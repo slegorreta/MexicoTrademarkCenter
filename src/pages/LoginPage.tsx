@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, AlertCircle, ArrowLeft, Globe, ChevronDown } from 'lucide-react';
 import { useLanguage, Language } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 
 type Mode = 'login' | 'register';
 
@@ -85,7 +86,20 @@ export default function LoginPage() {
       if (error) {
         setError(c.invalidCredentials);
       } else {
-        navigate('/dashboard');
+        // Fetch profile to determine correct redirect destination
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabase
+            .from('profiles').select('role').eq('id', user.id).maybeSingle();
+          const staffRoles = ['super_admin', 'admin', 'docketing_staff', 'filing_staff', 'read_only'];
+          if (profile && staffRoles.includes(profile.role)) {
+            navigate('/admin');
+          } else {
+            navigate('/dashboard');
+          }
+        } else {
+          navigate('/dashboard');
+        }
       }
     } else {
       if (form.password.length < 6) {
