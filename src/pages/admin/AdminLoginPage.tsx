@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, AlertCircle, Shield } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../lib/supabase';
 
 export default function AdminLoginPage() {
   const { signIn } = useAuth();
@@ -19,7 +20,21 @@ export default function AdminLoginPage() {
     if (error) {
       setError('Invalid credentials. Access denied.');
     } else {
-      navigate('/admin');
+      // Confirm staff role before navigating — profile fetch is async in AuthContext
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles').select('role').eq('id', user.id).maybeSingle();
+        const staffRoles = ['super_admin', 'admin', 'docketing_staff', 'filing_staff', 'read_only'];
+        if (profile && staffRoles.includes(profile.role)) {
+          window.location.href = '/admin';
+        } else {
+          setError('Access denied. This portal is for staff only.');
+          await supabase.auth.signOut();
+        }
+      } else {
+        navigate('/admin');
+      }
     }
     setLoading(false);
   };

@@ -93,7 +93,7 @@ export default function LoginPage() {
             .from('profiles').select('role').eq('id', user.id).maybeSingle();
           const staffRoles = ['super_admin', 'admin', 'docketing_staff', 'filing_staff', 'read_only'];
           if (profile && staffRoles.includes(profile.role)) {
-            navigate('/admin');
+            window.location.href = '/admin';
           } else {
             navigate('/dashboard');
           }
