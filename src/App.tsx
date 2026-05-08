@@ -18,6 +18,7 @@ import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import ApplyPage from './pages/ApplyPage';
 import TrademarkIdeaPage from './pages/TrademarkIdeaPage';
+import TrademarkCheckPage from './pages/TrademarkCheckPage';
 
 // Admin
 import AdminLoginPage from './pages/admin/AdminLoginPage';
@@ -86,6 +87,9 @@ function AppRoutes() {
 
       {/* Trademark Idea Generator */}
       <Route path="/trademark-ideas" element={<Layout><TrademarkIdeaPage /></Layout>} />
+
+      {/* Free Trademark Check */}
+      <Route path="/trademark-check" element={<Layout><TrademarkCheckPage /></Layout>} />
 
       {/* Client dashboard — has its own layout (sidebar), no Layout wrapper */}
       <Route

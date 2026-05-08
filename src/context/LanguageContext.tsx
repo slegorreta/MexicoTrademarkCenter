@@ -75,6 +75,26 @@ const translations: Record<string, Record<Language, string>> = {
   },
   'hero.ai.cta': { en: 'Try It', zh: '立即体验', es: 'Probar', de: 'Jetzt ausprobieren', fr: 'Essayer', hi: 'आज़माएं', pt: 'Experimentar' },
 
+  // Hero free clearance CTA
+  'hero.clearance.cta': {
+    en: 'Review Your Trademark for Free',
+    zh: '免费检索您的商标',
+    es: 'Revisa tu Marca Gratis',
+    de: 'Ihre Marke kostenlos prüfen',
+    fr: 'Vérifiez votre marque gratuitement',
+    hi: 'अपना ट्रेडमार्क मुफ़्त जांचें',
+    pt: 'Verifique sua marca gratuitamente',
+  },
+  'hero.clearance.desc': {
+    en: 'IMPI database, web & domain check — instant results',
+    zh: 'IMPI数据库、网络及域名检索 — 即时结果',
+    es: 'Búsqueda en IMPI, web y dominios — resultados instantáneos',
+    de: 'IMPI-Datenbank, Web- & Domainprüfung — sofortige Ergebnisse',
+    fr: 'Base IMPI, vérification web et domaines — résultats instantanés',
+    hi: 'IMPI डेटाबेस, वेब और डोमेन जांच — तत्काल परिणाम',
+    pt: 'Base IMPI, verificação web e domínios — resultados imediatos',
+  },
+
   // Trust badges
   'trust.filing': { en: '24-Hour Filing Target', zh: '24小时内提交目标', es: 'Objetivo: 24 horas hábiles', de: 'Einreichungsziel: 24 Stunden', fr: 'Objectif : dépôt en 24 h ouvrées', hi: '24 घंटे में दाखिल करने का लक्ष्य', pt: 'Meta: 24 horas úteis' },
   'trust.impi': { en: 'IMPI Official Filing', zh: 'IMPI官方申请', es: 'Solicitud oficial ante IMPI', de: 'Offizielle IMPI-Einreichung', fr: 'Dépôt officiel IMPI', hi: 'IMPI आधिकारिक दाखिल', pt: 'Protocolo oficial no IMPI' },

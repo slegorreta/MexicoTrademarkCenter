@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, Shield, Clock, Globe as Globe2, CheckCircle2, Star, Zap, FileText, Award, Users, TrendingUp, ChevronDown, Sparkles } from 'lucide-react';
+import { ArrowRight, Shield, Clock, Globe as Globe2, CheckCircle2, Star, Zap, FileText, Award, Users, TrendingUp, ChevronDown, Sparkles, Search } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import PriceGuaranteeBadge from '../components/PriceGuaranteeBadge';
 import { useState } from 'react';
@@ -69,7 +69,23 @@ export default function HomePage() {
             <p className="text-lg text-gray-300 leading-relaxed mb-8 max-w-2xl">
               {t('hero.subheading')}
             </p>
-            <div className="flex flex-wrap gap-4">
+
+            {/* Primary CTA: Free trademark review */}
+            <Link
+              to="/trademark-check"
+              className="group inline-flex items-center gap-3 bg-white text-navy-900 font-bold px-6 py-4 rounded-2xl transition-all duration-200 shadow-xl hover:shadow-2xl hover:-translate-y-0.5 mb-4 w-full sm:w-auto"
+            >
+              <div className="w-9 h-9 rounded-xl bg-gold-500 flex items-center justify-center flex-shrink-0 group-hover:bg-gold-400 transition-colors">
+                <Search size={18} className="text-white" />
+              </div>
+              <div className="text-left">
+                <div className="text-base font-bold text-navy-900 leading-tight">{t('hero.clearance.cta')}</div>
+                <div className="text-xs text-gray-500 font-normal mt-0.5">{t('hero.clearance.desc')}</div>
+              </div>
+              <ArrowRight size={18} className="ml-auto text-gold-500 group-hover:translate-x-0.5 transition-transform" />
+            </Link>
+
+            <div className="flex flex-wrap gap-3">
               <Link
                 to="/apply"
                 className="inline-flex items-center gap-2 bg-gold-500 hover:bg-gold-400 text-white font-semibold px-6 py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-gold-500/25"

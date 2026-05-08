@@ -4,7 +4,6 @@ import { Sparkles, Upload, X, ArrowRight, RefreshCw, Loader2, Image as ImageIcon
 import { useLanguage } from '../context/LanguageContext';
 import { supabase } from '../lib/supabase';
 import TrademarkClearancePanel from '../components/TrademarkClearancePanel';
-import MathCaptcha from '../components/MathCaptcha';
 
 interface IdeaCard {
   name: string;
@@ -87,7 +86,6 @@ export default function TrademarkIdeaPage() {
   const [ideas, setIdeas] = useState<IdeaCard[]>([]);
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
   const [selectedName, setSelectedName] = useState<string | null>(null);
-  const [captchaVerified, setCaptchaVerified] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Restore session from URL param
@@ -360,12 +358,6 @@ export default function TrademarkIdeaPage() {
                 )}
               </div>
 
-              <MathCaptcha
-                language={language as 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt'}
-                onVerified={() => setCaptchaVerified(true)}
-                onReset={() => setCaptchaVerified(false)}
-              />
-
               {genError && (
                 <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
                   <X size={15} className="flex-shrink-0" />
@@ -376,7 +368,7 @@ export default function TrademarkIdeaPage() {
               <button
                 type="button"
                 onClick={generate}
-                disabled={generating || !description.trim() || !captchaVerified}
+                disabled={generating || !description.trim()}
                 className="w-full flex items-center justify-center gap-2 bg-gold-500 hover:bg-gold-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl text-base transition-colors shadow-md"
               >
                 {generating
@@ -413,7 +405,6 @@ export default function TrademarkIdeaPage() {
                   setPhase('input');
                   setIdeas([]);
                   setCheckedIds(new Set());
-                  setCaptchaVerified(false);
                 }}
                 className="flex items-center gap-2 text-sm text-gray-600 hover:text-navy-900 border border-gray-200 hover:border-gray-300 px-4 py-2 rounded-lg transition-colors"
               >
