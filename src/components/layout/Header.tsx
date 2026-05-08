@@ -74,12 +74,12 @@ export default function Header() {
           </Link>
 
           {/* Desktop Nav */}
-          <nav className="hidden lg:flex items-center gap-6">
+          <nav className="hidden lg:flex items-center gap-1 xl:gap-4 min-w-0 flex-1 justify-center px-4">
             {navLinks.map(link => (
               <Link
                 key={link.href}
                 to={link.href}
-                className={`text-sm font-medium transition-colors ${
+                className={`text-xs xl:text-sm font-medium transition-colors whitespace-nowrap px-1.5 xl:px-2 py-1 rounded ${
                   isActive(link.href)
                     ? 'text-gold-600'
                     : 'text-gray-600 hover:text-navy-900'
@@ -91,7 +91,7 @@ export default function Header() {
           </nav>
 
           {/* Right side */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 xl:gap-3 flex-shrink-0">
             {/* Language dropdown */}
             <div className="relative" ref={langRef}>
               <button
@@ -176,7 +176,7 @@ export default function Header() {
 
             <Link
               to="/apply"
-              className="hidden sm:inline-flex bg-gold-500 hover:bg-gold-600 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-sm"
+              className="hidden lg:inline-flex bg-gold-500 hover:bg-gold-600 text-white text-xs xl:text-sm font-semibold px-3 xl:px-4 py-2 rounded-lg transition-colors shadow-sm whitespace-nowrap"
             >
               {t('nav.startFiling')}
             </Link>
