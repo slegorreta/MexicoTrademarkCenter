@@ -9,10 +9,12 @@ const corsHeaders = {
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const FROM_EMAIL = "Mexico Trademark Center <tm@mexicotrademarkcenter.com>";
-const STAFF_EMAIL = "tm@mexicotrademarkcenter.com";
+const FILING_TO_EMAIL = "sergio.legorreta@lawteam.com";
+const FILING_CC_EMAIL = "sergiolegorreta@yahoo.com";
 
-async function sendEmail(to: string, subject: string, html: string, attachments?: { filename: string; content: string; type: string }[]) {
+async function sendEmail(to: string, subject: string, html: string, attachments?: { filename: string; content: string; type: string }[], cc?: string[]) {
   const body: Record<string, unknown> = { from: FROM_EMAIL, to: [to], subject, html };
+  if (cc?.length) body.cc = cc;
   if (attachments?.length) body.attachments = attachments;
 
   const res = await fetch("https://api.resend.com/emails", {
@@ -272,15 +274,17 @@ Deno.serve(async (req: Request) => {
     // 2. Send staff instruction email
     const staffHtml = buildStaffInstructionEmail(app, client ?? {}, trademark ?? {}, classes ?? [], logoUrl);
     const staffResult = await sendEmail(
-      STAFF_EMAIL,
+      FILING_TO_EMAIL,
       `NEW FILING INSTRUCTION — ${app.case_number} — ${trademark?.mark_name ?? "Trademark"}`,
-      staffHtml
+      staffHtml,
+      undefined,
+      [FILING_CC_EMAIL]
     );
     results.staff_email = staffResult;
 
     await supabase.from("email_log").insert({
       application_id,
-      recipient_email: STAFF_EMAIL,
+      recipient_email: FILING_TO_EMAIL,
       template_key: "staff_instruction",
       subject: `NEW FILING INSTRUCTION — ${app.case_number}`,
       status: staffResult.ok ? "sent" : "failed",
