@@ -18,6 +18,7 @@ interface ClearanceResult {
   risk: 'low' | 'medium' | 'high';
   webFindings: string[];
   marciaFindings: MarciaFinding[];
+  marciaTotalCount?: number;
   marciaUrl: string;
   domainResults: DomainResult[];
   disclaimer: string;
@@ -228,15 +229,19 @@ export default function TrademarkClearancePanel({ markName, classes, language, a
           className="w-full flex items-center justify-between px-4 py-2 text-xs font-medium text-gray-600 hover:bg-white/80 transition-colors"
         >
           <span>
-            {t(
-              `IMPI MARCia results (${result.marciaFindings.length} match${result.marciaFindings.length !== 1 ? 'es' : ''})`,
-              `IMPI MARCia结果（${result.marciaFindings.length}条匹配）`,
-              `Resultados IMPI MARCia (${result.marciaFindings.length} coincidencia${result.marciaFindings.length !== 1 ? 's' : ''})`,
-              undefined,
-              undefined,
-              `IMPI MARCia परिणाम (${result.marciaFindings.length} मिलान)`,
-          `Resultados IMPI MARCia (${result.marciaFindings.length} correspondência${result.marciaFindings.length !== 1 ? 's' : ''})`
-            )}
+            {(() => {
+              const total = result.marciaTotalCount ?? result.marciaFindings.length;
+              const shown = result.marciaFindings.length;
+              const suffix = total > shown ? ` — ${t('showing', '显示', 'mostrando')} ${shown}` : '';
+              return t(
+                `IMPI MARCia results (${total} match${total !== 1 ? 'es' : ''}${suffix})`,
+                `IMPI MARCia结果（共${total}条匹配${total > shown ? `，显示${shown}条` : ''}）`,
+                `Resultados IMPI MARCia (${total} coincidencia${total !== 1 ? 's' : ''}${suffix})`,
+                undefined, undefined,
+                `IMPI MARCia परिणाम (${total} मिलान${suffix})`,
+                `Resultados IMPI MARCia (${total} correspondência${total !== 1 ? 's' : ''}${suffix})`
+              );
+            })()}
           </span>
           {marciaExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
         </button>

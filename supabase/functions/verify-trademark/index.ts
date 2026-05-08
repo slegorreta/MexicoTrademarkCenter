@@ -105,71 +105,131 @@ async function checkDomains(markName: string): Promise<DomainResult[]> {
   return results;
 }
 
-async function searchMarciaHTML(markName: string, classes: number[]): Promise<{
+async function searchMarcia(markName: string, classes: number[]): Promise<{
   findings: Array<{ name: string; status: string; classNum: string; holder: string }>;
   marciaUrl: string;
+  totalCount: number;
 }> {
+  const BASE = "https://marcia.impi.gob.mx/marcas";
   const encoded = encodeURIComponent(markName);
-  const marciaUrl = `https://marcia.impi.gob.mx/marcas/search/quick?query=${encoded}`;
+  const marciaUrl = `${BASE}/search/quick?query=${encoded}`;
 
   try {
-    const res = await fetch(marciaUrl, {
+    // Step 1: Load the SPA shell to obtain session cookies + CSRF token
+    const initRes = await fetch(`${BASE}/search/quick`, {
       headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; TrademarkClearanceBot/1.0)",
-        Accept: "text/html",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "es-MX,es;q=0.9,en;q=0.8",
       },
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(10000),
     });
 
-    if (!res.ok) {
-      return { findings: [], marciaUrl };
+    if (!initRes.ok) {
+      console.error("MARCia init failed:", initRes.status);
+      return { findings: [], marciaUrl, totalCount: 0 };
     }
 
-    const html = await res.text();
+    // Parse cookies from the init response
+    const setCookieHeaders: string[] = [];
+    initRes.headers.forEach((value, key) => {
+      if (key.toLowerCase() === "set-cookie") setCookieHeaders.push(value);
+    });
 
-    const findings: Array<{ name: string; status: string; classNum: string; holder: string }> = [];
-
-    const rowPattern = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
-
-    let rowMatch;
-    let rowCount = 0;
-    while ((rowMatch = rowPattern.exec(html)) !== null && rowCount < 20) {
-      const rowHtml = rowMatch[1];
-      const cells: string[] = [];
-      let cellMatch;
-      const cellRe = /<td[^>]*>([\s\S]*?)<\/td>/gi;
-      while ((cellMatch = cellRe.exec(rowHtml)) !== null) {
-        const text = cellMatch[1].replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
-        if (text) cells.push(text);
-      }
-      if (cells.length >= 3) {
-        const name = cells[0] || "";
-        const classNum = cells[1] || "";
-        const status = cells[2] || "";
-        const holder = cells[3] || "";
-
-        if (name && name.length > 1 && !/denominaci[oó]n/i.test(name)) {
-          const allClasses = classes.length > 0
-            ? [...classes, ...getRelatedClasses(classes)]
-            : [];
-
-          const classNumParsed = parseInt(classNum);
-          const inScope = allClasses.length === 0 ||
-            allClasses.includes(classNumParsed) ||
-            classNum === "";
-
-          if (inScope) {
-            findings.push({ name, status, classNum, holder });
-            rowCount++;
-          }
-        }
+    const cookieMap: Record<string, string> = {};
+    for (const header of setCookieHeaders) {
+      const [pair] = header.split(";");
+      const eqIdx = pair.indexOf("=");
+      if (eqIdx > -1) {
+        const name = pair.slice(0, eqIdx).trim();
+        const val = pair.slice(eqIdx + 1).trim();
+        cookieMap[name] = val;
       }
     }
 
-    return { findings: findings.slice(0, 10), marciaUrl };
+    // Also try to extract CSRF from HTML meta tag
+    const html = await initRes.text();
+    const metaCsrf = html.match(/name=["']_csrf["'][^>]*content=["']([^"']+)["']/i)?.[1]
+      ?? html.match(/content=["']([^"']+)["'][^>]*name=["']_csrf["']/i)?.[1]
+      ?? "";
+
+    const xsrfToken = cookieMap["XSRF-TOKEN"] ?? metaCsrf;
+    const cookieString = Object.entries(cookieMap)
+      .map(([k, v]) => `${k}=${v}`)
+      .join("; ");
+
+    const apiHeaders: Record<string, string> = {
+      "Content-Type": "application/json;charset=UTF-8",
+      "Accept": "application/json, text/plain, */*",
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      "Referer": `${BASE}/search/quick`,
+      "Origin": "https://marcia.impi.gob.mx",
+    };
+    if (cookieString) apiHeaders["Cookie"] = cookieString;
+    if (xsrfToken) apiHeaders["X-XSRF-TOKEN"] = xsrfToken;
+
+    // Step 2: Create a search record
+    const recordRes = await fetch(`${BASE}/search/internal/record`, {
+      method: "POST",
+      headers: apiHeaders,
+      body: JSON.stringify({ _type: "Search$Quick", query: markName.trim(), images: [] }),
+      signal: AbortSignal.timeout(12000),
+    });
+
+    if (!recordRes.ok) {
+      console.error("MARCia record creation failed:", recordRes.status, await recordRes.text());
+      return { findings: [], marciaUrl, totalCount: 0 };
+    }
+
+    const record = await recordRes.json();
+    const searchId: string = record.id;
+    const totalCount: number = record.count ?? 0;
+
+    if (!searchId) {
+      return { findings: [], marciaUrl, totalCount: 0 };
+    }
+
+    // Step 3: Fetch first page of results (up to 20)
+    const allClasses = classes.length > 0
+      ? [...classes, ...getRelatedClasses(classes)]
+      : [];
+
+    const resultRes = await fetch(`${BASE}/search/internal/result`, {
+      method: "POST",
+      headers: apiHeaders,
+      body: JSON.stringify({
+        searchId,
+        pageSize: 20,
+        pageNumber: 0,
+        statusFilter: [],
+        viennaCodeFilter: [],
+        niceClassFilter: allClasses.length > 0 ? allClasses : [],
+      }),
+      signal: AbortSignal.timeout(12000),
+    });
+
+    if (!resultRes.ok) {
+      console.error("MARCia result fetch failed:", resultRes.status);
+      return { findings: [], marciaUrl, totalCount };
+    }
+
+    const resultData = await resultRes.json();
+    const items: Record<string, unknown>[] = resultData.resultPage ?? [];
+
+    const findings = items.slice(0, 15).map((item) => {
+      const classNums: number[] = Array.isArray(item.classes) ? (item.classes as number[]) : [];
+      return {
+        name: String(item.title ?? ""),
+        status: String(item.status ?? ""),
+        classNum: classNums.length > 0 ? classNums.join(", ") : "",
+        holder: Array.isArray(item.owners) ? (item.owners as string[]).join(", ") : String(item.owners ?? ""),
+      };
+    }).filter(f => f.name);
+
+    return { findings, marciaUrl, totalCount };
   } catch (err) {
     console.error("MARCia fetch error:", err);
-    return { findings: [], marciaUrl };
+    return { findings: [], marciaUrl, totalCount: 0 };
   }
 }
 
@@ -302,17 +362,17 @@ Deno.serve(async (req: Request) => {
     // Run all checks in parallel
     const [webResult, marciaResult, domainResults] = await Promise.all([
       searchWeb(apiKey, markName.trim(), classes),
-      searchMarciaHTML(markName.trim(), classes),
+      searchMarcia(markName.trim(), classes),
       checkDomains(markName.trim()),
     ]);
 
     // Compute combined risk
     let risk: "low" | "medium" | "high" = webResult.risk;
-    if (marciaResult.findings.length > 0) {
+    if (marciaResult.totalCount > 0) {
       const hasExactMatch = marciaResult.findings.some(
         f => f.name.toLowerCase().trim() === markName.toLowerCase().trim()
       );
-      if (hasExactMatch) {
+      if (hasExactMatch || marciaResult.totalCount >= 5) {
         risk = "high";
       } else if (risk === "low") {
         risk = "medium";
@@ -328,6 +388,7 @@ Deno.serve(async (req: Request) => {
       risk,
       webFindings: webResult.findings,
       marciaFindings: marciaResult.findings,
+      marciaTotalCount: marciaResult.totalCount,
       marciaUrl: marciaResult.marciaUrl,
       domainResults,
       disclaimer,
