@@ -30,11 +30,12 @@ Deno.serve(async (req: Request) => {
     );
 
     const body = await req.json();
-    const { applicationId, amountUsd, markName, totalClasses } = body as {
+    const { applicationId, amountUsd, markName, totalClasses, couponCode } = body as {
       applicationId: string;
       amountUsd: number;
       markName: string;
       totalClasses: number;
+      couponCode?: string;
     };
 
     if (!applicationId || !amountUsd) {
@@ -65,9 +66,53 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Validate coupon if provided
+    let discountPercent = 0;
+    let couponId: string | null = null;
+
+    if (couponCode && couponCode.trim()) {
+      const normalizedCode = couponCode.trim().toUpperCase();
+      const { data: coupon } = await supabase
+        .from("coupons")
+        .select("id, discount_percent, max_uses, uses_count, active, expires_at")
+        .eq("code", normalizedCode)
+        .maybeSingle();
+
+      if (!coupon || !coupon.active) {
+        return new Response(
+          JSON.stringify({ error: "Invalid or inactive coupon code" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (coupon.expires_at && new Date(coupon.expires_at) < new Date()) {
+        return new Response(
+          JSON.stringify({ error: "Coupon has expired" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (coupon.max_uses !== null && coupon.uses_count >= coupon.max_uses) {
+        return new Response(
+          JSON.stringify({ error: "Coupon has reached its maximum uses" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      discountPercent = coupon.discount_percent;
+      couponId = coupon.id;
+    }
+
+    // Apply discount
+    const discountedAmount = discountPercent > 0
+      ? Math.max(0.50, amountUsd * (1 - discountPercent / 100)) // Stripe minimum $0.50
+      : amountUsd;
+
+    const finalAmountCents = Math.round(discountedAmount * 100);
+
     // Create the Stripe PaymentIntent (amount in cents)
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amountUsd * 100),
+      amount: finalAmountCents,
       currency: "usd",
       metadata: {
         application_id: applicationId,
@@ -75,8 +120,11 @@ Deno.serve(async (req: Request) => {
         client_id: app.client_id,
         mark_name: markName || "",
         total_classes: String(totalClasses || 1),
+        coupon_code: couponCode ? couponCode.trim().toUpperCase() : "",
+        discount_percent: String(discountPercent),
+        original_amount_usd: String(amountUsd),
       },
-      description: `Mexico Trademark Filing — ${markName} (${totalClasses} class${totalClasses !== 1 ? "es" : ""}) — Case ${app.case_number}`,
+      description: `Mexico Trademark Filing — ${markName} (${totalClasses} class${totalClasses !== 1 ? "es" : ""}) — Case ${app.case_number}${discountPercent > 0 ? ` — ${discountPercent}% discount applied` : ""}`,
       automatic_payment_methods: { enabled: true },
     });
 
@@ -85,13 +133,23 @@ Deno.serve(async (req: Request) => {
       application_id: applicationId,
       client_id: app.client_id,
       stripe_payment_intent_id: paymentIntent.id,
-      amount_usd: amountUsd,
+      amount_usd: discountedAmount,
       currency: "usd",
       status: "pending",
     });
 
+    // Increment coupon usage counter atomically
+    if (couponId) {
+      await supabase.rpc("increment_coupon_uses", { coupon_id: couponId });
+    }
+
     return new Response(
-      JSON.stringify({ clientSecret: paymentIntent.client_secret }),
+      JSON.stringify({
+        clientSecret: paymentIntent.client_secret,
+        discountPercent,
+        finalAmountUsd: discountedAmount,
+        originalAmountUsd: amountUsd,
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {

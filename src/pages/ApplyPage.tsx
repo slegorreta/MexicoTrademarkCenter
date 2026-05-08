@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { CheckCircle2, ChevronRight, Upload, X, Plus, Trash2, Lock, CreditCard, AlertCircle, Sparkles } from 'lucide-react';
+import { CheckCircle2, ChevronRight, Upload, X, Plus, Trash2, Lock, CreditCard, AlertCircle, Sparkles, Tag, Loader2 } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { useLanguage } from '../context/LanguageContext';
@@ -125,11 +125,11 @@ function StepIndicator({ current, total, t }: { current: Step; total: number; t:
 // ─── Stripe checkout inner form ──────────────────────────────────────────────
 interface CheckoutFormProps {
   language: string;
-  grandTotal: number;
+  finalTotal: number;
   onSuccess: () => void;
 }
 
-function CheckoutForm({ language, grandTotal, onSuccess }: CheckoutFormProps) {
+function CheckoutForm({ language, finalTotal, onSuccess }: CheckoutFormProps) {
   const stripe = useStripe();
   const elements = useElements();
   const [paying, setPaying] = useState(false);
@@ -175,7 +175,7 @@ function CheckoutForm({ language, grandTotal, onSuccess }: CheckoutFormProps) {
         <Lock size={16} />
         {paying
           ? (tri('Processing payment...', '处理付款中...', 'Procesando pago...', 'Zahlung wird verarbeitet...', 'Traitement du paiement...', 'भुगतान हो रहा है...', 'Processando pagamento...'))
-          : (tri(`Pay USD $${grandTotal.toFixed(2)}`, `支付 USD $${grandTotal.toFixed(2)}`, `Pagar USD $${grandTotal.toFixed(2)}`, `USD $${grandTotal.toFixed(2)} bezahlen`, `Payer USD $${grandTotal.toFixed(2)}`, `USD $${grandTotal.toFixed(2)} का भुगतान करें`, `Pagar USD $${grandTotal.toFixed(2)}`))}
+          : (tri(`Pay USD $${finalTotal.toFixed(2)}`, `支付 USD $${finalTotal.toFixed(2)}`, `Pagar USD $${finalTotal.toFixed(2)}`, `USD $${finalTotal.toFixed(2)} bezahlen`, `Payer USD $${finalTotal.toFixed(2)}`, `USD $${finalTotal.toFixed(2)} का भुगतान करें`, `Pagar USD $${finalTotal.toFixed(2)}`))}
       </button>
 
       <p className="text-center text-xs text-gray-400 flex items-center justify-center gap-1">
@@ -210,6 +210,13 @@ export default function ApplyPage() {
   });
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+
+  // Coupon state
+  const [couponInput, setCouponInput] = useState('');
+  const [couponApplied, setCouponApplied] = useState<{ code: string; discountPercent: number } | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [couponChecking, setCouponChecking] = useState(false);
+  const [finalTotal, setFinalTotal] = useState<number | null>(null);
 
   const [clearanceResults, setClearanceResults] = useState<Record<string, ClearanceResult>>({});
   const [showConflictModal, setShowConflictModal] = useState(false);
@@ -310,6 +317,50 @@ export default function ApplyPage() {
       setLogoPreview(null);
     }
   };
+
+  const handleApplyCoupon = async () => {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) return;
+    setCouponChecking(true);
+    setCouponError(null);
+    setCouponApplied(null);
+
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      // Validate by calling the edge function with a dummy preview (no applicationId)
+      const res = await fetch(`${supabaseUrl}/functions/v1/validate-coupon`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'Apikey': supabaseAnonKey,
+        },
+        body: JSON.stringify({ couponCode: code }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        setCouponError(data.error || tri('Invalid coupon code.', '无效优惠码。', 'Código de descuento inválido.', 'Ungültiger Gutscheincode.', 'Code promo invalide.', 'अमान्य कूपन कोड।', 'Código de desconto inválido.'));
+      } else {
+        setCouponApplied({ code, discountPercent: data.discountPercent });
+        setCouponInput('');
+      }
+    } catch {
+      setCouponError(tri('Could not verify coupon. Please try again.', '无法验证优惠码，请重试。', 'No se pudo verificar el cupón. Inténtalo de nuevo.', 'Gutschein konnte nicht überprüft werden.', 'Impossible de vérifier le code promo.', 'कूपन सत्यापित नहीं हो सका।', 'Não foi possível verificar o cupom.'));
+    } finally {
+      setCouponChecking(false);
+    }
+  };
+
+  const removeCoupon = () => {
+    setCouponApplied(null);
+    setCouponError(null);
+    setFinalTotal(null);
+  };
+
+  const discountedTotal = couponApplied
+    ? Math.max(0.50, grandTotal * (1 - couponApplied.discountPercent / 100))
+    : grandTotal;
 
   // Called when user clicks "Proceed to Payment" — saves records, creates PaymentIntent
   const handleProceedToPayment = async () => {
@@ -417,6 +468,7 @@ export default function ApplyPage() {
           amountUsd: grandTotal,
           markName: form.markName,
           totalClasses,
+          couponCode: couponApplied?.code ?? undefined,
         }),
       });
 
@@ -426,6 +478,7 @@ export default function ApplyPage() {
       }
 
       setClientSecret(data.clientSecret);
+      setFinalTotal(data.finalAmountUsd ?? grandTotal);
     } catch (err) {
       console.error(err);
       setPaymentError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
@@ -1074,11 +1127,39 @@ export default function ApplyPage() {
                     </span>
                     <span className="text-sm font-medium">USD ${govFee.toFixed(2)}</span>
                   </div>
+
+                  {/* Coupon row */}
+                  {couponApplied && (
+                    <div className="flex justify-between items-center px-5 py-3 bg-emerald-50">
+                      <span className="flex items-center gap-1.5 text-sm text-emerald-700 font-medium">
+                        <Tag size={14} />
+                        {tri('Discount', '折扣', 'Descuento', 'Rabatt', 'Remise', 'छूट', 'Desconto')}
+                        <span className="font-mono text-xs bg-emerald-100 border border-emerald-200 rounded px-1.5 py-0.5">{couponApplied.code}</span>
+                        <span className="text-xs">(-{couponApplied.discountPercent}%)</span>
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-emerald-700">
+                          -USD ${(grandTotal - discountedTotal).toFixed(2)}
+                        </span>
+                        {!clientSecret && (
+                          <button type="button" onClick={removeCoupon} className="text-emerald-500 hover:text-red-500 transition-colors">
+                            <X size={14} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex justify-between px-5 py-4 bg-white">
                     <span className="text-base font-bold text-navy-900">
                       {tri('Total Due', '应付总额', 'Total a Pagar', 'Gesamtbetrag fällig', 'Total à payer', 'कुल देय', 'Total a Pagar')}
                     </span>
-                    <span className="text-base font-bold text-navy-900">USD ${grandTotal.toFixed(2)}</span>
+                    <div className="text-right">
+                      {couponApplied && (
+                        <div className="text-sm text-gray-400 line-through">USD ${grandTotal.toFixed(2)}</div>
+                      )}
+                      <span className="text-base font-bold text-navy-900">USD ${discountedTotal.toFixed(2)}</span>
+                    </div>
                   </div>
                   <div className="px-5 pb-4 pt-1">
                     <p className="text-xs font-bold text-emerald-700">
@@ -1087,6 +1168,65 @@ export default function ApplyPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Coupon input — only shown before payment is initiated */}
+              {!clientSecret && (
+                <div className="mb-6">
+                  {!couponApplied ? (
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
+                        <Tag size={14} className="text-gray-400" />
+                        {tri('Have a discount code?', '有优惠码？', '¿Tienes un código de descuento?', 'Haben Sie einen Gutscheincode?', 'Vous avez un code promo ?', 'डिस्काउंट कोड है?', 'Tem um código de desconto?')}
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={couponInput}
+                          onChange={e => { setCouponInput(e.target.value); setCouponError(null); }}
+                          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleApplyCoupon(); } }}
+                          placeholder={tri('Enter code', '输入优惠码', 'Ingresa el código', 'Code eingeben', 'Entrer le code', 'कोड दर्ज करें', 'Inserir código')}
+                          className="flex-1 border border-gray-300 rounded-xl px-4 py-2.5 text-sm uppercase tracking-wider focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-transparent"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleApplyCoupon}
+                          disabled={couponChecking || !couponInput.trim()}
+                          className="flex items-center gap-2 bg-navy-900 hover:bg-navy-800 disabled:opacity-50 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors whitespace-nowrap"
+                        >
+                          {couponChecking
+                            ? <Loader2 size={14} className="animate-spin" />
+                            : <Tag size={14} />}
+                          {tri('Apply', '应用', 'Aplicar', 'Anwenden', 'Appliquer', 'लागू करें', 'Aplicar')}
+                        </button>
+                      </div>
+                      {couponError && (
+                        <p className="flex items-center gap-1.5 text-xs text-red-600">
+                          <AlertCircle size={12} />
+                          {couponError}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
+                      <CheckCircle2 size={16} className="text-emerald-500 flex-shrink-0" />
+                      <p className="text-sm text-emerald-700 font-medium flex-1">
+                        {tri(
+                          `Code "${couponApplied.code}" applied — ${couponApplied.discountPercent}% off!`,
+                          `优惠码 "${couponApplied.code}" 已应用 — 优惠 ${couponApplied.discountPercent}%！`,
+                          `Código "${couponApplied.code}" aplicado — ${couponApplied.discountPercent}% de descuento!`,
+                          `Code "${couponApplied.code}" angewendet — ${couponApplied.discountPercent}% Rabatt!`,
+                          `Code "${couponApplied.code}" appliqué — ${couponApplied.discountPercent}% de remise !`,
+                          `कोड "${couponApplied.code}" लागू — ${couponApplied.discountPercent}% छूट!`,
+                          `Código "${couponApplied.code}" aplicado — ${couponApplied.discountPercent}% de desconto!`
+                        )}
+                      </p>
+                      <button type="button" onClick={removeCoupon} className="text-emerald-400 hover:text-red-500 transition-colors flex-shrink-0">
+                        <X size={16} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Payment section — either "proceed" button or Stripe Element */}
               {!clientSecret ? (
@@ -1113,7 +1253,7 @@ export default function ApplyPage() {
                     <Lock size={16} />
                     {submitting
                       ? (tri('Preparing payment...', '准备付款中...', 'Preparando pago...', 'Zahlung wird vorbereitet...', 'Préparation du paiement...', 'भुगतान तैयार हो रहा है...', 'Preparando pagamento...'))
-                      : (tri(`Proceed to Payment — USD $${grandTotal.toFixed(2)}`, `前往付款 — USD $${grandTotal.toFixed(2)}`, `Proceder al Pago — USD $${grandTotal.toFixed(2)}`, `Zur Zahlung — USD $${grandTotal.toFixed(2)}`, `Procéder au Paiement — USD $${grandTotal.toFixed(2)}`, `भुगतान करें — USD $${grandTotal.toFixed(2)}`, `Prosseguir para Pagamento — USD $${grandTotal.toFixed(2)}`))}
+                      : (tri(`Proceed to Payment — USD $${discountedTotal.toFixed(2)}`, `前往付款 — USD $${discountedTotal.toFixed(2)}`, `Proceder al Pago — USD $${discountedTotal.toFixed(2)}`, `Zur Zahlung — USD $${discountedTotal.toFixed(2)}`, `Procéder au Paiement — USD $${discountedTotal.toFixed(2)}`, `भुगतान करें — USD $${discountedTotal.toFixed(2)}`, `Prosseguir para Pagamento — USD $${discountedTotal.toFixed(2)}`))}
                   </button>
                 </div>
               ) : (
@@ -1143,7 +1283,7 @@ export default function ApplyPage() {
                     >
                       <CheckoutForm
                         language={language}
-                        grandTotal={grandTotal}
+                        finalTotal={finalTotal ?? discountedTotal}
                         onSuccess={handlePaymentSuccess}
                       />
                     </Elements>
