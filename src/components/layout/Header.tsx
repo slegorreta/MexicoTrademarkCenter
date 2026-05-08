@@ -61,20 +61,22 @@ export default function Header() {
       isScrolled ? 'bg-white shadow-md' : 'bg-white/95 backdrop-blur-sm'
     }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 lg:h-20">
-          {/* Logo */}
+        <div className="flex items-center h-16 lg:h-20 gap-4">
+          {/* Logo — never shrinks */}
           <Link to="/" className="flex items-center gap-2 flex-shrink-0">
             <div className="w-8 h-8 bg-navy-900 rounded flex items-center justify-center flex-shrink-0">
               <span className="text-gold-500 font-bold text-sm">MX</span>
             </div>
-            <div>
-              <div className="text-navy-900 font-bold text-sm sm:text-base leading-tight">Mexico Trademark</div>
+            <div className="flex-shrink-0">
+              <div className="text-navy-900 font-bold text-sm sm:text-base leading-tight whitespace-nowrap">Mexico Trademark</div>
               <div className="text-gold-600 text-xs font-medium tracking-wide">CENTER</div>
             </div>
           </Link>
 
-          {/* Desktop Nav — only at xl and above to avoid overlap with long translated labels */}
-          <nav className="hidden xl:flex items-center gap-3 2xl:gap-5 min-w-0 flex-1 justify-center px-4">
+          {/* Desktop Nav — centered, only renders when there is genuinely enough room.
+              "Preguntas Frecuentes" + "Generador de Ideas" in Spanish need ~950px of nav
+              space alone, so the full layout only works at 1536px (2xl) and above. */}
+          <nav className="hidden 2xl:flex items-center gap-4 flex-1 justify-center">
             {navLinks.map(link => (
               <Link
                 key={link.href}
@@ -90,8 +92,11 @@ export default function Header() {
             ))}
           </nav>
 
+          {/* Spacer on xl so right-side controls stay right-aligned without a nav */}
+          <div className="flex-1 2xl:hidden" />
+
           {/* Right side */}
-          <div className="flex items-center gap-2 xl:gap-3 flex-shrink-0">
+          <div className="flex items-center gap-2 flex-shrink-0">
             {/* Language dropdown */}
             <div className="relative" ref={langRef}>
               <button
@@ -124,7 +129,7 @@ export default function Header() {
             </div>
 
             {user ? (
-              <div className="relative hidden xl:block">
+              <div className="relative hidden 2xl:block">
                 <button
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                   className="flex items-center gap-2 text-sm text-gray-700 hover:text-navy-900 px-3 py-1.5 rounded border border-gray-200 hover:border-gray-300 transition-colors"
@@ -168,7 +173,7 @@ export default function Header() {
             ) : (
               <Link
                 to="/login"
-                className="hidden xl:inline-flex text-sm font-medium text-gray-600 hover:text-navy-900 px-3 py-1.5 rounded border border-gray-200 hover:border-gray-300 transition-colors"
+                className="hidden 2xl:inline-flex text-sm font-medium text-gray-600 hover:text-navy-900 px-3 py-1.5 rounded border border-gray-200 hover:border-gray-300 transition-colors"
               >
                 {t('nav.login')}
               </Link>
@@ -176,14 +181,14 @@ export default function Header() {
 
             <Link
               to="/apply"
-              className="hidden xl:inline-flex bg-gold-500 hover:bg-gold-600 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-sm whitespace-nowrap"
+              className="hidden 2xl:inline-flex bg-gold-500 hover:bg-gold-600 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-sm whitespace-nowrap"
             >
               {t('nav.startFiling')}
             </Link>
 
-            {/* Hamburger — visible below xl */}
+            {/* Hamburger — visible below 2xl */}
             <button
-              className="xl:hidden p-2 text-gray-600"
+              className="2xl:hidden p-2 text-gray-600"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
             >
               {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
@@ -192,9 +197,9 @@ export default function Header() {
         </div>
       </div>
 
-      {/* Mobile/tablet menu — shown below xl */}
+      {/* Mobile/tablet menu — shown below 2xl */}
       {isMenuOpen && (
-        <div className="xl:hidden bg-white border-t border-gray-100 shadow-lg">
+        <div className="2xl:hidden bg-white border-t border-gray-100 shadow-lg">
           <div className="max-w-7xl mx-auto px-4 py-4 space-y-1">
             {navLinks.map(link => (
               <Link
