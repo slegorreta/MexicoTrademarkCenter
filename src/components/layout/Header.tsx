@@ -64,22 +64,22 @@ export default function Header() {
         <div className="flex items-center justify-between h-16 lg:h-20">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 flex-shrink-0">
-            <div className="w-8 h-8 bg-navy-900 rounded flex items-center justify-center">
+            <div className="w-8 h-8 bg-navy-900 rounded flex items-center justify-center flex-shrink-0">
               <span className="text-gold-500 font-bold text-sm">MX</span>
             </div>
-            <div className="hidden sm:block">
-              <div className="text-navy-900 font-bold text-base leading-tight">Mexico Trademark</div>
+            <div>
+              <div className="text-navy-900 font-bold text-sm sm:text-base leading-tight">Mexico Trademark</div>
               <div className="text-gold-600 text-xs font-medium tracking-wide">CENTER</div>
             </div>
           </Link>
 
-          {/* Desktop Nav */}
-          <nav className="hidden lg:flex items-center gap-1 xl:gap-4 min-w-0 flex-1 justify-center px-4">
+          {/* Desktop Nav — only at xl and above to avoid overlap with long translated labels */}
+          <nav className="hidden xl:flex items-center gap-3 2xl:gap-5 min-w-0 flex-1 justify-center px-4">
             {navLinks.map(link => (
               <Link
                 key={link.href}
                 to={link.href}
-                className={`text-xs xl:text-sm font-medium transition-colors whitespace-nowrap px-1.5 xl:px-2 py-1 rounded ${
+                className={`text-sm font-medium transition-colors whitespace-nowrap px-2 py-1 rounded ${
                   isActive(link.href)
                     ? 'text-gold-600'
                     : 'text-gray-600 hover:text-navy-900'
@@ -124,12 +124,12 @@ export default function Header() {
             </div>
 
             {user ? (
-              <div className="relative">
+              <div className="relative hidden xl:block">
                 <button
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                   className="flex items-center gap-2 text-sm text-gray-700 hover:text-navy-900 px-3 py-1.5 rounded border border-gray-200 hover:border-gray-300 transition-colors"
                 >
-                  <span className="hidden sm:inline max-w-28 truncate">
+                  <span className="max-w-28 truncate">
                     {profile?.full_name || profile?.email || 'Account'}
                   </span>
                   <ChevronDown size={14} />
@@ -168,7 +168,7 @@ export default function Header() {
             ) : (
               <Link
                 to="/login"
-                className="hidden sm:inline-flex text-sm font-medium text-gray-600 hover:text-navy-900 px-3 py-1.5 rounded border border-gray-200 hover:border-gray-300 transition-colors"
+                className="hidden xl:inline-flex text-sm font-medium text-gray-600 hover:text-navy-900 px-3 py-1.5 rounded border border-gray-200 hover:border-gray-300 transition-colors"
               >
                 {t('nav.login')}
               </Link>
@@ -176,14 +176,14 @@ export default function Header() {
 
             <Link
               to="/apply"
-              className="hidden lg:inline-flex bg-gold-500 hover:bg-gold-600 text-white text-xs xl:text-sm font-semibold px-3 xl:px-4 py-2 rounded-lg transition-colors shadow-sm whitespace-nowrap"
+              className="hidden xl:inline-flex bg-gold-500 hover:bg-gold-600 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-sm whitespace-nowrap"
             >
               {t('nav.startFiling')}
             </Link>
 
-            {/* Mobile menu button */}
+            {/* Hamburger — visible below xl */}
             <button
-              className="lg:hidden p-2 text-gray-600"
+              className="xl:hidden p-2 text-gray-600"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
             >
               {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
@@ -192,9 +192,9 @@ export default function Header() {
         </div>
       </div>
 
-      {/* Mobile menu */}
+      {/* Mobile/tablet menu — shown below xl */}
       {isMenuOpen && (
-        <div className="lg:hidden bg-white border-t border-gray-100 shadow-lg">
+        <div className="xl:hidden bg-white border-t border-gray-100 shadow-lg">
           <div className="max-w-7xl mx-auto px-4 py-4 space-y-1">
             {navLinks.map(link => (
               <Link
