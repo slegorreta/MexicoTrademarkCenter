@@ -1170,6 +1170,22 @@ export default function ApplyPage() {
                     </div>
                   )}
                   <input type="text" required className={inputClass} value={form.markName} onChange={e => set({ markName: e.target.value })} />
+                  {form.markName.trim().length >= 2 && (
+                    <div className="mt-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                          {tri('Trademark Availability Check', '商标可用性检索', 'Verificación de Disponibilidad de Marca', 'Markenverfügbarkeitsprüfung', 'Vérification de disponibilité', 'ट्रेडमार्क उपलब्धता जांच', 'Verificação de Disponibilidade da Marca')}
+                        </span>
+                        <InfoTooltip text={t('tooltip.clearance')} />
+                      </div>
+                      <TrademarkClearancePanel
+                        markName={form.markName}
+                        classes={[]}
+                        language={(language === 'zh' ? 'zh' : language === 'es' ? 'es' : language === 'de' ? 'de' : language === 'fr' ? 'fr' : language === 'hi' ? 'hi' : language === 'pt' ? 'pt' : 'en') as 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt'}
+                        autoRun
+                      />
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className={labelClass}>
