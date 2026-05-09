@@ -5,7 +5,7 @@ import {
   ChevronRight, Download, MessageSquare, User, Settings,
   Bell, ArrowLeft, Send, Lock, Building2,
   Inbox, Shield, Pencil, CreditCard, Loader2, Tag, X,
-  Printer, Sheet, Trash2, Receipt, ExternalLink, ChevronDown, ChevronUp
+  Printer, Sheet, Trash2, Receipt, ChevronDown, ChevronUp, RefreshCw
 } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
@@ -1452,6 +1452,9 @@ export default function DashboardPage() {
                   <p className="text-sm text-gray-500 mt-0.5">All your trademark cases in one place</p>
                 </div>
                 <div className="flex items-center gap-2">
+                  <button onClick={loadDocket} disabled={loading} className="flex items-center gap-1.5 text-xs font-medium text-gray-600 border border-gray-200 bg-white hover:bg-gray-50 px-3 py-2 rounded-lg transition-colors disabled:opacity-50" title="Refresh">
+                    <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
+                  </button>
                   {docketRows.length > 0 && (
                     <>
                       <button onClick={() => exportDocketCSV(docketRows, 'trademark-docket.csv')} className="flex items-center gap-1.5 text-xs font-medium text-gray-600 border border-gray-200 bg-white hover:bg-gray-50 px-3 py-2 rounded-lg transition-colors">
