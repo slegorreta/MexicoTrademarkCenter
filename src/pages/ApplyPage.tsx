@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { CheckCircle2, ChevronRight, Upload, X, Plus, Trash2, Lock, CreditCard, AlertCircle, Sparkles, Tag, Loader2 } from 'lucide-react';
+import { CheckCircle2, ChevronRight, Upload, X, Plus, Trash2, Lock, CreditCard, AlertCircle, Sparkles, Tag, Loader2, Pencil } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { useLanguage } from '../context/LanguageContext';
@@ -552,16 +552,16 @@ export default function ApplyPage() {
                     <input type="text" className={inputClass} value={form.contactPerson} onChange={e => set({ contactPerson: e.target.value })} />
                   </div>
                   <div className="sm:col-span-2">
-                    <label className={labelClass}>{tri('Address', '地址', 'Domicilio', 'Adresse', 'Adresse', 'पता', 'Endereço')}</label>
-                    <input type="text" className={inputClass} value={form.address} onChange={e => set({ address: e.target.value })} />
+                    <label className={labelClass}>{tri('Address (Street & Number) *', '地址（街道和门牌号）*', 'Domicilio (Calle y Número) *', 'Adresse (Straße und Nr.) *', 'Adresse (Rue et numéro) *', 'पता (गली और नंबर) *', 'Endereço (Rua e Número) *', '住所（番地・丁目）*')}</label>
+                    <input type="text" required className={inputClass} value={form.address} onChange={e => set({ address: e.target.value })} />
                   </div>
                   <div>
-                    <label className={labelClass}>{tri('City', '城市', 'Ciudad', 'Stadt', 'Ville', 'शहर', 'Cidade')}</label>
-                    <input type="text" className={inputClass} value={form.city} onChange={e => set({ city: e.target.value })} />
+                    <label className={labelClass}>{tri('City *', '城市 *', 'Ciudad *', 'Stadt *', 'Ville *', 'शहर *', 'Cidade *', '市区町村 *')}</label>
+                    <input type="text" required className={inputClass} value={form.city} onChange={e => set({ city: e.target.value })} />
                   </div>
                   <div>
-                    <label className={labelClass}>{tri('Postal Code', '邮政编码', 'Código Postal', 'Postleitzahl', 'Code postal', 'पिन कोड', 'CEP')}</label>
-                    <input type="text" className={inputClass} value={form.postalCode} onChange={e => set({ postalCode: e.target.value })} />
+                    <label className={labelClass}>{tri('Postal Code *', '邮政编码 *', 'Código Postal *', 'Postleitzahl *', 'Code postal *', 'पिन कोड *', 'CEP *', '郵便番号 *')}</label>
+                    <input type="text" required className={inputClass} value={form.postalCode} onChange={e => set({ postalCode: e.target.value })} />
                   </div>
                   <div>
                     <label className={labelClass}>{tri('Email Address *', '电子邮件 *', 'Correo Electrónico *', 'E-Mail-Adresse *', 'Adresse e-mail *', 'ईमेल पता *', 'Endereço de E-mail *')}</label>
@@ -975,61 +975,100 @@ export default function ApplyPage() {
           )}
 
           {/* STEP 5 — Review */}
-          {step === 5 && (
-            <div>
-              <h2 className="text-lg font-bold text-navy-900 mb-6">{t('form.step5')}</h2>
-              <div className="space-y-4">
-                <div className="border border-gray-200 rounded-xl overflow-hidden">
-                  <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-200">
-                    <span className="text-sm font-semibold text-navy-900">{tri('Applicant', '申请人', 'Solicitante', 'Antragsteller', 'Déposant', 'आवेदक', 'Solicitante')}</span>
-                  </div>
-                  <div className="divide-y divide-gray-100">
-                    {[
-                      { label: tri('Legal Name', '法定名称', 'Nombre o Razón Social', 'Rechtlicher Name', 'Nom légal', 'कानूनी नाम', 'Nome Legal'), val: form.legalName },
-                      { label: tri('Country', '国家', 'País', 'Land', 'Pays', 'देश', 'País'), val: form.country ? (sortedCountries.find(c => c.code === form.country)?.[language as SupportedLang] || form.country) : '' },
-                      { label: tri('Email', '电子邮件', 'Correo', 'E-Mail', 'E-mail', 'ईमेल', 'E-mail'), val: form.email },
-                    ].map((row, ri) => (
-                      <div key={ri} className="flex px-4 py-2.5 gap-4">
-                        <span className="text-xs text-gray-500 w-32 flex-shrink-0">{row.label}</span>
-                        <span className="text-sm text-gray-800">{row.val || '—'}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+          {step === 5 && (() => {
+            const EditBtn = ({ targetStep }: { targetStep: Step }) => (
+              <button
+                type="button"
+                onClick={() => setStep(targetStep)}
+                className="flex items-center gap-1 text-xs font-medium text-gold-600 hover:text-gold-700 transition-colors px-2 py-1 rounded hover:bg-gold-50"
+              >
+                <Pencil size={12} />
+                {tri('Edit', '编辑', 'Editar', 'Bearbeiten', 'Modifier', 'संपादित करें', 'Editar', '編集')}
+              </button>
+            );
 
-                <div className="border border-gray-200 rounded-xl overflow-hidden">
-                  <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-200">
-                    <span className="text-sm font-semibold text-navy-900">{tri('Trademark', '商标', 'Marca', 'Marke', 'Marque', 'ट्रेडमार्क', 'Marca')}</span>
-                  </div>
-                  <div className="divide-y divide-gray-100">
-                    {[
-                      { label: tri('Mark Name', '商标名称', 'Nombre de Marca', 'Markenname', 'Nom de marque', 'चिह्न का नाम', 'Nome da Marca'), val: form.markName },
-                      { label: tri('Mark Type', '商标类型', 'Tipo de Marca', 'Markentyp', 'Type de marque', 'चिह्न का प्रकार', 'Tipo de Marca'), val: form.markType },
-                      { label: tri('Language', '语言', 'Idioma', 'Sprache', 'Langue', 'भाषा', 'Idioma'), val: form.markLanguage },
-                    ].map((row, ri) => (
-                      <div key={ri} className="flex px-4 py-2.5 gap-4">
-                        <span className="text-xs text-gray-500 w-32 flex-shrink-0">{row.label}</span>
-                        <span className="text-sm text-gray-800">{row.val || '—'}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+            const ReviewRow = ({ label, val }: { label: string; val: string }) => (
+              <div className="flex px-4 py-2.5 gap-4">
+                <span className="text-xs text-gray-500 w-36 flex-shrink-0">{label}</span>
+                <span className="text-sm text-gray-800 break-words min-w-0">{val || '—'}</span>
+              </div>
+            );
 
-                <div className="border border-gray-200 rounded-xl overflow-hidden">
-                  <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-200 flex items-center justify-between">
-                    <span className="text-sm font-semibold text-navy-900">{tri('Goods & Services', '商品和服务', 'Bienes y Servicios', 'Waren & Dienstleistungen', 'Produits & services', 'वस्तुएं और सेवाएं', 'Bens e Serviços')}</span>
-                    <span className="text-xs text-gray-500">{totalClasses} {tri('class(es)', '个类别', 'clase(s)')}</span>
+            const markTypeLabel = {
+              word: tri('Word Mark', '文字商标', 'Marca Denominativa', 'Wortmarke', 'Marque verbale', 'शब्द चिह्न', 'Marca Denominativa', '文字商標'),
+              design: tri('Design / Logo', '图形/标志', 'Diseño / Logo', 'Design / Logo', 'Marque figurative', 'डिज़ाइन / लोगो', 'Marca Figurativa', 'デザイン/ロゴ'),
+              combined: tri('Combined', '组合', 'Denominativa + Diseño', 'Kombiniert', 'Mixte', 'संयुक्त', 'Combinada', '結合'),
+              trade_name: tri('Trade Name', '商号', 'Nombre Comercial', 'Handelsname', 'Nom commercial', 'व्यापार नाम', 'Nome Comercial', '商号'),
+              slogan: tri('Slogan', '口号', 'Eslogan', 'Slogan', 'Slogan', 'नारा', 'Slogan', 'スローガン'),
+            }[form.markType] ?? form.markType;
+
+            return (
+              <div>
+                <h2 className="text-lg font-bold text-navy-900 mb-2">{t('form.step5')}</h2>
+                <p className="text-sm text-gray-500 mb-6">
+                  {tri('Review all details below. Click Edit on any section to make changes.', '请仔细检查以下所有信息。点击各栏的编辑按钮进行修改。', 'Revisa todos los detalles a continuación. Haz clic en Editar para modificar cualquier sección.', 'Überprüfen Sie alle Details unten. Klicken Sie auf Bearbeiten, um Änderungen vorzunehmen.', 'Vérifiez tous les détails ci-dessous. Cliquez sur Modifier pour apporter des changements.', 'नीचे सभी विवरण जांचें। किसी भी अनुभाग में परिवर्तन करने के लिए संपादित करें पर क्लिक करें।', 'Revise todos os detalhes abaixo. Clique em Editar para fazer alterações.', '以下のすべての詳細を確認してください。変更するには各セクションの編集をクリックしてください。')}
+                </p>
+                <div className="space-y-4">
+
+                  {/* Applicant */}
+                  <div className="border border-gray-200 rounded-xl overflow-hidden">
+                    <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-200 flex items-center justify-between">
+                      <span className="text-sm font-semibold text-navy-900">{tri('Applicant', '申请人', 'Solicitante', 'Antragsteller', 'Déposant', 'आवेदक', 'Solicitante', '出願人')}</span>
+                      <EditBtn targetStep={1} />
+                    </div>
+                    <div className="divide-y divide-gray-100">
+                      <ReviewRow label={tri('Legal Name', '法定名称', 'Nombre o Razón Social', 'Rechtlicher Name', 'Nom légal', 'कानूनी नाम', 'Nome Legal', '法人名')} val={form.legalName} />
+                      <ReviewRow label={tri('Type', '类型', 'Tipo', 'Typ', 'Type', 'प्रकार', 'Tipo', '種類')} val={form.applicantType === 'company' ? tri('Company', '公司', 'Empresa', 'Unternehmen', 'Entreprise', 'कंपनी', 'Empresa', '法人') : tri('Individual', '个人', 'Persona Física', 'Einzelperson', 'Particulier', 'व्यक्ति', 'Pessoa Física', '個人')} />
+                      <ReviewRow label={tri('Country', '国家', 'País', 'Land', 'Pays', 'देश', 'País', '国')} val={form.country ? (sortedCountries.find(c => c.code === form.country)?.[language as SupportedLang] || form.country) : ''} />
+                      <ReviewRow label={tri('Address', '地址', 'Domicilio', 'Adresse', 'Adresse', 'पता', 'Endereço', '住所')} val={form.address} />
+                      <ReviewRow label={tri('City', '城市', 'Ciudad', 'Stadt', 'Ville', 'शहर', 'Cidade', '市区町村')} val={form.city} />
+                      {form.stateProvince && <ReviewRow label={tri('State / Province', '州/省', 'Estado / Provincia', 'Bundesland', 'État / Province', 'राज्य', 'Estado', '都道府県')} val={form.stateProvince} />}
+                      <ReviewRow label={tri('Postal Code', '邮政编码', 'Código Postal', 'Postleitzahl', 'Code postal', 'पिन कोड', 'CEP', '郵便番号')} val={form.postalCode} />
+                      <ReviewRow label={tri('Email', '电子邮件', 'Correo', 'E-Mail', 'E-mail', 'ईमेल', 'E-mail', 'メール')} val={form.email} />
+                      {(form.phoneDialCode || form.phoneNumber) && <ReviewRow label={tri('Phone', '电话', 'Teléfono', 'Telefon', 'Téléphone', 'फोन', 'Telefone', '電話')} val={[form.phoneDialCode, form.phoneNumber].filter(Boolean).join(' ')} />}
+                      {form.contactPerson && <ReviewRow label={tri('Contact Person', '联系人', 'Persona de Contacto', 'Kontaktperson', 'Personne de contact', 'संपर्क व्यक्ति', 'Pessoa de Contato', '担当者')} val={form.contactPerson} />}
+                      {form.taxId && <ReviewRow label={tri('Tax ID', '税号', 'RFC', 'Steuer-ID', 'N° fiscal', 'टैक्स ID', 'CNPJ/CPF', '税番号')} val={form.taxId} />}
+                      <ReviewRow label={tri('Preferred Language', '首选语言', 'Idioma', 'Sprache', 'Langue', 'भाषा', 'Idioma', '言語')} val={form.preferredLanguage.toUpperCase()} />
+                    </div>
                   </div>
-                  <div className="divide-y divide-gray-100">
-                    {form.classEntries.map((entry) => {
-                      const classNums = entry.isConfirmed && entry.classNumber !== null
-                        ? [entry.classNumber]
-                        : entry.fallbackClasses;
-                      if (classNums.length === 0) return null;
-                      return (
-                        <div key={entry.id} className="px-4 py-3">
-                          <div className="flex items-start gap-3">
-                            <div className="flex flex-wrap gap-1.5 flex-1">
+
+                  {/* Trademark */}
+                  <div className="border border-gray-200 rounded-xl overflow-hidden">
+                    <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-200 flex items-center justify-between">
+                      <span className="text-sm font-semibold text-navy-900">{tri('Trademark', '商标', 'Marca', 'Marke', 'Marque', 'ट्रेडमार्क', 'Marca', '商標')}</span>
+                      <EditBtn targetStep={2} />
+                    </div>
+                    <div className="divide-y divide-gray-100">
+                      <ReviewRow label={tri('Mark Name', '商标名称', 'Nombre de Marca', 'Markenname', 'Nom de marque', 'चिह्न का नाम', 'Nome da Marca', '商標名')} val={form.markName} />
+                      <ReviewRow label={tri('Mark Type', '商标类型', 'Tipo de Marca', 'Markentyp', 'Type de marque', 'चिह्न का प्रकार', 'Tipo de Marca', '商標種別')} val={markTypeLabel} />
+                      <ReviewRow label={tri('Language', '语言', 'Idioma', 'Sprache', 'Langue', 'भाषा', 'Idioma', '言語')} val={form.markLanguage} />
+                      {form.containsNonSpanish && <ReviewRow label={tri('Non-Spanish', '非西班牙语', 'No español', 'Nicht-Spanisch', 'Non espagnol', 'गैर-स्पेनिश', 'Não espanhol', '非スペイン語')} val={tri('Yes', '是', 'Sí', 'Ja', 'Oui', 'हाँ', 'Sim', 'はい')} />}
+                      {form.meaningSpanish && <ReviewRow label={tri('Meaning (ES)', '西班牙语含义', 'Significado', 'Bedeutung', 'Signification', 'अर्थ', 'Significado', '意味')} val={form.meaningSpanish} />}
+                      {form.transliteration && <ReviewRow label={tri('Transliteration', '音译', 'Transliteración', 'Transliteration', 'Translittération', 'लिप्यंतरण', 'Transliteração', '翻字')} val={form.transliteration} />}
+                      {form.claimsColor && <ReviewRow label={tri('Color Claim', '颜色声明', 'Reclamo de Color', 'Farbanspruch', 'Revendication couleur', 'रंग दावा', 'Reivindicação de Cor', '色彩主張')} val={form.colorDescription || tri('Yes', '是', 'Sí', 'Ja', 'Oui', 'हाँ', 'Sim', 'はい')} />}
+                      {form.markDescription && <ReviewRow label={tri('Description', '描述', 'Descripción', 'Beschreibung', 'Description', 'विवरण', 'Descrição', '説明')} val={form.markDescription} />}
+                      {form.logoFile && <ReviewRow label={tri('Logo File', '标志文件', 'Archivo de Logo', 'Logo-Datei', 'Fichier logo', 'लोगो फ़ाइल', 'Arquivo de Logo', 'ロゴファイル')} val={form.logoFile.name} />}
+                    </div>
+                  </div>
+
+                  {/* Goods & Services */}
+                  <div className="border border-gray-200 rounded-xl overflow-hidden">
+                    <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-200 flex items-center justify-between">
+                      <span className="text-sm font-semibold text-navy-900">{tri('Goods & Services', '商品和服务', 'Bienes y Servicios', 'Waren & Dienstleistungen', 'Produits & services', 'वस्तुएं और सेवाएं', 'Bens e Serviços', '商品・サービス')}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-gray-500">{totalClasses} {tri('class(es)', '个类别', 'clase(s)', 'Klasse(n)', 'classe(s)', 'वर्ग', 'classe(s)', 'クラス')}</span>
+                        <EditBtn targetStep={3} />
+                      </div>
+                    </div>
+                    <div className="divide-y divide-gray-100">
+                      {form.classEntries.map((entry) => {
+                        const classNums = entry.isConfirmed && entry.classNumber !== null
+                          ? [entry.classNumber]
+                          : entry.fallbackClasses;
+                        if (classNums.length === 0) return null;
+                        return (
+                          <div key={entry.id} className="px-4 py-3">
+                            <div className="flex flex-wrap gap-1.5 mb-1.5">
                               {classNums.map(cn => {
                                 const nc = ALL_CLASSES.find(c => c.classNumber === cn);
                                 return (
@@ -1039,68 +1078,86 @@ export default function ApplyPage() {
                                 );
                               })}
                             </div>
-                          </div>
-                          {entry.description && (
-                            <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">{entry.description}</p>
-                          )}
-                          {entry.descriptionEn && (
-                            <p className="text-xs text-gray-600 mt-1 italic">{entry.descriptionEn}</p>
-                          )}
-                        </div>
-                      );
-                    })}
-                    {totalClasses === 0 && (
-                      <div className="px-4 py-3 text-sm text-gray-400">
-                        {tri('No classes selected', '未选择类别', 'Sin clases seleccionadas', 'Keine Klassen ausgewählt', 'Aucune classe sélectionnée', 'कोई कक्षा नहीं चुनी', 'Nenhuma classe selecionada')}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {Object.keys(clearanceResults).length > 0 && (
-                  <div className="border border-gray-200 rounded-xl overflow-hidden">
-                    <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-200 flex items-center justify-between">
-                      <span className="text-sm font-semibold text-navy-900">{tri('Clearance Check Summary', '商标检索摘要', 'Resumen de Búsqueda de Disponibilidad', 'Zusammenfassung der Markenrecherche', 'Résumé de la vérification de disponibilité', 'क्लीयरेंस जांच सारांश', 'Resumo da Verificação de Disponibilidade')}</span>
-                    </div>
-                    <div className="divide-y divide-gray-100">
-                      {Object.entries(clearanceResults).map(([entryId, res]) => {
-                        const entry = form.classEntries.find(e => e.id === entryId);
-                        const classNums = entry
-                          ? entry.isConfirmed && entry.classNumber !== null ? [entry.classNumber] : entry.fallbackClasses
-                          : [];
-                        const riskColors = { low: 'text-emerald-700 bg-emerald-100', medium: 'text-amber-700 bg-amber-100', high: 'text-red-700 bg-red-100' };
-                        return (
-                          <div key={entryId} className="flex items-center gap-3 px-4 py-2.5">
-                            <div className="flex flex-wrap gap-1 flex-1">
-                              {classNums.map(cn => (
-                                <span key={cn} className="text-xs font-medium text-gray-600">Class {cn}</span>
-                              ))}
-                            </div>
-                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${riskColors[res.risk]}`}>
-                              {res.risk === 'low'
-                                ? (tri('Low risk', '低风险', 'Riesgo bajo', 'Niedriges Risiko', 'Risque faible', 'कम जोखिम', 'Baixo risco'))
-                                : res.risk === 'medium'
-                                ? (tri('Medium risk', '中等风险', 'Riesgo medio', 'Mittleres Risiko', 'Risque modéré', 'मध्यम जोखिम', 'Risco médio'))
-                                : (tri('High risk', '高风险', 'Riesgo alto', 'Hohes Risiko', 'Risque élevé', 'उच्च जोखिम', 'Alto risco'))}
-                            </span>
-                            <span className="text-xs text-gray-400">
-                              {res.marciaFindings.length + res.webFindings.length} {tri('findings', '条结果', 'resultados', 'Ergebnisse', 'résultats', 'परिणाम', 'resultados')}
-                            </span>
+                            {entry.description && (
+                              <p className="text-xs text-gray-500 leading-relaxed">{entry.description}</p>
+                            )}
+                            {entry.descriptionEn && (
+                              <p className="text-xs text-gray-600 mt-0.5 italic">{entry.descriptionEn}</p>
+                            )}
                           </div>
                         );
                       })}
+                      {totalClasses === 0 && (
+                        <div className="px-4 py-3 text-sm text-gray-400">
+                          {tri('No classes selected', '未选择类别', 'Sin clases seleccionadas', 'Keine Klassen ausgewählt', 'Aucune classe sélectionnée', 'कोई कक्षा नहीं चुनी', 'Nenhuma classe selecionada', 'クラス未選択')}
+                        </div>
+                      )}
                     </div>
                   </div>
-                )}
 
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                  <p className="text-xs text-amber-800 font-medium">
-                    {tri('Spanish translation status: Pending admin review. Our team will review and confirm all translations before filing.', '西班牙语翻译状态：待管理员审查。我们的团队将在提交前审查并确认所有翻译。', 'Estado de redacción en español: Pendiente de revisión. Nuestro equipo revisará y confirmará la redacción antes de presentar la solicitud.', 'Status der spanischen Übersetzung: Ausstehende Prüfung. Unser Team prüft und bestätigt alle Übersetzungen vor der Einreichung.', 'Statut de la traduction espagnole : Révision en attente. Notre équipe examinera et confirmera toutes les traductions avant le dépôt.', 'स्पेनिश अनुवाद स्थिति: व्यवस्थापक समीक्षा लंबित। हमारी टीम दाखिल करने से पहले सभी अनुवादों की समीक्षा करेगी।', 'Status da tradução para espanhol: Revisão pendente. Nossa equipe revisará e confirmará todas as traduções antes do protocolo.')}
-                  </p>
+                  {/* Prior Use & Priority */}
+                  <div className="border border-gray-200 rounded-xl overflow-hidden">
+                    <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-200 flex items-center justify-between">
+                      <span className="text-sm font-semibold text-navy-900">{tri('Prior Use & Priority', '在先使用和优先权', 'Uso Previo y Prioridad', 'Vorbenutzt & Priorität', 'Usage antérieur & Priorité', 'पूर्व उपयोग और प्राथमिकता', 'Uso Anterior e Prioridade', '先使用・優先権')}</span>
+                      <EditBtn targetStep={4} />
+                    </div>
+                    <div className="divide-y divide-gray-100">
+                      <ReviewRow label={tri('Used in Mexico', '在墨西哥使用', 'Usada en México', 'In Mexiko verwendet', 'Utilisée au Mexique', 'मेक्सिको में उपयोग', 'Usada no México', 'メキシコで使用')} val={form.usedInMexico ? tri('Yes', '是', 'Sí', 'Ja', 'Oui', 'हाँ', 'Sim', 'はい') : tri('No', '否', 'No', 'Nein', 'Non', 'नहीं', 'Não', 'いいえ')} />
+                      {form.usedInMexico && form.firstUseDate && <ReviewRow label={tri('First Use Date', '首次使用日期', 'Fecha Primer Uso', 'Erstbenutzungsdatum', 'Date 1er usage', 'पहले उपयोग की तारीख', 'Data 1º Uso', '初使用日')} val={form.firstUseDate} />}
+                      <ReviewRow label={tri('Priority Claimed', '声明优先权', 'Prioridad Reclamada', 'Priorität beansprucht', 'Priorité revendiquée', 'प्राथमिकता का दावा', 'Prioridade Reivindicada', '優先権主張')} val={form.priorityClaimed ? tri('Yes', '是', 'Sí', 'Ja', 'Oui', 'हाँ', 'Sim', 'はい') : tri('No', '否', 'No', 'Nein', 'Non', 'नहीं', 'Não', 'いいえ')} />
+                      {form.priorityClaimed && form.priorityCountry && <ReviewRow label={tri('Priority Country', '优先权国家', 'País de Prioridad', 'Prioritätsland', 'Pays de priorité', 'प्राथमिकता देश', 'País de Prioridade', '優先権国')} val={form.priorityCountry} />}
+                      {form.priorityClaimed && form.priorityAppNumber && <ReviewRow label={tri('App. Number', '申请号', 'Nº Solicitud', 'Antragsnr.', 'Nº demande', 'आवेदन नं.', 'Nº Pedido', '出願番号')} val={form.priorityAppNumber} />}
+                      {form.priorityClaimed && form.priorityFilingDate && <ReviewRow label={tri('Filing Date', '申请日期', 'Fecha Presentación', 'Einreichungsdatum', 'Date de dépôt', 'दाखिल तारीख', 'Data Protocolo', '出願日')} val={form.priorityFilingDate} />}
+                      <ReviewRow label={tri('Owner Confirmed', '所有人确认', 'Titular Confirmado', 'Inhaber bestätigt', 'Titulaire confirmé', 'मालिक पुष्टि', 'Titular Confirmado', '所有者確認')} val={form.isOwner ? tri('Yes', '是', 'Sí', 'Ja', 'Oui', 'हाँ', 'Sim', 'はい') : tri('No', '否', 'No', 'Nein', 'Non', 'नहीं', 'Não', 'いいえ')} />
+                      {form.knownSimilarMarks && <ReviewRow label={tri('Known Similar Marks', '已知类似商标', 'Marcas Similares', 'Ähnliche Marken', 'Marques similaires', 'समान चिह्न', 'Marcas Similares', '類似商標')} val={form.knownSimilarMarks} />}
+                    </div>
+                  </div>
+
+                  {Object.keys(clearanceResults).length > 0 && (
+                    <div className="border border-gray-200 rounded-xl overflow-hidden">
+                      <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-200">
+                        <span className="text-sm font-semibold text-navy-900">{tri('Clearance Check Summary', '商标检索摘要', 'Resumen de Búsqueda de Disponibilidad', 'Zusammenfassung der Markenrecherche', 'Résumé de la vérification de disponibilité', 'क्लीयरेंस जांच सारांश', 'Resumo da Verificação de Disponibilidade', '商標調査結果')}</span>
+                      </div>
+                      <div className="divide-y divide-gray-100">
+                        {Object.entries(clearanceResults).map(([entryId, res]) => {
+                          const entry = form.classEntries.find(e => e.id === entryId);
+                          const classNums = entry
+                            ? entry.isConfirmed && entry.classNumber !== null ? [entry.classNumber] : entry.fallbackClasses
+                            : [];
+                          const riskColors = { low: 'text-emerald-700 bg-emerald-100', medium: 'text-amber-700 bg-amber-100', high: 'text-red-700 bg-red-100' };
+                          return (
+                            <div key={entryId} className="flex items-center gap-3 px-4 py-2.5">
+                              <div className="flex flex-wrap gap-1 flex-1">
+                                {classNums.map(cn => (
+                                  <span key={cn} className="text-xs font-medium text-gray-600">Class {cn}</span>
+                                ))}
+                              </div>
+                              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${riskColors[res.risk]}`}>
+                                {res.risk === 'low'
+                                  ? (tri('Low risk', '低风险', 'Riesgo bajo', 'Niedriges Risiko', 'Risque faible', 'कम जोखिम', 'Baixo risco', '低リスク'))
+                                  : res.risk === 'medium'
+                                  ? (tri('Medium risk', '中等风险', 'Riesgo medio', 'Mittleres Risiko', 'Risque modéré', 'मध्यम जोखिम', 'Risco médio', '中リスク'))
+                                  : (tri('High risk', '高风险', 'Riesgo alto', 'Hohes Risiko', 'Risque élevé', 'उच्च जोखिम', 'Alto risco', '高リスク'))}
+                              </span>
+                              <span className="text-xs text-gray-400">
+                                {res.marciaFindings.length + res.webFindings.length} {tri('findings', '条结果', 'resultados', 'Ergebnisse', 'résultats', 'परिणाम', 'resultados', '件')}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                    <p className="text-xs text-amber-800 font-medium">
+                      {tri('Spanish translation status: Pending admin review. Our team will review and confirm all translations before filing.', '西班牙语翻译状态：待管理员审查。我们的团队将在提交前审查并确认所有翻译。', 'Estado de redacción en español: Pendiente de revisión. Nuestro equipo revisará y confirmará la redacción antes de presentar la solicitud.', 'Status der spanischen Übersetzung: Ausstehende Prüfung. Unser Team prüft und bestätigt alle Übersetzungen vor der Einreichung.', 'Statut de la traduction espagnole : Révision en attente. Notre équipe examinera et confirmera toutes les traductions avant le dépôt.', 'स्पेनिश अनुवाद स्थिति: व्यवस्थापक समीक्षा लंबित। हमारी टीम दाखिल करने से पहले सभी अनुवादों की समीक्षा करेगी।', 'Status da tradução para espanhol: Revisão pendente. Nossa equipe revisará e confirmará todas as traduções antes do protocolo.', 'スペイン語翻訳状態：管理者審査待ち。出願前にチームが全翻訳を確認します。')}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* STEP 6 — Payment */}
           {step === 6 && (
@@ -1382,7 +1439,7 @@ export default function ApplyPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    if (step === 1 && form.email !== form.emailConfirm) return;
+                    if (step === 1 && (form.email !== form.emailConfirm || !form.address.trim() || !form.city.trim() || !form.postalCode.trim() || !form.country.trim())) return;
                     if (step === 3) {
                       const hasHighRisk = Object.values(clearanceResults).some(r => r.risk === 'high' || r.risk === 'medium');
                       if (hasHighRisk) {
@@ -1393,7 +1450,7 @@ export default function ApplyPage() {
                     setStep(s => Math.min(6, s + 1) as Step);
                   }}
                   disabled={
-                    (step === 1 && (form.email !== form.emailConfirm)) ||
+                    (step === 1 && (form.email !== form.emailConfirm || !form.address.trim() || !form.city.trim() || !form.postalCode.trim() || !form.country.trim())) ||
                     (step === 3 && confirmedEntries.length === 0 && !activeEntryIsConfirmed)
                   }
                   className="px-5 py-2.5 rounded-xl bg-navy-900 hover:bg-navy-800 text-white text-sm font-semibold transition-colors disabled:opacity-40"

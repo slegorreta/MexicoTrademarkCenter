@@ -73,7 +73,7 @@ export default function TrademarkClearancePanel({ markName, classes, language, a
   const [errorMsg, setErrorMsg] = useState('');
   const [webExpanded, setWebExpanded] = useState(false);
   const [marciaExpanded, setMarciaExpanded] = useState(false);
-  const [domainExpanded, setDomainExpanded] = useState(true);
+  const [domainExpanded, setDomainExpanded] = useState(false);
   const runningRef = useRef(false);
 
   const lang = (language === 'es' ? 'es' : language === 'zh' ? 'zh' : language === 'de' ? 'de' : language === 'fr' ? 'fr' : language === 'hi' ? 'hi' : language === 'pt' ? 'pt' : 'en') as 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt';

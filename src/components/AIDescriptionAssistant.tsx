@@ -4,7 +4,6 @@ import {
   ChevronUp, AlertTriangle, Loader2, MessageSquare, Pencil
 } from 'lucide-react';
 import { classifyGoods, type ClassSuggestion } from '../lib/classifier';
-import MathCaptcha from './MathCaptcha';
 
 interface AIClass {
   classNumber: number;
@@ -376,7 +375,6 @@ export default function AIDescriptionAssistant({
   const [classDescriptionsEs, setClassDescriptionsEs] = useState<Record<number, string>>({});
   const [showAllClasses, setShowAllClasses] = useState(false);
   const [round, setRound] = useState(0);
-  const [captchaVerified, setCaptchaVerified] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const s = (key: string) => ui[key]?.[language] ?? ui[key]?.['en'] ?? key;
@@ -590,7 +588,7 @@ export default function AIDescriptionAssistant({
             <button
               type="button"
               onClick={mode === 'idle' || mode === 'fallback' ? handleAnalyze : handleReset}
-              disabled={!description.trim() || mode === 'analyzing' || (!captchaVerified && mode === 'idle')}
+              disabled={!description.trim() || mode === 'analyzing'}
               className={`w-full flex items-center justify-center gap-2 font-semibold py-2.5 rounded-xl text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                 mode === 'classified' || mode === 'questions'
                   ? 'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200'
@@ -617,14 +615,6 @@ export default function AIDescriptionAssistant({
           </div>
         </div>
 
-        {/* Anti-bot captcha — always visible when user can initiate analysis */}
-        {(mode === 'idle' || mode === 'fallback') && (
-          <MathCaptcha
-            language={language}
-            onVerified={() => setCaptchaVerified(true)}
-            onReset={() => setCaptchaVerified(false)}
-          />
-        )}
       </div>
 
       {/* Analyzing skeleton */}
