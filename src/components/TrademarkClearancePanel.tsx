@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Shield, Loader2, ChevronDown, ChevronUp, ExternalLink, AlertTriangle, CheckCircle2, AlertCircle, Info, Globe } from 'lucide-react';
+import { Shield, Loader2, ChevronDown, ChevronUp, ExternalLink, AlertTriangle, CheckCircle2, AlertCircle, Info, Globe, Scale } from 'lucide-react';
 
 interface MarciaFinding {
   name: string;
@@ -14,6 +14,12 @@ interface DomainResult {
   status: 'available' | 'taken' | 'unknown';
 }
 
+export interface RegistrabilityFlag {
+  category: string;
+  severity: 'low' | 'medium' | 'high';
+  explanation: string;
+}
+
 interface ClearanceResult {
   risk: 'low' | 'medium' | 'high';
   webFindings: string[];
@@ -21,6 +27,8 @@ interface ClearanceResult {
   marciaTotalCount?: number;
   marciaUrl: string;
   domainResults: DomainResult[];
+  registrabilityFlags?: RegistrabilityFlag[];
+  registrabilityRisk?: 'low' | 'medium' | 'high';
   disclaimer: string;
 }
 
@@ -65,6 +73,127 @@ const riskConfig = {
   },
 };
 
+// Human-readable LFPPI category names per language
+const CATEGORY_LABELS: Record<string, Record<string, string>> = {
+  generic_descriptive: {
+    en: 'Generic or Descriptive',
+    zh: '通用或描述性词汇',
+    es: 'Genérico o Descriptivo',
+    de: 'Generisch oder Beschreibend',
+    fr: 'Générique ou Descriptif',
+    hi: 'सामान्य या वर्णनात्मक',
+    pt: 'Genérico ou Descritivo',
+  },
+  functional_shape: {
+    en: 'Functional Shape',
+    zh: '功能性形状',
+    es: 'Forma Funcional',
+    de: 'Funktionelle Form',
+    fr: 'Forme Fonctionnelle',
+    hi: 'कार्यात्मक आकार',
+    pt: 'Forma Funcional',
+  },
+  deceptive: {
+    en: 'Deceptive or Misleading',
+    zh: '欺骗性或误导性',
+    es: 'Engañoso o Equívoco',
+    de: 'Täuschend oder Irreführend',
+    fr: 'Trompeur ou Induit en Erreur',
+    hi: 'भ्रामक या गुमराह करने वाला',
+    pt: 'Enganoso ou Ilusório',
+  },
+  official_emblems: {
+    en: 'Official Emblems / Flags',
+    zh: '官方徽章/国旗',
+    es: 'Emblemas Oficiales / Banderas',
+    de: 'Offizielle Embleme / Flaggen',
+    fr: 'Emblèmes Officiels / Drapeaux',
+    hi: 'आधिकारिक प्रतीक/ध्वज',
+    pt: 'Emblemas Oficiais / Bandeiras',
+  },
+  personal_identity: {
+    en: 'Personal Identity Without Consent',
+    zh: '未经许可的个人身份',
+    es: 'Identidad Personal Sin Consentimiento',
+    de: 'Persönliche Identität Ohne Einwilligung',
+    fr: 'Identité Personnelle Sans Consentement',
+    hi: 'बिना अनुमति व्यक्तिगत पहचान',
+    pt: 'Identidade Pessoal Sem Consentimento',
+  },
+  confusingly_similar: {
+    en: 'Confusingly Similar to Existing Mark',
+    zh: '与现有商标混淆相似',
+    es: 'Confusamente Similar a Marca Existente',
+    de: 'Verwechslungsgefahr mit Bestehender Marke',
+    fr: 'Similaire à une Marque Existante',
+    hi: 'मौजूदा ट्रेडमार्क से भ्रामक रूप से समान',
+    pt: 'Confusamente Similar a Marca Existente',
+  },
+  famous_mark: {
+    en: 'Famous or Notorious Mark',
+    zh: '知名或著名商标',
+    es: 'Marca Famosa o Notoriamente Conocida',
+    de: 'Bekannte oder Berühmte Marke',
+    fr: 'Marque Célèbre ou Notoirement Connue',
+    hi: 'प्रसिद्ध या विख्यात ट्रेडमार्क',
+    pt: 'Marca Famosa ou Notoriamente Conhecida',
+  },
+  protected_characters: {
+    en: 'Protected Characters / Titles',
+    zh: '受保护的角色/标题',
+    es: 'Personajes / Títulos Protegidos',
+    de: 'Geschützte Figuren / Titel',
+    fr: 'Personnages / Titres Protégés',
+    hi: 'संरक्षित पात्र/शीर्षक',
+    pt: 'Personagens / Títulos Protegidos',
+  },
+  geographic_indication: {
+    en: 'Protected Geographic Indication',
+    zh: '受保护的地理标志',
+    es: 'Indicación Geográfica Protegida',
+    de: 'Geschützte Geografische Angabe',
+    fr: 'Indication Géographique Protégée',
+    hi: 'संरक्षित भौगोलिक संकेत',
+    pt: 'Indicação Geográfica Protegida',
+  },
+  immoral_offensive: {
+    en: 'Contrary to Public Order / Morality',
+    zh: '违反公共秩序/道德',
+    es: 'Contrario al Orden Público / Moral',
+    de: 'Gegen Öffentliche Ordnung / Moral',
+    fr: 'Contraire à l\'Ordre Public / Moralité',
+    hi: 'सार्वजनिक व्यवस्था/नैतिकता के विरुद्ध',
+    pt: 'Contrário à Ordem Pública / Moralidade',
+  },
+  isolated_color: {
+    en: 'Isolated Color (Not Distinctive)',
+    zh: '单一颜色（缺乏显著性）',
+    es: 'Color Aislado (No Distintivo)',
+    de: 'Einzelfarbe (Nicht Unterscheidungskräftig)',
+    fr: 'Couleur Isolée (Non Distinctive)',
+    hi: 'अकेला रंग (विशिष्ट नहीं)',
+    pt: 'Cor Isolada (Não Distintiva)',
+  },
+  non_distinctive_nontrad: {
+    en: 'Non-Distinctive Non-Traditional Mark',
+    zh: '缺乏显著性的非传统标志',
+    es: 'Marca No Tradicional Sin Distintividad',
+    de: 'Nicht Unterscheidungskräftiges Nicht-Traditionelles Zeichen',
+    fr: 'Marque Non Traditionnelle Non Distinctive',
+    hi: 'गैर-विशिष्ट अपारंपरिक चिह्न',
+    pt: 'Marca Não Tradicional Sem Distintividade',
+  },
+  bad_faith: {
+    en: 'Bad Faith Filing',
+    zh: '恶意申请',
+    es: 'Solicitud de Mala Fe',
+    de: 'Bösgläubige Anmeldung',
+    fr: 'Dépôt de Mauvaise Foi',
+    hi: 'बुरे इरादे से दाखिल',
+    pt: 'Depósito de Má-fé',
+  },
+};
+
 export type { ClearanceResult };
 
 export default function TrademarkClearancePanel({ markName, classes, language, autoRun = true, onResult }: Props) {
@@ -74,6 +203,7 @@ export default function TrademarkClearancePanel({ markName, classes, language, a
   const [webExpanded, setWebExpanded] = useState(false);
   const [marciaExpanded, setMarciaExpanded] = useState(false);
   const [domainExpanded, setDomainExpanded] = useState(false);
+  const [registrabilityExpanded, setRegistrabilityExpanded] = useState(true);
   const runningRef = useRef(false);
 
   const lang = (language === 'es' ? 'es' : language === 'zh' ? 'zh' : language === 'de' ? 'de' : language === 'fr' ? 'fr' : language === 'hi' ? 'hi' : language === 'pt' ? 'pt' : 'en') as 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt';
@@ -157,13 +287,13 @@ export default function TrademarkClearancePanel({ markName, classes, language, a
         <Loader2 size={15} className="text-gray-400 animate-spin flex-shrink-0" />
         <p className="text-xs text-gray-500">
           {t(
-            'Searching IMPI MARCia, web, and checking domain availability…',
-            '正在搜索IMPI MARCia、网络并检查域名可用性…',
-            'Buscando en IMPI MARCia, web y verificando disponibilidad de dominio…',
+            'Analyzing mark, searching IMPI MARCia, web, and checking domain availability…',
+            '正在分析商标、搜索IMPI MARCia、网络并检查域名可用性…',
+            'Analizando marca, buscando en IMPI MARCia, web y verificando disponibilidad de dominio…',
             undefined,
             undefined,
-            'IMPI MARCia, वेब पर खोज हो रही है और डोमेन उपलब्धता जांची जा रही है…',
-            'Pesquisando no IMPI MARCia, na web e verificando disponibilidade de domínio…'
+            'चिह्न का विश्लेषण हो रहा है, IMPI MARCia, वेब पर खोज हो रही है और डोमेन उपलब्धता जांची जा रही है…',
+            'Analisando marca, pesquisando no IMPI MARCia, na web e verificando disponibilidade de domínio…'
           )}
         </p>
       </div>
@@ -195,6 +325,10 @@ export default function TrademarkClearancePanel({ markName, classes, language, a
   const domainResults = result.domainResults || [];
   const availableCount = domainResults.filter(d => d.status === 'available').length;
   const takenCount = domainResults.filter(d => d.status === 'taken').length;
+  const regFlags = result.registrabilityFlags ?? [];
+  const highFlags = regFlags.filter(f => f.severity === 'high');
+  const mediumFlags = regFlags.filter(f => f.severity === 'medium');
+  const lowFlags = regFlags.filter(f => f.severity === 'low');
 
   return (
     <div className={`mt-3 rounded-xl border ${cfg.border} ${cfg.bg} overflow-hidden`}>
@@ -221,7 +355,104 @@ export default function TrademarkClearancePanel({ markName, classes, language, a
         </button>
       </div>
 
-      {/* MARCia findings — first */}
+      {/* Registrability analysis (LFPPI) — first, most actionable */}
+      <div className="border-t border-gray-100 bg-white/60">
+        <button
+          type="button"
+          onClick={() => setRegistrabilityExpanded(v => !v)}
+          className="w-full flex items-center justify-between px-4 py-2 text-xs font-medium text-gray-600 hover:bg-white/80 transition-colors"
+        >
+          <span className="flex items-center gap-1.5">
+            <Scale size={12} className="text-[#2d5a2d]" />
+            {regFlags.length === 0
+              ? t('Registrability Analysis (LFPPI) — No issues', '可注册性分析（LFPPI）— 无问题', 'Análisis de Registrabilidad (LFPPI) — Sin problemas', undefined, undefined, 'पंजीकरण योग्यता विश्लेषण (LFPPI) — कोई समस्या नहीं', 'Análise de Registrabilidade (LFPPI) — Sem problemas')
+              : t(
+                  `Registrability Analysis (LFPPI) — ${regFlags.length} issue${regFlags.length !== 1 ? 's' : ''} detected`,
+                  `可注册性分析（LFPPI）— 检测到${regFlags.length}个问题`,
+                  `Análisis de Registrabilidad (LFPPI) — ${regFlags.length} problema${regFlags.length !== 1 ? 's' : ''} detectado${regFlags.length !== 1 ? 's' : ''}`,
+                  undefined, undefined,
+                  `पंजीकरण योग्यता विश्लेषण (LFPPI) — ${regFlags.length} समस्या${regFlags.length !== 1 ? 'एं' : ''} मिलीं`,
+                  `Análise de Registrabilidade (LFPPI) — ${regFlags.length} problema${regFlags.length !== 1 ? 's' : ''} detectado${regFlags.length !== 1 ? 's' : ''}`
+                )}
+          </span>
+          {registrabilityExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+        </button>
+        {registrabilityExpanded && (
+          <div className="px-4 pb-3">
+            {regFlags.length === 0 ? (
+              <div className="flex items-center gap-2 text-xs text-emerald-700">
+                <CheckCircle2 size={13} className="text-emerald-500 flex-shrink-0" />
+                <span>
+                  {t(
+                    'No absolute grounds for refusal under the LFPPI were detected for this mark.',
+                    '根据LFPPI，未检测到该商标存在绝对驳回事由。',
+                    'No se detectaron causales absolutas de negativa bajo la LFPPI para esta marca.',
+                    undefined, undefined,
+                    'इस चिह्न के लिए LFPPI के तहत कोई पूर्ण अस्वीकृति का आधार नहीं मिला।',
+                    'Nenhuma causa absoluta de recusa sob a LFPPI foi detectada para esta marca.'
+                  )}
+                </span>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {[...highFlags, ...mediumFlags, ...lowFlags].map((flag, i) => {
+                  const severityClasses = {
+                    high: 'bg-red-50 border-red-200 text-red-800',
+                    medium: 'bg-amber-50 border-amber-200 text-amber-800',
+                    low: 'bg-blue-50 border-blue-200 text-blue-800',
+                  }[flag.severity];
+                  const severityBadge = {
+                    high: 'bg-red-100 text-red-700',
+                    medium: 'bg-amber-100 text-amber-700',
+                    low: 'bg-blue-100 text-blue-700',
+                  }[flag.severity];
+                  const severityLabel = {
+                    high: t('High', '高', 'Alto', undefined, undefined, 'उच्च', 'Alto'),
+                    medium: t('Medium', '中', 'Medio', undefined, undefined, 'मध्यम', 'Médio'),
+                    low: t('Low', '低', 'Bajo', undefined, undefined, 'कम', 'Baixo'),
+                  }[flag.severity];
+                  const categoryLabel = CATEGORY_LABELS[flag.category]?.[lang] ?? flag.category;
+                  return (
+                    <div key={i} className={`border rounded-lg px-3 py-2.5 ${severityClasses}`}>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide ${severityBadge}`}>
+                          {severityLabel}
+                        </span>
+                        <span className="text-xs font-semibold">{categoryLabel}</span>
+                      </div>
+                      <p className="text-xs leading-relaxed opacity-90">{flag.explanation}</p>
+                    </div>
+                  );
+                })}
+                <p className="text-xs text-gray-500 leading-relaxed mt-1 flex items-start gap-1">
+                  <Info size={11} className="flex-shrink-0 mt-0.5 text-gray-400" />
+                  {t(
+                    'These issues may lead to IMPI refusing the application. Filing is still allowed — you assume full registrability risk.',
+                    '这些问题可能导致IMPI驳回申请。仍允许提交申请，但您自行承担可注册性风险。',
+                    'Estos problemas pueden llevar a que el IMPI rechace la solicitud. El trámite sigue permitido — usted asume todo el riesgo de registrabilidad.',
+                    undefined, undefined,
+                    'ये समस्याएं IMPI द्वारा आवेदन अस्वीकार करने का कारण बन सकती हैं। दाखिल करना अभी भी अनुमत है — आप पूर्ण पंजीकरण योग्यता जोखिम वहन करते हैं।',
+                    'Esses problemas podem levar o IMPI a recusar o pedido. O protocolo ainda é permitido — você assume todo o risco de registrabilidade.'
+                  )}
+                </p>
+              </div>
+            )}
+            <p className="text-xs text-gray-400 mt-2 leading-relaxed flex items-start gap-1">
+              <Info size={10} className="flex-shrink-0 mt-0.5" />
+              {t(
+                'AI analysis based on Mexico\'s Ley Federal de Protección a la Propiedad Industrial (LFPPI). Not legal advice.',
+                '基于墨西哥《联邦工业产权保护法》(LFPPI)的AI分析，不构成法律建议。',
+                'Análisis de IA basado en la Ley Federal de Protección a la Propiedad Industrial (LFPPI) de México. No constituye asesoría legal.',
+                undefined, undefined,
+                'मेक्सिको की Ley Federal de Protección a la Propiedad Industrial (LFPPI) पर आधारित AI विश्लेषण। यह कानूनी सलाह नहीं है।',
+                'Análise de IA baseada na Ley Federal de Protección a la Propiedad Industrial (LFPPI) do México. Não constitui assessoria jurídica.'
+              )}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* MARCia findings — second */}
       <div className="border-t border-gray-100 bg-white/60">
         <button
           type="button"
@@ -288,7 +519,7 @@ export default function TrademarkClearancePanel({ markName, classes, language, a
         )}
       </div>
 
-      {/* Web findings — second */}
+      {/* Web findings — third */}
       {result.webFindings.length > 0 && (
         <div className="border-t border-gray-100 bg-white/60">
           <button
@@ -322,7 +553,7 @@ export default function TrademarkClearancePanel({ markName, classes, language, a
         </div>
       )}
 
-      {/* Domain availability — third */}
+      {/* Domain availability — fourth */}
       {domainResults.length > 0 && (
         <div className="border-t border-gray-100 bg-white/60">
           <button

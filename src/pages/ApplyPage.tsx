@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { CheckCircle2, ChevronRight, Upload, X, Plus, Trash2, Lock, CreditCard, AlertCircle, Sparkles, Tag, Loader2, Pencil, Eye, EyeOff, UserPlus, HelpCircle, Info, Save } from 'lucide-react';
+import { CheckCircle2, ChevronRight, Upload, X, Plus, Trash2, Lock, CreditCard, AlertCircle, AlertTriangle, Sparkles, Tag, Loader2, Pencil, Eye, EyeOff, UserPlus, HelpCircle, Info, Save } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { useLanguage } from '../context/LanguageContext';
@@ -517,6 +517,9 @@ export default function ApplyPage() {
 
   const [clearanceResults, setClearanceResults] = useState<Record<string, ClearanceResult>>({});
   const [showConflictModal, setShowConflictModal] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [agreedToDisclaimer, setAgreedToDisclaimer] = useState(false);
+  const [disclaimerError, setDisclaimerError] = useState(false);
 
   const suggestedName = useRef<string>('');
 
@@ -1005,6 +1008,9 @@ export default function ApplyPage() {
           priority_app_number: form.priorityAppNumber,
           priority_filing_date: form.priorityFilingDate || null,
           source: 'website',
+          terms_accepted: agreedToTerms,
+          disclaimer_accepted: agreedToDisclaimer,
+          disclaimer_accepted_at: agreedToDisclaimer ? new Date().toISOString() : null,
         }).select().maybeSingle();
 
         if (!appData) throw new Error('Failed to create application record');
@@ -1820,6 +1826,163 @@ export default function ApplyPage() {
                       {tri('Spanish translation status: Pending admin review. Our team will review and confirm all translations before filing.', '西班牙语翻译状态：待管理员审查。我们的团队将在提交前审查并确认所有翻译。', 'Estado de redacción en español: Pendiente de revisión. Nuestro equipo revisará y confirmará la redacción antes de presentar la solicitud.', 'Status der spanischen Übersetzung: Ausstehende Prüfung. Unser Team prüft und bestätigt alle Übersetzungen vor der Einreichung.', 'Statut de la traduction espagnole : Révision en attente. Notre équipe examinera et confirmera toutes les traductions avant le dépôt.', 'स्पेनिश अनुवाद स्थिति: व्यवस्थापक समीक्षा लंबित। हमारी टीम दाखिल करने से पहले सभी अनुवादों की समीक्षा करेगी।', 'Status da tradução para espanhol: Revisão pendente. Nossa equipe revisará e confirmará todas as traduções antes do protocolo.', 'スペイン語翻訳状態：管理者審査待ち。出願前にチームが全翻訳を確認します。')}
                     </p>
                   </div>
+
+                  {/* Registrability risk summary from clearance checks */}
+                  {(() => {
+                    const allFlags = Object.values(clearanceResults).flatMap(r => r.registrabilityFlags ?? []);
+                    const highCount = allFlags.filter(f => f.severity === 'high').length;
+                    const medCount = allFlags.filter(f => f.severity === 'medium').length;
+                    if (allFlags.length === 0) return null;
+                    return (
+                      <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                        <div className="flex items-start gap-2 mb-2">
+                          <AlertCircle size={15} className="text-red-600 flex-shrink-0 mt-0.5" />
+                          <p className="text-xs font-bold text-red-800">
+                            {tri(
+                              `Registrability Risk Detected (${allFlags.length} issue${allFlags.length !== 1 ? 's' : ''})`,
+                              `检测到可注册性风险（${allFlags.length}个问题）`,
+                              `Riesgo de Registrabilidad Detectado (${allFlags.length} problema${allFlags.length !== 1 ? 's' : ''})`,
+                              `Registrierbarkeitsrisiko erkannt (${allFlags.length} Problem${allFlags.length !== 1 ? 'e' : ''})`,
+                              `Risque de registrabilité détecté (${allFlags.length} problème${allFlags.length !== 1 ? 's' : ''})`,
+                              `पंजीकरण योग्यता जोखिम मिला (${allFlags.length} समस्या${allFlags.length !== 1 ? 'एं' : ''})`,
+                              `Risco de Registrabilidade Detectado (${allFlags.length} problema${allFlags.length !== 1 ? 's' : ''})`,
+                              `登録可能性リスク検出 (${allFlags.length}件の問題)`
+                            )}
+                          </p>
+                        </div>
+                        {(highCount > 0 || medCount > 0) && (
+                          <p className="text-xs text-red-700 mb-2 leading-relaxed">
+                            {tri(
+                              `Our AI analysis detected ${highCount > 0 ? `${highCount} high-severity` : ''}${highCount > 0 && medCount > 0 ? ' and ' : ''}${medCount > 0 ? `${medCount} medium-severity` : ''} issue${(highCount + medCount) !== 1 ? 's' : ''} that may cause IMPI to refuse this mark. Review the Goods & Services step for details.`,
+                              `AI分析检测到${highCount > 0 ? `${highCount}个高风险` : ''}${highCount > 0 && medCount > 0 ? '和' : ''}${medCount > 0 ? `${medCount}个中等风险` : ''}问题，可能导致IMPI驳回该商标。请在商品和服务步骤中查看详情。`,
+                              `Nuestro análisis de IA detectó ${highCount > 0 ? `${highCount} problema${highCount !== 1 ? 's' : ''} de alta gravedad` : ''}${highCount > 0 && medCount > 0 ? ' y ' : ''}${medCount > 0 ? `${medCount} de gravedad media` : ''} que pueden causar que el IMPI rechace esta marca. Revisa el paso de Bienes y Servicios para más detalles.`,
+                              undefined, undefined, undefined, undefined,
+                              `当社のAI分析では、IMPIがこの商標を拒絶する可能性がある${highCount > 0 ? `高重大度${highCount}件` : ''}${highCount > 0 && medCount > 0 ? 'および' : ''}${medCount > 0 ? `中重大度${medCount}件` : ''}の問題が検出されました。`
+                            )}
+                          </p>
+                        )}
+                        <p className="text-xs text-red-600 font-medium">
+                          {tri(
+                            'Filing is allowed at your own risk. All fees are non-refundable regardless of IMPI\'s decision.',
+                            '您可自行承担风险继续提交。无论IMPI的决定如何，所有费用均不予退还。',
+                            'Puedes presentar la solicitud bajo tu propio riesgo. Todos los honorarios son no reembolsables independientemente de la decisión del IMPI.',
+                            'Eine Anmeldung ist auf eigenes Risiko möglich. Alle Gebühren sind unabhängig von der Entscheidung des IMPI nicht erstattungsfähig.',
+                            'Le dépôt est autorisé à vos risques. Tous les honoraires sont non remboursables quelle que soit la décision de l\'IMPI.',
+                            'दाखिल करना आपके अपने जोखिम पर अनुमत है। IMPI के निर्णय की परवाह किए बिना सभी शुल्क वापस नहीं होंगे।',
+                            'O protocolo é permitido por sua conta e risco. Todos os honorários são irrecuperáveis independentemente da decisão do IMPI.',
+                            '出願はご自身のリスクで許可されています。IMPIの決定に関わらず、すべての料金は返金不可です。'
+                          )}
+                        </p>
+                      </div>
+                    );
+                  })()}
+
+                  {/* No-guarantee / no-refund disclaimer + checkboxes */}
+                  <div className="border-2 border-red-300 rounded-xl overflow-hidden">
+                    <div className="bg-red-600 px-4 py-3 flex items-center gap-2">
+                      <AlertTriangle size={15} className="text-white flex-shrink-0" />
+                      <p className="text-sm font-bold text-white">
+                        {tri(
+                          'Important Disclaimer — Please Read Before Proceeding',
+                          '重要声明 — 继续前请仔细阅读',
+                          'Aviso Importante — Lea Antes de Continuar',
+                          'Wichtiger Hinweis — Bitte Vor dem Fortfahren Lesen',
+                          'Avis Important — Veuillez Lire Avant de Continuer',
+                          'महत्वपूर्ण अस्वीकरण — आगे बढ़ने से पहले पढ़ें',
+                          'Aviso Importante — Leia Antes de Continuar',
+                          '重要な免責事項 — 続行前にお読みください'
+                        )}
+                      </p>
+                    </div>
+                    <div className="bg-red-50 px-4 py-4 space-y-3">
+                      <p className="text-xs text-red-900 leading-relaxed">
+                        {tri(
+                          'Filing a trademark application does not guarantee registration. IMPI (Instituto Mexicano de la Propiedad Industrial) may refuse the application for any of the grounds established in Mexico\'s Ley Federal de Protección a la Propiedad Industrial (LFPPI), including but not limited to: descriptive or generic marks, confusingly similar prior marks, famous or notorious marks, deceptive signs, geographic indications, official emblems, and marks contrary to public order. The automated clearance analysis provided is preliminary and informational only — it does not constitute a legal clearance opinion or guarantee of registrability.',
+                          '提交商标申请并不保证注册成功。IMPI（墨西哥工业产权局）可能基于墨西哥《联邦工业产权保护法》（LFPPI）规定的任何理由驳回申请，包括但不限于：描述性或通用性标志、与在先商标混淆相似、知名商标、欺骗性标志、地理标志、官方徽章及违反公共秩序的标志。所提供的自动检索分析仅供参考，不构成法律检索意见或可注册性保证。',
+                          'La presentación de una solicitud de registro de marca no garantiza su registro. El IMPI (Instituto Mexicano de la Propiedad Industrial) puede rechazar la solicitud por cualquiera de los motivos establecidos en la Ley Federal de Protección a la Propiedad Industrial (LFPPI) de México, incluyendo pero no limitándose a: signos descriptivos o genéricos, marcas confundiblemente similares a marcas previas, marcas famosas o notoriamente conocidas, signos engañosos, indicaciones geográficas, emblemas oficiales y signos contrarios al orden público. El análisis de disponibilidad automatizado proporcionado es únicamente preliminar e informativo — no constituye una opinión legal de disponibilidad ni garantía de registrabilidad.',
+                          'Die Einreichung einer Markenanmeldung garantiert keine Eintragung. Das IMPI kann den Antrag aus jedem der in Mexikos LFPPI festgelegten Gründe ablehnen. Die automatisierte Recherche ist nur vorläufig und informativ.',
+                          'Le dépôt d\'une demande de marque ne garantit pas l\'enregistrement. L\'IMPI peut refuser la demande pour tout motif prévu par la LFPPI mexicaine. L\'analyse automatisée est uniquement préliminaire et informative.',
+                          'ट्रेडमार्क आवेदन दाखिल करना पंजीकरण की गारंटी नहीं देता। IMPI मेक्सिको की LFPPI में निर्धारित किसी भी कारण से आवेदन अस्वीकार कर सकता है। स्वचालित विश्लेषण केवल प्रारंभिक और सूचनात्मक है।',
+                          'O protocolo de um pedido de marca não garante o registro. O IMPI pode recusar o pedido por qualquer dos motivos estabelecidos na LFPPI do México. A análise automatizada é apenas preliminar e informativa.',
+                          '商標出願の提出は登録を保証するものではありません。IMPIはメキシコのLFPPIに定められたいかなる理由によっても出願を拒絶する場合があります。自動分析は予備的・情報提供のみです。'
+                        )}
+                      </p>
+                      <p className="text-xs text-red-900 leading-relaxed font-medium">
+                        {tri(
+                          'All fees paid — including our service fees and IMPI government fees — are strictly non-refundable once payment is processed, regardless of the outcome of the examination or any subsequent IMPI decision.',
+                          '一旦付款处理完成，所有已付费用——包括我们的服务费和IMPI官方费用——均严格不予退还，无论审查结果或IMPI后续决定如何。',
+                          'Todos los honorarios pagados — incluyendo nuestros honorarios de servicio y las tasas oficiales del IMPI — son estrictamente no reembolsables una vez procesado el pago, independientemente del resultado del examen o cualquier decisión posterior del IMPI.',
+                          'Alle gezahlten Gebühren — einschließlich unserer Servicegebühren und IMPI-Regierungsgebühren — sind nach der Zahlung streng nicht erstattungsfähig.',
+                          'Tous les honoraires payés — y compris nos frais de service et les taxes gouvernementales de l\'IMPI — sont strictement non remboursables une fois le paiement traité.',
+                          'भुगतान प्रसंस्कृत होने के बाद सभी भुगतान की गई फीस — सेवा शुल्क और IMPI सरकारी शुल्क सहित — सख्ती से वापस नहीं होगी।',
+                          'Todos os honorários pagos — incluindo nossas taxas de serviço e as taxas governamentais do IMPI — são estritamente irrecuperáveis uma vez que o pagamento seja processado.',
+                          '支払われたすべての料金（当社サービス料金およびIMPI政府手数料を含む）は、審査結果やIMPIのその後の決定に関わらず、支払い処理後は一切返金されません。'
+                        )}
+                      </p>
+
+                      <div className="space-y-3 pt-1">
+                        <label className="flex items-start gap-3 cursor-pointer group">
+                          <input
+                            type="checkbox"
+                            checked={agreedToTerms}
+                            onChange={e => { setAgreedToTerms(e.target.checked); if (e.target.checked) setDisclaimerError(false); }}
+                            className="mt-0.5 rounded border-red-300 text-red-600 focus:ring-red-500"
+                          />
+                          <span className="text-xs text-red-900 leading-relaxed group-hover:text-red-800">
+                            {tri(
+                              'I have read and agree to the Terms of Service governing this trademark filing service.',
+                              '我已阅读并同意管理本商标申请服务的服务条款。',
+                              'He leído y acepto los Términos de Servicio que rigen este servicio de registro de marcas.',
+                              'Ich habe die Nutzungsbedingungen für diesen Markenanmeldungsservice gelesen und stimme ihnen zu.',
+                              'J\'ai lu et j\'accepte les Conditions d\'utilisation régissant ce service de dépôt de marque.',
+                              'मैंने इस ट्रेडमार्क दाखिल करने की सेवा को नियंत्रित करने वाली सेवा शर्तें पढ़ी हैं और उनसे सहमत हूं।',
+                              'Li e concordo com os Termos de Serviço que regem este serviço de registro de marcas.',
+                              '私はこの商標出願サービスを規定する利用規約を読み、同意します。'
+                            )}
+                          </span>
+                        </label>
+
+                        <label className="flex items-start gap-3 cursor-pointer group">
+                          <input
+                            type="checkbox"
+                            checked={agreedToDisclaimer}
+                            onChange={e => { setAgreedToDisclaimer(e.target.checked); if (e.target.checked) setDisclaimerError(false); }}
+                            className="mt-0.5 rounded border-red-300 text-red-600 focus:ring-red-500"
+                          />
+                          <span className="text-xs text-red-900 leading-relaxed group-hover:text-red-800">
+                            {tri(
+                              'I understand and acknowledge that: (a) filing does not guarantee registration; (b) IMPI may refuse my application for any reason under Mexican law; (c) all fees paid are non-refundable; and (d) I assume the entire risk related to the registrability of this mark.',
+                              '我理解并承认：（a）提交申请不保证注册；（b）IMPI可能因墨西哥法律规定的任何原因驳回我的申请；（c）所有已付费用不予退还；（d）我承担与该商标可注册性相关的全部风险。',
+                              'Entiendo y reconozco que: (a) presentar la solicitud no garantiza el registro; (b) el IMPI puede rechazar mi solicitud por cualquier motivo bajo la ley mexicana; (c) todos los honorarios pagados no son reembolsables; y (d) asumo el riesgo total relacionado con la registrabilidad de esta marca.',
+                              'Ich verstehe und anerkenne, dass: (a) die Einreichung keine Eintragung garantiert; (b) das IMPI meinen Antrag aus jedem Grund nach mexikanischem Recht ablehnen kann; (c) alle gezahlten Gebühren nicht erstattungsfähig sind; und (d) ich das gesamte Risiko bezüglich der Eintragungsfähigkeit dieser Marke trage.',
+                              'Je comprends et reconnais que : (a) le dépôt ne garantit pas l\'enregistrement ; (b) l\'IMPI peut rejeter ma demande pour tout motif prévu par la loi mexicaine ; (c) tous les honoraires payés sont non remboursables ; et (d) j\'assume l\'entier risque lié à la registrabilité de cette marque.',
+                              'मैं समझता/समझती हूं और स्वीकार करता/करती हूं कि: (a) दाखिल करना पंजीकरण की गारंटी नहीं देता; (b) IMPI मेक्सिकन कानून के तहत किसी भी कारण से मेरा आवेदन अस्वीकार कर सकता है; (c) सभी भुगतान की गई फीस वापस नहीं होगी; और (d) मैं इस चिह्न की पंजीकरण योग्यता से संबंधित पूरा जोखिम वहन करता/करती हूं।',
+                              'Entendo e reconheço que: (a) o protocolo não garante o registro; (b) o IMPI pode recusar meu pedido por qualquer motivo sob a lei mexicana; (c) todos os honorários pagos são irrecuperáveis; e (d) assumo o risco total relacionado à registrabilidade desta marca.',
+                              '私は以下を理解し認めます：(a) 出願は登録を保証しない；(b) IMPIはメキシコ法のいかなる理由によっても私の出願を拒絶できる；(c) 支払われたすべての料金は返金不可；(d) この商標の登録可能性に関するリスクを全面的に引き受ける。'
+                            )}
+                          </span>
+                        </label>
+                      </div>
+
+                      {disclaimerError && (
+                        <div className="flex items-center gap-2 bg-red-100 border border-red-300 rounded-lg px-3 py-2 mt-2">
+                          <AlertCircle size={13} className="text-red-600 flex-shrink-0" />
+                          <p className="text-xs text-red-700 font-medium">
+                            {tri(
+                              'You must check both boxes above to proceed.',
+                              '您必须勾选上述两个复选框才能继续。',
+                              'Debes marcar ambas casillas para continuar.',
+                              'Sie müssen beide Kästchen ankreuzen, um fortzufahren.',
+                              'Vous devez cocher les deux cases pour continuer.',
+                              'आगे बढ़ने के लिए आपको दोनों बॉक्स चेक करने होंगे।',
+                              'Você deve marcar ambas as caixas para continuar.',
+                              '続行するには両方のチェックボックスをオンにする必要があります。'
+                            )}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             );
@@ -2138,9 +2301,15 @@ export default function ApplyPage() {
                         return;
                       }
                     }
-                    if (step === 5 && !user) {
-                      setShowAuthGate(true);
-                      return;
+                    if (step === 5) {
+                      if (!agreedToTerms || !agreedToDisclaimer) {
+                        setDisclaimerError(true);
+                        return;
+                      }
+                      if (!user) {
+                        setShowAuthGate(true);
+                        return;
+                      }
                     }
                     setStep(s => Math.min(6, s + 1) as Step);
                   }}

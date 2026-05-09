@@ -233,6 +233,94 @@ async function searchMarcia(markName: string, classes: number[]): Promise<{
   }
 }
 
+interface RegistrabilityFlag {
+  category: string;
+  severity: "low" | "medium" | "high";
+  explanation: string;
+}
+
+async function analyzeRegistrability(apiKey: string, markName: string, classes: number[]): Promise<{
+  flags: RegistrabilityFlag[];
+  risk: "low" | "medium" | "high";
+}> {
+  const classContext = classes.length > 0
+    ? ` applied for goods/services in Nice Classification class(es) ${classes.join(", ")}`
+    : "";
+
+  const prompt = `You are an expert Mexican trademark attorney. Analyze the trademark "${markName}"${classContext} against each of the following 13 absolute grounds for refusal under Mexico's Ley Federal de Protección a la Propiedad Industrial (LFPPI). For every category that may apply, return a flag. Return ONLY a JSON object.
+
+Categories to evaluate:
+1. "generic_descriptive" — Generic or descriptive terms that directly describe the product/service (e.g., "Cremoso" for yogurt, "Fast Delivery" for courier)
+2. "functional_shape" — Common or functional product shapes/forms necessary for technical function
+3. "deceptive" — Signs that mislead about geographic origin, quality, or nature (e.g., "Swiss Chocolate" for non-Swiss products)
+4. "official_emblems" — National flags, government emblems, symbols of international organizations (UN, Red Cross, etc.)
+5. "personal_identity" — Names, likenesses, signatures of real persons without consent (celebrities, public figures)
+6. "confusingly_similar" — Names visually, phonetically, or conceptually similar to well-known existing brands that could cause consumer confusion
+7. "famous_mark" — Reproduction or imitation of a famous or notorious mark even in unrelated classes (e.g., Apple, Google, Ferrari)
+8. "protected_characters" — Titles of famous works or well-known fictional characters/franchises (Harry Potter, Marvel, Star Wars)
+9. "geographic_indication" — Protected geographic indications or appellations of origin (Tequila, Mezcal, Champagne, Roquefort)
+10. "immoral_offensive" — Signs contrary to public order, morality, or applicable law (offensive, discriminatory, or illegal terms)
+11. "isolated_color" — A single color with no other distinctive elements
+12. "non_distinctive_nontrad" — Non-traditional marks (sounds, scents, trade dress) that lack distinctiveness or are functional
+13. "bad_faith" — Marks that appear to be filed in bad faith to pirate an existing brand or block legitimate use
+
+Highly weak terms to flag under generic_descriptive: "Tech", "Digital", "AI", "Legal", "Fintech", "Mexico", "Center", "Solutions", "Digital", "Online", "Smart", "Pro", "Plus", "Max", "Global", "International", "Express", "Fast", "Premium", "Elite", "Quality", "Best", "Super", "Ultra".
+
+Return:
+{
+  "flags": [
+    {
+      "category": "<one of the 13 keys above>",
+      "severity": "low" | "medium" | "high",
+      "explanation": "<one sentence explaining why this category may apply to this specific mark>"
+    }
+  ],
+  "risk": "low" | "medium" | "high",
+  "summary": "<one sentence overall assessment>"
+}
+
+Only include flags that genuinely apply. If no issues are found, return an empty flags array with risk "low". Return ONLY the JSON, no markdown.`;
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: "You are a Mexican trademark law expert. Return only valid JSON." },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.1,
+        max_tokens: 1000,
+        response_format: { type: "json_object" },
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("Registrability analysis API error:", response.status);
+      return { flags: [], risk: "low" };
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) return { flags: [], risk: "low" };
+
+    const parsed = JSON.parse(content);
+    const flags: RegistrabilityFlag[] = (parsed.flags ?? []).filter(
+      (f: Record<string, unknown>) => f.category && f.severity && f.explanation
+    );
+    const risk: "low" | "medium" | "high" = parsed.risk ?? (flags.length > 0 ? "medium" : "low");
+    return { flags, risk };
+  } catch (err) {
+    console.error("Registrability analysis error:", err);
+    return { flags: [], risk: "low" };
+  }
+}
+
 async function searchWeb(apiKey: string, markName: string, classes: number[]): Promise<{
   findings: string[];
   risk: "low" | "medium" | "high";
@@ -360,10 +448,11 @@ Deno.serve(async (req: Request) => {
     }
 
     // Run all checks in parallel
-    const [webResult, marciaResult, domainResults] = await Promise.all([
+    const [webResult, marciaResult, domainResults, registrabilityResult] = await Promise.all([
       searchWeb(apiKey, markName.trim(), classes),
       searchMarcia(markName.trim(), classes),
       checkDomains(markName.trim()),
+      analyzeRegistrability(apiKey, markName.trim(), classes),
     ]);
 
     // Compute combined risk
@@ -378,6 +467,12 @@ Deno.serve(async (req: Request) => {
         risk = "medium";
       }
     }
+    // Factor in registrability risk
+    if (registrabilityResult.risk === "high") {
+      risk = "high";
+    } else if (registrabilityResult.risk === "medium" && risk === "low") {
+      risk = "medium";
+    }
 
     const disclaimer =
       language === "zh" ? DISCLAIMER_ZH :
@@ -391,6 +486,8 @@ Deno.serve(async (req: Request) => {
       marciaTotalCount: marciaResult.totalCount,
       marciaUrl: marciaResult.marciaUrl,
       domainResults,
+      registrabilityFlags: registrabilityResult.flags,
+      registrabilityRisk: registrabilityResult.risk,
       disclaimer,
     };
 
