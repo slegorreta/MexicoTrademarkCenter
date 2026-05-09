@@ -11,6 +11,7 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
+import { COUNTRIES } from '../lib/countries';
 
 // ─── Stripe singleton ─────────────────────────────────────────────────────────
 const stripePromise = (() => {
@@ -40,6 +41,8 @@ interface DocketRow {
   trademark_name: string;
   mark_type: string;
   logo_preview_url: string | null;
+  // applicant country
+  country: string | null;
   // per-class fields (null when no classes yet)
   class_id: string | null;
   class_number: number | null;
@@ -634,6 +637,7 @@ function DocketTable({
               <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide w-8"></th>
               <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide">Mark</th>
               <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide">Case No.</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide">Country</th>
               <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide">Class</th>
               <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide">Status</th>
               <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide">App. Status</th>
@@ -676,6 +680,13 @@ function DocketTable({
                     {/* Case number */}
                     <td className="px-4 py-3">
                       <span className="text-xs font-mono text-gray-600">{row.case_number}</span>
+                    </td>
+
+                    {/* Country */}
+                    <td className="px-4 py-3">
+                      {row.country
+                        ? <span className="text-xs text-gray-700">{row.country}</span>
+                        : <span className="text-xs text-gray-300 italic">—</span>}
                     </td>
 
                     {/* Class */}
@@ -723,12 +734,14 @@ function DocketTable({
 
                     {/* Receipt */}
                     <td className="px-4 py-3 text-center">
-                      {isPaid && row.receipt_url ? (
-                        <a href={row.receipt_url} target="_blank" rel="noopener noreferrer"
+                      {isPaid ? (
+                        <button
+                          onClick={() => onViewDetail(row.app_id)}
                           className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#f0f7f0] border border-[#c8e0c8] text-[#2d5a2d] hover:bg-[#2d5a2d] hover:text-white transition-colors"
-                          title="View receipt">
+                          title="View & download receipt"
+                        >
                           <Receipt size={13} />
-                        </a>
+                        </button>
                       ) : (
                         <span className="text-xs text-gray-300">—</span>
                       )}
@@ -817,7 +830,7 @@ function DocketTable({
 
 // ─── Filing Particulars card ──────────────────────────────────────────────────
 
-function FilingParticularsCard({ app, printRef, receiptUrl }: { app: AppDetail; printRef: React.RefObject<HTMLDivElement | null>; receiptUrl?: string | null }) {
+function FilingParticularsCard({ app, printRef, onDownloadReceipt }: { app: AppDetail; printRef: React.RefObject<HTMLDivElement | null>; onDownloadReceipt?: () => void }) {
   const trademark = Array.isArray(app.trademarks) ? app.trademarks[0] : app.trademarks;
   const classes = app.trademark_classes ?? [];
 
@@ -855,16 +868,14 @@ function FilingParticularsCard({ app, printRef, receiptUrl }: { app: AppDetail; 
             </span>
           </div>
         </div>
-        {receiptUrl && (
-          <a
-            href={receiptUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+        {onDownloadReceipt && (
+          <button
+            onClick={onDownloadReceipt}
             className="flex-shrink-0 flex items-center gap-1.5 text-xs font-medium text-[#2d5a2d] border border-[#c8e0c8] bg-[#f0f7f0] hover:bg-[#2d5a2d] hover:text-white px-3 py-1.5 rounded-lg transition-colors"
-            title="View payment receipt"
+            title="Download PDF receipt"
           >
             <Receipt size={13} /> Receipt
-          </a>
+          </button>
         )}
       </div>
 
@@ -948,6 +959,7 @@ function ApplicationDetail({ appId, onBack }: { appId: string; onBack: () => voi
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
+  const [paymentInfo, setPaymentInfo] = useState<{ amount_usd: number; paid_at: string; stripe_payment_intent_id: string } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -961,11 +973,13 @@ function ApplicationDetail({ appId, onBack }: { appId: string; onBack: () => voi
       supabase.from('timeline_events').select('id, event_type, title, description, created_at').eq('application_id', appId).eq('is_visible_to_client', true).order('created_at', { ascending: false }),
       supabase.from('uploaded_files').select('id, file_name, category, file_path, file_size_bytes, created_at').eq('application_id', appId).eq('visible_to_client', true).order('created_at', { ascending: false }),
       supabase.from('client_messages').select('id, sender_role, content, is_read, created_at').eq('application_id', appId).order('created_at', { ascending: true }),
-      supabase.from('payments').select('receipt_url').eq('application_id', appId).eq('status', 'paid').maybeSingle(),
+      supabase.from('payments').select('receipt_url, amount_usd, paid_at, stripe_payment_intent_id').eq('application_id', appId).eq('status', 'paid').maybeSingle(),
     ]);
-    const receiptUrl = paymentRes.data?.receipt_url && paymentRes.data.receipt_url.length > 0
-      ? paymentRes.data.receipt_url
-      : null;
+    const pd = paymentRes.data;
+    const receiptUrl = pd?.receipt_url && pd.receipt_url.length > 0 ? pd.receipt_url : null;
+    if (pd?.amount_usd && pd?.paid_at) {
+      setPaymentInfo({ amount_usd: Number(pd.amount_usd), paid_at: pd.paid_at, stripe_payment_intent_id: pd.stripe_payment_intent_id ?? '' });
+    }
     const appData = appRes.data ? { ...(appRes.data as AppDetail), receipt_url: receiptUrl } : null;
     setApp(appData);
     setTimeline(timelineRes.data ?? []);
@@ -1041,6 +1055,102 @@ function ApplicationDetail({ appId, onBack }: { appId: string; onBack: () => voi
     setTimeout(() => { win.print(); win.close(); }, 300);
   };
 
+  const handleDownloadReceipt = () => {
+    if (!app || !paymentInfo) return;
+    const tm = Array.isArray(app.trademarks) ? app.trademarks[0] : app.trademarks;
+    const classes = (app.trademark_classes ?? []).map(c => `Class ${c.class_number} — ${c.class_title_en}`).join(', ') || '—';
+    const countryName = app.clients?.country
+      ? (COUNTRIES.find(c => c.code === app.clients!.country)?.en ?? app.clients.country)
+      : '—';
+    const piShort = paymentInfo.stripe_payment_intent_id
+      ? paymentInfo.stripe_payment_intent_id.replace('pi_', '').slice(-12).toUpperCase()
+      : '—';
+    const paidDate = paymentInfo.paid_at ? new Date(paymentInfo.paid_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '—';
+    const amount = `USD $${Number(paymentInfo.amount_usd).toFixed(2)}`;
+
+    const win = window.open('', '_blank');
+    if (!win) return;
+    win.document.write(`<!DOCTYPE html><html><head><title>Receipt — ${app.case_number}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;color:#111;background:#fff;padding:0}
+  .page{max-width:680px;margin:0 auto;padding:48px 40px}
+  .header{background:#1a2e1a;color:#fff;border-radius:10px 10px 0 0;padding:28px 32px;display:flex;align-items:center;justify-content:space-between}
+  .brand{font-size:22px;font-weight:800;letter-spacing:-0.5px;color:#fff}
+  .brand-sub{font-size:11px;color:#a3c4a3;margin-top:2px;letter-spacing:.04em}
+  .stamp{background:#22c55e;color:#fff;font-size:13px;font-weight:800;padding:6px 18px;border-radius:20px;letter-spacing:.08em;text-transform:uppercase}
+  .receipt-title{margin:28px 0 6px;font-size:20px;font-weight:700;color:#1a2e1a}
+  .receipt-sub{font-size:12px;color:#6b7280}
+  .ref{font-size:11px;color:#9ca3af;margin-top:4px;font-family:monospace}
+  .divider{border:none;border-top:1px solid #e5e7eb;margin:20px 0}
+  .section-title{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#6b7280;font-weight:700;margin-bottom:10px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 24px;margin-bottom:20px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px 24px;margin-bottom:20px}
+  dt{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:600;margin-bottom:3px}
+  dd{font-size:13px;font-weight:600;color:#111;word-break:break-word}
+  dd.mono{font-family:monospace;color:#1a2e1a;font-size:12px}
+  .amount-table{width:100%;border-collapse:collapse;margin:12px 0}
+  .amount-table td{padding:8px 0;font-size:13px;border-bottom:1px solid #f3f4f6}
+  .amount-table td:last-child{text-align:right;font-weight:600}
+  .amount-table tr.total td{border-bottom:none;border-top:2px solid #1a2e1a;padding-top:12px;font-size:15px;font-weight:800;color:#1a2e1a}
+  .footer{margin-top:36px;padding-top:20px;border-top:1px solid #e5e7eb;font-size:11px;color:#9ca3af;line-height:1.6;text-align:center}
+  @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}.page{padding:32px 28px}}
+</style>
+</head><body>
+<div class="page">
+  <div class="header">
+    <div>
+      <div class="brand">MarcaTec</div>
+      <div class="brand-sub">Mexico Trademark Filing Services</div>
+    </div>
+    <div class="stamp">PAID</div>
+  </div>
+
+  <div class="receipt-title">Official Payment Receipt</div>
+  <div class="receipt-sub">This document serves as proof of payment for trademark filing services.</div>
+  <div class="ref">Reference: ${piShort} &nbsp;·&nbsp; Issued: ${paidDate}</div>
+
+  <hr class="divider" />
+
+  <div class="section-title">Applicant Information</div>
+  <div class="grid">
+    <div><dt>Name / Entity</dt><dd>${app.clients?.legal_name ?? '—'}</dd></div>
+    <div><dt>Country</dt><dd>${countryName}</dd></div>
+    <div><dt>Email</dt><dd>${app.clients?.email ?? '—'}</dd></div>
+    <div><dt>Phone</dt><dd>${app.clients?.phone ?? '—'}</dd></div>
+  </div>
+
+  <hr class="divider" />
+
+  <div class="section-title">Filing Details</div>
+  <div class="grid3">
+    <div><dt>Case Number</dt><dd class="mono">${app.case_number}</dd></div>
+    <div><dt>Mark Name</dt><dd>${tm?.mark_name ?? '—'}</dd></div>
+    <div><dt>Mark Type</dt><dd>${tm?.mark_type ? tm.mark_type.charAt(0).toUpperCase() + tm.mark_type.slice(1) : '—'}</dd></div>
+    <div style="grid-column:span 3"><dt>Nice Classification</dt><dd>${classes}</dd></div>
+  </div>
+
+  <hr class="divider" />
+
+  <div class="section-title">Payment Summary</div>
+  <table class="amount-table">
+    <tr><td>Service Fee</td><td>USD $${Number(app.service_fee_usd ?? 0).toFixed(2)}</td></tr>
+    <tr><td>Government Filing Fee (IMPI)</td><td>USD $${Number(app.government_fee_usd ?? 0).toFixed(2)}</td></tr>
+    <tr class="total"><td>Total Paid</td><td>${amount}</td></tr>
+  </table>
+
+  <div class="footer">
+    MarcaTec — Mexico Trademark Filing Services<br>
+    Payment processed on ${paidDate} · Transaction ref: ${paymentInfo.stripe_payment_intent_id}<br>
+    This receipt confirms that full payment has been received and your application is being processed.
+  </div>
+</div>
+<script>setTimeout(function(){window.print();},350);</script>
+</body></html>`);
+    win.document.close();
+    win.focus();
+  };
+
   const trademark = Array.isArray(app?.trademarks) ? app!.trademarks[0] : app?.trademarks;
   const currentStageIndex = app ? getStageIndex(app.filing_status) : 0;
 
@@ -1084,16 +1194,14 @@ function ApplicationDetail({ appId, onBack }: { appId: string; onBack: () => voi
             </div>
           </div>
           <div className="flex gap-2 flex-shrink-0 flex-wrap">
-            {app.payment_status === 'paid' && app.receipt_url && (
-              <a
-                href={app.receipt_url}
-                target="_blank"
-                rel="noopener noreferrer"
+            {app.payment_status === 'paid' && paymentInfo && (
+              <button
+                onClick={handleDownloadReceipt}
                 className="flex items-center gap-1.5 text-xs font-medium text-[#2d5a2d] border border-[#c8e0c8] bg-[#f0f7f0] hover:bg-[#2d5a2d] hover:text-white px-3 py-1.5 rounded-lg transition-colors"
-                title="View payment receipt"
+                title="Download PDF receipt"
               >
                 <Receipt size={14} /> Receipt
-              </a>
+              </button>
             )}
             <button onClick={exportCSV} className="flex items-center gap-1.5 text-xs font-medium text-gray-600 border border-gray-200 bg-white hover:bg-gray-50 px-3 py-1.5 rounded-lg transition-colors" title="Export to CSV">
               <Sheet size={14} /> Excel
@@ -1122,7 +1230,7 @@ function ApplicationDetail({ appId, onBack }: { appId: string; onBack: () => voi
         ))}
       </div>
 
-      {tab === 'particulars' && <FilingParticularsCard app={app} printRef={printRef} receiptUrl={app.receipt_url} />}
+      {tab === 'particulars' && <FilingParticularsCard app={app} printRef={printRef} onDownloadReceipt={paymentInfo ? handleDownloadReceipt : undefined} />}
 
       {tab === 'timeline' && (
         <div className="space-y-3">
@@ -1325,6 +1433,7 @@ export default function DashboardPage() {
           created_at, impi_application_number, impi_filing_date,
           impi_publication_date, impi_registration_number,
           impi_registration_date, impi_renewal_deadline,
+          clients(country),
           trademarks(mark_name, mark_type, logo_preview_url),
           trademark_classes(id, class_number, class_title_en, application_status, admin_comments)
         `)
@@ -1354,6 +1463,12 @@ export default function DashboardPage() {
       const tm = Array.isArray(tms) ? tms[0] : tms;
       const classes = (app.trademark_classes as Record<string, unknown>[] | null) ?? [];
 
+      const clientRaw = app.clients as Record<string, unknown> | null;
+      const countryCode = clientRaw ? (clientRaw.country as string | null) : null;
+      const countryName = countryCode
+        ? (COUNTRIES.find(c => c.code === countryCode)?.en ?? countryCode)
+        : null;
+
       const base: Omit<DocketRow, 'class_id' | 'class_number' | 'class_title_en' | 'application_status' | 'admin_comments'> = {
         app_id: String(app.id),
         case_number: String(app.case_number),
@@ -1372,6 +1487,7 @@ export default function DashboardPage() {
         trademark_name: tm ? String(tm.mark_name ?? '') : '',
         mark_type: tm ? String(tm.mark_type ?? '') : '',
         logo_preview_url: tm ? (tm.logo_preview_url as string | null) : null,
+        country: countryName,
         receipt_url: receiptMap[String(app.id)] ?? null,
       };
 

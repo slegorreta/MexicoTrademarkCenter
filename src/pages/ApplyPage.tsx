@@ -808,6 +808,18 @@ export default function ApplyPage() {
     setSubmitting(true);
     setPaymentError(null);
     try {
+      // Validate: every class entry must have at least one class number selected
+      const unclassified = form.classEntries.filter(e => {
+        const hasConfirmed = e.isConfirmed && e.classNumber !== null;
+        const hasFallback = e.fallbackClasses.length > 0;
+        return !hasConfirmed && !hasFallback;
+      });
+      if (unclassified.length > 0) {
+        setPaymentError('Please classify all goods and services before proceeding to payment.');
+        setSubmitting(false);
+        return;
+      }
+
       let resolvedAppId: string;
 
       if (editingAppId && editingClientId) {
