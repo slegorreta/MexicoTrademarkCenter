@@ -465,6 +465,13 @@ export default function ApplyPage() {
   const draftLoaded = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Edit-mode state (when navigated from /apply?edit=<appId>)
+  const [editingAppId, setEditingAppId] = useState<string | null>(null);
+  const [editingClientId, setEditingClientId] = useState<string | null>(null);
+  const [editingCaseNumber, setEditingCaseNumber] = useState<string | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
+  const editLoaded = useRef(false);
+
   // Stripe state
   const [stripePromise] = useState(() => {
     const key = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
@@ -680,9 +687,94 @@ export default function ApplyPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  // Auto-save draft on form/step change (debounced 1.5s, authenticated users only)
+  // Load existing application when ?edit=<appId> is present
   useEffect(() => {
-    if (!user || !draftLoaded.current || step === 7) return;
+    const editId = searchParams.get('edit');
+    if (!editId || !user || editLoaded.current) return;
+    editLoaded.current = true;
+    setEditLoading(true);
+    (async () => {
+      const [appRes, tmRes, classRes, gsRes] = await Promise.all([
+        supabase.from('applications').select('id, case_number, client_id, priority_claimed, priority_country, priority_app_number, priority_filing_date').eq('id', editId).eq('user_id', user.id).maybeSingle(),
+        supabase.from('trademarks').select('*').eq('application_id', editId).maybeSingle(),
+        supabase.from('trademark_classes').select('class_number, class_title_en').eq('application_id', editId),
+        supabase.from('goods_services').select('description_original, business_industry').eq('application_id', editId),
+      ]);
+      if (!appRes.data) { setEditLoading(false); return; }
+
+      const app = appRes.data;
+      setEditingAppId(app.id);
+      setEditingClientId(app.client_id);
+      setEditingCaseNumber(app.case_number);
+      setCaseNumber(app.case_number);
+
+      // Load client row
+      const { data: client } = await supabase.from('clients').select('*').eq('id', app.client_id).maybeSingle();
+
+      // Reconstruct classEntries from trademark_classes + goods_services
+      const classes = classRes.data ?? [];
+      const gs = gsRes.data ?? [];
+      const entries: ClassEntry[] = classes.map((c, i) => ({
+        id: `entry-edit-${i}-${c.class_number}`,
+        description: gs[i]?.description_original ?? '',
+        businessIndustry: gs[i]?.business_industry ?? '',
+        classNumber: c.class_number,
+        classTitleEn: c.class_title_en ?? '',
+        descriptionEn: '',
+        descriptionEs: '',
+        confidence: 1,
+        isConfirmed: true,
+        fallbackClasses: [],
+        fallbackSuggestions: [],
+      }));
+
+      const tm = tmRes.data;
+      setForm(f => ({
+        ...f,
+        // Step 1 — applicant
+        applicantType: (client?.applicant_type as 'individual' | 'company') ?? 'company',
+        legalName: client?.legal_name ?? '',
+        country: client?.country ?? '',
+        address: client?.address ?? '',
+        city: client?.city ?? '',
+        stateProvince: client?.state_province ?? '',
+        postalCode: client?.postal_code ?? '',
+        email: client?.email ?? '',
+        emailConfirm: client?.email ?? '',
+        phoneNumber: client?.phone ?? '',
+        wechat: client?.wechat ?? '',
+        whatsapp: client?.whatsapp ?? '',
+        taxId: client?.tax_id ?? '',
+        contactPerson: client?.contact_person ?? '',
+        preferredLanguage: (client?.preferred_language as FormData['preferredLanguage']) ?? f.preferredLanguage,
+        // Step 2 — mark
+        markName: tm?.mark_name ?? '',
+        markType: tm?.mark_type ?? 'word',
+        containsNonSpanish: tm?.contains_non_spanish ?? false,
+        markLanguage: tm?.mark_language ?? 'en',
+        meaningSpanish: tm?.meaning_spanish ?? '',
+        transliteration: tm?.transliteration ?? '',
+        markDescription: tm?.mark_description ?? '',
+        claimsColor: tm?.claims_color ?? false,
+        colorDescription: tm?.color_description ?? '',
+        // Step 3 — classes
+        classEntries: entries.length > 0 ? entries : [newEntry()],
+        // Priority fields
+        priorityClaimed: app.priority_claimed ?? false,
+        priorityCountry: app.priority_country ?? '',
+        priorityAppNumber: app.priority_app_number ?? '',
+        priorityFilingDate: app.priority_filing_date ?? '',
+      }));
+
+      if (tm?.logo_preview_url) setLogoPreview(tm.logo_preview_url);
+      setEditLoading(false);
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  // Auto-save draft on form/step change (debounced 1.5s, authenticated users only, not in edit mode)
+  useEffect(() => {
+    if (!user || !draftLoaded.current || step === 7 || editingAppId) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
       const payload = {
@@ -716,99 +808,184 @@ export default function ApplyPage() {
     setSubmitting(true);
     setPaymentError(null);
     try {
-      const cn = generateCaseNumber();
-      setCaseNumber(cn);
+      let resolvedAppId: string;
 
-      // Ensure the profile row exists for authenticated users (it may be missing
-      // if the insert during signUp was blocked by RLS before the policy was added)
-      if (user) {
-        await supabase.from('profiles').upsert({
-          id: user.id,
-          email: user.email ?? form.email,
-          full_name: form.contactPerson || form.legalName,
-          role: 'client',
-        }, { onConflict: 'id', ignoreDuplicates: true });
-      }
+      if (editingAppId && editingClientId) {
+        // ── EDIT MODE: update existing records ──────────────────────────────
+        resolvedAppId = editingAppId;
 
-      const { data: clientData, error: clientError } = await supabase.from('clients').insert({
-        user_id: user?.id || null,
-        applicant_type: form.applicantType,
-        legal_name: form.legalName,
-        country: form.country,
-        address: form.address,
-        city: form.city,
-        state_province: form.stateProvince,
-        postal_code: form.postalCode,
-        email: form.email,
-        phone: form.phoneDialCode ? `${form.phoneDialCode} ${form.phoneNumber}` : form.phoneNumber,
-        wechat: form.wechat,
-        whatsapp: form.whatsapp,
-        tax_id: form.taxId,
-        contact_person: form.contactPerson,
-        preferred_language: form.preferredLanguage,
-      }).select().maybeSingle();
+        await supabase.from('clients').update({
+          applicant_type: form.applicantType,
+          legal_name: form.legalName,
+          country: form.country,
+          address: form.address,
+          city: form.city,
+          state_province: form.stateProvince,
+          postal_code: form.postalCode,
+          email: form.email,
+          phone: form.phoneNumber,
+          wechat: form.wechat,
+          whatsapp: form.whatsapp,
+          tax_id: form.taxId,
+          contact_person: form.contactPerson,
+          preferred_language: form.preferredLanguage,
+        }).eq('id', editingClientId);
 
-      if (clientError || !clientData) throw new Error(`Failed to create client record: ${clientError?.message ?? 'no data returned'}`);
+        await supabase.from('applications').update({
+          total_classes: totalClasses,
+          service_fee_usd: serviceFee,
+          government_fee_usd: govFee,
+          total_amount_usd: grandTotal,
+          priority_claimed: form.priorityClaimed,
+          priority_country: form.priorityCountry,
+          priority_app_number: form.priorityAppNumber,
+          priority_filing_date: form.priorityFilingDate || null,
+        }).eq('id', editingAppId);
 
-      const { data: appData } = await supabase.from('applications').insert({
-        case_number: cn,
-        client_id: clientData.id,
-        user_id: user?.id || null,
-        payment_status: 'pending',
-        filing_status: 'pending_payment',
-        total_classes: totalClasses,
-        service_fee_usd: serviceFee,
-        government_fee_usd: govFee,
-        total_amount_usd: grandTotal,
-        priority_claimed: form.priorityClaimed,
-        priority_country: form.priorityCountry,
-        priority_app_number: form.priorityAppNumber,
-        priority_filing_date: form.priorityFilingDate || null,
-        source: 'website',
-      }).select().maybeSingle();
+        await supabase.from('trademarks').update({
+          mark_name: form.markName,
+          mark_type: form.markType as 'word',
+          contains_non_spanish: form.containsNonSpanish,
+          mark_language: form.markLanguage,
+          meaning_spanish: form.meaningSpanish,
+          transliteration: form.transliteration,
+          mark_description: form.markDescription,
+          claims_color: form.claimsColor,
+          color_description: form.colorDescription,
+        }).eq('application_id', editingAppId);
 
-      if (!appData) throw new Error('Failed to create application record');
-      setApplicationId(appData.id);
+        // Replace classes and goods_services
+        await supabase.from('trademark_classes').delete().eq('application_id', editingAppId);
+        await supabase.from('goods_services').delete().eq('application_id', editingAppId);
 
-      await supabase.from('trademarks').insert({
-        application_id: appData.id,
-        mark_name: form.markName,
-        mark_type: form.markType as 'word',
-        contains_non_spanish: form.containsNonSpanish,
-        mark_language: form.markLanguage,
-        meaning_spanish: form.meaningSpanish,
-        transliteration: form.transliteration,
-        mark_description: form.markDescription,
-        claims_color: form.claimsColor,
-        color_description: form.colorDescription,
-      });
+        for (const entry of form.classEntries) {
+          const classNums = entry.isConfirmed && entry.classNumber !== null
+            ? [entry.classNumber]
+            : entry.fallbackClasses;
+          if (classNums.length === 0) continue;
 
-      for (const entry of form.classEntries) {
-        const classNums = entry.isConfirmed && entry.classNumber !== null
-          ? [entry.classNumber]
-          : entry.fallbackClasses;
-        if (classNums.length === 0) continue;
+          await supabase.from('goods_services').insert({
+            application_id: editingAppId,
+            description_original: entry.description,
+            original_language: form.preferredLanguage,
+            business_industry: entry.businessIndustry,
+            sales_channels: [],
+            countries_sold: [],
+            mexico_launch_status: 'planning',
+          });
 
-        await supabase.from('goods_services').insert({
+          for (const classNum of classNums) {
+            const nc = ALL_CLASSES.find(c => c.classNumber === classNum);
+            if (nc) {
+              await supabase.from('trademark_classes').insert({
+                application_id: editingAppId,
+                class_number: classNum,
+                class_title_en: entry.classTitleEn || nc.titleEn,
+                classification_source: entry.isConfirmed ? 'ai_classified' : 'user_selected',
+                confidence_score: entry.confidence,
+              });
+            }
+          }
+        }
+
+        setApplicationId(editingAppId);
+      } else {
+        // ── CREATE MODE: insert new records ─────────────────────────────────
+        const cn = generateCaseNumber();
+        setCaseNumber(cn);
+
+        // Ensure the profile row exists for authenticated users (it may be missing
+        // if the insert during signUp was blocked by RLS before the policy was added)
+        if (user) {
+          await supabase.from('profiles').upsert({
+            id: user.id,
+            email: user.email ?? form.email,
+            full_name: form.contactPerson || form.legalName,
+            role: 'client',
+          }, { onConflict: 'id', ignoreDuplicates: true });
+        }
+
+        const { data: clientData, error: clientError } = await supabase.from('clients').insert({
+          user_id: user?.id || null,
+          applicant_type: form.applicantType,
+          legal_name: form.legalName,
+          country: form.country,
+          address: form.address,
+          city: form.city,
+          state_province: form.stateProvince,
+          postal_code: form.postalCode,
+          email: form.email,
+          phone: form.phoneDialCode ? `${form.phoneDialCode} ${form.phoneNumber}` : form.phoneNumber,
+          wechat: form.wechat,
+          whatsapp: form.whatsapp,
+          tax_id: form.taxId,
+          contact_person: form.contactPerson,
+          preferred_language: form.preferredLanguage,
+        }).select().maybeSingle();
+
+        if (clientError || !clientData) throw new Error(`Failed to create client record: ${clientError?.message ?? 'no data returned'}`);
+
+        const { data: appData } = await supabase.from('applications').insert({
+          case_number: cn,
+          client_id: clientData.id,
+          user_id: user?.id || null,
+          payment_status: 'pending',
+          filing_status: 'pending_payment',
+          total_classes: totalClasses,
+          service_fee_usd: serviceFee,
+          government_fee_usd: govFee,
+          total_amount_usd: grandTotal,
+          priority_claimed: form.priorityClaimed,
+          priority_country: form.priorityCountry,
+          priority_app_number: form.priorityAppNumber,
+          priority_filing_date: form.priorityFilingDate || null,
+          source: 'website',
+        }).select().maybeSingle();
+
+        if (!appData) throw new Error('Failed to create application record');
+        resolvedAppId = appData.id;
+        setApplicationId(appData.id);
+
+        await supabase.from('trademarks').insert({
           application_id: appData.id,
-          description_original: entry.description,
-          original_language: form.preferredLanguage,
-          business_industry: entry.businessIndustry,
-          sales_channels: [],
-          countries_sold: [],
-          mexico_launch_status: 'planning',
+          mark_name: form.markName,
+          mark_type: form.markType as 'word',
+          contains_non_spanish: form.containsNonSpanish,
+          mark_language: form.markLanguage,
+          meaning_spanish: form.meaningSpanish,
+          transliteration: form.transliteration,
+          mark_description: form.markDescription,
+          claims_color: form.claimsColor,
+          color_description: form.colorDescription,
         });
 
-        for (const classNum of classNums) {
-          const nc = ALL_CLASSES.find(c => c.classNumber === classNum);
-          if (nc) {
-            await supabase.from('trademark_classes').insert({
-              application_id: appData.id,
-              class_number: classNum,
-              class_title_en: entry.classTitleEn || nc.titleEn,
-              classification_source: entry.isConfirmed ? 'ai_classified' : 'user_selected',
-              confidence_score: entry.confidence,
-            });
+        for (const entry of form.classEntries) {
+          const classNums = entry.isConfirmed && entry.classNumber !== null
+            ? [entry.classNumber]
+            : entry.fallbackClasses;
+          if (classNums.length === 0) continue;
+
+          await supabase.from('goods_services').insert({
+            application_id: appData.id,
+            description_original: entry.description,
+            original_language: form.preferredLanguage,
+            business_industry: entry.businessIndustry,
+            sales_channels: [],
+            countries_sold: [],
+            mexico_launch_status: 'planning',
+          });
+
+          for (const classNum of classNums) {
+            const nc = ALL_CLASSES.find(c => c.classNumber === classNum);
+            if (nc) {
+              await supabase.from('trademark_classes').insert({
+                application_id: appData.id,
+                class_number: classNum,
+                class_title_en: entry.classTitleEn || nc.titleEn,
+                classification_source: entry.isConfirmed ? 'ai_classified' : 'user_selected',
+                confidence_score: entry.confidence,
+              });
+            }
           }
         }
       }
@@ -824,7 +1001,7 @@ export default function ApplyPage() {
           'Apikey': supabaseAnonKey,
         },
         body: JSON.stringify({
-          applicationId: appData.id,
+          applicationId: resolvedAppId,
           amountUsd: grandTotal,
           markName: form.markName,
           totalClasses,
@@ -870,8 +1047,26 @@ export default function ApplyPage() {
 
         {step < 7 && <StepIndicator current={step} total={7} t={t} />}
 
+        {/* Edit-mode loading */}
+        {editLoading && (
+          <div className="mb-4 flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 text-sm text-amber-700">
+            <Loader2 size={14} className="animate-spin flex-shrink-0" />
+            <span>Loading your case details…</span>
+          </div>
+        )}
+
+        {/* Edit-mode banner */}
+        {editingAppId && !editLoading && step < 7 && (
+          <div className="mb-4 flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 text-sm text-amber-800">
+            <Pencil size={14} className="flex-shrink-0 text-amber-600" />
+            <span>
+              Editing case <span className="font-mono font-semibold">{editingCaseNumber}</span> — review your details and proceed to payment when ready.
+            </span>
+          </div>
+        )}
+
         {/* Draft resumed notice */}
-        {draftId && step > 1 && step < 7 && (
+        {draftId && !editingAppId && step > 1 && step < 7 && (
           <div className="mb-4 flex items-center justify-between gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-2.5 text-sm text-blue-700">
             <span>
               {tri('Draft restored — you can edit any previous step.', '草稿已恢复——您可以编辑任何之前的步骤。', 'Borrador restaurado: puede editar cualquier paso anterior.', 'Entwurf wiederhergestellt – Sie können jeden Schritt bearbeiten.', 'Brouillon restauré — vous pouvez modifier n\'importe quelle étape.', 'ड्राफ़्ट पुनर्स्थापित — आप कोई भी पिछला चरण संपादित कर सकते हैं।', 'Rascunho restaurado — você pode editar qualquer etapa anterior.', '下書きが復元されました。前のステップを編集できます。')}

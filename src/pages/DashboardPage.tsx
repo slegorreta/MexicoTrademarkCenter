@@ -5,7 +5,7 @@ import {
   ChevronRight, Download, MessageSquare, User, Settings,
   Bell, ArrowLeft, Send, Lock, Building2,
   Inbox, Shield, Pencil, CreditCard, Loader2, Tag, X,
-  Printer, Sheet, Trash2, Receipt, ChevronDown, ChevronUp, RefreshCw
+  Printer, Sheet, Trash2, Receipt, ChevronDown, ChevronUp, RefreshCw, Eye
 } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
@@ -101,6 +101,7 @@ interface AppDetail {
   impi_renewal_deadline: string | null;
   priority_claimed: boolean;
   priority_country: string | null;
+  receipt_url?: string | null;
   clients: {
     legal_name: string;
     country: string;
@@ -744,6 +745,13 @@ function DocketTable({
                             >
                               <CreditCard size={11} /> Pay
                             </button>
+                            <button
+                              onClick={() => onViewDetail(row.app_id)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 border border-gray-200 text-gray-600 hover:bg-[#f0f7f0] hover:border-[#c8e0c8] text-xs font-medium rounded-lg transition-colors"
+                              title="Review case details"
+                            >
+                              <Eye size={11} /> Review
+                            </button>
                             <Link
                               to={`/apply?edit=${row.app_id}`}
                               className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 transition-colors"
@@ -809,7 +817,7 @@ function DocketTable({
 
 // ─── Filing Particulars card ──────────────────────────────────────────────────
 
-function FilingParticularsCard({ app, printRef }: { app: AppDetail; printRef: React.RefObject<HTMLDivElement | null> }) {
+function FilingParticularsCard({ app, printRef, receiptUrl }: { app: AppDetail; printRef: React.RefObject<HTMLDivElement | null>; receiptUrl?: string | null }) {
   const trademark = Array.isArray(app.trademarks) ? app.trademarks[0] : app.trademarks;
   const classes = app.trademark_classes ?? [];
 
@@ -847,6 +855,17 @@ function FilingParticularsCard({ app, printRef }: { app: AppDetail; printRef: Re
             </span>
           </div>
         </div>
+        {receiptUrl && (
+          <a
+            href={receiptUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-shrink-0 flex items-center gap-1.5 text-xs font-medium text-[#2d5a2d] border border-[#c8e0c8] bg-[#f0f7f0] hover:bg-[#2d5a2d] hover:text-white px-3 py-1.5 rounded-lg transition-colors"
+            title="View payment receipt"
+          >
+            <Receipt size={13} /> Receipt
+          </a>
+        )}
       </div>
 
       <dl className="grid grid-cols-2 sm:grid-cols-3 gap-px bg-gray-100">
@@ -932,7 +951,7 @@ function ApplicationDetail({ appId, onBack }: { appId: string; onBack: () => voi
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [appRes, timelineRes, docsRes, msgsRes] = await Promise.all([
+    const [appRes, timelineRes, docsRes, msgsRes, paymentRes] = await Promise.all([
       supabase
         .from('applications')
         .select('id, case_number, filing_status, payment_status, total_classes, total_amount_usd, service_fee_usd, government_fee_usd, created_at, impi_application_number, impi_filing_date, impi_publication_date, impi_registration_number, impi_registration_date, impi_renewal_deadline, priority_claimed, priority_country, clients(*), trademarks(*), trademark_classes(*)')
@@ -942,8 +961,13 @@ function ApplicationDetail({ appId, onBack }: { appId: string; onBack: () => voi
       supabase.from('timeline_events').select('id, event_type, title, description, created_at').eq('application_id', appId).eq('is_visible_to_client', true).order('created_at', { ascending: false }),
       supabase.from('uploaded_files').select('id, file_name, category, file_path, file_size_bytes, created_at').eq('application_id', appId).eq('visible_to_client', true).order('created_at', { ascending: false }),
       supabase.from('client_messages').select('id, sender_role, content, is_read, created_at').eq('application_id', appId).order('created_at', { ascending: true }),
+      supabase.from('payments').select('receipt_url').eq('application_id', appId).eq('status', 'paid').maybeSingle(),
     ]);
-    setApp(appRes.data as AppDetail | null);
+    const receiptUrl = paymentRes.data?.receipt_url && paymentRes.data.receipt_url.length > 0
+      ? paymentRes.data.receipt_url
+      : null;
+    const appData = appRes.data ? { ...(appRes.data as AppDetail), receipt_url: receiptUrl } : null;
+    setApp(appData);
     setTimeline(timelineRes.data ?? []);
     setDocuments(docsRes.data ?? []);
     setMessages(msgsRes.data ?? []);
@@ -1059,7 +1083,18 @@ function ApplicationDetail({ appId, onBack }: { appId: string; onBack: () => voi
               </div>
             </div>
           </div>
-          <div className="flex gap-2 flex-shrink-0">
+          <div className="flex gap-2 flex-shrink-0 flex-wrap">
+            {app.payment_status === 'paid' && app.receipt_url && (
+              <a
+                href={app.receipt_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-xs font-medium text-[#2d5a2d] border border-[#c8e0c8] bg-[#f0f7f0] hover:bg-[#2d5a2d] hover:text-white px-3 py-1.5 rounded-lg transition-colors"
+                title="View payment receipt"
+              >
+                <Receipt size={14} /> Receipt
+              </a>
+            )}
             <button onClick={exportCSV} className="flex items-center gap-1.5 text-xs font-medium text-gray-600 border border-gray-200 bg-white hover:bg-gray-50 px-3 py-1.5 rounded-lg transition-colors" title="Export to CSV">
               <Sheet size={14} /> Excel
             </button>
@@ -1087,7 +1122,7 @@ function ApplicationDetail({ appId, onBack }: { appId: string; onBack: () => voi
         ))}
       </div>
 
-      {tab === 'particulars' && <FilingParticularsCard app={app} printRef={printRef} />}
+      {tab === 'particulars' && <FilingParticularsCard app={app} printRef={printRef} receiptUrl={app.receipt_url} />}
 
       {tab === 'timeline' && (
         <div className="space-y-3">
@@ -1309,7 +1344,7 @@ export default function DashboardPage() {
     // Build receipt map
     const receiptMap: Record<string, string> = {};
     for (const p of (paymentsRes.data ?? [])) {
-      if (p.receipt_url) receiptMap[p.application_id] = p.receipt_url;
+      if (p.receipt_url && p.receipt_url.length > 0) receiptMap[p.application_id] = p.receipt_url;
     }
 
     // Flatten to one row per class (or one row if no classes)
