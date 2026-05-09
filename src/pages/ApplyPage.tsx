@@ -127,9 +127,11 @@ interface CheckoutFormProps {
   language: string;
   finalTotal: number;
   onSuccess: () => void;
+  applicationId: string | null;
+  paymentIntentId: string | null;
 }
 
-function CheckoutForm({ language, finalTotal, onSuccess }: CheckoutFormProps) {
+function CheckoutForm({ language, finalTotal, onSuccess, applicationId, paymentIntentId }: CheckoutFormProps) {
   const stripe = useStripe();
   const elements = useElements();
   const [paying, setPaying] = useState(false);
@@ -151,9 +153,29 @@ function CheckoutForm({ language, finalTotal, onSuccess }: CheckoutFormProps) {
     if (confirmError) {
       setError(confirmError.message ?? 'Payment failed. Please try again.');
       setPaying(false);
-    } else {
-      onSuccess();
+      return;
     }
+
+    // Immediately sync payment status and trigger confirmation emails
+    if (applicationId && paymentIntentId) {
+      try {
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        await fetch(`${supabaseUrl}/functions/v1/confirm-payment-client`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseAnonKey}`,
+            'Apikey': supabaseAnonKey,
+          },
+          body: JSON.stringify({ paymentIntentId, applicationId }),
+        });
+      } catch (e) {
+        console.error('confirm-payment-client failed:', e);
+      }
+    }
+
+    onSuccess();
   };
 
   return (
@@ -449,6 +471,7 @@ export default function ApplyPage() {
     return key ? loadStripe(key) : null;
   });
   const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
   const [paymentError, setPaymentError] = useState<string | null>(null);
 
   // Coupon state
@@ -815,6 +838,7 @@ export default function ApplyPage() {
       }
 
       setClientSecret(data.clientSecret);
+      setPaymentIntentId(data.paymentIntentId ?? null);
       setFinalTotal(data.finalAmountUsd ?? grandTotal);
     } catch (err) {
       console.error(err);
@@ -1688,6 +1712,8 @@ export default function ApplyPage() {
                         language={language}
                         finalTotal={finalTotal ?? discountedTotal}
                         onSuccess={handlePaymentSuccess}
+                        applicationId={applicationId}
+                        paymentIntentId={paymentIntentId}
                       />
                     </Elements>
                   ) : (

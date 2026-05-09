@@ -3,9 +3,9 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   Plus, FileText, Clock, CheckCircle2, AlertCircle, LogOut,
   ChevronRight, Download, MessageSquare, User, Settings,
-  Bell, ArrowLeft, Send, Lock, Globe, Building2, RefreshCw,
+  Bell, ArrowLeft, Send, Lock, Building2,
   Inbox, Shield, Pencil, CreditCard, Loader2, Tag, X,
-  Printer, Sheet, Calendar, Hash, Award, BarChart3
+  Printer, Sheet, Trash2, Receipt, ExternalLink, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
@@ -20,23 +20,34 @@ const stripePromise = (() => {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface AppSummary {
-  id: string;
+interface DocketRow {
+  // application fields
+  app_id: string;
   case_number: string;
-  filing_status: string;
   payment_status: string;
-  total_classes: number;
+  filing_status: string;
+  total_amount_usd: number | null;
+  service_fee_usd: number | null;
+  government_fee_usd: number | null;
   created_at: string;
-  trademark_name?: string;
-  logo_preview_url?: string;
-  // Docket fields
-  impi_application_number?: string | null;
-  impi_filing_date?: string | null;
-  impi_publication_date?: string | null;
-  impi_registration_number?: string | null;
-  impi_registration_date?: string | null;
-  impi_renewal_deadline?: string | null;
-  class_titles?: string;
+  impi_application_number: string | null;
+  impi_filing_date: string | null;
+  impi_publication_date: string | null;
+  impi_registration_number: string | null;
+  impi_registration_date: string | null;
+  impi_renewal_deadline: string | null;
+  // trademark fields
+  trademark_name: string;
+  mark_type: string;
+  logo_preview_url: string | null;
+  // per-class fields (null when no classes yet)
+  class_id: string | null;
+  class_number: number | null;
+  class_title_en: string | null;
+  application_status: string | null;
+  admin_comments: string | null;
+  // payment receipt
+  receipt_url: string | null;
 }
 
 interface FilingDraft {
@@ -106,12 +117,13 @@ interface AppDetail {
     claims_color: boolean;
     color_description: string | null;
     logo_preview_url: string | null;
-    logo_file_path: string | null;
   }[] | null;
   trademark_classes: {
     class_number: number;
     class_title_en: string;
     goods_services_en: string;
+    application_status: string | null;
+    admin_comments: string | null;
   }[] | null;
 }
 
@@ -121,13 +133,12 @@ function fmt(date: string | null | undefined): string {
   if (!date) return '—';
   return new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 }
-
 function fmtShort(date: string | null | undefined): string {
   if (!date) return '—';
   return new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
 }
 
-// ─── Status config ─────────────────────────────────────────────────────────
+// ─── Status configs ───────────────────────────────────────────────────────────
 
 const FILING_STAGES = [
   { key: 'received', label: 'Received', statuses: ['new', 'pending_review', 'pending_payment'] },
@@ -172,6 +183,23 @@ const STATUS_COLORS: Record<string, string> = {
   abandoned: 'bg-gray-100 text-gray-500',
 };
 
+const APP_STATUS_LABELS: Record<string, string> = {
+  pending_payment: 'Awaiting Payment',
+  in_review: 'In Review',
+  filed: 'Filed',
+  published: 'Published',
+  granted: 'Granted',
+  abandoned: 'Abandoned',
+};
+const APP_STATUS_COLORS: Record<string, string> = {
+  pending_payment: 'bg-orange-100 text-orange-700',
+  in_review: 'bg-amber-100 text-amber-700',
+  filed: 'bg-blue-100 text-blue-700',
+  published: 'bg-cyan-100 text-cyan-700',
+  granted: 'bg-emerald-100 text-emerald-700',
+  abandoned: 'bg-gray-100 text-gray-500',
+};
+
 const TIMELINE_ICONS: Record<string, string> = {
   payment_confirmed: '💳',
   status_change: '🔄',
@@ -184,17 +212,18 @@ const TIMELINE_ICONS: Record<string, string> = {
 
 // ─── Export utilities ─────────────────────────────────────────────────────────
 
-function exportToCSV(rows: AppSummary[], filename: string) {
+function exportDocketCSV(rows: DocketRow[], filename: string) {
   const headers = [
-    'Mark Name', 'Internal Case No.', 'Classes', 'Status',
-    'Date Filed', 'IMPI App. No.', 'IMPI Filing Date',
-    'Publication Date', 'IMPI Reg. No.', 'Registration Date', 'Renewal Deadline',
+    'Mark Name', 'Case No.', 'Class', 'Filing Status', 'Application Status',
+    'Date Filed', 'IMPI App. No.', 'IMPI Filing Date', 'Publication Date',
+    'IMPI Reg. No.', 'Registration Date', 'Renewal / Expiration', 'Comments',
   ];
   const lines = rows.map(r => [
-    r.trademark_name ?? '',
+    r.trademark_name,
     r.case_number,
-    String(r.total_classes),
+    r.class_number ? `Class ${r.class_number} — ${r.class_title_en ?? ''}` : '—',
     STATUS_LABELS[r.filing_status] ?? r.filing_status,
+    r.application_status ? (APP_STATUS_LABELS[r.application_status] ?? r.application_status) : '—',
     fmtShort(r.created_at),
     r.impi_application_number ?? '',
     fmtShort(r.impi_filing_date),
@@ -202,49 +231,54 @@ function exportToCSV(rows: AppSummary[], filename: string) {
     r.impi_registration_number ?? '',
     fmtShort(r.impi_registration_date),
     fmtShort(r.impi_renewal_deadline),
+    r.admin_comments ?? '',
   ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
   const csv = [headers.join(','), ...lines].join('\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.click();
+  a.href = url; a.download = filename; a.click();
   URL.revokeObjectURL(url);
 }
 
-function exportSingleToCSV(app: AppDetail, filename: string) {
-  const trademark = Array.isArray(app.trademarks) ? app.trademarks[0] : app.trademarks;
-  const classes = (app.trademark_classes ?? []).map(c => `Class ${c.class_number} – ${c.class_title_en}`).join('; ');
-  const rows = [
-    ['Field', 'Value'],
-    ['Mark Name', trademark?.mark_name ?? ''],
-    ['Mark Type', trademark?.mark_type ?? ''],
-    ['Internal Case No.', app.case_number],
-    ['Filing Status', STATUS_LABELS[app.filing_status] ?? app.filing_status],
-    ['Nice Classes', classes],
-    ['Date Submitted', fmtShort(app.created_at)],
-    ['IMPI Application No.', app.impi_application_number ?? ''],
-    ['IMPI Filing Date', fmtShort(app.impi_filing_date)],
-    ['Publication Date', fmtShort(app.impi_publication_date)],
-    ['IMPI Registration No.', app.impi_registration_number ?? ''],
-    ['Registration Date', fmtShort(app.impi_registration_date)],
-    ['Renewal / Expiration', fmtShort(app.impi_renewal_deadline)],
-    ['Applicant', app.clients?.legal_name ?? ''],
-    ['Country', app.clients?.country ?? ''],
-    ['Email', app.clients?.email ?? ''],
-  ];
-  const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
+function printDocket(rows: DocketRow[]) {
+  const trs = rows.map(r => `<tr>
+    <td>${r.trademark_name}</td>
+    <td style="font-family:monospace">${r.case_number}</td>
+    <td>${r.class_number ? `Class ${r.class_number}` : '—'}</td>
+    <td>${STATUS_LABELS[r.filing_status] ?? r.filing_status}</td>
+    <td>${r.application_status ? (APP_STATUS_LABELS[r.application_status] ?? r.application_status) : '—'}</td>
+    <td>${fmtShort(r.created_at)}</td>
+    <td style="font-family:monospace">${r.impi_application_number ?? '—'}</td>
+    <td>${fmtShort(r.impi_publication_date)}</td>
+    <td style="font-family:monospace">${r.impi_registration_number ?? '—'}</td>
+    <td>${fmtShort(r.impi_registration_date)}</td>
+    <td>${fmtShort(r.impi_renewal_deadline)}</td>
+    <td style="max-width:160px;word-break:break-word">${r.admin_comments ?? '—'}</td>
+  </tr>`).join('');
+  const win = window.open('', '_blank');
+  if (!win) return;
+  win.document.write(`<!DOCTYPE html><html><head><title>Trademark Docket</title>
+    <style>
+      body{font-family:system-ui,sans-serif;font-size:10px;padding:20px}
+      h1{font-size:15px;margin-bottom:12px}
+      table{width:100%;border-collapse:collapse}
+      th{background:#1a2e1a;color:#fff;text-align:left;padding:6px 8px;font-size:9px;text-transform:uppercase;letter-spacing:.05em}
+      td{padding:6px 8px;border-bottom:1px solid #e5e7eb;vertical-align:top}
+      tr:nth-child(even) td{background:#f9fafb}
+      @media print{body{padding:10px}}
+    </style></head><body>
+    <h1>Trademark Docket — ${new Date().toLocaleDateString()}</h1>
+    <table><thead><tr>
+      <th>Mark</th><th>Case No.</th><th>Class</th><th>Status</th><th>App. Status</th>
+      <th>Filed</th><th>IMPI App.</th><th>Publication</th><th>IMPI Reg.</th>
+      <th>Registration</th><th>Renewal</th><th>Comments</th>
+    </tr></thead><tbody>${trs}</tbody></table></body></html>`);
+  win.document.close(); win.focus();
+  setTimeout(() => { win.print(); win.close(); }, 300);
 }
 
-// ─── Sub-components ────────────────────────────────────────────────────────
+// ─── Stage progress bar ───────────────────────────────────────────────────────
 
 function StageProgress({ status }: { status: string }) {
   const current = getStageIndex(status);
@@ -277,7 +311,15 @@ function StageProgress({ status }: { status: string }) {
 
 // ─── Stripe checkout form ─────────────────────────────────────────────────────
 
-function DashboardCheckoutForm({ onSuccess }: { onSuccess: () => void }) {
+function DashboardCheckoutForm({
+  onSuccess,
+  applicationId,
+  paymentIntentId,
+}: {
+  onSuccess: () => void;
+  applicationId: string;
+  paymentIntentId: string;
+}) {
   const stripe = useStripe();
   const elements = useElements();
   const [paying, setPaying] = useState(false);
@@ -295,9 +337,25 @@ function DashboardCheckoutForm({ onSuccess }: { onSuccess: () => void }) {
     if (confirmError) {
       setError(confirmError.message ?? 'Payment failed. Please try again.');
       setPaying(false);
-    } else {
-      onSuccess();
+      return;
     }
+    // Immediately sync status and trigger emails — don't rely solely on webhook
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      await fetch(`${supabaseUrl}/functions/v1/confirm-payment-client`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'Apikey': supabaseAnonKey,
+        },
+        body: JSON.stringify({ paymentIntentId, applicationId }),
+      });
+    } catch (e) {
+      console.error('confirm-payment-client failed:', e);
+    }
+    onSuccess();
   };
 
   return (
@@ -326,76 +384,430 @@ function DashboardCheckoutForm({ onSuccess }: { onSuccess: () => void }) {
   );
 }
 
-// ─── Docket row in list view ──────────────────────────────────────────────────
+// ─── Inline payment panel (used in docket row) ───────────────────────────────
 
-function DocketField({ label, value, mono = false }: { label: string; value: string | null | undefined; mono?: boolean }) {
+function PaymentPanel({
+  row,
+  onClose,
+  onPaid,
+}: {
+  row: DocketRow;
+  onClose: () => void;
+  onPaid: () => void;
+}) {
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [paymentIntentId, setPaymentIntentId] = useState('');
+  const [initializing, setInitializing] = useState(false);
+  const [initError, setInitError] = useState<string | null>(null);
+  const [couponInput, setCouponInput] = useState('');
+  const [couponApplied, setCouponApplied] = useState<{ code: string; discountPercent: number } | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [couponChecking, setCouponChecking] = useState(false);
+  const [finalAmount, setFinalAmount] = useState<number | null>(null);
+
+  const initPayment = async () => {
+    setInitializing(true);
+    setInitError(null);
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      const res = await fetch(`${supabaseUrl}/functions/v1/create-payment-intent`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'Apikey': supabaseAnonKey,
+        },
+        body: JSON.stringify({
+          applicationId: row.app_id,
+          amountUsd: row.total_amount_usd,
+          markName: row.trademark_name,
+          totalClasses: 1,
+          couponCode: couponApplied?.code ?? undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.clientSecret) throw new Error(data.error || 'Failed to initialize payment');
+      setClientSecret(data.clientSecret);
+      setPaymentIntentId(data.paymentIntentId ?? '');
+      setFinalAmount(data.finalAmountUsd ?? row.total_amount_usd);
+    } catch (err) {
+      setInitError(err instanceof Error ? err.message : 'Could not initialize payment.');
+    } finally {
+      setInitializing(false);
+    }
+  };
+
+  const applyCoupon = async () => {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) return;
+    setCouponChecking(true); setCouponError(null);
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      const res = await fetch(`${supabaseUrl}/functions/v1/validate-coupon`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseAnonKey}`, 'Apikey': supabaseAnonKey },
+        body: JSON.stringify({ couponCode: code }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) { setCouponError(data.error || 'Invalid coupon.'); }
+      else { setCouponApplied({ code, discountPercent: data.discountPercent }); setCouponInput(''); setClientSecret(null); }
+    } catch { setCouponError('Could not verify coupon.'); }
+    finally { setCouponChecking(false); }
+  };
+
+  const totalDue = Number(row.total_amount_usd ?? 0);
+  const discountAmt = couponApplied ? totalDue * couponApplied.discountPercent / 100 : 0;
+  const showFinal = finalAmount ?? (totalDue - discountAmt);
+
   return (
-    <div className="min-w-0">
-      <dt className="text-[10px] uppercase tracking-wide text-gray-400 font-medium">{label}</dt>
-      <dd className={`text-xs mt-0.5 truncate ${value && value !== '—' ? (mono ? 'font-mono text-gray-800 font-semibold' : 'text-gray-700') : 'text-gray-300 italic'}`}>
-        {value && value !== '—' ? value : '—'}
-      </dd>
+    <div className="bg-white border border-orange-200 rounded-xl overflow-hidden mt-1">
+      <div className="bg-orange-50 border-b border-orange-200 px-5 py-3 flex items-center justify-between">
+        <p className="text-sm font-semibold text-orange-900 flex items-center gap-2">
+          <CreditCard size={14} /> Complete Payment — {row.case_number}
+        </p>
+        <button onClick={onClose} className="text-orange-400 hover:text-orange-600"><X size={16} /></button>
+      </div>
+      <div className="p-5 space-y-4">
+        {/* Summary */}
+        <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 space-y-2 text-sm">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Order Summary</p>
+          <div className="flex justify-between"><span className="text-gray-600">Service fee</span><span className="font-medium">USD ${Number(row.service_fee_usd ?? 0).toFixed(2)}</span></div>
+          <div className="flex justify-between"><span className="text-gray-600">Government fee</span><span className="font-medium">USD ${Number(row.government_fee_usd ?? 0).toFixed(2)}</span></div>
+          {couponApplied && (
+            <div className="flex justify-between text-green-700">
+              <span>Coupon ({couponApplied.code}) -{couponApplied.discountPercent}%</span>
+              <span className="font-medium">-USD ${discountAmt.toFixed(2)}</span>
+            </div>
+          )}
+          <div className="flex justify-between font-bold border-t border-gray-200 pt-2">
+            <span>Total</span><span>USD ${showFinal.toFixed(2)}</span>
+          </div>
+        </div>
+
+        {/* Coupon */}
+        {!clientSecret && (
+          <div>
+            <p className="text-xs font-medium text-gray-700 mb-1.5 flex items-center gap-1"><Tag size={12} /> Coupon Code</p>
+            {couponApplied ? (
+              <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-sm">
+                <CheckCircle2 size={13} className="text-green-600" />
+                <span className="text-green-700 font-medium flex-1">{couponApplied.code} — {couponApplied.discountPercent}% off</span>
+                <button onClick={() => { setCouponApplied(null); setFinalAmount(null); }}><X size={13} className="text-green-500" /></button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <input value={couponInput} onChange={e => setCouponInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && applyCoupon()} placeholder="Enter code" className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2d5a2d] uppercase" />
+                <button onClick={applyCoupon} disabled={couponChecking || !couponInput.trim()} className="px-3 py-2 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800 disabled:opacity-50">
+                  {couponChecking ? <Loader2 size={13} className="animate-spin" /> : 'Apply'}
+                </button>
+              </div>
+            )}
+            {couponError && <p className="text-xs text-red-600 mt-1">{couponError}</p>}
+          </div>
+        )}
+
+        {/* Stripe form or proceed button */}
+        {!clientSecret ? (
+          <button onClick={initPayment} disabled={initializing} className="w-full flex items-center justify-center gap-2 bg-[#1a2e1a] hover:bg-[#2d5a2d] text-white font-semibold py-3 rounded-xl text-sm disabled:opacity-60">
+            {initializing ? <Loader2 size={15} className="animate-spin" /> : <CreditCard size={15} />}
+            {initializing ? 'Preparing...' : 'Proceed to Card Payment'}
+          </button>
+        ) : stripePromise ? (
+          <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'stripe' } }}>
+            <DashboardCheckoutForm
+              applicationId={row.app_id}
+              paymentIntentId={paymentIntentId}
+              onSuccess={() => { onPaid(); onClose(); }}
+            />
+          </Elements>
+        ) : (
+          <p className="text-sm text-red-600">Stripe is not configured.</p>
+        )}
+        {initError && (
+          <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl p-3">
+            <AlertCircle size={14} className="text-red-500 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-red-700">{initError}</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
-function AppCard({ app, onClick }: { app: AppSummary; onClick: () => void }) {
-  const statusColor = STATUS_COLORS[app.filing_status] ?? 'bg-gray-100 text-gray-600';
-  const statusLabel = STATUS_LABELS[app.filing_status] ?? app.filing_status;
+// ─── Delete confirmation dialog ───────────────────────────────────────────────
 
+function DeleteConfirmDialog({
+  caseNumber,
+  onConfirm,
+  onCancel,
+  deleting,
+}: {
+  caseNumber: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+  deleting: boolean;
+}) {
   return (
-    <button
-      onClick={onClick}
-      className="w-full text-left bg-white rounded-xl border border-gray-200 p-5 hover:border-[#2d5a2d] hover:shadow-md transition-all group"
-    >
-      {/* Top row: logo + name + case + status */}
-      <div className="flex items-start gap-4 mb-4">
-        <div className="w-12 h-12 rounded-lg bg-[#f0f7f0] border border-[#c8e0c8] flex items-center justify-center flex-shrink-0 overflow-hidden">
-          {app.logo_preview_url
-            ? <img src={app.logo_preview_url} alt="" className="w-full h-full object-contain" />
-            : <Shield size={20} className="text-[#2d5a2d]" />}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between gap-2 mb-1">
-            <span className="font-semibold text-gray-900 truncate text-base">
-              {app.trademark_name || 'Untitled Mark'}
-            </span>
-            <ChevronRight size={16} className="text-gray-400 group-hover:text-[#2d5a2d] flex-shrink-0 transition-colors" />
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${statusColor}`}>
-              {statusLabel}
-            </span>
-            {app.payment_status === 'pending' && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-semibold bg-orange-600 text-white group-hover:bg-orange-700 transition-colors">
-                <CreditCard size={10} /> Complete Payment
-              </span>
-            )}
-          </div>
-        </div>
+    <div className="mt-1 bg-red-50 border border-red-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+      <div className="flex-1">
+        <p className="text-sm font-semibold text-red-900">Delete case {caseNumber}?</p>
+        <p className="text-xs text-red-700 mt-0.5">This will permanently remove the application and all associated data. This cannot be undone.</p>
       </div>
-
-      {/* Docket grid */}
-      <dl className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-x-4 gap-y-3 bg-gray-50 rounded-lg px-4 py-3 border border-gray-100">
-        <DocketField label="Case No." value={app.case_number} mono />
-        <DocketField label="Classes" value={String(app.total_classes)} />
-        <DocketField label="Date Filed" value={fmt(app.created_at)} />
-        <DocketField label="IMPI App. No." value={app.impi_application_number} mono />
-        <DocketField label="Publication" value={fmt(app.impi_publication_date)} />
-        <DocketField label="Registration" value={fmt(app.impi_registration_date)} />
-        <DocketField label="IMPI Reg. No." value={app.impi_registration_number} mono />
-        <DocketField label="Renewal / Exp." value={fmt(app.impi_renewal_deadline)} />
-      </dl>
-
-      {/* Progress bar */}
-      <div className="mt-4 pt-4 border-t border-gray-100">
-        <StageProgress status={app.filing_status} />
+      <div className="flex gap-2 flex-shrink-0">
+        <button onClick={onCancel} className="px-3 py-1.5 text-xs font-medium border border-red-200 text-red-700 rounded-lg hover:bg-red-100">Cancel</button>
+        <button onClick={onConfirm} disabled={deleting} className="px-3 py-1.5 text-xs font-semibold bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-60 flex items-center gap-1.5">
+          {deleting ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+          {deleting ? 'Deleting...' : 'Delete'}
+        </button>
       </div>
-    </button>
+    </div>
   );
 }
 
-// ─── Filing Particulars card (inside detail view) ─────────────────────────────
+// ─── Docket table ─────────────────────────────────────────────────────────────
+
+function DocketTable({
+  rows,
+  onRefresh,
+  onViewDetail,
+}: {
+  rows: DocketRow[];
+  onRefresh: () => void;
+  onViewDetail: (appId: string) => void;
+}) {
+  const [paymentRow, setPaymentRow] = useState<string | null>(null); // app_id of row with open payment panel
+  const [deleteRow, setDeleteRow] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
+
+  const toggleComment = (key: string) =>
+    setExpandedComments(prev => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+
+  const handleDelete = async (appId: string) => {
+    setDeleting(true);
+    try {
+      // Delete child records first, then the application
+      await supabase.from('trademark_classes').delete().eq('application_id', appId);
+      await supabase.from('trademarks').delete().eq('application_id', appId);
+      await supabase.from('goods_services').delete().eq('application_id', appId);
+      await supabase.from('payments').delete().eq('application_id', appId);
+      await supabase.from('timeline_events').delete().eq('application_id', appId);
+      await supabase.from('client_messages').delete().eq('application_id', appId);
+      await supabase.from('uploaded_files').delete().eq('application_id', appId);
+      await supabase.from('applications').delete().eq('id', appId);
+    } finally {
+      setDeleting(false);
+      setDeleteRow(null);
+      onRefresh();
+    }
+  };
+
+  if (rows.length === 0) {
+    return (
+      <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
+        <div className="w-16 h-16 bg-[#f0f7f0] rounded-full flex items-center justify-center mx-auto mb-4">
+          <Shield size={24} className="text-[#2d5a2d]" />
+        </div>
+        <h3 className="text-base font-semibold text-gray-800 mb-1">No applications yet</h3>
+        <p className="text-sm text-gray-500 mb-5">Start your first Mexico trademark filing today.</p>
+        <Link to="/apply" className="inline-flex items-center gap-2 bg-[#1a2e1a] text-white text-sm font-medium px-5 py-2.5 rounded-lg hover:bg-[#2d5a2d] transition-colors">
+          <Plus size={15} /> Start First Filing
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      {/* Desktop table */}
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[900px]">
+          <thead>
+            <tr className="bg-[#1a2e1a] text-white">
+              <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide w-8"></th>
+              <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide">Mark</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide">Case No.</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide">Class</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide">Status</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide">App. Status</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide">Comments</th>
+              <th className="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wide">Receipt</th>
+              <th className="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wide">Action</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {rows.map((row, idx) => {
+              const rowKey = row.class_id ?? row.app_id;
+              const isPending = row.payment_status !== 'paid';
+              const isPaid = row.payment_status === 'paid';
+              const isPaymentOpen = paymentRow === row.app_id;
+              const isDeleteOpen = deleteRow === row.app_id;
+              const commentKey = `${row.app_id}-${row.class_id}`;
+              const isExpanded = expandedComments.has(commentKey);
+              const appStatus = row.application_status ?? 'pending_payment';
+
+              return (
+                <>
+                  <tr
+                    key={rowKey}
+                    className={`group transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/60'} hover:bg-[#f0f7f0]`}
+                  >
+                    {/* Logo */}
+                    <td className="px-4 py-3">
+                      <div className="w-8 h-8 rounded-md bg-[#f0f7f0] border border-[#c8e0c8] flex items-center justify-center overflow-hidden flex-shrink-0">
+                        {row.logo_preview_url
+                          ? <img src={row.logo_preview_url} alt="" className="w-full h-full object-contain" />
+                          : <Shield size={13} className="text-[#2d5a2d]" />}
+                      </div>
+                    </td>
+
+                    {/* Mark name */}
+                    <td className="px-4 py-3">
+                      <p className="text-sm font-semibold text-gray-900 leading-tight">{row.trademark_name || 'Untitled'}</p>
+                    </td>
+
+                    {/* Case number */}
+                    <td className="px-4 py-3">
+                      <span className="text-xs font-mono text-gray-600">{row.case_number}</span>
+                    </td>
+
+                    {/* Class */}
+                    <td className="px-4 py-3">
+                      {row.class_number ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#1a2e1a] bg-[#f0f7f0] border border-[#c8e0c8] px-2 py-0.5 rounded font-mono">
+                          Cl. {row.class_number}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-400 italic">—</span>
+                      )}
+                    </td>
+
+                    {/* Filing status */}
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[row.filing_status] ?? 'bg-gray-100 text-gray-600'}`}>
+                        {STATUS_LABELS[row.filing_status] ?? row.filing_status}
+                      </span>
+                    </td>
+
+                    {/* Application status (admin-set) */}
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${APP_STATUS_COLORS[appStatus] ?? 'bg-gray-100 text-gray-600'}`}>
+                        {APP_STATUS_LABELS[appStatus] ?? appStatus}
+                      </span>
+                    </td>
+
+                    {/* Comments (admin-set) */}
+                    <td className="px-4 py-3 max-w-[180px]">
+                      {row.admin_comments ? (
+                        <div>
+                          <p className={`text-xs text-gray-600 leading-relaxed ${!isExpanded ? 'line-clamp-2' : ''}`}>
+                            {row.admin_comments}
+                          </p>
+                          {row.admin_comments.length > 80 && (
+                            <button onClick={() => toggleComment(commentKey)} className="text-[10px] text-[#2d5a2d] font-medium mt-0.5 flex items-center gap-0.5">
+                              {isExpanded ? <><ChevronUp size={10} /> Less</> : <><ChevronDown size={10} /> More</>}
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-300 italic">—</span>
+                      )}
+                    </td>
+
+                    {/* Receipt */}
+                    <td className="px-4 py-3 text-center">
+                      {isPaid && row.receipt_url ? (
+                        <a href={row.receipt_url} target="_blank" rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#f0f7f0] border border-[#c8e0c8] text-[#2d5a2d] hover:bg-[#2d5a2d] hover:text-white transition-colors"
+                          title="View receipt">
+                          <Receipt size={13} />
+                        </a>
+                      ) : (
+                        <span className="text-xs text-gray-300">—</span>
+                      )}
+                    </td>
+
+                    {/* Action */}
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {isPending ? (
+                          <>
+                            <button
+                              onClick={() => setPaymentRow(isPaymentOpen ? null : row.app_id)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold rounded-lg transition-colors"
+                            >
+                              <CreditCard size={11} /> Pay
+                            </button>
+                            <Link
+                              to={`/apply?edit=${row.app_id}`}
+                              className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 transition-colors"
+                              title="Edit case"
+                            >
+                              <Pencil size={12} />
+                            </Link>
+                            <button
+                              onClick={() => setDeleteRow(isDeleteOpen ? null : row.app_id)}
+                              className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-red-200 text-red-400 hover:bg-red-50 transition-colors"
+                              title="Delete case"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            onClick={() => onViewDetail(row.app_id)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 border border-gray-200 text-gray-600 hover:bg-[#f0f7f0] hover:border-[#c8e0c8] text-xs font-medium rounded-lg transition-colors"
+                          >
+                            View <ChevronRight size={11} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+
+                  {/* Payment panel row */}
+                  {isPaymentOpen && (
+                    <tr key={`pay-${rowKey}`}>
+                      <td colSpan={9} className="px-4 pb-3">
+                        <PaymentPanel
+                          row={row}
+                          onClose={() => setPaymentRow(null)}
+                          onPaid={() => { setPaymentRow(null); onRefresh(); }}
+                        />
+                      </td>
+                    </tr>
+                  )}
+
+                  {/* Delete confirm row */}
+                  {isDeleteOpen && (
+                    <tr key={`del-${rowKey}`}>
+                      <td colSpan={9} className="px-4 pb-3">
+                        <DeleteConfirmDialog
+                          caseNumber={row.case_number}
+                          onConfirm={() => handleDelete(row.app_id)}
+                          onCancel={() => setDeleteRow(null)}
+                          deleting={deleting}
+                        />
+                      </td>
+                    </tr>
+                  )}
+                </>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ─── Filing Particulars card ──────────────────────────────────────────────────
 
 function FilingParticularsCard({ app, printRef }: { app: AppDetail; printRef: React.RefObject<HTMLDivElement | null> }) {
   const trademark = Array.isArray(app.trademarks) ? app.trademarks[0] : app.trademarks;
@@ -418,7 +830,6 @@ function FilingParticularsCard({ app, printRef }: { app: AppDetail; printRef: Re
 
   return (
     <div ref={printRef} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-      {/* Card header */}
       <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 bg-[#f8fdf8]">
         {trademark?.logo_preview_url ? (
           <img src={trademark.logo_preview_url} alt="" className="w-12 h-12 object-contain rounded-lg border border-gray-200 bg-white p-1 flex-shrink-0" />
@@ -438,7 +849,6 @@ function FilingParticularsCard({ app, printRef }: { app: AppDetail; printRef: Re
         </div>
       </div>
 
-      {/* Fields grid */}
       <dl className="grid grid-cols-2 sm:grid-cols-3 gap-px bg-gray-100">
         {fields.map(([label, value, mono]) => (
           <div key={label} className="bg-white px-4 py-3">
@@ -450,19 +860,31 @@ function FilingParticularsCard({ app, printRef }: { app: AppDetail; printRef: Re
         ))}
       </dl>
 
-      {/* Classes breakdown */}
       {classes.length > 0 && (
         <div className="px-5 py-4 border-t border-gray-100">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Nice Classification</p>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {classes.map(c => (
               <div key={c.class_number} className="flex gap-3 items-start">
                 <span className="flex-shrink-0 w-16 inline-flex items-center justify-center px-2 py-0.5 rounded bg-[#f0f7f0] text-[#1a2e1a] text-xs font-bold font-mono border border-[#c8e0c8]">
                   Class {c.class_number}
                 </span>
-                <div>
+                <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold text-gray-700">{c.class_title_en}</p>
                   {c.goods_services_en && <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{c.goods_services_en}</p>}
+                  {/* Admin-set per-class status/comments */}
+                  {(c.application_status || c.admin_comments) && (
+                    <div className="mt-2 flex flex-wrap gap-2 items-start">
+                      {c.application_status && c.application_status !== 'pending_payment' && (
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${APP_STATUS_COLORS[c.application_status] ?? 'bg-gray-100 text-gray-600'}`}>
+                          {APP_STATUS_LABELS[c.application_status] ?? c.application_status}
+                        </span>
+                      )}
+                      {c.admin_comments && (
+                        <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-2 py-1 leading-relaxed">{c.admin_comments}</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -470,7 +892,6 @@ function FilingParticularsCard({ app, printRef }: { app: AppDetail; printRef: Re
         </div>
       )}
 
-      {/* Applicant */}
       {app.clients && (
         <div className="px-5 py-4 border-t border-gray-100">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Applicant</p>
@@ -509,78 +930,6 @@ function ApplicationDetail({ appId, onBack }: { appId: string; onBack: () => voi
   const [sending, setSending] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
-  // Payment panel state
-  const [showPayment, setShowPayment] = useState(false);
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [paymentInitializing, setPaymentInitializing] = useState(false);
-  const [paymentError, setPaymentError] = useState<string | null>(null);
-  const [couponInput, setCouponInput] = useState('');
-  const [couponApplied, setCouponApplied] = useState<{ code: string; discountPercent: number } | null>(null);
-  const [couponError, setCouponError] = useState<string | null>(null);
-  const [couponChecking, setCouponChecking] = useState(false);
-  const [finalAmount, setFinalAmount] = useState<number | null>(null);
-  const [paid, setPaid] = useState(false);
-
-  const initPayment = async (appData: AppDetail) => {
-    setPaymentInitializing(true);
-    setPaymentError(null);
-    try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      const res = await fetch(`${supabaseUrl}/functions/v1/create-payment-intent`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseAnonKey}`,
-          'Apikey': supabaseAnonKey,
-        },
-        body: JSON.stringify({
-          applicationId: appData.id,
-          amountUsd: appData.total_amount_usd,
-          markName: (Array.isArray(appData.trademarks) ? appData.trademarks[0] : appData.trademarks)?.mark_name ?? '',
-          totalClasses: appData.total_classes,
-          couponCode: couponApplied?.code ?? undefined,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.clientSecret) throw new Error(data.error || 'Failed to initialize payment');
-      setClientSecret(data.clientSecret);
-      setFinalAmount(data.finalAmountUsd ?? appData.total_amount_usd);
-    } catch (err) {
-      setPaymentError(err instanceof Error ? err.message : 'Could not initialize payment. Please try again.');
-    } finally {
-      setPaymentInitializing(false);
-    }
-  };
-
-  const handleApplyCoupon = async () => {
-    const code = couponInput.trim().toUpperCase();
-    if (!code) return;
-    setCouponChecking(true);
-    setCouponError(null);
-    try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      const res = await fetch(`${supabaseUrl}/functions/v1/validate-coupon`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseAnonKey}`, 'Apikey': supabaseAnonKey },
-        body: JSON.stringify({ couponCode: code }),
-      });
-      const data = await res.json();
-      if (!res.ok || data.error) {
-        setCouponError(data.error || 'Invalid coupon code.');
-      } else {
-        setCouponApplied({ code, discountPercent: data.discountPercent });
-        setCouponInput('');
-        setClientSecret(null);
-      }
-    } catch {
-      setCouponError('Could not verify coupon. Please try again.');
-    } finally {
-      setCouponChecking(false);
-    }
-  };
-
   const load = useCallback(async () => {
     setLoading(true);
     const [appRes, timelineRes, docsRes, msgsRes] = await Promise.all([
@@ -590,23 +939,9 @@ function ApplicationDetail({ appId, onBack }: { appId: string; onBack: () => voi
         .eq('id', appId)
         .eq('user_id', user!.id)
         .maybeSingle(),
-      supabase
-        .from('timeline_events')
-        .select('id, event_type, title, description, created_at')
-        .eq('application_id', appId)
-        .eq('is_visible_to_client', true)
-        .order('created_at', { ascending: false }),
-      supabase
-        .from('uploaded_files')
-        .select('id, file_name, category, file_path, file_size_bytes, created_at')
-        .eq('application_id', appId)
-        .eq('visible_to_client', true)
-        .order('created_at', { ascending: false }),
-      supabase
-        .from('client_messages')
-        .select('id, sender_role, content, is_read, created_at')
-        .eq('application_id', appId)
-        .order('created_at', { ascending: true }),
+      supabase.from('timeline_events').select('id, event_type, title, description, created_at').eq('application_id', appId).eq('is_visible_to_client', true).order('created_at', { ascending: false }),
+      supabase.from('uploaded_files').select('id, file_name, category, file_path, file_size_bytes, created_at').eq('application_id', appId).eq('visible_to_client', true).order('created_at', { ascending: false }),
+      supabase.from('client_messages').select('id, sender_role, content, is_read, created_at').eq('application_id', appId).order('created_at', { ascending: true }),
     ]);
     setApp(appRes.data as AppDetail | null);
     setTimeline(timelineRes.data ?? []);
@@ -620,12 +955,7 @@ function ApplicationDetail({ appId, onBack }: { appId: string; onBack: () => voi
   const sendMessage = async () => {
     if (!newMessage.trim() || !user) return;
     setSending(true);
-    await supabase.from('client_messages').insert({
-      application_id: appId,
-      sender_id: user.id,
-      sender_role: 'client',
-      content: newMessage.trim(),
-    });
+    await supabase.from('client_messages').insert({ application_id: appId, sender_id: user.id, sender_role: 'client', content: newMessage.trim() });
     setNewMessage('');
     await load();
     setSending(false);
@@ -634,11 +964,36 @@ function ApplicationDetail({ appId, onBack }: { appId: string; onBack: () => voi
   const downloadFile = async (filePath: string, fileName: string) => {
     const { data } = await supabase.storage.from('trademark-assets').createSignedUrl(filePath, 3600);
     if (data?.signedUrl) {
-      const a = document.createElement('a');
-      a.href = data.signedUrl;
-      a.download = fileName;
-      a.click();
+      const a = document.createElement('a'); a.href = data.signedUrl; a.download = fileName; a.click();
     }
+  };
+
+  const exportCSV = () => {
+    if (!app) return;
+    const trademark = Array.isArray(app.trademarks) ? app.trademarks[0] : app.trademarks;
+    const classes = (app.trademark_classes ?? []).map(c => `Class ${c.class_number} – ${c.class_title_en}`).join('; ');
+    const rows = [
+      ['Field', 'Value'],
+      ['Mark Name', trademark?.mark_name ?? ''],
+      ['Internal Case No.', app.case_number],
+      ['Filing Status', STATUS_LABELS[app.filing_status] ?? app.filing_status],
+      ['Classes', classes],
+      ['Date Submitted', fmtShort(app.created_at)],
+      ['IMPI Application No.', app.impi_application_number ?? ''],
+      ['IMPI Filing Date', fmtShort(app.impi_filing_date)],
+      ['Publication Date', fmtShort(app.impi_publication_date)],
+      ['IMPI Registration No.', app.impi_registration_number ?? ''],
+      ['Registration Date', fmtShort(app.impi_registration_date)],
+      ['Renewal / Expiration', fmtShort(app.impi_renewal_deadline)],
+      ['Applicant', app.clients?.legal_name ?? ''],
+      ['Country', app.clients?.country ?? ''],
+      ['Email', app.clients?.email ?? ''],
+    ];
+    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `${app.case_number}.csv`; a.click();
+    URL.revokeObjectURL(url);
   };
 
   const handlePrint = () => {
@@ -648,22 +1003,17 @@ function ApplicationDetail({ appId, onBack }: { appId: string; onBack: () => voi
     if (!win) return;
     win.document.write(`<!DOCTYPE html><html><head><title>Filing Particulars</title>
       <style>
-        body { font-family: system-ui, sans-serif; font-size: 13px; color: #111; padding: 32px; }
-        dl { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1px; background: #e5e7eb; }
-        .field { background: white; padding: 10px 14px; }
-        dt { font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: #9ca3af; margin-bottom: 4px; }
-        dd { font-size: 13px; font-weight: 600; color: #111; }
-        .mono { font-family: monospace; color: #1a2e1a; }
-        .section { margin-top: 20px; border-top: 1px solid #e5e7eb; padding-top: 16px; }
-        .section-title { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: #6b7280; font-weight: 700; margin-bottom: 12px; }
-        .class-row { display: flex; gap: 12px; margin-bottom: 10px; }
-        .class-badge { flex-shrink: 0; background: #f0f7f0; border: 1px solid #c8e0c8; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; font-family: monospace; }
-        h1 { font-size: 20px; margin: 0 0 4px 0; }
-        .subtitle { font-size: 12px; color: #6b7280; margin-bottom: 24px; }
-        @media print { body { padding: 16px; } }
+        body{font-family:system-ui,sans-serif;font-size:13px;color:#111;padding:32px}
+        dl{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:#e5e7eb}
+        .field{background:white;padding:10px 14px}
+        dt{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#9ca3af;margin-bottom:4px}
+        dd{font-size:13px;font-weight:600;color:#111}
+        .mono{font-family:monospace;color:#1a2e1a}
+        .section{margin-top:20px;border-top:1px solid #e5e7eb;padding-top:16px}
+        .section-title{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#6b7280;font-weight:700;margin-bottom:12px}
+        @media print{body{padding:16px}}
       </style></head><body>${html}</body></html>`);
-    win.document.close();
-    win.focus();
+    win.document.close(); win.focus();
     setTimeout(() => { win.print(); win.close(); }, 300);
   };
 
@@ -676,9 +1026,7 @@ function ApplicationDetail({ appId, onBack }: { appId: string; onBack: () => voi
     </div>
   );
 
-  if (!app) return (
-    <div className="text-center py-24 text-gray-500">Application not found.</div>
-  );
+  if (!app) return <div className="text-center py-24 text-gray-500">Application not found.</div>;
 
   const tabs = [
     { key: 'particulars', label: 'Filing Particulars', icon: FileText },
@@ -690,10 +1038,9 @@ function ApplicationDetail({ appId, onBack }: { appId: string; onBack: () => voi
 
   return (
     <div>
-      {/* Header */}
       <div className="mb-6">
         <button onClick={onBack} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-4 transition-colors">
-          <ArrowLeft size={15} /> Back to Applications
+          <ArrowLeft size={15} /> Back to Docket
         </button>
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-4">
@@ -712,164 +1059,36 @@ function ApplicationDetail({ appId, onBack }: { appId: string; onBack: () => voi
               </div>
             </div>
           </div>
-
-          {/* Export buttons */}
           <div className="flex gap-2 flex-shrink-0">
-            <button
-              onClick={() => app && exportSingleToCSV(app, `${app.case_number}.csv`)}
-              className="flex items-center gap-1.5 text-xs font-medium text-gray-600 border border-gray-200 bg-white hover:bg-gray-50 px-3 py-1.5 rounded-lg transition-colors"
-              title="Export to Excel/CSV"
-            >
+            <button onClick={exportCSV} className="flex items-center gap-1.5 text-xs font-medium text-gray-600 border border-gray-200 bg-white hover:bg-gray-50 px-3 py-1.5 rounded-lg transition-colors" title="Export to CSV">
               <Sheet size={14} /> Excel
             </button>
-            <button
-              onClick={handlePrint}
-              className="flex items-center gap-1.5 text-xs font-medium text-gray-600 border border-gray-200 bg-white hover:bg-gray-50 px-3 py-1.5 rounded-lg transition-colors"
-              title="Print"
-            >
+            <button onClick={handlePrint} className="flex items-center gap-1.5 text-xs font-medium text-gray-600 border border-gray-200 bg-white hover:bg-gray-50 px-3 py-1.5 rounded-lg transition-colors" title="Print">
               <Printer size={14} /> Print
             </button>
           </div>
         </div>
 
-        {/* Progress bar */}
         <div className="mt-5 bg-white rounded-xl border border-gray-200 p-5">
           <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-4">Prosecution Progress</p>
           <StageProgress status={app.filing_status} />
-          <p className="text-xs text-[#2d5a2d] mt-3 font-medium">
-            Currently: {FILING_STAGES[currentStageIndex]?.label}
-          </p>
+          <p className="text-xs text-[#2d5a2d] mt-3 font-medium">Currently: {FILING_STAGES[currentStageIndex]?.label}</p>
         </div>
       </div>
-
-      {/* Payment required banner */}
-      {app.payment_status === 'pending' && !paid && (
-        <div className="mb-6">
-          {!showPayment ? (
-            <div className="bg-orange-50 border border-orange-200 rounded-xl p-5 flex flex-col sm:flex-row sm:items-center gap-4">
-              <div className="flex items-center gap-3 flex-1">
-                <div className="w-10 h-10 rounded-lg bg-orange-100 border border-orange-200 flex items-center justify-center flex-shrink-0">
-                  <CreditCard size={18} className="text-orange-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-orange-900">Payment required to file this trademark</p>
-                  <p className="text-xs text-orange-700 mt-0.5">
-                    Total due: <span className="font-bold">USD ${Number(app.total_amount_usd ?? 0).toFixed(2)}</span>
-                    {app.total_classes > 0 && ` · ${app.total_classes} class${app.total_classes !== 1 ? 'es' : ''}`}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => { setShowPayment(true); if (app) initPayment(app); }}
-                className="flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors flex-shrink-0"
-              >
-                <CreditCard size={15} /> Complete Payment
-              </button>
-            </div>
-          ) : (
-            <div className="bg-white border border-orange-200 rounded-xl overflow-hidden">
-              <div className="bg-orange-50 border-b border-orange-200 px-5 py-4 flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-orange-900 flex items-center gap-2">
-                    <CreditCard size={15} /> Complete Your Payment
-                  </p>
-                  <p className="text-xs text-orange-700 mt-0.5">{app.case_number} · {trademark?.mark_name}</p>
-                </div>
-                <button onClick={() => { setShowPayment(false); setClientSecret(null); setCouponApplied(null); }} className="text-orange-400 hover:text-orange-600 transition-colors">
-                  <X size={18} />
-                </button>
-              </div>
-              <div className="p-5 space-y-5">
-                <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 space-y-2">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Order Summary</p>
-                  <div className="flex justify-between text-sm"><span className="text-gray-600">Service fee</span><span className="font-medium">USD ${Number(app.service_fee_usd ?? 0).toFixed(2)}</span></div>
-                  <div className="flex justify-between text-sm"><span className="text-gray-600">Government fee ({app.total_classes} class{app.total_classes !== 1 ? 'es' : ''})</span><span className="font-medium">USD ${Number(app.government_fee_usd ?? 0).toFixed(2)}</span></div>
-                  {couponApplied && (
-                    <div className="flex justify-between text-sm text-green-700">
-                      <span>Coupon ({couponApplied.code}) -{couponApplied.discountPercent}%</span>
-                      <span className="font-medium">-USD ${(Number(app.total_amount_usd ?? 0) * couponApplied.discountPercent / 100).toFixed(2)}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-sm font-bold border-t border-gray-200 pt-2 mt-2">
-                    <span>Total</span>
-                    <span>USD ${(finalAmount ?? Number(app.total_amount_usd ?? 0)).toFixed(2)}</span>
-                  </div>
-                </div>
-                {!clientSecret && (
-                  <div>
-                    <p className="text-xs font-medium text-gray-700 mb-2 flex items-center gap-1"><Tag size={12} /> Coupon Code</p>
-                    {couponApplied ? (
-                      <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
-                        <CheckCircle2 size={14} className="text-green-600" />
-                        <span className="text-sm text-green-700 font-medium flex-1">{couponApplied.code} — {couponApplied.discountPercent}% off</span>
-                        <button onClick={() => { setCouponApplied(null); setFinalAmount(null); }} className="text-green-500 hover:text-green-700"><X size={14} /></button>
-                      </div>
-                    ) : (
-                      <div className="flex gap-2">
-                        <input value={couponInput} onChange={e => setCouponInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleApplyCoupon()} placeholder="Enter code" className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2d5a2d] uppercase" />
-                        <button onClick={handleApplyCoupon} disabled={couponChecking || !couponInput.trim()} className="px-4 py-2 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800 disabled:opacity-50 transition-colors">
-                          {couponChecking ? <Loader2 size={14} className="animate-spin" /> : 'Apply'}
-                        </button>
-                      </div>
-                    )}
-                    {couponError && <p className="text-xs text-red-600 mt-1">{couponError}</p>}
-                  </div>
-                )}
-                {!clientSecret ? (
-                  <button onClick={() => app && initPayment(app)} disabled={paymentInitializing} className="w-full flex items-center justify-center gap-2 bg-[#1a2e1a] hover:bg-[#2d5a2d] text-white font-semibold py-3 rounded-xl text-sm transition-colors disabled:opacity-60">
-                    {paymentInitializing ? <Loader2 size={16} className="animate-spin" /> : <CreditCard size={16} />}
-                    {paymentInitializing ? 'Preparing payment...' : 'Proceed to Card Payment'}
-                  </button>
-                ) : stripePromise ? (
-                  <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'stripe' } }}>
-                    <DashboardCheckoutForm onSuccess={() => { setPaid(true); setShowPayment(false); load(); }} />
-                  </Elements>
-                ) : (
-                  <p className="text-sm text-red-600">Stripe is not configured.</p>
-                )}
-                {paymentError && (
-                  <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl p-3">
-                    <AlertCircle size={15} className="text-red-500 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-red-700">{paymentError}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {paid && (
-        <div className="mb-6 bg-green-50 border border-green-200 rounded-xl p-5 flex items-center gap-3">
-          <CheckCircle2 size={20} className="text-green-600 flex-shrink-0" />
-          <div>
-            <p className="text-sm font-semibold text-green-900">Payment received — thank you!</p>
-            <p className="text-xs text-green-700 mt-0.5">Your application is now being processed by our team.</p>
-          </div>
-        </div>
-      )}
 
       {/* Tabs */}
       <div className="flex gap-1 mb-5 bg-gray-100 rounded-lg p-1 overflow-x-auto">
         {tabs.map(t => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
+          <button key={t.key} onClick={() => setTab(t.key)}
             className={`flex items-center gap-1.5 flex-shrink-0 justify-center px-3 py-2 rounded-md text-xs font-medium transition-all
-              ${tab === t.key ? 'bg-white text-[#1a2e1a] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            <t.icon size={13} />
-            <span>{t.label}</span>
+              ${tab === t.key ? 'bg-white text-[#1a2e1a] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+            <t.icon size={13} /><span>{t.label}</span>
           </button>
         ))}
       </div>
 
-      {/* Filing Particulars */}
-      {tab === 'particulars' && (
-        <FilingParticularsCard app={app} printRef={printRef} />
-      )}
+      {tab === 'particulars' && <FilingParticularsCard app={app} printRef={printRef} />}
 
-      {/* Timeline */}
       {tab === 'timeline' && (
         <div className="space-y-3">
           {timeline.length === 0 ? (
@@ -890,13 +1109,12 @@ function ApplicationDetail({ appId, onBack }: { appId: string; onBack: () => voi
         </div>
       )}
 
-      {/* Documents */}
       {tab === 'documents' && (
         <div className="space-y-2">
           {documents.length === 0 ? (
             <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-400">
               <FileText size={28} className="mx-auto mb-2 opacity-40" />
-              <p className="text-sm">No documents available yet. Official documents will appear here once filed.</p>
+              <p className="text-sm">No documents available yet.</p>
             </div>
           ) : documents.map(doc => (
             <div key={doc.id} className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-3">
@@ -905,9 +1123,7 @@ function ApplicationDetail({ appId, onBack }: { appId: string; onBack: () => voi
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 truncate">{doc.file_name}</p>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  {doc.category.replace(/_/g, ' ')} · {(doc.file_size_bytes / 1024).toFixed(0)} KB · {new Date(doc.created_at).toLocaleDateString()}
-                </p>
+                <p className="text-xs text-gray-400 mt-0.5">{doc.category.replace(/_/g, ' ')} · {(doc.file_size_bytes / 1024).toFixed(0)} KB · {new Date(doc.created_at).toLocaleDateString()}</p>
               </div>
               <button onClick={() => downloadFile(doc.file_path, doc.file_name)} className="flex items-center gap-1.5 text-xs text-[#2d5a2d] hover:text-[#1a2e1a] font-medium transition-colors">
                 <Download size={14} /> Download
@@ -917,7 +1133,6 @@ function ApplicationDetail({ appId, onBack }: { appId: string; onBack: () => voi
         </div>
       )}
 
-      {/* Messages */}
       {tab === 'messages' && (
         <div className="bg-white rounded-xl border border-gray-200 flex flex-col" style={{ minHeight: 400 }}>
           <div className="flex-1 overflow-y-auto p-4 space-y-3" style={{ maxHeight: 400 }}>
@@ -939,13 +1154,7 @@ function ApplicationDetail({ appId, onBack }: { appId: string; onBack: () => voi
             ))}
           </div>
           <div className="border-t border-gray-100 p-3 flex gap-2">
-            <input
-              value={newMessage}
-              onChange={e => setNewMessage(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage()}
-              placeholder="Type a message to our team..."
-              className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2d5a2d] focus:border-transparent"
-            />
+            <input value={newMessage} onChange={e => setNewMessage(e.target.value)} onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage()} placeholder="Type a message to our team..." className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2d5a2d] focus:border-transparent" />
             <button onClick={sendMessage} disabled={sending || !newMessage.trim()} className="w-9 h-9 bg-[#1a2e1a] text-white rounded-lg flex items-center justify-center disabled:opacity-40 hover:bg-[#2d5a2d] transition-colors">
               <Send size={15} />
             </button>
@@ -953,38 +1162,35 @@ function ApplicationDetail({ appId, onBack }: { appId: string; onBack: () => voi
         </div>
       )}
 
-      {/* My Info */}
       {tab === 'info' && (
-        <div className="space-y-4">
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <Building2 size={15} className="text-[#2d5a2d]" /> Applicant Details
-            </h3>
-            <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
-              {([
-                ['Owner Name', app.clients?.legal_name],
-                ['Entity Type', app.clients?.applicant_type === 'company' ? 'Company' : 'Individual'],
-                ['Country', app.clients?.country],
-                ['City', app.clients?.city],
-                ['Address', app.clients?.address],
-                ['Postal Code', app.clients?.postal_code],
-                ['Email', app.clients?.email],
-                ['Phone', app.clients?.phone],
-              ] as [string, string | undefined][]).map(([label, value]) => value ? (
-                <div key={label}>
-                  <dt className="text-gray-400 text-xs uppercase tracking-wide">{label}</dt>
-                  <dd className="text-gray-800 font-medium mt-0.5">{value}</dd>
-                </div>
-              ) : null)}
-            </dl>
-          </div>
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <Building2 size={15} className="text-[#2d5a2d]" /> Applicant Details
+          </h3>
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+            {([
+              ['Owner Name', app.clients?.legal_name],
+              ['Entity Type', app.clients?.applicant_type === 'company' ? 'Company' : 'Individual'],
+              ['Country', app.clients?.country],
+              ['City', app.clients?.city],
+              ['Address', app.clients?.address],
+              ['Postal Code', app.clients?.postal_code],
+              ['Email', app.clients?.email],
+              ['Phone', app.clients?.phone],
+            ] as [string, string | undefined][]).map(([label, value]) => value ? (
+              <div key={label}>
+                <dt className="text-gray-400 text-xs uppercase tracking-wide">{label}</dt>
+                <dd className="text-gray-800 font-medium mt-0.5">{value}</dd>
+              </div>
+            ) : null)}
+          </dl>
         </div>
       )}
     </div>
   );
 }
 
-// ─── Account Settings View ────────────────────────────────────────────────────
+// ─── Account Settings ─────────────────────────────────────────────────────────
 
 function AccountSettings() {
   const { user, profile } = useAuth();
@@ -1000,15 +1206,11 @@ function AccountSettings() {
     if (newPassword.length < 8) { setMsg({ type: 'error', text: 'Password must be at least 8 characters.' }); return; }
     setSaving(true);
     const { error } = await supabase.auth.updateUser({ password: newPassword });
-    if (error) {
-      setMsg({ type: 'error', text: error.message });
-    } else {
+    if (error) { setMsg({ type: 'error', text: error.message }); }
+    else {
       setMsg({ type: 'success', text: 'Password updated successfully.' });
-      setNewPassword('');
-      setConfirmPassword('');
-      if (profile) {
-        await supabase.from('profiles').update({ password_change_required: false }).eq('id', user!.id);
-      }
+      setNewPassword(''); setConfirmPassword('');
+      if (profile) await supabase.from('profiles').update({ password_change_required: false }).eq('id', user!.id);
     }
     setSaving(false);
   };
@@ -1017,30 +1219,21 @@ function AccountSettings() {
     if (!user?.email) return;
     setResetLoading(true);
     await supabase.auth.resetPasswordForEmail(user.email, { redirectTo: `${window.location.origin}/dashboard` });
-    setResetSent(true);
-    setResetLoading(false);
+    setResetSent(true); setResetLoading(false);
   };
 
   return (
     <div className="space-y-5 max-w-lg">
       <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <User size={15} className="text-[#2d5a2d]" /> Profile
-        </h3>
+        <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2"><User size={15} className="text-[#2d5a2d]" /> Profile</h3>
         <div className="space-y-2 text-sm">
           <div className="flex justify-between"><span className="text-gray-500">Name</span><span className="font-medium">{profile?.full_name ?? '—'}</span></div>
           <div className="flex justify-between"><span className="text-gray-500">Email</span><span className="font-medium">{user?.email}</span></div>
         </div>
       </div>
       <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <Lock size={15} className="text-[#2d5a2d]" /> Change Password
-        </h3>
-        {msg && (
-          <div className={`mb-4 px-3 py-2 rounded-lg text-sm ${msg.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
-            {msg.text}
-          </div>
-        )}
+        <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2"><Lock size={15} className="text-[#2d5a2d]" /> Change Password</h3>
+        {msg && <div className={`mb-4 px-3 py-2 rounded-lg text-sm ${msg.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>{msg.text}</div>}
         <div className="space-y-3">
           <div>
             <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">New Password</label>
@@ -1054,13 +1247,9 @@ function AccountSettings() {
             {saving ? 'Saving…' : 'Update Password'}
           </button>
           <div className="pt-1 border-t border-gray-100 text-center">
-            {resetSent ? (
-              <p className="text-xs text-green-600 font-medium">Reset link sent to {user?.email}</p>
-            ) : (
-              <button type="button" onClick={sendResetEmail} disabled={resetLoading} className="text-xs text-gray-400 hover:text-[#2d5a2d] transition-colors disabled:opacity-50">
-                {resetLoading ? 'Sending…' : 'Or send a reset link to my email'}
-              </button>
-            )}
+            {resetSent
+              ? <p className="text-xs text-green-600 font-medium">Reset link sent to {user?.email}</p>
+              : <button type="button" onClick={sendResetEmail} disabled={resetLoading} className="text-xs text-gray-400 hover:text-[#2d5a2d] transition-colors disabled:opacity-50">{resetLoading ? 'Sending…' : 'Or send a reset link to my email'}</button>}
           </div>
         </div>
       </div>
@@ -1068,18 +1257,18 @@ function AccountSettings() {
   );
 }
 
-// ─── Main Dashboard ────────────────────────────────────────────────────────────
+// ─── Main Dashboard ───────────────────────────────────────────────────────────
 
-type View = 'applications' | 'detail' | 'settings';
+type View = 'docket' | 'detail' | 'settings';
 
 export default function DashboardPage() {
   const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
   const params = useParams<{ id?: string }>();
 
-  const [applications, setApplications] = useState<AppSummary[]>([]);
+  const [docketRows, setDocketRows] = useState<DocketRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<View>(params.id ? 'detail' : 'applications');
+  const [view, setView] = useState<View>(params.id ? 'detail' : 'docket');
   const [selectedAppId, setSelectedAppId] = useState<string | null>(params.id ?? null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [draft, setDraft] = useState<FilingDraft | null>(null);
@@ -1088,15 +1277,28 @@ export default function DashboardPage() {
     if (profile?.password_change_required) setView('settings');
   }, [profile]);
 
-  const loadApplications = useCallback(async () => {
+  const loadDocket = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const [appsRes, draftRes] = await Promise.all([
+
+    const [appsRes, paymentsRes, draftRes] = await Promise.all([
       supabase
         .from('applications')
-        .select('id, case_number, filing_status, payment_status, total_classes, created_at, impi_application_number, impi_filing_date, impi_publication_date, impi_registration_number, impi_registration_date, impi_renewal_deadline, trademarks(mark_name, logo_preview_url), trademark_classes(class_number, class_title_en)')
+        .select(`
+          id, case_number, filing_status, payment_status,
+          total_amount_usd, service_fee_usd, government_fee_usd,
+          created_at, impi_application_number, impi_filing_date,
+          impi_publication_date, impi_registration_number,
+          impi_registration_date, impi_renewal_deadline,
+          trademarks(mark_name, mark_type, logo_preview_url),
+          trademark_classes(id, class_number, class_title_en, application_status, admin_comments)
+        `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false }),
+      supabase
+        .from('payments')
+        .select('application_id, receipt_url, status')
+        .eq('status', 'paid'),
       supabase
         .from('filing_drafts')
         .select('id, current_step, mark_name, logo_preview_data, updated_at')
@@ -1104,88 +1306,68 @@ export default function DashboardPage() {
         .maybeSingle(),
     ]);
 
-    const apps: AppSummary[] = (appsRes.data ?? []).map((a: Record<string, unknown>) => {
-      const tms = a.trademarks as Record<string, unknown>[] | Record<string, unknown> | null;
+    // Build receipt map
+    const receiptMap: Record<string, string> = {};
+    for (const p of (paymentsRes.data ?? [])) {
+      if (p.receipt_url) receiptMap[p.application_id] = p.receipt_url;
+    }
+
+    // Flatten to one row per class (or one row if no classes)
+    const rows: DocketRow[] = [];
+    for (const app of (appsRes.data ?? []) as Record<string, unknown>[]) {
+      const tms = app.trademarks as Record<string, unknown>[] | Record<string, unknown> | null;
       const tm = Array.isArray(tms) ? tms[0] : tms;
-      const clsArr = a.trademark_classes as Record<string, unknown>[] | null;
-      const classTitles = clsArr?.map(c => `Class ${c.class_number}`).join(', ') ?? '';
-      return {
-        id: String(a.id),
-        case_number: String(a.case_number),
-        filing_status: String(a.filing_status),
-        payment_status: String(a.payment_status),
-        total_classes: Number(a.total_classes),
-        created_at: String(a.created_at),
-        trademark_name: tm ? String(tm.mark_name ?? '') : undefined,
-        logo_preview_url: tm ? (tm.logo_preview_url ? String(tm.logo_preview_url) : undefined) : undefined,
-        impi_application_number: a.impi_application_number as string | null,
-        impi_filing_date: a.impi_filing_date as string | null,
-        impi_publication_date: a.impi_publication_date as string | null,
-        impi_registration_number: a.impi_registration_number as string | null,
-        impi_registration_date: a.impi_registration_date as string | null,
-        impi_renewal_deadline: a.impi_renewal_deadline as string | null,
-        class_titles: classTitles,
+      const classes = (app.trademark_classes as Record<string, unknown>[] | null) ?? [];
+
+      const base: Omit<DocketRow, 'class_id' | 'class_number' | 'class_title_en' | 'application_status' | 'admin_comments'> = {
+        app_id: String(app.id),
+        case_number: String(app.case_number),
+        payment_status: String(app.payment_status),
+        filing_status: String(app.filing_status),
+        total_amount_usd: app.total_amount_usd as number | null,
+        service_fee_usd: app.service_fee_usd as number | null,
+        government_fee_usd: app.government_fee_usd as number | null,
+        created_at: String(app.created_at),
+        impi_application_number: app.impi_application_number as string | null,
+        impi_filing_date: app.impi_filing_date as string | null,
+        impi_publication_date: app.impi_publication_date as string | null,
+        impi_registration_number: app.impi_registration_number as string | null,
+        impi_registration_date: app.impi_registration_date as string | null,
+        impi_renewal_deadline: app.impi_renewal_deadline as string | null,
+        trademark_name: tm ? String(tm.mark_name ?? '') : '',
+        mark_type: tm ? String(tm.mark_type ?? '') : '',
+        logo_preview_url: tm ? (tm.logo_preview_url as string | null) : null,
+        receipt_url: receiptMap[String(app.id)] ?? null,
       };
-    });
-    setApplications(apps);
+
+      if (classes.length === 0) {
+        rows.push({ ...base, class_id: null, class_number: null, class_title_en: null, application_status: null, admin_comments: null });
+      } else {
+        for (const c of classes) {
+          rows.push({
+            ...base,
+            class_id: String(c.id),
+            class_number: c.class_number as number,
+            class_title_en: c.class_title_en as string | null,
+            application_status: c.application_status as string | null,
+            admin_comments: c.admin_comments as string | null,
+          });
+        }
+      }
+    }
+
+    setDocketRows(rows);
     setDraft(draftRes.data as FilingDraft | null);
     setLoading(false);
   }, [user]);
 
-  useEffect(() => { loadApplications(); }, [loadApplications]);
-
-  const openApp = (id: string) => {
-    setSelectedAppId(id);
-    setView('detail');
-    setSidebarOpen(false);
-  };
-
-  const handleListPrint = () => {
-    const rows = applications.map(a => `
-      <tr>
-        <td>${a.trademark_name ?? '—'}</td>
-        <td style="font-family:monospace">${a.case_number}</td>
-        <td>${a.total_classes}</td>
-        <td>${STATUS_LABELS[a.filing_status] ?? a.filing_status}</td>
-        <td>${fmtShort(a.created_at)}</td>
-        <td style="font-family:monospace">${a.impi_application_number ?? '—'}</td>
-        <td>${fmtShort(a.impi_filing_date)}</td>
-        <td>${fmtShort(a.impi_publication_date)}</td>
-        <td style="font-family:monospace">${a.impi_registration_number ?? '—'}</td>
-        <td>${fmtShort(a.impi_registration_date)}</td>
-        <td>${fmtShort(a.impi_renewal_deadline)}</td>
-      </tr>`).join('');
-    const win = window.open('', '_blank');
-    if (!win) return;
-    win.document.write(`<!DOCTYPE html><html><head><title>Trademark Docket</title>
-      <style>
-        body { font-family: system-ui, sans-serif; font-size: 11px; padding: 24px; }
-        h1 { font-size: 16px; margin-bottom: 16px; }
-        table { width: 100%; border-collapse: collapse; }
-        th { background: #1a2e1a; color: white; text-align: left; padding: 8px 10px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
-        td { padding: 7px 10px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
-        tr:nth-child(even) td { background: #f9fafb; }
-        @media print { body { padding: 12px; } }
-      </style></head><body>
-      <h1>Trademark Docket — ${new Date().toLocaleDateString()}</h1>
-      <table>
-        <thead><tr>
-          <th>Mark</th><th>Case No.</th><th>Classes</th><th>Status</th>
-          <th>Filed</th><th>IMPI App. No.</th><th>IMPI Filing</th>
-          <th>Publication</th><th>IMPI Reg. No.</th><th>Registration</th><th>Renewal</th>
-        </tr></thead>
-        <tbody>${rows}</tbody>
-      </table></body></html>`);
-    win.document.close();
-    win.focus();
-    setTimeout(() => { win.print(); win.close(); }, 300);
-  };
+  useEffect(() => { loadDocket(); }, [loadDocket]);
 
   const stats = [
-    { label: 'Total', value: applications.length, icon: FileText, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: 'In Progress', value: applications.filter(a => ['new','pending_review','filed','ready_to_file'].includes(a.filing_status)).length, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
-    { label: 'Registered', value: applications.filter(a => a.filing_status === 'registered').length, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-    { label: 'Action Needed', value: applications.filter(a => ['info_requested','office_action_pending','pending_payment'].includes(a.filing_status)).length, icon: AlertCircle, color: 'text-rose-600', bg: 'bg-rose-50' },
+    { label: 'Total Cases', value: docketRows.length, icon: FileText, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { label: 'In Progress', value: docketRows.filter(r => ['new','pending_review','filed','ready_to_file'].includes(r.filing_status)).length, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
+    { label: 'Registered', value: docketRows.filter(r => r.filing_status === 'registered').length, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { label: 'Action Needed', value: docketRows.filter(r => ['info_requested','office_action_pending','pending_payment'].includes(r.filing_status)).length, icon: AlertCircle, color: 'text-rose-600', bg: 'bg-rose-50' },
   ];
 
   const initials = profile?.full_name
@@ -1193,24 +1375,19 @@ export default function DashboardPage() {
     : (user?.email?.[0] ?? 'U').toUpperCase();
 
   const navItems = [
-    { key: 'applications', label: 'My Applications', icon: FileText },
+    { key: 'docket', label: 'My Docket', icon: FileText },
     { key: 'settings', label: 'Account Settings', icon: Settings },
   ] as const;
 
   return (
     <div className="min-h-screen bg-[#f8f7f4] flex">
-      {sidebarOpen && (
-        <div className="fixed inset-0 bg-black/40 z-20 lg:hidden" onClick={() => setSidebarOpen(false)} />
-      )}
+      {sidebarOpen && <div className="fixed inset-0 bg-black/40 z-20 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
       {/* Sidebar */}
-      <aside className={`fixed lg:static inset-y-0 left-0 z-30 w-64 bg-[#0f1f0f] text-white flex flex-col transition-transform duration-200
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+      <aside className={`fixed lg:static inset-y-0 left-0 z-30 w-64 bg-[#0f1f0f] text-white flex flex-col transition-transform duration-200 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
         <div className="px-6 py-5 border-b border-white/10">
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-[#c9a84c] rounded flex items-center justify-center">
-              <Shield size={14} className="text-white" />
-            </div>
+            <div className="w-7 h-7 bg-[#c9a84c] rounded flex items-center justify-center"><Shield size={14} className="text-white" /></div>
             <div>
               <p className="text-xs font-bold text-white leading-none">Mexico Trademark</p>
               <p className="text-[10px] text-green-400 mt-0.5">Client Portal</p>
@@ -1233,16 +1410,10 @@ export default function DashboardPage() {
         </div>
         <nav className="flex-1 px-3 py-4 space-y-1">
           {navItems.map(item => (
-            <button
-              key={item.key}
-              onClick={() => { setView(item.key as View); setSidebarOpen(false); }}
+            <button key={item.key} onClick={() => { setView(item.key as View); setSidebarOpen(false); }}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
-                ${view === item.key || (item.key === 'applications' && view === 'detail')
-                  ? 'bg-white/10 text-white font-medium'
-                  : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
-            >
-              <item.icon size={16} />
-              {item.label}
+                ${view === item.key || (item.key === 'docket' && view === 'detail') ? 'bg-white/10 text-white font-medium' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}>
+              <item.icon size={16} />{item.label}
             </button>
           ))}
           <Link to="/apply" className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-400 hover:bg-white/5 hover:text-white transition-colors mt-1">
@@ -1271,37 +1442,27 @@ export default function DashboardPage() {
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-          {/* Applications list */}
-          {view === 'applications' && (
+
+          {/* Docket view */}
+          {view === 'docket' && (
             <>
               <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
                 <div>
-                  <h1 className="text-xl font-bold text-gray-900">My Applications</h1>
-                  <p className="text-sm text-gray-500 mt-0.5">Track your trademark filings in real time</p>
+                  <h1 className="text-xl font-bold text-gray-900">My Docket</h1>
+                  <p className="text-sm text-gray-500 mt-0.5">All your trademark cases in one place</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  {applications.length > 0 && (
+                  {docketRows.length > 0 && (
                     <>
-                      <button
-                        onClick={() => exportToCSV(applications, 'trademark-docket.csv')}
-                        className="flex items-center gap-1.5 text-xs font-medium text-gray-600 border border-gray-200 bg-white hover:bg-gray-50 px-3 py-2 rounded-lg transition-colors"
-                        title="Export all to Excel/CSV"
-                      >
-                        <Sheet size={14} /> Export All
+                      <button onClick={() => exportDocketCSV(docketRows, 'trademark-docket.csv')} className="flex items-center gap-1.5 text-xs font-medium text-gray-600 border border-gray-200 bg-white hover:bg-gray-50 px-3 py-2 rounded-lg transition-colors">
+                        <Sheet size={14} /> Export
                       </button>
-                      <button
-                        onClick={handleListPrint}
-                        className="flex items-center gap-1.5 text-xs font-medium text-gray-600 border border-gray-200 bg-white hover:bg-gray-50 px-3 py-2 rounded-lg transition-colors"
-                        title="Print docket"
-                      >
-                        <Printer size={14} /> Print Docket
+                      <button onClick={() => printDocket(docketRows)} className="flex items-center gap-1.5 text-xs font-medium text-gray-600 border border-gray-200 bg-white hover:bg-gray-50 px-3 py-2 rounded-lg transition-colors">
+                        <Printer size={14} /> Print
                       </button>
                     </>
                   )}
-                  <Link
-                    to="/apply"
-                    className="inline-flex items-center gap-2 bg-[#1a2e1a] hover:bg-[#2d5a2d] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-                  >
+                  <Link to="/apply" className="inline-flex items-center gap-2 bg-[#1a2e1a] hover:bg-[#2d5a2d] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
                     <Plus size={15} /> New Filing
                   </Link>
                 </div>
@@ -1311,25 +1472,15 @@ export default function DashboardPage() {
               {draft && (
                 <div className="mb-5 bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-4">
                   <div className="w-11 h-11 rounded-lg bg-amber-100 border border-amber-200 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                    {draft.logo_preview_data
-                      ? <img src={draft.logo_preview_data} alt="" className="w-full h-full object-contain" />
-                      : <Pencil size={18} className="text-amber-600" />}
+                    {draft.logo_preview_data ? <img src={draft.logo_preview_data} alt="" className="w-full h-full object-contain" /> : <Pencil size={18} className="text-amber-600" />}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-amber-900">
-                      {draft.mark_name ? `"${draft.mark_name}" — ` : ''}Draft Filing in Progress
-                    </p>
-                    <p className="text-xs text-amber-700 mt-0.5">
-                      Step {draft.current_step} of 6 &middot; Last saved {new Date(draft.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                    </p>
+                    <p className="text-sm font-semibold text-amber-900">{draft.mark_name ? `"${draft.mark_name}" — ` : ''}Draft Filing in Progress</p>
+                    <p className="text-xs text-amber-700 mt-0.5">Step {draft.current_step} of 6 &middot; Last saved {new Date(draft.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
                   </div>
                   <div className="flex gap-2 flex-shrink-0">
-                    <Link to="/apply?resume=1" className="inline-flex items-center gap-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors">
-                      Continue <ChevronRight size={13} />
-                    </Link>
-                    <Link to="/apply?fresh=1" className="inline-flex items-center gap-1.5 border border-amber-300 text-amber-700 hover:bg-amber-100 text-xs font-medium px-3 py-2 rounded-lg transition-colors">
-                      Start new
-                    </Link>
+                    <Link to="/apply?resume=1" className="inline-flex items-center gap-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors">Continue <ChevronRight size={13} /></Link>
+                    <Link to="/apply?fresh=1" className="inline-flex items-center gap-1.5 border border-amber-300 text-amber-700 hover:bg-amber-100 text-xs font-medium px-3 py-2 rounded-lg transition-colors">Start new</Link>
                   </div>
                 </div>
               )}
@@ -1347,38 +1498,23 @@ export default function DashboardPage() {
                 ))}
               </div>
 
-              {/* App cards */}
               {loading ? (
                 <div className="flex items-center justify-center py-20">
                   <div className="w-8 h-8 border-2 border-[#2d5a2d] border-t-transparent rounded-full animate-spin" />
                 </div>
-              ) : applications.length === 0 ? (
-                <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
-                  <div className="w-16 h-16 bg-[#f0f7f0] rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Shield size={24} className="text-[#2d5a2d]" />
-                  </div>
-                  <h3 className="text-base font-semibold text-gray-800 mb-1">No applications yet</h3>
-                  <p className="text-sm text-gray-500 mb-5">Start your first Mexico trademark filing today.</p>
-                  <Link to="/apply" className="inline-flex items-center gap-2 bg-[#1a2e1a] text-white text-sm font-medium px-5 py-2.5 rounded-lg hover:bg-[#2d5a2d] transition-colors">
-                    <Plus size={15} /> Start First Filing
-                  </Link>
-                </div>
               ) : (
-                <div className="space-y-3">
-                  {applications.map(app => (
-                    <AppCard key={app.id} app={app} onClick={() => openApp(app.id)} />
-                  ))}
-                </div>
+                <DocketTable
+                  rows={docketRows}
+                  onRefresh={loadDocket}
+                  onViewDetail={id => { setSelectedAppId(id); setView('detail'); }}
+                />
               )}
             </>
           )}
 
           {/* Detail view */}
           {view === 'detail' && selectedAppId && (
-            <ApplicationDetail
-              appId={selectedAppId}
-              onBack={() => { setView('applications'); setSelectedAppId(null); }}
-            />
+            <ApplicationDetail appId={selectedAppId} onBack={() => { setView('docket'); setSelectedAppId(null); }} />
           )}
 
           {/* Settings */}

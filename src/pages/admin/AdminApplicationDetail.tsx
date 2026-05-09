@@ -48,6 +48,7 @@ export default function AdminApplicationDetail() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'details'|'notes'|'messages'|'timeline'|'documents'|'instructions'>('details');
+  const [savingClass, setSavingClass] = useState<string | null>(null);
 
   // Form states
   const [newNote, setNewNote] = useState('');
@@ -101,6 +102,13 @@ export default function AdminApplicationDetail() {
     await supabase.from('applications').update(updates).eq('id', id!);
     setApp(prev => prev ? { ...prev, ...updates } : prev);
     setSaving(false);
+  };
+
+  const updateClass = async (classId: string, updates: Record<string, unknown>) => {
+    setSavingClass(classId);
+    await supabase.from('trademark_classes').update(updates).eq('id', classId);
+    setClasses(prev => prev.map(c => String(c.id) === classId ? { ...c, ...updates } : c));
+    setSavingClass(null);
   };
 
   const addNote = async () => {
@@ -266,6 +274,12 @@ export default function AdminApplicationDetail() {
             onBlur={e => updateApp({ impi_filing_date: e.target.value || null })} />
         </div>
         <div>
+          <label className="text-xs text-gray-500 block mb-1">Publication Date</label>
+          <input type="date" className="border border-gray-200 rounded-lg text-sm px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-gold-400"
+            defaultValue={String(app.impi_publication_date ?? '')}
+            onBlur={e => updateApp({ impi_publication_date: e.target.value || null })} />
+        </div>
+        <div>
           <label className="text-xs text-gray-500 block mb-1">Registration Number</label>
           <input type="text" className="border border-gray-200 rounded-lg text-sm px-3 py-1.5 w-36 focus:outline-none focus:ring-1 focus:ring-gold-400"
             defaultValue={String(app.impi_registration_number ?? '')}
@@ -347,19 +361,58 @@ export default function AdminApplicationDetail() {
               </div>
             ) : <p className="text-xs text-gray-400">No trademark record.</p>}
           </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <h3 className="font-semibold text-navy-900 mb-4 text-sm">Nice Classes ({classes.length})</h3>
+          <div className="bg-white rounded-xl border border-gray-200 p-5 lg:col-span-2">
+            <h3 className="font-semibold text-navy-900 mb-4 text-sm">Nice Classes — Application Status & Comments ({classes.length})</h3>
             {classes.length > 0 ? (
-              <div className="space-y-2">
-                {classes.map(c => (
-                  <div key={String(c.id)} className="flex items-start gap-3">
-                    <span className="bg-navy-100 text-navy-700 text-xs font-bold px-2 py-0.5 rounded flex-shrink-0">Class {String(c.class_number)}</span>
-                    <span className="text-xs text-gray-600">{String(c.class_title_en ?? '')}</span>
-                    <span className={`ml-auto text-xs px-1.5 py-0.5 rounded flex-shrink-0 ${c.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{String(c.status)}</span>
-                  </div>
-                ))}
+              <div className="space-y-4">
+                {classes.map(c => {
+                  const classId = String(c.id);
+                  const isSaving = savingClass === classId;
+                  return (
+                    <div key={classId} className="border border-gray-200 rounded-xl p-4 bg-gray-50/50">
+                      <div className="flex items-center gap-3 mb-3">
+                        <span className="bg-navy-100 text-navy-700 text-xs font-bold px-2 py-0.5 rounded flex-shrink-0 font-mono">
+                          Class {String(c.class_number)}
+                        </span>
+                        <span className="text-xs text-gray-700 font-medium flex-1">{String(c.class_title_en ?? '')}</span>
+                        {isSaving && <span className="text-xs text-gray-400 animate-pulse ml-auto">Saving…</span>}
+                      </div>
+                      <div className="grid sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs text-gray-500 block mb-1">Application Status</label>
+                          <select
+                            className="w-full border border-gray-200 rounded-lg text-sm px-3 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-gold-400"
+                            value={String(c.application_status ?? 'pending_payment')}
+                            onChange={e => updateClass(classId, { application_status: e.target.value })}
+                          >
+                            <option value="pending_payment">Awaiting Payment</option>
+                            <option value="in_review">In Review</option>
+                            <option value="filed">Filed</option>
+                            <option value="published">Published</option>
+                            <option value="granted">Granted</option>
+                            <option value="abandoned">Abandoned</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500 block mb-1">Comments (anticipations, oppositions, etc.)</label>
+                          <textarea
+                            className="w-full border border-gray-200 rounded-lg text-xs px-3 py-2 resize-none bg-white focus:outline-none focus:ring-1 focus:ring-gold-400"
+                            rows={2}
+                            defaultValue={String(c.admin_comments ?? '')}
+                            placeholder="Add notes visible to client…"
+                            onBlur={e => {
+                              if (e.target.value !== String(c.admin_comments ?? '')) {
+                                updateClass(classId, { admin_comments: e.target.value || null });
+                              }
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            ) : <p className="text-xs text-gray-400">No classes.</p>}
+            ) : <p className="text-xs text-gray-400">No classes assigned yet.</p>}
           </div>
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <h3 className="font-semibold text-navy-900 mb-4 text-sm">Goods & Services</h3>

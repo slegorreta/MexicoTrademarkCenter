@@ -156,6 +156,7 @@ Deno.serve(async (req: Request) => {
     return new Response(
       JSON.stringify({
         clientSecret: paymentIntent.client_secret,
+        paymentIntentId: paymentIntent.id,
         discountPercent,
         finalAmountUsd: discountedAmount,
         originalAmountUsd: amountUsd,
