@@ -604,7 +604,18 @@ export default function ApplyPage() {
       const cn = generateCaseNumber();
       setCaseNumber(cn);
 
-      const { data: clientData } = await supabase.from('clients').insert({
+      // Ensure the profile row exists for authenticated users (it may be missing
+      // if the insert during signUp was blocked by RLS before the policy was added)
+      if (user) {
+        await supabase.from('profiles').upsert({
+          id: user.id,
+          email: user.email ?? form.email,
+          full_name: form.contactPerson || form.legalName,
+          role: 'client',
+        }, { onConflict: 'id', ignoreDuplicates: true });
+      }
+
+      const { data: clientData, error: clientError } = await supabase.from('clients').insert({
         user_id: user?.id || null,
         applicant_type: form.applicantType,
         legal_name: form.legalName,
@@ -622,7 +633,7 @@ export default function ApplyPage() {
         preferred_language: form.preferredLanguage,
       }).select().maybeSingle();
 
-      if (!clientData) throw new Error('Failed to create client record');
+      if (clientError || !clientData) throw new Error(`Failed to create client record: ${clientError?.message ?? 'no data returned'}`);
 
       const { data: appData } = await supabase.from('applications').insert({
         case_number: cn,
