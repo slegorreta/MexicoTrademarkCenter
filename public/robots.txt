@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+
+# Transactional & private pages — not for indexing
+Disallow: /admin
+Disallow: /admin/
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /login
+Disallow: /staff
+Disallow: /apply
+
+# Sitemap
+Sitemap: https://www.mexicotrademarkcenter.com/sitemap.xml
