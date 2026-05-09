@@ -4,7 +4,7 @@ import {
   Plus, FileText, Clock, CheckCircle2, AlertCircle, LogOut,
   ChevronRight, Download, MessageSquare, User, Settings,
   Bell, ArrowLeft, Send, Lock, Globe, Building2, RefreshCw,
-  Inbox, Shield
+  Inbox, Shield, Pencil
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -20,6 +20,14 @@ interface AppSummary {
   created_at: string;
   trademark_name?: string;
   logo_preview_url?: string;
+}
+
+interface FilingDraft {
+  id: string;
+  current_step: number;
+  mark_name: string | null;
+  logo_preview_data: string | null;
+  updated_at: string;
 }
 
 interface TimelineEvent {
@@ -635,6 +643,7 @@ export default function DashboardPage() {
   const [view, setView] = useState<View>(params.id ? 'detail' : 'applications');
   const [selectedAppId, setSelectedAppId] = useState<string | null>(params.id ?? null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [draft, setDraft] = useState<FilingDraft | null>(null);
 
   // Force password change if required
   useEffect(() => {
@@ -646,13 +655,20 @@ export default function DashboardPage() {
   const loadApplications = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const { data } = await supabase
-      .from('applications')
-      .select('id, case_number, filing_status, payment_status, total_classes, created_at, trademarks(mark_name, logo_preview_url)')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
+    const [appsRes, draftRes] = await Promise.all([
+      supabase
+        .from('applications')
+        .select('id, case_number, filing_status, payment_status, total_classes, created_at, trademarks(mark_name, logo_preview_url)')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('filing_drafts')
+        .select('id, current_step, mark_name, logo_preview_data, updated_at')
+        .eq('user_id', user.id)
+        .maybeSingle(),
+    ]);
 
-    const apps: AppSummary[] = (data ?? []).map((a: Record<string, unknown>) => {
+    const apps: AppSummary[] = (appsRes.data ?? []).map((a: Record<string, unknown>) => {
       const tms = a.trademarks as Record<string, unknown>[] | Record<string, unknown> | null;
       const tm = Array.isArray(tms) ? tms[0] : tms;
       return {
@@ -667,6 +683,7 @@ export default function DashboardPage() {
       };
     });
     setApplications(apps);
+    setDraft(draftRes.data as FilingDraft | null);
     setLoading(false);
   }, [user]);
 
@@ -801,6 +818,39 @@ export default function DashboardPage() {
                   <Plus size={15} /> New Filing
                 </Link>
               </div>
+
+              {/* In-progress draft banner */}
+              {draft && (
+                <div className="mb-5 bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-4">
+                  <div className="w-11 h-11 rounded-lg bg-amber-100 border border-amber-200 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    {draft.logo_preview_data
+                      ? <img src={draft.logo_preview_data} alt="" className="w-full h-full object-contain" />
+                      : <Pencil size={18} className="text-amber-600" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-amber-900">
+                      {draft.mark_name ? `"${draft.mark_name}" — ` : ''}Draft Filing in Progress
+                    </p>
+                    <p className="text-xs text-amber-700 mt-0.5">
+                      Step {draft.current_step} of 6 &middot; Last saved {new Date(draft.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
+                  <div className="flex gap-2 flex-shrink-0">
+                    <Link
+                      to="/apply?resume=1"
+                      className="inline-flex items-center gap-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
+                    >
+                      Continue <ChevronRight size={13} />
+                    </Link>
+                    <Link
+                      to="/apply?fresh=1"
+                      className="inline-flex items-center gap-1.5 border border-amber-300 text-amber-700 hover:bg-amber-100 text-xs font-medium px-3 py-2 rounded-lg transition-colors"
+                    >
+                      Start new
+                    </Link>
+                  </div>
+                </div>
+              )}
 
               {/* Stats */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">

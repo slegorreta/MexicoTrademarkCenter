@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { CheckCircle2, ChevronRight, Upload, X, Plus, Trash2, Lock, CreditCard, AlertCircle, Sparkles, Tag, Loader2, Pencil, Eye, EyeOff, UserPlus } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
@@ -429,6 +429,7 @@ export default function ApplyPage() {
   const sortedDialCodes = getSortedDialCodes(language as SupportedLang);
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [step, setStep] = useState<Step>(1);
   const [showAuthGate, setShowAuthGate] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -436,6 +437,9 @@ export default function ApplyPage() {
   const [applicationId, setApplicationId] = useState<string | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const activeEntryRef = useRef<HTMLDivElement>(null);
+  const [draftId, setDraftId] = useState<string | null>(null);
+  const draftLoaded = useRef(false);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Stripe state
   const [stripePromise] = useState(() => {
@@ -597,6 +601,92 @@ export default function ApplyPage() {
     : grandTotal;
 
   // Called when user clicks "Proceed to Payment" — saves records, creates PaymentIntent
+  // ─── Draft persistence ─────────────────────────────────────────────────────
+
+  const serializeForm = useCallback((f: FormData) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { logoFile, ...rest } = f;
+    return rest;
+  }, []);
+
+  // Load existing draft on mount (authenticated users only)
+  useEffect(() => {
+    if (!user) {
+      draftLoaded.current = true;
+      return;
+    }
+    (async () => {
+      const { data } = await supabase
+        .from('filing_drafts')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (data) {
+        // User wants a fresh start — delete the saved draft and begin clean
+        if (searchParams.get('fresh') === '1') {
+          await supabase.from('filing_drafts').delete().eq('id', data.id);
+          draftLoaded.current = true;
+          return;
+        }
+
+        setDraftId(data.id);
+        const savedStep = (data.current_step ?? 1) as Step;
+        const savedForm = data.form_data as Partial<FormData> | null;
+        const savedEntries = data.class_entries as ClassEntry[] | null;
+        if (savedForm) {
+          setForm(f => ({
+            ...f,
+            ...savedForm,
+            logoFile: null,
+            classEntries: savedEntries && savedEntries.length > 0 ? savedEntries : f.classEntries,
+          }));
+        }
+        if (data.logo_preview_data) {
+          setLogoPreview(data.logo_preview_data);
+        }
+        // If the user navigated here to resume, go to their saved step
+        if (searchParams.get('resume') === '1') {
+          setStep(savedStep);
+        }
+      }
+      draftLoaded.current = true;
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  // Auto-save draft on form/step change (debounced 1.5s, authenticated users only)
+  useEffect(() => {
+    if (!user || !draftLoaded.current || step === 7) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      const payload = {
+        user_id: user.id,
+        current_step: step,
+        mark_name: form.markName,
+        form_data: serializeForm(form),
+        class_entries: form.classEntries,
+        logo_preview_data: logoPreview ?? null,
+        updated_at: new Date().toISOString(),
+      };
+      if (draftId) {
+        await supabase.from('filing_drafts').update(payload).eq('id', draftId);
+      } else {
+        const { data } = await supabase.from('filing_drafts').insert(payload).select('id').maybeSingle();
+        if (data?.id) setDraftId(data.id);
+      }
+    }, 1500);
+    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
+  }, [user, step, form, logoPreview, draftId, serializeForm]);
+
+  const deleteDraft = useCallback(async () => {
+    if (!draftId || !user) return;
+    await supabase.from('filing_drafts').delete().eq('id', draftId);
+    setDraftId(null);
+  }, [draftId, user]);
+
+  // ─── Payment ───────────────────────────────────────────────────────────────
+
   const handleProceedToPayment = async () => {
     setSubmitting(true);
     setPaymentError(null);
@@ -733,6 +823,7 @@ export default function ApplyPage() {
   };
 
   const handlePaymentSuccess = () => {
+    deleteDraft();
     setStep(7);
   };
 
@@ -752,6 +843,15 @@ export default function ApplyPage() {
         </div>
 
         {step < 7 && <StepIndicator current={step} total={7} t={t} />}
+
+        {/* Draft resumed notice */}
+        {draftId && step > 1 && step < 7 && (
+          <div className="mb-4 flex items-center justify-between gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-2.5 text-sm text-blue-700">
+            <span>
+              {tri('Draft restored — you can edit any previous step.', '草稿已恢复——您可以编辑任何之前的步骤。', 'Borrador restaurado: puede editar cualquier paso anterior.', 'Entwurf wiederhergestellt – Sie können jeden Schritt bearbeiten.', 'Brouillon restauré — vous pouvez modifier n\'importe quelle étape.', 'ड्राफ़्ट पुनर्स्थापित — आप कोई भी पिछला चरण संपादित कर सकते हैं।', 'Rascunho restaurado — você pode editar qualquer etapa anterior.', '下書きが復元されました。前のステップを編集できます。')}
+            </span>
+          </div>
+        )}
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 lg:p-8">
           {/* STEP 1 */}
