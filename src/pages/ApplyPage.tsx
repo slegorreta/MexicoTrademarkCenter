@@ -884,9 +884,7 @@ export default function ApplyPage() {
                       key={activeEntry.id}
                       language={(language === 'zh' ? 'zh' : language === 'es' ? 'es' : language === 'de' ? 'de' : language === 'fr' ? 'fr' : language === 'hi' ? 'hi' : language === 'pt' ? 'pt' : 'en') as 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt'}
                       initialDescription={activeEntry.description}
-                      businessIndustry={activeEntry.businessIndustry}
                       onDescriptionChange={desc => updateEntry(activeEntry.id, { description: desc })}
-                      onIndustryChange={ind => updateEntry(activeEntry.id, { businessIndustry: ind })}
                       onClassesAccepted={(nums, descEn, descEs) => {
                         if (nums.length === 0) return;
                         const primaryClass = nums[0];

@@ -36,9 +36,7 @@ type Lang = 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt';
 interface Props {
   language: Lang;
   initialDescription: string;
-  businessIndustry: string;
   onDescriptionChange: (desc: string) => void;
-  onIndustryChange: (industry: string) => void;
   onClassesAccepted: (classNumbers: number[], descriptionsEn: Record<number, string>, descriptionsEs: Record<number, string>) => void;
   onFallbackSuggestions: (suggestions: ClassSuggestion[]) => void;
   selectedClasses: number[];
@@ -354,9 +352,7 @@ const ui: Record<string, Record<Lang, string>> = {
 export default function AIDescriptionAssistant({
   language,
   initialDescription,
-  businessIndustry,
   onDescriptionChange,
-  onIndustryChange,
   onClassesAccepted,
   onFallbackSuggestions,
   selectedClasses,
@@ -364,7 +360,7 @@ export default function AIDescriptionAssistant({
   relatedClasses = [],
 }: Props) {
   const [description, setDescription] = useState(initialDescription);
-  const [industry, setIndustry] = useState(businessIndustry);
+  const industry = '';
   const [mode, setMode] = useState<AssistantMode>('idle');
   const [conversation, setConversation] = useState<ConversationMessage[]>([]);
   const [aiResponse, setAiResponse] = useState<AIResponse | null>(null);
@@ -419,7 +415,6 @@ export default function AIDescriptionAssistant({
   const handleAnalyze = async () => {
     if (!description.trim()) return;
     onDescriptionChange(description);
-    onIndustryChange(industry);
 
     setMode('analyzing');
     setAiResponse(null);
@@ -510,7 +505,6 @@ export default function AIDescriptionAssistant({
     setClassDescriptionsEs({});
     setFallbackSuggestions([]);
     setRound(0);
-    setCaptchaVerified(false);
   };
 
   const confidenceColor = (c: number) =>
@@ -540,7 +534,7 @@ export default function AIDescriptionAssistant({
         </div>
       )}
 
-      {/* Description textarea + industry */}
+      {/* Description textarea + analyze button */}
       <div className="space-y-3">
         <div>
           <div className="flex items-center justify-between mb-1.5">
@@ -554,7 +548,7 @@ export default function AIDescriptionAssistant({
           </div>
           <textarea
             ref={textareaRef}
-            rows={4}
+            rows={5}
             required
             className={inputCls}
             placeholder={s('descPlaceholder')}
@@ -567,54 +561,33 @@ export default function AIDescriptionAssistant({
           />
         </div>
 
-        <div className="grid sm:grid-cols-2 gap-3">
-          <div>
-            <label className="text-sm font-medium text-gray-700 block mb-1.5">
-              {s('industryLabel')}
-            </label>
-            <input
-              type="text"
-              className={inputCls}
-              value={industry}
-              onChange={e => {
-                setIndustry(e.target.value);
-                onIndustryChange(e.target.value);
-                if (mode !== 'idle') setMode('idle');
-              }}
-              placeholder={s('industryPlaceholder')}
-            />
-          </div>
-          <div className="flex items-end">
-            <button
-              type="button"
-              onClick={mode === 'idle' || mode === 'fallback' ? handleAnalyze : handleReset}
-              disabled={!description.trim() || mode === 'analyzing'}
-              className={`w-full flex items-center justify-center gap-2 font-semibold py-2.5 rounded-xl text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-                mode === 'classified' || mode === 'questions'
-                  ? 'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200'
-                  : 'bg-navy-900 hover:bg-navy-800 text-white shadow-sm'
-              }`}
-            >
-              {mode === 'analyzing' ? (
-                <>
-                  <Loader2 size={15} className="animate-spin" />
-                  {s('analyzing')}
-                </>
-              ) : mode === 'classified' || mode === 'questions' ? (
-                <>
-                  <RefreshCw size={14} />
-                  {s('reAnalyze')}
-                </>
-              ) : (
-                <>
-                  <Sparkles size={15} />
-                  {s('analyzeWithAI')}
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-
+        <button
+          type="button"
+          onClick={mode === 'idle' || mode === 'fallback' ? handleAnalyze : handleReset}
+          disabled={!description.trim() || mode === 'analyzing'}
+          className={`w-full flex items-center justify-center gap-2 font-semibold py-2.5 rounded-xl text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+            mode === 'classified' || mode === 'questions'
+              ? 'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200'
+              : 'bg-navy-900 hover:bg-navy-800 text-white shadow-sm'
+          }`}
+        >
+          {mode === 'analyzing' ? (
+            <>
+              <Loader2 size={15} className="animate-spin" />
+              {s('analyzing')}
+            </>
+          ) : mode === 'classified' || mode === 'questions' ? (
+            <>
+              <RefreshCw size={14} />
+              {s('reAnalyze')}
+            </>
+          ) : (
+            <>
+              <Sparkles size={15} />
+              {s('analyzeWithAI')}
+            </>
+          )}
+        </button>
       </div>
 
       {/* Analyzing skeleton */}
