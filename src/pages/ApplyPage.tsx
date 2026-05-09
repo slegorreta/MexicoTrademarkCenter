@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { CheckCircle2, ChevronRight, Upload, X, Plus, Trash2, Lock, CreditCard, AlertCircle, Sparkles, Tag, Loader2, Pencil } from 'lucide-react';
+import { CheckCircle2, ChevronRight, Upload, X, Plus, Trash2, Lock, CreditCard, AlertCircle, Sparkles, Tag, Loader2, Pencil, Eye, EyeOff, UserPlus } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { useLanguage } from '../context/LanguageContext';
@@ -185,6 +185,239 @@ function CheckoutForm({ language, finalTotal, onSuccess }: CheckoutFormProps) {
     </form>
   );
 }
+// ─── Auth Gate Modal ─────────────────────────────────────────────────────────
+interface AuthGateProps {
+  language: string;
+  onSuccess: () => void;
+  onClose: () => void;
+}
+
+function AuthGateModal({ language, onSuccess, onClose }: AuthGateProps) {
+  const { signIn, signUp } = useAuth();
+  const [mode, setMode] = useState<'signup' | 'login'>('signup');
+  const [form, setForm] = useState({ email: '', password: '', fullName: '' });
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [resetSent, setResetSent] = useState(false);
+  const [showReset, setShowReset] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+
+  const l = (en: string, zh: string, es: string, de?: string, fr?: string, hi?: string, pt?: string, ja?: string) =>
+    language === 'zh' ? zh : language === 'es' ? es : language === 'de' ? (de ?? en) : language === 'fr' ? (fr ?? en) : language === 'hi' ? (hi ?? en) : language === 'pt' ? (pt ?? en) : language === 'ja' ? (ja ?? en) : en;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    if (mode === 'login') {
+      const { error } = await signIn(form.email, form.password);
+      if (error) {
+        setError(l('Invalid email or password.', '邮箱或密码错误。', 'Correo o contraseña incorrectos.', 'Ungültige E-Mail oder Passwort.', 'E-mail ou mot de passe invalide.', 'अमान्य ईमेल या पासवर्ड।', 'E-mail ou senha inválidos.', 'メールアドレスまたはパスワードが正しくありません。'));
+      } else {
+        onSuccess();
+      }
+    } else {
+      if (form.password.length < 6) {
+        setError(l('Password must be at least 6 characters.', '密码至少需要6个字符。', 'La contraseña debe tener al menos 6 caracteres.', 'Passwort muss mindestens 6 Zeichen haben.', 'Le mot de passe doit comporter au moins 6 caractères.', 'पासवर्ड कम से कम 6 अक्षर का होना चाहिए।', 'A senha deve ter pelo menos 6 caracteres.', 'パスワードは6文字以上必要です。'));
+        setLoading(false);
+        return;
+      }
+      const { error } = await signUp(form.email, form.password, form.fullName || form.email);
+      if (error) {
+        setError(error.message);
+      } else {
+        onSuccess();
+      }
+    }
+    setLoading(false);
+  };
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetLoading(true);
+    await supabase.auth.resetPasswordForEmail(resetEmail, {
+      redirectTo: `${window.location.origin}/dashboard`,
+    });
+    setResetSent(true);
+    setResetLoading(false);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+        {/* Header */}
+        <div className="bg-navy-900 px-6 py-5 flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-gold-500 rounded-xl flex items-center justify-center flex-shrink-0">
+              <UserPlus size={18} className="text-white" />
+            </div>
+            <div>
+              <h3 className="text-white font-bold text-base">
+                {l('Create Your Account', '创建您的账户', 'Crea tu Cuenta', 'Konto erstellen', 'Créer votre compte', 'अपना खाता बनाएं', 'Crie sua Conta', 'アカウントを作成')}
+              </h3>
+              <p className="text-navy-300 text-xs mt-0.5">
+                {l('Save your filing and track its progress', '保存申请并跟踪进度', 'Guarda tu solicitud y haz seguimiento', 'Einreichung speichern und verfolgen', 'Enregistrez votre dépôt et suivez son avancement', 'अपनी फाइलिंग सेव करें और प्रगति ट्रैक करें', 'Salve seu pedido e acompanhe o andamento', '出願を保存して進捗を追跡')}
+              </p>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-navy-400 hover:text-white transition-colors mt-0.5">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="p-6">
+          {/* Mode tabs */}
+          <div className="flex bg-gray-100 rounded-xl p-1 mb-5">
+            <button
+              type="button"
+              onClick={() => { setMode('signup'); setError(''); setShowReset(false); }}
+              className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${mode === 'signup' ? 'bg-white shadow text-navy-900' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              {l('Create Account', '创建账户', 'Crear Cuenta', 'Konto erstellen', 'Créer un compte', 'खाता बनाएं', 'Criar Conta', 'アカウント作成')}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setMode('login'); setError(''); setShowReset(false); }}
+              className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${mode === 'login' ? 'bg-white shadow text-navy-900' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              {l('Sign In', '登录', 'Iniciar Sesión', 'Anmelden', 'Se connecter', 'साइन इन', 'Entrar', 'サインイン')}
+            </button>
+          </div>
+
+          {showReset ? (
+            <div>
+              {resetSent ? (
+                <div className="text-center py-4">
+                  <CheckCircle2 size={36} className="text-green-500 mx-auto mb-3" />
+                  <p className="text-sm font-semibold text-gray-800 mb-1">
+                    {l('Check your email', '请查看您的邮件', 'Revisa tu correo', 'Überprüfen Sie Ihre E-Mail', 'Vérifiez votre e-mail', 'अपना ईमेल जांचें', 'Verifique seu e-mail', 'メールを確認してください')}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {l('We sent a password reset link to', 'パスワードリセットリンクを以下に送信しました', 'Enviamos un enlace para restablecer la contraseña a', 'Wir haben einen Link zum Zurücksetzen des Passworts gesendet an', 'Nous avons envoyé un lien de réinitialisation à', 'हमने पासवर्ड रीसेट लिंक भेजा है', 'Enviamos um link de redefinição para', 'パスワードリセットリンクを送信しました')} {resetEmail}
+                  </p>
+                  <button onClick={() => { setShowReset(false); setResetSent(false); }} className="mt-4 text-sm text-gold-600 hover:text-gold-700 font-medium">
+                    {l('Back to sign in', '返回登录', 'Volver al inicio de sesión', 'Zurück zur Anmeldung', 'Retour à la connexion', 'साइन इन पर वापस', 'Voltar ao login', 'サインインに戻る')}
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handlePasswordReset} className="space-y-4">
+                  <p className="text-sm text-gray-600">
+                    {l("Enter your email and we'll send you a reset link.", '输入您的邮箱，我们将发送重置链接。', 'Ingresa tu correo y te enviaremos un enlace de restablecimiento.', 'Geben Sie Ihre E-Mail ein und wir senden Ihnen einen Reset-Link.', 'Entrez votre e-mail et nous vous enverrons un lien de réinitialisation.', 'अपना ईमेल दर्ज करें और हम आपको रीसेट लिंक भेजेंगे।', 'Insira seu e-mail e enviaremos um link de redefinição.', 'メールアドレスを入力するとリセットリンクを送信します。')}
+                  </p>
+                  <input
+                    type="email"
+                    required
+                    className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-transparent"
+                    placeholder={l('your@email.com', 'your@email.com', 'tu@correo.com', 'ihre@email.de', 'votre@email.fr', 'आपका@ईमेल.com', 'seu@email.com', 'your@email.com')}
+                    value={resetEmail}
+                    onChange={e => setResetEmail(e.target.value)}
+                  />
+                  <button
+                    type="submit"
+                    disabled={resetLoading}
+                    className="w-full bg-navy-900 hover:bg-navy-800 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors disabled:opacity-60"
+                  >
+                    {resetLoading ? l('Sending...', '发送中...', 'Enviando...', 'Senden...', 'Envoi...', 'भेज रहे हैं...', 'Enviando...', '送信中...') : l('Send Reset Link', '发送重置链接', 'Enviar enlace', 'Reset-Link senden', 'Envoyer le lien', 'रीसेट लिंक भेजें', 'Enviar link', 'リセットリンクを送信')}
+                  </button>
+                  <button type="button" onClick={() => setShowReset(false)} className="w-full text-sm text-gray-500 hover:text-gray-700">
+                    {l('Back', '返回', 'Volver', 'Zurück', 'Retour', 'वापस', 'Voltar', '戻る')}
+                  </button>
+                </form>
+              )}
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {error && (
+                <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 rounded-lg p-3 text-sm">
+                  <AlertCircle size={15} />
+                  {error}
+                </div>
+              )}
+
+              {mode === 'signup' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    {l('Full Name', '全名', 'Nombre Completo', 'Vollständiger Name', 'Nom complet', 'पूरा नाम', 'Nome Completo', '氏名')}
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-transparent"
+                    value={form.fullName}
+                    onChange={e => setForm(f => ({ ...f, fullName: e.target.value }))}
+                    placeholder={l('Optional', '可选', 'Opcional', 'Optional', 'Facultatif', 'वैकल्पिक', 'Opcional', '任意')}
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  {l('Email Address', '电子邮件', 'Correo Electrónico', 'E-Mail-Adresse', 'Adresse e-mail', 'ईमेल पता', 'Endereço de E-mail', 'メールアドレス')}
+                </label>
+                <input
+                  type="email"
+                  required
+                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-transparent"
+                  value={form.email}
+                  onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  {l('Password', '密码', 'Contraseña', 'Passwort', 'Mot de passe', 'पासवर्ड', 'Senha', 'パスワード')}
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-transparent pr-10"
+                    placeholder={mode === 'signup' ? l('Min. 6 characters', '至少6个字符', 'Mín. 6 caracteres', 'Min. 6 Zeichen', 'Min. 6 caractères', 'न्यूनतम 6 अक्षर', 'Mín. 6 caracteres', '6文字以上') : ''}
+                    value={form.password}
+                    onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    onClick={() => setShowPassword(v => !v)}
+                  >
+                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
+              </div>
+
+              {mode === 'login' && (
+                <button
+                  type="button"
+                  onClick={() => { setShowReset(true); setResetEmail(form.email); setError(''); }}
+                  className="text-xs text-gold-600 hover:text-gold-700 font-medium"
+                >
+                  {l('Forgot password?', '忘记密码？', '¿Olvidaste tu contraseña?', 'Passwort vergessen?', 'Mot de passe oublié ?', 'पासवर्ड भूल गए?', 'Esqueceu a senha?', 'パスワードをお忘れですか？')}
+                </button>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full flex items-center justify-center gap-2 bg-gold-500 hover:bg-gold-600 disabled:opacity-60 text-white font-bold py-3 rounded-xl text-sm transition-colors"
+              >
+                {loading ? <Loader2 size={16} className="animate-spin" /> : null}
+                {mode === 'signup'
+                  ? l('Create Account & Continue', '创建账户并继续', 'Crear Cuenta y Continuar', 'Konto erstellen und fortfahren', 'Créer un compte et continuer', 'खाता बनाएं और जारी रखें', 'Criar Conta e Continuar', 'アカウントを作成して続ける')
+                  : l('Sign In & Continue', '登录并继续', 'Iniciar sesión y continuar', 'Anmelden und fortfahren', 'Se connecter et continuer', 'साइन इन करें और जारी रखें', 'Entrar e Continuar', 'サインインして続ける')}
+              </button>
+            </form>
+          )}
+
+          <p className="text-center text-xs text-gray-400 mt-4">
+            {l('Your data is encrypted and never shared.', '您的数据已加密，绝不共享。', 'Tus datos están cifrados y nunca se comparten.', 'Ihre Daten sind verschlüsselt und werden nie geteilt.', 'Vos données sont chiffrées et jamais partagées.', 'आपका डेटा एन्क्रिप्टेड है और कभी साझा नहीं किया जाता।', 'Seus dados são criptografados e nunca compartilhados.', 'データは暗号化され、共有されません。')}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function ApplyPage() {
@@ -197,6 +430,7 @@ export default function ApplyPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>(1);
+  const [showAuthGate, setShowAuthGate] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [caseNumber, setCaseNumber] = useState('');
   const [applicationId, setApplicationId] = useState<string | null>(null);
@@ -1385,6 +1619,15 @@ export default function ApplyPage() {
             </div>
           )}
 
+          {/* Account creation gate */}
+          {showAuthGate && (
+            <AuthGateModal
+              language={language}
+              onSuccess={() => { setShowAuthGate(false); setStep(6); }}
+              onClose={() => setShowAuthGate(false)}
+            />
+          )}
+
           {/* Conflict warning modal */}
           {showConflictModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -1444,6 +1687,10 @@ export default function ApplyPage() {
                         setShowConflictModal(true);
                         return;
                       }
+                    }
+                    if (step === 5 && !user) {
+                      setShowAuthGate(true);
+                      return;
                     }
                     setStep(s => Math.min(6, s + 1) as Step);
                   }}

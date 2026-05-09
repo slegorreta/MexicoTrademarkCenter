@@ -516,11 +516,13 @@ function ApplicationDetail({ appId, onBack }: { appId: string; onBack: () => voi
 // ─── Account Settings View ────────────────────────────────────────────────
 
 function AccountSettings() {
-  const { user, profile, signOut } = useAuth();
+  const { user, profile } = useAuth();
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [resetSent, setResetSent] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
 
   const changePassword = async () => {
     if (newPassword !== confirmPassword) { setMsg({ type: 'error', text: 'Passwords do not match.' }); return; }
@@ -538,6 +540,16 @@ function AccountSettings() {
       }
     }
     setSaving(false);
+  };
+
+  const sendResetEmail = async () => {
+    if (!user?.email) return;
+    setResetLoading(true);
+    await supabase.auth.resetPasswordForEmail(user.email, {
+      redirectTo: `${window.location.origin}/dashboard`,
+    });
+    setResetSent(true);
+    setResetLoading(false);
   };
 
   return (
@@ -589,6 +601,20 @@ function AccountSettings() {
           >
             {saving ? 'Saving…' : 'Update Password'}
           </button>
+          <div className="pt-1 border-t border-gray-100 text-center">
+            {resetSent ? (
+              <p className="text-xs text-green-600 font-medium">Reset link sent to {user?.email}</p>
+            ) : (
+              <button
+                type="button"
+                onClick={sendResetEmail}
+                disabled={resetLoading}
+                className="text-xs text-gray-400 hover:text-[#2d5a2d] transition-colors disabled:opacity-50"
+              >
+                {resetLoading ? 'Sending…' : 'Or send a reset link to my email'}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
