@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Shield, Loader2, ChevronDown, ChevronUp, ExternalLink, AlertTriangle, CheckCircle2, AlertCircle, Info, Globe, Scale } from 'lucide-react';
+import { Shield, Loader2, ChevronDown, ChevronUp, ExternalLink, AlertTriangle, CheckCircle2, AlertCircle, Info, Globe, Scale, ArrowRight } from 'lucide-react';
 
 interface MarciaFinding {
   name: string;
@@ -38,6 +38,7 @@ interface Props {
   language: 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt';
   autoRun?: boolean;
   onResult?: (result: ClearanceResult) => void;
+  onSelectDespiteRisk?: (markName: string) => void;
 }
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -196,7 +197,7 @@ const CATEGORY_LABELS: Record<string, Record<string, string>> = {
 
 export type { ClearanceResult };
 
-export default function TrademarkClearancePanel({ markName, classes, language, autoRun = true, onResult }: Props) {
+export default function TrademarkClearancePanel({ markName, classes, language, autoRun = true, onResult, onSelectDespiteRisk }: Props) {
   const [status, setStatus] = useState<'idle' | 'checking' | 'done' | 'error'>('idle');
   const [result, setResult] = useState<ClearanceResult | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
@@ -204,6 +205,7 @@ export default function TrademarkClearancePanel({ markName, classes, language, a
   const [marciaExpanded, setMarciaExpanded] = useState(false);
   const [domainExpanded, setDomainExpanded] = useState(false);
   const [registrabilityExpanded, setRegistrabilityExpanded] = useState(true);
+  const [showSelectModal, setShowSelectModal] = useState(false);
   const runningRef = useRef(false);
 
   const lang = (language === 'es' ? 'es' : language === 'zh' ? 'zh' : language === 'de' ? 'de' : language === 'fr' ? 'fr' : language === 'hi' ? 'hi' : language === 'pt' ? 'pt' : 'en') as 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt';
@@ -623,6 +625,84 @@ export default function TrademarkClearancePanel({ markName, classes, language, a
         <Info size={11} className="text-gray-400 flex-shrink-0 mt-0.5" />
         <p className="text-xs text-gray-400 leading-relaxed">{result.disclaimer}</p>
       </div>
+
+      {/* "Use this mark anyway" — only shown for medium/high risk when caller supports it */}
+      {onSelectDespiteRisk && (result.risk === 'medium' || result.risk === 'high') && (
+        <div className="border-t border-gray-100 bg-white/60 px-4 py-3">
+          <button
+            type="button"
+            onClick={() => setShowSelectModal(true)}
+            className="w-full flex items-center justify-center gap-2 text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 hover:border-amber-300 px-4 py-2.5 rounded-xl transition-all duration-150"
+          >
+            <ArrowRight size={13} />
+            {t(
+              'Use this mark anyway →',
+              '仍使用此商标继续 →',
+              'Continuar con esta marca de todos modos →',
+              'Diese Marke trotzdem verwenden →',
+              'Utiliser cette marque quand même →',
+              'फिर भी यह ट्रेडमार्क उपयोग करें →',
+              'Usar esta marca mesmo assim →'
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* Confirmation modal */}
+      {showSelectModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle size={20} className="text-amber-600" />
+              </div>
+              <div>
+                <h3 className="font-bold text-navy-900 text-base leading-snug">
+                  {t(
+                    `Proceed with "${markName}" despite risks?`,
+                    `尽管存在风险，仍要使用"${markName}"吗？`,
+                    `¿Continuar con "${markName}" a pesar de los riesgos?`,
+                    `Mit „${markName}" trotz Risiken fortfahren?`,
+                    `Continuer avec « ${markName} » malgré les risques ?`,
+                    `जोखिमों के बावजूद "${markName}" के साथ आगे बढ़ें?`,
+                    `Prosseguir com "${markName}" apesar dos riscos?`
+                  )}
+                </h3>
+                <p className="text-sm text-gray-600 mt-2 leading-relaxed">
+                  {t(
+                    'The clearance check identified potential conflicts or registrability issues for this mark. Filing does not guarantee registration — IMPI may refuse this mark based on the findings above. You assume full responsibility for the filing decision.',
+                    '本次检索发现该商标存在潜在冲突或可注册性问题。提交申请并不保证获准注册——IMPI可能根据上述发现驳回该商标。您将自行承担申请决定的全部责任。',
+                    'La verificación identificó posibles conflictos o problemas de registrabilidad para esta marca. Presentar la solicitud no garantiza el registro — el IMPI puede rechazar esta marca con base en los hallazgos anteriores. Usted asume plena responsabilidad por la decisión de presentación.',
+                    'Die Überprüfung hat potenzielle Konflikte oder Registrierbarkeitsprobleme für diese Marke festgestellt. Die Anmeldung garantiert keine Eintragung — der IMPI kann diese Marke aufgrund der obigen Feststellungen ablehnen. Sie übernehmen die volle Verantwortung für die Anmeldeentscheidung.',
+                    "La vérification a identifié des conflits potentiels ou des problèmes de registrabilité pour cette marque. Le dépôt ne garantit pas l'enregistrement — l'IMPI peut refuser cette marque sur la base des conclusions ci-dessus. Vous assumez l'entière responsabilité de la décision de dépôt.",
+                    'क्लीयरेंस जांच ने इस ट्रेडमार्क के लिए संभावित विरोध या पंजीकरण योग्यता समस्याओं की पहचान की है। दाखिल करना पंजीकरण की गारंटी नहीं देता — IMPI उपरोक्त निष्कर्षों के आधार पर इस ट्रेडमार्क को अस्वीकार कर सकता है। आप दाखिलगी निर्णय की पूरी जिम्मेदारी वहन करते हैं।',
+                    'A verificação identificou potenciais conflitos ou problemas de registrabilidade para esta marca. O protocolo não garante o registro — o IMPI pode recusar esta marca com base nos resultados acima. Você assume total responsabilidade pela decisão de protocolo.'
+                  )}
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-5">
+              <button
+                type="button"
+                onClick={() => setShowSelectModal(false)}
+                className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                {t('Review findings', '返回查看', 'Revisar hallazgos', 'Befunde überprüfen', 'Revoir les résultats', 'निष्कर्ष देखें', 'Revisar resultados')}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSelectModal(false);
+                  onSelectDespiteRisk(markName);
+                }}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold transition-colors"
+              >
+                {t('Yes, use this mark', '是的，使用此商标', 'Sí, usar esta marca', 'Ja, diese Marke verwenden', 'Oui, utiliser cette marque', 'हाँ, यह ट्रेडमार्क उपयोग करें', 'Sim, usar esta marca')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

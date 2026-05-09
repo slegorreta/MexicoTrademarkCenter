@@ -1456,6 +1456,7 @@ export default function ApplyPage() {
                               language={(language === 'zh' ? 'zh' : language === 'es' ? 'es' : language === 'de' ? 'de' : language === 'fr' ? 'fr' : language === 'hi' ? 'hi' : language === 'pt' ? 'pt' : 'en') as 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt'}
                               autoRun={true}
                               onResult={r => setClearanceResults(prev => ({ ...prev, [entry.id]: r }))}
+                              onSelectDespiteRisk={() => { setShowConflictModal(false); setStep(3); }}
                             />
                           </div>
                         )}
@@ -1507,6 +1508,7 @@ export default function ApplyPage() {
                                 language={(language === 'zh' ? 'zh' : language === 'es' ? 'es' : language === 'de' ? 'de' : language === 'fr' ? 'fr' : language === 'hi' ? 'hi' : language === 'pt' ? 'pt' : 'en') as 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt'}
                                 autoRun={true}
                                 onResult={r => setClearanceResults(prev => ({ ...prev, [activeEntry.id]: r }))}
+                                onSelectDespiteRisk={() => { setShowConflictModal(false); setStep(3); }}
                               />
                             </div>
                           )}
