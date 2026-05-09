@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { CheckCircle2, ChevronRight, Upload, X, Plus, Trash2, Lock, CreditCard, AlertCircle, Sparkles, Tag, Loader2, Pencil, Eye, EyeOff, UserPlus } from 'lucide-react';
+import { CheckCircle2, ChevronRight, Upload, X, Plus, Trash2, Lock, CreditCard, AlertCircle, Sparkles, Tag, Loader2, Pencil, Eye, EyeOff, UserPlus, HelpCircle, Info, Save } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { useLanguage } from '../context/LanguageContext';
@@ -87,6 +87,33 @@ function generateCaseNumber(): string {
   const year = new Date().getFullYear();
   const rand = Math.floor(10000 + Math.random() * 90000);
   return `MTC-${year}-${rand}`;
+}
+
+// ─── Info Tooltip ─────────────────────────────────────────────────────────────
+function InfoTooltip({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="relative inline-flex items-center ml-1.5">
+      <button
+        type="button"
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setOpen(false)}
+        onClick={() => setOpen(v => !v)}
+        className="text-gray-400 hover:text-[#2d5a2d] transition-colors focus:outline-none"
+        aria-label="What is this?"
+      >
+        <HelpCircle size={14} />
+      </button>
+      {open && (
+        <span className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-72 bg-[#1a2e1a] text-white text-xs rounded-xl px-3 py-2.5 shadow-xl leading-relaxed pointer-events-none">
+          {text}
+          <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#1a2e1a]" />
+        </span>
+      )}
+    </span>
+  );
 }
 
 function StepIndicator({ current, total, t }: { current: Step; total: number; t: (k: string) => string }) {
@@ -802,6 +829,32 @@ export default function ApplyPage() {
     setDraftId(null);
   }, [draftId, user]);
 
+  const [draftSavedFeedback, setDraftSavedFeedback] = useState(false);
+
+  const handleSaveAndContinueLater = useCallback(async () => {
+    if (!user) {
+      setShowAuthGate(true);
+      return;
+    }
+    const payload = {
+      user_id: user.id,
+      current_step: step,
+      mark_name: form.markName,
+      form_data: serializeForm(form),
+      class_entries: form.classEntries,
+      logo_preview_data: logoPreview ?? null,
+      updated_at: new Date().toISOString(),
+    };
+    if (draftId) {
+      await supabase.from('filing_drafts').update(payload).eq('id', draftId);
+    } else {
+      const { data } = await supabase.from('filing_drafts').insert(payload).select('id').maybeSingle();
+      if (data?.id) setDraftId(data.id);
+    }
+    setDraftSavedFeedback(true);
+    setTimeout(() => setDraftSavedFeedback(false), 3000);
+  }, [user, step, form, logoPreview, draftId, serializeForm]);
+
   // ─── Payment ───────────────────────────────────────────────────────────────
 
   const handleProceedToPayment = async () => {
@@ -1087,127 +1140,10 @@ export default function ApplyPage() {
         )}
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 lg:p-8">
-          {/* STEP 1 */}
+          {/* STEP 1 — Trademark Details (was Step 2) */}
           {step === 1 && (
             <div>
               <h2 className="text-lg font-bold text-navy-900 mb-6">{t('form.step1')}</h2>
-              <div className="space-y-4">
-                <div>
-                  <label className={labelClass}>{tri('Applicant Type', '申请人类型', 'Tipo de Solicitante', 'Antragstellertyp', 'Type de déposant', 'आवेदक प्रकार', 'Tipo de Solicitante')}</label>
-                  <div className="flex gap-3">
-                    {['company','individual'].map(type => (
-                      <button
-                        key={type}
-                        type="button"
-                        onClick={() => set({ applicantType: type as 'company' })}
-                        className={`flex-1 py-2.5 rounded-xl border text-sm font-medium transition-colors ${
-                          form.applicantType === type
-                            ? 'border-gold-500 bg-gold-50 text-gold-700'
-                            : 'border-gray-200 text-gray-600 hover:border-gray-300'
-                        }`}
-                      >
-                        {type === 'company' ? tri('Company', '公司', 'Empresa', 'Unternehmen', 'Entreprise', 'कंपनी', 'Empresa') : tri('Individual', '个人', 'Persona Física', 'Einzelperson', 'Particulier', 'व्यक्ति', 'Pessoa Física')}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div className="sm:col-span-2">
-                    <label className={labelClass}>{tri('Full Legal Name *', '完整法定名称 *', 'Nombre o Razón Social *', 'Vollständiger rechtlicher Name *', 'Nom légal complet *', 'पूरा कानूनी नाम *', 'Nome Legal Completo *')}</label>
-                    <input type="text" required className={inputClass} value={form.legalName} onChange={e => set({ legalName: e.target.value })} />
-                  </div>
-                  <div>
-                    <label className={labelClass}>{tri('Country *', '国家 *', 'País *', 'Land *', 'Pays *', 'देश *', 'País *')}</label>
-                    <select required className={inputClass} value={form.country} onChange={e => set({ country: e.target.value })}>
-                      <option value="">{tri('— Select country —', '— 选择国家 —', '— Seleccionar país —', '— Land auswählen —', '— Sélectionner un pays —', '— देश चुनें —', '— Selecionar país —')}</option>
-                      {sortedCountries.map(c => (
-                        <option key={c.code} value={c.code}>{c[language as SupportedLang] || c.en}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className={labelClass}>{tri('Contact Person', '联系人', 'Persona de Contacto', 'Kontaktperson', 'Personne de contact', 'संपर्क व्यक्ति', 'Pessoa de Contato')}</label>
-                    <input type="text" className={inputClass} value={form.contactPerson} onChange={e => set({ contactPerson: e.target.value })} />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label className={labelClass}>{tri('Address (Street & Number) *', '地址（街道和门牌号）*', 'Domicilio (Calle y Número) *', 'Adresse (Straße und Nr.) *', 'Adresse (Rue et numéro) *', 'पता (गली और नंबर) *', 'Endereço (Rua e Número) *', '住所（番地・丁目）*')}</label>
-                    <input type="text" required className={inputClass} value={form.address} onChange={e => set({ address: e.target.value })} />
-                  </div>
-                  <div>
-                    <label className={labelClass}>{tri('City *', '城市 *', 'Ciudad *', 'Stadt *', 'Ville *', 'शहर *', 'Cidade *', '市区町村 *')}</label>
-                    <input type="text" required className={inputClass} value={form.city} onChange={e => set({ city: e.target.value })} />
-                  </div>
-                  <div>
-                    <label className={labelClass}>{tri('Postal Code *', '邮政编码 *', 'Código Postal *', 'Postleitzahl *', 'Code postal *', 'पिन कोड *', 'CEP *', '郵便番号 *')}</label>
-                    <input type="text" required className={inputClass} value={form.postalCode} onChange={e => set({ postalCode: e.target.value })} />
-                  </div>
-                  <div>
-                    <label className={labelClass}>{tri('Email Address *', '电子邮件 *', 'Correo Electrónico *', 'E-Mail-Adresse *', 'Adresse e-mail *', 'ईमेल पता *', 'Endereço de E-mail *')}</label>
-                    <input type="email" required className={inputClass} value={form.email} onChange={e => set({ email: e.target.value })} />
-                  </div>
-                  <div>
-                    <label className={labelClass}>{tri('Confirm Email Address *', '确认电子邮件 *', 'Confirmar Correo Electrónico *', 'E-Mail-Adresse bestätigen *', 'Confirmer l\'adresse e-mail *', 'ईमेल पता की पुष्टि करें *', 'Confirmar Endereço de E-mail *')}</label>
-                    <input
-                      type="email"
-                      required
-                      className={`${inputClass} ${form.emailConfirm && form.email !== form.emailConfirm ? 'border-red-400 focus:ring-red-400' : ''}`}
-                      value={form.emailConfirm}
-                      onChange={e => set({ emailConfirm: e.target.value })}
-                    />
-                    {form.emailConfirm && form.email !== form.emailConfirm && (
-                      <p className="text-xs text-red-500 mt-1">
-                        {tri('Email addresses do not match', '两次输入的电子邮件不一致', 'Los correos no coinciden', 'E-Mail-Adressen stimmen nicht überein', 'Les adresses e-mail ne correspondent pas', 'ईमेल पते मेल नहीं खाते', 'Os endereços de e-mail não coincidem')}
-                      </p>
-                    )}
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label className={labelClass}>{tri('Phone / WeChat / WhatsApp', '电话/微信/WhatsApp', 'Teléfono / WhatsApp', 'Telefon / WeChat / WhatsApp', 'Téléphone / WeChat / WhatsApp', 'फोन / WeChat / WhatsApp', 'Telefone / WhatsApp')}</label>
-                    <div className="flex gap-2">
-                      <select
-                        className="border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-transparent w-48 flex-shrink-0"
-                        value={form.phoneDialCode}
-                        onChange={e => set({ phoneDialCode: e.target.value })}
-                      >
-                        <option value="">{tri('Code', '区号', 'Código', 'Vorwahl', 'Indicatif', 'कोड', 'Código')}</option>
-                        {sortedDialCodes.map(d => (
-                          <option key={d.code} value={d.dialCode}>{d.name} ({d.dialCode})</option>
-                        ))}
-                      </select>
-                      <input
-                        type="tel"
-                        className={`${inputClass} flex-1`}
-                        placeholder={tri('Phone number', '电话号码', 'Número de teléfono', 'Telefonnummer', 'Numéro de téléphone', 'फोन नंबर', 'Número de telefone')}
-                        value={form.phoneNumber}
-                        onChange={e => set({ phoneNumber: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className={labelClass}>{tri('Tax ID / Registration No.', '税号/注册号', 'RFC / Número de Registro', 'Steuer-ID / Registrierungsnr.', 'Numéro fiscal / Enregistrement', 'टैक्स ID / पंजीकरण नं.', 'CNPJ/CPF / Nº de Registro')}</label>
-                    <input type="text" className={inputClass} value={form.taxId} onChange={e => set({ taxId: e.target.value })} />
-                  </div>
-                  <div>
-                    <label className={labelClass}>{tri('Preferred Language', '首选语言', 'Idioma de Preferencia', 'Bevorzugte Sprache', 'Langue préférée', 'पसंदीदा भाषा', 'Idioma Preferido')}</label>
-                    <select className={inputClass} value={form.preferredLanguage} onChange={e => set({ preferredLanguage: e.target.value as 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt' | 'ja' })}>
-                      <option value="en">English</option>
-                      <option value="zh">中文 (Chinese)</option>
-                      <option value="ja">日本語 (Japanese)</option>
-                      <option value="es">Español (Spanish)</option>
-                      <option value="de">Deutsch (German)</option>
-                      <option value="fr">Français (French)</option>
-                      <option value="hi">हिन्दी (Hindi)</option>
-                      <option value="pt">Português (Portuguese)</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 2 */}
-          {step === 2 && (
-            <div>
-              <h2 className="text-lg font-bold text-navy-900 mb-6">{t('form.step2')}</h2>
               <div className="space-y-4">
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
@@ -1230,7 +1166,10 @@ export default function ApplyPage() {
                   <input type="text" required className={inputClass} value={form.markName} onChange={e => set({ markName: e.target.value })} />
                 </div>
                 <div>
-                  <label className={labelClass}>{tri('Type of Mark', '商标类型', 'Tipo de Marca', 'Art der Marke', 'Type de marque', 'चिह्न का प्रकार', 'Tipo de Marca')}</label>
+                  <label className={labelClass}>
+                    {tri('Type of Mark', '商标类型', 'Tipo de Marca', 'Art der Marke', 'Type de marque', 'चिह्न का प्रकार', 'Tipo de Marca')}
+                    <InfoTooltip text={t('tooltip.markType')} />
+                  </label>
                   <select className={inputClass} value={form.markType} onChange={e => set({ markType: e.target.value })}>
                     <option value="word">{tri('Word Mark', '文字商标', 'Marca Denominativa', 'Wortmarke', 'Marque verbale', 'शब्द चिह्न', 'Marca Denominativa')}</option>
                     <option value="design">{tri('Design / Logo Mark', '图形/标志商标', 'Diseño / Logo', 'Design / Logomarke', 'Marque figurative / Logo', 'डिज़ाइन / लोगो चिह्न', 'Marca Figurativa / Logo')}</option>
@@ -1332,14 +1271,141 @@ export default function ApplyPage() {
             </div>
           )}
 
-          {/* STEP 3 */}
-          {step === 3 && (
+          {/* STEP 4 — Owner Details (was Step 1) */}
+          {step === 4 && (
             <div>
-              <h2 className="text-lg font-bold text-navy-900 mb-1">{t('form.step3')}</h2>
+              <h2 className="text-lg font-bold text-navy-900 mb-6">{t('form.step4')}</h2>
+              <div className="space-y-4">
+                <div>
+                  <label className={labelClass}>
+                    {tri('Applicant Type', '申请人类型', 'Tipo de Solicitante', 'Antragstellertyp', 'Type de déposant', 'आवेदक प्रकार', 'Tipo de Solicitante')}
+                    <InfoTooltip text={t('tooltip.ownerType')} />
+                  </label>
+                  <div className="flex gap-3">
+                    {['company','individual'].map(type => (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => set({ applicantType: type as 'company' })}
+                        className={`flex-1 py-2.5 rounded-xl border text-sm font-medium transition-colors ${
+                          form.applicantType === type
+                            ? 'border-gold-500 bg-gold-50 text-gold-700'
+                            : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                        }`}
+                      >
+                        {type === 'company' ? tri('Company', '公司', 'Empresa', 'Unternehmen', 'Entreprise', 'कंपनी', 'Empresa') : tri('Individual', '个人', 'Persona Física', 'Einzelperson', 'Particulier', 'व्यक्ति', 'Pessoa Física')}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="sm:col-span-2">
+                    <label className={labelClass}>{tri('Full Legal Name *', '完整法定名称 *', 'Nombre o Razón Social *', 'Vollständiger rechtlicher Name *', 'Nom légal complet *', 'पूरा कानूनी नाम *', 'Nome Legal Completo *')}</label>
+                    <input type="text" required className={inputClass} value={form.legalName} onChange={e => set({ legalName: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className={labelClass}>{tri('Country *', '国家 *', 'País *', 'Land *', 'Pays *', 'देश *', 'País *')}</label>
+                    <select required className={inputClass} value={form.country} onChange={e => set({ country: e.target.value })}>
+                      <option value="">{tri('— Select country —', '— 选择国家 —', '— Seleccionar país —', '— Land auswählen —', '— Sélectionner un pays —', '— देश चुनें —', '— Selecionar país —')}</option>
+                      {sortedCountries.map(c => (
+                        <option key={c.code} value={c.code}>{c[language as SupportedLang] || c.en}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelClass}>{tri('Contact Person', '联系人', 'Persona de Contacto', 'Kontaktperson', 'Personne de contact', 'संपर्क व्यक्ति', 'Pessoa de Contato')}</label>
+                    <input type="text" className={inputClass} value={form.contactPerson} onChange={e => set({ contactPerson: e.target.value })} />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className={labelClass}>{tri('Address (Street & Number) *', '地址（街道和门牌号）*', 'Domicilio (Calle y Número) *', 'Adresse (Straße und Nr.) *', 'Adresse (Rue et numéro) *', 'पता (गली और नंबर) *', 'Endereço (Rua e Número) *', '住所（番地・丁目）*')}</label>
+                    <input type="text" required className={inputClass} value={form.address} onChange={e => set({ address: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className={labelClass}>{tri('City *', '城市 *', 'Ciudad *', 'Stadt *', 'Ville *', 'शहर *', 'Cidade *', '市区町村 *')}</label>
+                    <input type="text" required className={inputClass} value={form.city} onChange={e => set({ city: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className={labelClass}>{tri('Postal Code *', '邮政编码 *', 'Código Postal *', 'Postleitzahl *', 'Code postal *', 'पिन कोड *', 'CEP *', '郵便番号 *')}</label>
+                    <input type="text" required className={inputClass} value={form.postalCode} onChange={e => set({ postalCode: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className={labelClass}>
+                      {tri('Email Address *', '电子邮件 *', 'Correo Electrónico *', 'E-Mail-Adresse *', 'Adresse e-mail *', 'ईमेल पता *', 'Endereço de E-mail *')}
+                      <InfoTooltip text={t('tooltip.ownerEmail')} />
+                    </label>
+                    <input type="email" required className={inputClass} value={form.email} onChange={e => set({ email: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className={labelClass}>{tri('Confirm Email Address *', '确认电子邮件 *', 'Confirmar Correo Electrónico *', 'E-Mail-Adresse bestätigen *', 'Confirmer l\'adresse e-mail *', 'ईमेल पता की पुष्टि करें *', 'Confirmar Endereço de E-mail *')}</label>
+                    <input
+                      type="email"
+                      required
+                      className={`${inputClass} ${form.emailConfirm && form.email !== form.emailConfirm ? 'border-red-400 focus:ring-red-400' : ''}`}
+                      value={form.emailConfirm}
+                      onChange={e => set({ emailConfirm: e.target.value })}
+                    />
+                    {form.emailConfirm && form.email !== form.emailConfirm && (
+                      <p className="text-xs text-red-500 mt-1">
+                        {tri('Email addresses do not match', '两次输入的电子邮件不一致', 'Los correos no coinciden', 'E-Mail-Adressen stimmen nicht überein', 'Les adresses e-mail ne correspondent pas', 'ईमेल पते मेल नहीं खाते', 'Os endereços de e-mail não coincidem')}
+                      </p>
+                    )}
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className={labelClass}>{tri('Phone / WeChat / WhatsApp', '电话/微信/WhatsApp', 'Teléfono / WhatsApp', 'Telefon / WeChat / WhatsApp', 'Téléphone / WeChat / WhatsApp', 'फोन / WeChat / WhatsApp', 'Telefone / WhatsApp')}</label>
+                    <div className="flex gap-2">
+                      <select
+                        className="border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-transparent w-48 flex-shrink-0"
+                        value={form.phoneDialCode}
+                        onChange={e => set({ phoneDialCode: e.target.value })}
+                      >
+                        <option value="">{tri('Code', '区号', 'Código', 'Vorwahl', 'Indicatif', 'कोड', 'Código')}</option>
+                        {sortedDialCodes.map(d => (
+                          <option key={d.code} value={d.dialCode}>{d.name} ({d.dialCode})</option>
+                        ))}
+                      </select>
+                      <input
+                        type="tel"
+                        className={`${inputClass} flex-1`}
+                        placeholder={tri('Phone number', '电话号码', 'Número de teléfono', 'Telefonnummer', 'Numéro de téléphone', 'फोन नंबर', 'Número de telefone')}
+                        value={form.phoneNumber}
+                        onChange={e => set({ phoneNumber: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className={labelClass}>{tri('Tax ID / Registration No.', '税号/注册号', 'RFC / Número de Registro', 'Steuer-ID / Registrierungsnr.', 'Numéro fiscal / Enregistrement', 'टैक्स ID / पंजीकरण नं.', 'CNPJ/CPF / Nº de Registro')}</label>
+                    <input type="text" className={inputClass} value={form.taxId} onChange={e => set({ taxId: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className={labelClass}>{tri('Preferred Language', '首选语言', 'Idioma de Preferencia', 'Bevorzugte Sprache', 'Langue préférée', 'पसंदीदा भाषा', 'Idioma Preferido')}</label>
+                    <select className={inputClass} value={form.preferredLanguage} onChange={e => set({ preferredLanguage: e.target.value as 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt' | 'ja' })}>
+                      <option value="en">English</option>
+                      <option value="zh">中文 (Chinese)</option>
+                      <option value="ja">日本語 (Japanese)</option>
+                      <option value="es">Español (Spanish)</option>
+                      <option value="de">Deutsch (German)</option>
+                      <option value="fr">Français (French)</option>
+                      <option value="hi">हिन्दी (Hindi)</option>
+                      <option value="pt">Português (Portuguese)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 2 — Goods & Services (was Step 3) */}
+          {step === 2 && (
+            <div>
+              <h2 className="text-lg font-bold text-navy-900 mb-1 flex items-center gap-2">
+                {t('form.step2')}
+                <InfoTooltip text={t('tooltip.niceClass')} />
+              </h2>
               <p className="text-sm text-gray-500 mb-6">
                 {tri('Describe the goods or services for each Nice Classification class you want to protect. Add as many classes as needed.', '描述每个您希望保护的尼斯分类类别的商品或服务。可以添加任意数量的类别。', 'Describe los bienes o servicios para cada clase de la Clasificación de Niza. Agrega tantas clases como necesites.', 'Beschreiben Sie die Waren oder Dienstleistungen für jede Nizza-Klasse. Fügen Sie so viele Klassen wie nötig hinzu.', 'Décrivez les produits ou services pour chaque classe de Nice. Ajoutez autant de classes que nécessaire.', 'प्रत्येक नाइस वर्गीकरण कक्षा के लिए वस्तुओं या सेवाओं का वर्णन करें। जितनी जरूरत हो उतनी कक्षाएं जोड़ें।', 'Descreva os bens ou serviços para cada classe de Nice. Adicione quantas classes forem necessárias.')}
               </p>
-
+              {/* Reusing G&S content marker — inserted below as step2gscontent */}
+              {/* STEP 2 content START */}
               {confirmedEntries.length > 0 && (
                 <div className="space-y-2 mb-6">
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
@@ -1368,22 +1434,24 @@ export default function ApplyPage() {
                               <p className="text-xs text-gray-500 mt-1 truncate">{entry.description}</p>
                             )}
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => removeEntry(entry.id)}
-                            className="flex-shrink-0 text-gray-400 hover:text-red-500 transition-colors"
-                          >
+                          <button type="button" onClick={() => removeEntry(entry.id)} className="flex-shrink-0 text-gray-400 hover:text-red-500 transition-colors">
                             <Trash2 size={14} />
                           </button>
                         </div>
                         {form.markName.trim() && classNums.length > 0 && (
-                          <TrademarkClearancePanel
-                            markName={form.markName}
-                            classes={classNums}
-                            language={(language === 'zh' ? 'zh' : language === 'es' ? 'es' : language === 'de' ? 'de' : language === 'fr' ? 'fr' : language === 'hi' ? 'hi' : language === 'pt' ? 'pt' : 'en') as 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt'}
-                            autoRun={true}
-                            onResult={r => setClearanceResults(prev => ({ ...prev, [entry.id]: r }))}
-                          />
+                          <div>
+                            <div className="flex items-center gap-1 mt-1 mb-0.5 px-1">
+                              <span className="text-xs text-gray-400 italic">{tri('IMPI database & conflict check', 'IMPI数据库冲突检索', 'Verificación en base IMPI')}</span>
+                              <InfoTooltip text={t('tooltip.clearance')} />
+                            </div>
+                            <TrademarkClearancePanel
+                              markName={form.markName}
+                              classes={classNums}
+                              language={(language === 'zh' ? 'zh' : language === 'es' ? 'es' : language === 'de' ? 'de' : language === 'fr' ? 'fr' : language === 'hi' ? 'hi' : language === 'pt' ? 'pt' : 'en') as 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt'}
+                              autoRun={true}
+                              onResult={r => setClearanceResults(prev => ({ ...prev, [entry.id]: r }))}
+                            />
+                          </div>
                         )}
                       </div>
                     );
@@ -1417,22 +1485,24 @@ export default function ApplyPage() {
                                 <p className="text-xs text-gray-500 mt-1 truncate">{activeEntry.description}</p>
                               )}
                             </div>
-                            <button
-                              type="button"
-                              onClick={() => removeEntry(activeEntry.id)}
-                              className="flex-shrink-0 text-gray-400 hover:text-red-500 transition-colors"
-                            >
+                            <button type="button" onClick={() => removeEntry(activeEntry.id)} className="flex-shrink-0 text-gray-400 hover:text-red-500 transition-colors">
                               <Trash2 size={14} />
                             </button>
                           </div>
                           {form.markName.trim() && classNums.length > 0 && (
-                            <TrademarkClearancePanel
-                              markName={form.markName}
-                              classes={classNums}
-                              language={(language === 'zh' ? 'zh' : language === 'es' ? 'es' : language === 'de' ? 'de' : language === 'fr' ? 'fr' : language === 'hi' ? 'hi' : language === 'pt' ? 'pt' : 'en') as 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt'}
-                              autoRun={true}
-                              onResult={r => setClearanceResults(prev => ({ ...prev, [activeEntry.id]: r }))}
-                            />
+                            <div>
+                              <div className="flex items-center gap-1 mt-1 mb-0.5 px-1">
+                                <span className="text-xs text-gray-400 italic">{tri('IMPI database & conflict check', 'IMPI数据库冲突检索', 'Verificación en base IMPI')}</span>
+                                <InfoTooltip text={t('tooltip.clearance')} />
+                              </div>
+                              <TrademarkClearancePanel
+                                markName={form.markName}
+                                classes={classNums}
+                                language={(language === 'zh' ? 'zh' : language === 'es' ? 'es' : language === 'de' ? 'de' : language === 'fr' ? 'fr' : language === 'hi' ? 'hi' : language === 'pt' ? 'pt' : 'en') as 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt'}
+                                autoRun={true}
+                                onResult={r => setClearanceResults(prev => ({ ...prev, [activeEntry.id]: r }))}
+                              />
+                            </div>
                           )}
                         </div>
                       );
@@ -1497,53 +1567,65 @@ export default function ApplyPage() {
             </div>
           )}
 
-          {/* STEP 4 */}
-          {step === 4 && (
+          {/* STEP 3 — Prior Use */}
+          {step === 3 && (
             <div>
-              <h2 className="text-lg font-bold text-navy-900 mb-6">{t('form.step4')}</h2>
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <input type="checkbox" id="usedInMexico" checked={form.usedInMexico} onChange={e => set({ usedInMexico: e.target.checked })} className="rounded border-gray-300 text-gold-500" />
-                  <label htmlFor="usedInMexico" className="text-sm text-gray-700">
-                    {tri('This mark is already used in Mexico', '该商标已在墨西哥使用', 'Esta marca ya se usa en México', 'Diese Marke wird bereits in Mexiko verwendet', 'Cette marque est déjà utilisée au Mexique', 'यह चिह्न पहले से मेक्सिको में उपयोग हो रहा है', 'Esta marca já é usada no México')}
-                  </label>
-                </div>
-                {form.usedInMexico && (
-                  <div>
-                    <label className={labelClass}>{tri('First Use Date in Mexico', '在墨西哥首次使用日期', 'Fecha de Primer Uso en México', 'Erstes Verwendungsdatum in Mexiko', 'Date de première utilisation au Mexique', 'मेक्सिको में पहले उपयोग की तारीख', 'Data do Primeiro Uso no México')}</label>
-                    <input type="date" className={inputClass} value={form.firstUseDate} onChange={e => set({ firstUseDate: e.target.value })} />
+              <h2 className="text-lg font-bold text-navy-900 mb-1">{t('form.step3')}</h2>
+              <p className="text-sm text-gray-500 mb-6">
+                {tri('Tell us about any prior use of this mark and whether you are claiming priority from a foreign application.', '请告诉我们该商标是否已在使用，以及您是否主张外国申请的优先权。', 'Indícanos si esta marca ya está siendo usada y si reclamas prioridad de una solicitud extranjera.', 'Teilen Sie uns mit, ob diese Marke bereits verwendet wird und ob Sie Priorität aus einer ausländischen Anmeldung beanspruchen.', 'Indiquez si cette marque est déjà utilisée et si vous revendiquez la priorité d\'une demande étrangère.', 'हमें बताएं कि क्या यह चिह्न पहले से उपयोग में है और क्या आप किसी विदेशी आवेदन से प्राथमिकता का दावा कर रहे हैं।', 'Informe-nos se esta marca já está em uso e se você reivindica prioridade de um pedido estrangeiro.', 'この商標がすでに使用されているか、また外国出願から優先権を主張するかをお知らせください。')}
+              </p>
+              <div className="space-y-5">
+                <div className="bg-white border border-gray-200 rounded-xl p-5">
+                  <div className="flex items-start gap-3 mb-3">
+                    <input type="checkbox" id="usedInMexico" checked={form.usedInMexico} onChange={e => set({ usedInMexico: e.target.checked })} className="mt-0.5 rounded border-gray-300 text-gold-500" />
+                    <label htmlFor="usedInMexico" className="text-sm font-medium text-gray-800 leading-snug">
+                      {tri('This mark is already used in Mexico', '该商标已在墨西哥使用', 'Esta marca ya se usa en México', 'Diese Marke wird bereits in Mexiko verwendet', 'Cette marque est déjà utilisée au Mexique', 'यह चिह्न पहले से मेक्सिको में उपयोग हो रहा है', 'Esta marca já é usada no México', 'この商標はすでにメキシコで使用されています')}
+                      <InfoTooltip text={t('tooltip.priorUse')} />
+                    </label>
                   </div>
-                )}
-                <div className="flex items-center gap-3 mt-2">
-                  <input type="checkbox" id="priorityClaimed" checked={form.priorityClaimed} onChange={e => set({ priorityClaimed: e.target.checked })} className="rounded border-gray-300 text-gold-500" />
-                  <label htmlFor="priorityClaimed" className="text-sm text-gray-700">
-                    {tri('Claiming priority from a foreign application', '声明来自外国申请的优先权', 'Reclama prioridad de una solicitud extranjera', 'Priorität aus einer ausländischen Anmeldung beanspruchen', 'Revendique la priorité d\'une demande étrangère', 'विदेशी आवेदन से प्राथमिकता का दावा', 'Reivindicando prioridade de um pedido estrangeiro')}
-                  </label>
+                  {form.usedInMexico && (
+                    <div className="pl-7">
+                      <label className={labelClass}>{tri('First Use Date in Mexico', '在墨西哥首次使用日期', 'Fecha de Primer Uso en México', 'Erstes Verwendungsdatum in Mexiko', 'Date de première utilisation au Mexique', 'मेक्सिको में पहले उपयोग की तारीख', 'Data do Primeiro Uso no México', 'メキシコでの初使用日')}</label>
+                      <input type="date" className={inputClass} value={form.firstUseDate} onChange={e => set({ firstUseDate: e.target.value })} />
+                    </div>
+                  )}
                 </div>
-                {form.priorityClaimed && (
-                  <div className="grid sm:grid-cols-2 gap-4 pl-6">
-                    <div>
-                      <label className={labelClass}>{tri('Priority Country', '优先权国家', 'País de Prioridad', 'Prioritätsland', 'Pays de priorité', 'प्राथमिकता देश', 'País de Prioridade')}</label>
-                      <input type="text" className={inputClass} value={form.priorityCountry} onChange={e => set({ priorityCountry: e.target.value })} />
-                    </div>
-                    <div>
-                      <label className={labelClass}>{tri('Application Number', '申请号', 'Número de Solicitud', 'Antragsnummer', 'Numéro de demande', 'आवेदन नंबर', 'Número do Pedido')}</label>
-                      <input type="text" className={inputClass} value={form.priorityAppNumber} onChange={e => set({ priorityAppNumber: e.target.value })} />
-                    </div>
-                    <div>
-                      <label className={labelClass}>{tri('Filing Date', '申请日期', 'Fecha de Presentación', 'Einreichungsdatum', 'Date de dépôt', 'दाखिल तारीख', 'Data de Protocolo')}</label>
-                      <input type="date" className={inputClass} value={form.priorityFilingDate} onChange={e => set({ priorityFilingDate: e.target.value })} />
-                    </div>
+
+                <div className="bg-white border border-gray-200 rounded-xl p-5">
+                  <div className="flex items-start gap-3 mb-3">
+                    <input type="checkbox" id="priorityClaimed" checked={form.priorityClaimed} onChange={e => set({ priorityClaimed: e.target.checked })} className="mt-0.5 rounded border-gray-300 text-gold-500" />
+                    <label htmlFor="priorityClaimed" className="text-sm font-medium text-gray-800 leading-snug">
+                      {tri('Claiming priority from a foreign application', '声明来自外国申请的优先权', 'Reclama prioridad de una solicitud extranjera', 'Priorität aus einer ausländischen Anmeldung beanspruchen', 'Revendiquer la priorité d\'une demande étrangère', 'विदेशी आवेदन से प्राथमिकता का दावा', 'Reivindicando prioridade de um pedido estrangeiro', '外国出願から優先権を主張する')}
+                      <InfoTooltip text={t('tooltip.priorityClaim')} />
+                    </label>
                   </div>
-                )}
-                <div className="flex items-center gap-3 mt-2">
-                  <input type="checkbox" id="isOwner" checked={form.isOwner} onChange={e => set({ isOwner: e.target.checked })} className="rounded border-gray-300 text-gold-500" />
-                  <label htmlFor="isOwner" className="text-sm text-gray-700">
-                    {tri('I confirm I am the owner of this mark', '我确认我是该商标的所有人', 'Confirmo que soy el titular de esta marca', 'Ich bestätige, dass ich der Inhaber dieser Marke bin', 'Je confirme être le titulaire de cette marque', 'मैं पुष्टि करता/करती हूं कि मैं इस चिह्न का मालिक हूं', 'Confirmo que sou o titular desta marca')}
+                  {form.priorityClaimed && (
+                    <div className="grid sm:grid-cols-2 gap-4 pl-7">
+                      <div>
+                        <label className={labelClass}>{tri('Priority Country', '优先权国家', 'País de Prioridad', 'Prioritätsland', 'Pays de priorité', 'प्राथमिकता देश', 'País de Prioridade', '優先権国')}</label>
+                        <input type="text" className={inputClass} value={form.priorityCountry} onChange={e => set({ priorityCountry: e.target.value })} />
+                      </div>
+                      <div>
+                        <label className={labelClass}>{tri('Application Number', '申请号', 'Número de Solicitud', 'Antragsnummer', 'Numéro de demande', 'आवेदन नंबर', 'Número do Pedido', '出願番号')}</label>
+                        <input type="text" className={inputClass} value={form.priorityAppNumber} onChange={e => set({ priorityAppNumber: e.target.value })} />
+                      </div>
+                      <div>
+                        <label className={labelClass}>{tri('Filing Date', '申请日期', 'Fecha de Presentación', 'Einreichungsdatum', 'Date de dépôt', 'दाखिल तारीख', 'Data de Protocolo', '出願日')}</label>
+                        <input type="date" className={inputClass} value={form.priorityFilingDate} onChange={e => set({ priorityFilingDate: e.target.value })} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <input type="checkbox" id="isOwner" checked={form.isOwner} onChange={e => set({ isOwner: e.target.checked })} className="mt-0.5 rounded border-gray-300 text-gold-500" />
+                  <label htmlFor="isOwner" className="text-sm text-gray-700 leading-snug">
+                    {tri('I confirm I am the owner of this mark', '我确认我是该商标的所有人', 'Confirmo que soy el titular de esta marca', 'Ich bestätige, dass ich der Inhaber dieser Marke bin', 'Je confirme être le titulaire de cette marque', 'मैं पुष्टि करता/करती हूं कि मैं इस चिह्न का मालिक हूं', 'Confirmo que sou o titular desta marca', '私はこの商標の所有者であることを確認します')}
                   </label>
                 </div>
+
                 <div>
-                  <label className={labelClass}>{tri('Any Known Similar Marks? (Optional)', '已知任何类似商标？（可选）', '¿Marcas similares conocidas? (Opcional)')}</label>
+                  <label className={labelClass}>{tri('Any Known Similar Marks? (Optional)', '已知任何类似商标？（可选）', '¿Marcas similares conocidas? (Opcional)', 'Bekannte ähnliche Marken? (Optional)', 'Marques similaires connues ? (Optionnel)', 'कोई ज्ञात समान चिह्न? (वैकल्पिक)', 'Marcas similares conhecidas? (Opcional)', '既知の類似商標は？（任意）')}</label>
                   <textarea rows={2} className={inputClass} value={form.knownSimilarMarks} onChange={e => set({ knownSimilarMarks: e.target.value })} />
                 </div>
               </div>
@@ -1584,13 +1666,21 @@ export default function ApplyPage() {
                 <p className="text-sm text-gray-500 mb-6">
                   {tri('Review all details below. Click Edit on any section to make changes.', '请仔细检查以下所有信息。点击各栏的编辑按钮进行修改。', 'Revisa todos los detalles a continuación. Haz clic en Editar para modificar cualquier sección.', 'Überprüfen Sie alle Details unten. Klicken Sie auf Bearbeiten, um Änderungen vorzunehmen.', 'Vérifiez tous les détails ci-dessous. Cliquez sur Modifier pour apporter des changements.', 'नीचे सभी विवरण जांचें। किसी भी अनुभाग में परिवर्तन करने के लिए संपादित करें पर क्लिक करें।', 'Revise todos os detalhes abaixo. Clique em Editar para fazer alterações.', '以下のすべての詳細を確認してください。変更するには各セクションの編集をクリックしてください。')}
                 </p>
+                {/* Mexico filing notice */}
+                <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl p-4 mb-2">
+                  <Info size={18} className="text-blue-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-blue-800 font-medium leading-snug">
+                    {t('review.mexicoNotice')}
+                  </p>
+                </div>
+
                 <div className="space-y-4">
 
                   {/* Applicant */}
                   <div className="border border-gray-200 rounded-xl overflow-hidden">
                     <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-200 flex items-center justify-between">
                       <span className="text-sm font-semibold text-navy-900">{tri('Applicant', '申请人', 'Solicitante', 'Antragsteller', 'Déposant', 'आवेदक', 'Solicitante', '出願人')}</span>
-                      <EditBtn targetStep={1} />
+                      <EditBtn targetStep={4} />
                     </div>
                     <div className="divide-y divide-gray-100">
                       <ReviewRow label={tri('Legal Name', '法定名称', 'Nombre o Razón Social', 'Rechtlicher Name', 'Nom légal', 'कानूनी नाम', 'Nome Legal', '法人名')} val={form.legalName} />
@@ -1612,7 +1702,7 @@ export default function ApplyPage() {
                   <div className="border border-gray-200 rounded-xl overflow-hidden">
                     <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-200 flex items-center justify-between">
                       <span className="text-sm font-semibold text-navy-900">{tri('Trademark', '商标', 'Marca', 'Marke', 'Marque', 'ट्रेडमार्क', 'Marca', '商標')}</span>
-                      <EditBtn targetStep={2} />
+                      <EditBtn targetStep={1} />
                     </div>
                     <div className="divide-y divide-gray-100">
                       <ReviewRow label={tri('Mark Name', '商标名称', 'Nombre de Marca', 'Markenname', 'Nom de marque', 'चिह्न का नाम', 'Nome da Marca', '商標名')} val={form.markName} />
@@ -1633,7 +1723,7 @@ export default function ApplyPage() {
                       <span className="text-sm font-semibold text-navy-900">{tri('Goods & Services', '商品和服务', 'Bienes y Servicios', 'Waren & Dienstleistungen', 'Produits & services', 'वस्तुएं और सेवाएं', 'Bens e Serviços', '商品・サービス')}</span>
                       <div className="flex items-center gap-3">
                         <span className="text-xs text-gray-500">{totalClasses} {tri('class(es)', '个类别', 'clase(s)', 'Klasse(n)', 'classe(s)', 'वर्ग', 'classe(s)', 'クラス')}</span>
-                        <EditBtn targetStep={3} />
+                        <EditBtn targetStep={2} />
                       </div>
                     </div>
                     <div className="divide-y divide-gray-100">
@@ -1675,7 +1765,7 @@ export default function ApplyPage() {
                   <div className="border border-gray-200 rounded-xl overflow-hidden">
                     <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-200 flex items-center justify-between">
                       <span className="text-sm font-semibold text-navy-900">{tri('Prior Use & Priority', '在先使用和优先权', 'Uso Previo y Prioridad', 'Vorbenutzt & Priorität', 'Usage antérieur & Priorité', 'पूर्व उपयोग और प्राथमिकता', 'Uso Anterior e Prioridade', '先使用・優先権')}</span>
-                      <EditBtn targetStep={4} />
+                      <EditBtn targetStep={3} />
                     </div>
                     <div className="divide-y divide-gray-100">
                       <ReviewRow label={tri('Used in Mexico', '在墨西哥使用', 'Usada en México', 'In Mexiko verwendet', 'Utilisée au Mexique', 'मेक्सिको में उपयोग', 'Usada no México', 'メキシコで使用')} val={form.usedInMexico ? tri('Yes', '是', 'Sí', 'Ja', 'Oui', 'हाँ', 'Sim', 'はい') : tri('No', '否', 'No', 'Nein', 'Non', 'नहीं', 'Não', 'いいえ')} />
@@ -2001,7 +2091,7 @@ export default function ApplyPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => { setShowConflictModal(false); setStep(4); }}
+                    onClick={() => { setShowConflictModal(false); setStep(3); }}
                     className="flex-1 px-4 py-2.5 rounded-xl bg-navy-900 hover:bg-navy-800 text-white text-sm font-semibold transition-colors"
                   >
                     {tri('Continue anyway', '仍然继续', 'Continuar de todas formas', 'Trotzdem fortfahren', 'Continuer quand même', 'फिर भी जारी रखें', 'Continuar mesmo assim')}
@@ -2013,7 +2103,21 @@ export default function ApplyPage() {
 
           {/* Navigation */}
           {step < 7 && (
-            <div className="flex justify-between mt-8 pt-6 border-t border-gray-100">
+            <div className="mt-8 pt-6 border-t border-gray-100">
+              {/* Save & Continue Later — shown for steps 1–5 */}
+              {step < 6 && !editingAppId && (
+                <div className="flex justify-center mb-4">
+                  <button
+                    type="button"
+                    onClick={handleSaveAndContinueLater}
+                    className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                  >
+                    <Save size={13} />
+                    {draftSavedFeedback ? t('form.draftSaved') : t('form.saveLater')}
+                  </button>
+                </div>
+              )}
+              <div className="flex justify-between">
               <button
                 type="button"
                 onClick={() => setStep(s => Math.max(1, s - 1) as Step)}
@@ -2026,8 +2130,8 @@ export default function ApplyPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    if (step === 1 && (form.email !== form.emailConfirm || !form.address.trim() || !form.city.trim() || !form.postalCode.trim() || !form.country.trim())) return;
-                    if (step === 3) {
+                    if (step === 4 && (form.email !== form.emailConfirm || !form.address.trim() || !form.city.trim() || !form.postalCode.trim() || !form.country.trim())) return;
+                    if (step === 2) {
                       const hasHighRisk = Object.values(clearanceResults).some(r => r.risk === 'high' || r.risk === 'medium');
                       if (hasHighRisk) {
                         setShowConflictModal(true);
@@ -2041,14 +2145,15 @@ export default function ApplyPage() {
                     setStep(s => Math.min(6, s + 1) as Step);
                   }}
                   disabled={
-                    (step === 1 && (form.email !== form.emailConfirm || !form.address.trim() || !form.city.trim() || !form.postalCode.trim() || !form.country.trim())) ||
-                    (step === 3 && confirmedEntries.length === 0 && !activeEntryIsConfirmed)
+                    (step === 4 && (form.email !== form.emailConfirm || !form.address.trim() || !form.city.trim() || !form.postalCode.trim() || !form.country.trim())) ||
+                    (step === 2 && confirmedEntries.length === 0 && !activeEntryIsConfirmed)
                   }
                   className="px-5 py-2.5 rounded-xl bg-navy-900 hover:bg-navy-800 text-white text-sm font-semibold transition-colors disabled:opacity-40"
                 >
                   {t('form.next')} <ChevronRight size={16} className="inline" />
                 </button>
               )}
+              </div>
             </div>
           )}
         </div>

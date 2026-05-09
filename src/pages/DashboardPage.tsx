@@ -145,11 +145,36 @@ function fmtShort(date: string | null | undefined): string {
 // ─── Status configs ───────────────────────────────────────────────────────────
 
 const FILING_STAGES = [
-  { key: 'received', label: 'Received', statuses: ['new', 'pending_review', 'pending_payment'] },
-  { key: 'review', label: 'Under Review', statuses: ['classification_pending', 'info_requested', 'ready_to_file'] },
-  { key: 'filed', label: 'Filed', statuses: ['filed'] },
-  { key: 'published', label: 'Published', statuses: ['published', 'office_action_pending'] },
-  { key: 'registered', label: 'Registered', statuses: ['registered'] },
+  {
+    key: 'received',
+    label: 'Received',
+    statuses: ['new', 'pending_review', 'pending_payment'],
+    desc: 'Your application has been received and payment confirmed. Our team is preparing your file for review and professional classification.',
+  },
+  {
+    key: 'review',
+    label: 'Under Review',
+    statuses: ['classification_pending', 'info_requested', 'ready_to_file'],
+    desc: 'Our attorneys are reviewing your application, confirming the Nice Classification of your goods and services, and drafting the Spanish-language specification required by IMPI.',
+  },
+  {
+    key: 'filed',
+    label: 'Filed',
+    statuses: ['filed'],
+    desc: 'Your trademark application has been formally submitted to IMPI (Instituto Mexicano de la Propiedad Industrial). IMPI will assign an official application number and begin their substantive examination, which typically takes 3–6 months.',
+  },
+  {
+    key: 'published',
+    label: 'Published',
+    statuses: ['published', 'office_action_pending'],
+    desc: 'IMPI has approved your application and published it in the Official Gazette (Diario Oficial de la Federación) for a 30-day opposition period, during which third parties may file an opposition. If no opposition is filed, registration proceeds.',
+  },
+  {
+    key: 'registered',
+    label: 'Registered',
+    statuses: ['registered'],
+    desc: 'Congratulations — your trademark is officially registered in Mexico! Your registration certificate will be issued by IMPI and is valid for 10 years from the filing date, renewable indefinitely.',
+  },
 ];
 
 function getStageIndex(status: string): number {
@@ -1215,7 +1240,16 @@ function ApplicationDetail({ appId, onBack }: { appId: string; onBack: () => voi
         <div className="mt-5 bg-white rounded-xl border border-gray-200 p-5">
           <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-4">Prosecution Progress</p>
           <StageProgress status={app.filing_status} />
-          <p className="text-xs text-[#2d5a2d] mt-3 font-medium">Currently: {FILING_STAGES[currentStageIndex]?.label}</p>
+          {FILING_STAGES[currentStageIndex] && (
+            <div className="mt-4 bg-[#f0f7f0] border border-[#c8e0c8] rounded-xl px-4 py-3">
+              <p className="text-xs font-semibold text-[#1a2e1a] mb-1">
+                Current Stage: {FILING_STAGES[currentStageIndex].label}
+              </p>
+              <p className="text-xs text-[#2d5a2d] leading-relaxed">
+                {FILING_STAGES[currentStageIndex].desc}
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
