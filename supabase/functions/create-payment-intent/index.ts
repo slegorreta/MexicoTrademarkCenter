@@ -138,9 +138,19 @@ Deno.serve(async (req: Request) => {
       status: "pending",
     });
 
-    // Increment coupon usage counter atomically
+    // Increment coupon usage counter atomically (service role bypasses RLS)
     if (couponId) {
-      await supabase.rpc("increment_coupon_uses", { coupon_id: couponId });
+      const { data: current } = await supabase
+        .from("coupons")
+        .select("uses_count")
+        .eq("id", couponId)
+        .maybeSingle();
+      if (current) {
+        await supabase
+          .from("coupons")
+          .update({ uses_count: current.uses_count + 1 })
+          .eq("id", couponId);
+      }
     }
 
     return new Response(
