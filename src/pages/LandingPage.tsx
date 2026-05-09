@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Star, Shield, Zap, Tag, ChevronDown, ChevronUp, CheckCircle2, Sparkles, Globe } from 'lucide-react';
-import { useLanguage } from '../context/LanguageContext';
 import SEOHead from '../components/SEOHead';
 import CurrencyDisplay from '../components/CurrencyDisplay';
 import { LANDING_PAGES, HREFLANG_ALTERNATES, type LandingPageData } from '../data/landingPages';
@@ -40,14 +39,7 @@ function FAQItem({ q, a }: { q: string; a: string }) {
 }
 
 export default function LandingPage({ lang }: Props) {
-  const { setLanguage } = useLanguage();
   const data: LandingPageData | undefined = LANDING_PAGES[lang];
-
-  useEffect(() => {
-    if (lang && ['en', 'zh', 'es', 'de', 'fr', 'hi', 'pt', 'ja'].includes(lang)) {
-      setLanguage(lang as Parameters<typeof setLanguage>[0]);
-    }
-  }, [lang, setLanguage]);
 
   if (!data) return null;
 

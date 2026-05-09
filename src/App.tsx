@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
-import { LanguageProvider } from './context/LanguageContext';
+import { LanguageProvider, type Language } from './context/LanguageContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/layout/Layout';
 
@@ -61,6 +61,16 @@ function ProtectedRoute({ children, requireStaff = false }: { children: React.Re
 }
 
 const isAppSubdomain = window.location.hostname === 'app.mexicotrademarkcenter.com';
+
+const LANG_ROUTES: Record<string, Language> = {
+  '/es/': 'es', '/en/': 'en', '/zh/': 'zh', '/pt/': 'pt',
+  '/de/': 'de', '/fr/': 'fr', '/hi/': 'hi', '/ja/': 'ja',
+};
+
+function detectInitialLang(): Language | undefined {
+  const path = window.location.pathname;
+  return LANG_ROUTES[path] ?? LANG_ROUTES[path.endsWith('/') ? path : `${path}/`];
+}
 
 function AppRoutes() {
   return (
@@ -172,7 +182,7 @@ function AppRoutes() {
 export default function App() {
   return (
     <BrowserRouter>
-      <LanguageProvider>
+      <LanguageProvider initialLang={detectInitialLang()}>
         <AuthProvider>
           <AppRoutes />
         </AuthProvider>
