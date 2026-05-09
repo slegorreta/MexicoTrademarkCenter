@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Star, Shield, Zap, Tag, ChevronDown, ChevronUp, CheckCircle2, Sparkles, Globe } from 'lucide-react';
+import { useLanguage, type Language } from '../context/LanguageContext';
 import SEOHead from '../components/SEOHead';
 import CurrencyDisplay from '../components/CurrencyDisplay';
 import { LANDING_PAGES, HREFLANG_ALTERNATES, type LandingPageData } from '../data/landingPages';
@@ -39,7 +40,16 @@ function FAQItem({ q, a }: { q: string; a: string }) {
 }
 
 export default function LandingPage({ lang }: Props) {
+  const { language, setLanguage } = useLanguage();
   const data: LandingPageData | undefined = LANDING_PAGES[lang];
+
+  // Keep context language in sync when navigating between language routes within the SPA.
+  // Using a ref to avoid a render loop — this runs synchronously during render, not as an effect.
+  const syncedLang = useRef<string>('');
+  if (data && lang !== syncedLang.current && lang !== language) {
+    syncedLang.current = lang;
+    setLanguage(lang as Language);
+  }
 
   if (!data) return null;
 

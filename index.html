@@ -18,9 +18,78 @@
     <meta name="twitter:title" content="Register Trademark in Mexico | MexicoTrademarkCenter" />
     <meta name="twitter:description" content="File your trademark in Mexico with IMPI quickly and affordably." />
     <meta name="twitter:image" content="https://www.mexicotrademarkcenter.com/IMG_2221_2.jpg" />
-    
+
     <!-- Preload LCP image to improve Largest Contentful Paint -->
     <link rel="preload" as="image" href="/IMG_2221_2.jpg" />
+
+    <!--
+      Pre-JS SEO: synchronously set <title>, <html lang>, and meta description
+      for language-specific landing pages before React hydrates.
+      Crawlers that do not execute JS will see the correct per-language metadata.
+    -->
+    <script>
+      (function () {
+        var pages = {
+          '/es/': {
+            lang: 'es',
+            title: 'Registro de Marca en México | IMPI Online — MexicoTrademarkCenter',
+            desc: 'Registra tu marca ante el IMPI de forma rápida, asequible y 100% en línea. Precios transparentes desde USD $270 por clase. Presentación en 24 horas hábiles.'
+          },
+          '/en/': {
+            lang: 'en',
+            title: 'Register Trademark in Mexico Online | IMPI Filing — MexicoTrademarkCenter',
+            desc: 'Register your trademark in Mexico with IMPI quickly and affordably. AI-powered classification, 24-hour filing, all fees included from USD $270 per class.'
+          },
+          '/zh/': {
+            lang: 'zh-Hans',
+            title: '墨西哥商标注册 | IMPI在线申请 — MexicoTrademarkCenter',
+            desc: '在线快速注册墨西哥商标，IMPI官方申请，24小时内提交，含全部官费，每类仅需USD $270。AI智能分类，全程中文服务。'
+          },
+          '/pt/': {
+            lang: 'pt',
+            title: 'Registro de Marca no México | Protocolo IMPI Online — MexicoTrademarkCenter',
+            desc: 'Registre sua marca no México junto ao IMPI de forma rápida e acessível. Protocolamos em até 24 horas úteis, com todos os impostos inclusos, a partir de USD $270 por classe.'
+          },
+          '/de/': {
+            lang: 'de',
+            title: 'Markenanmeldung in Mexiko | IMPI Online — MexicoTrademarkCenter',
+            desc: 'Marke in Mexiko beim IMPI anmelden — schnell, günstig und vollständig online. Einreichung innerhalb von 24 Geschäftsstunden, Komplettpreis ab USD $270 pro Klasse.'
+          },
+          '/fr/': {
+            lang: 'fr',
+            title: 'Enregistrement de marque au Mexique | Dépôt IMPI en ligne — MexicoTrademarkCenter',
+            desc: "Déposez votre marque au Mexique auprès de l'IMPI rapidement et à prix accessible. Dépôt en 24 heures ouvrées, tous frais inclus à partir de USD $270 par classe."
+          },
+          '/hi/': {
+            lang: 'hi',
+            title: 'मेक्सिको में ट्रेडमार्क पंजीकरण | IMPI ऑनलाइन — MexicoTrademarkCenter',
+            desc: 'मेक्सिको में अपना ट्रेडमार्क IMPI के साथ पंजीकृत करें — 24 व्यावसायिक घंटों में दाखिल, सभी शुल्क सहित USD $270 प्रति वर्ग से। Amazon Brand Registry के लिए भी मान्य।'
+          },
+          '/ja/': {
+            lang: 'ja',
+            title: 'メキシコ商標登録 | IMPI オンライン申請 — MexicoTrademarkCenter',
+            desc: 'メキシコの商標をIMPIにオンラインで登録。AIによる区分分類、24営業時間以内の申請、全費用込みでUSD $270/区分から。Amazon Brand Registryにも対応。'
+          }
+        };
+        var path = window.location.pathname;
+        if (!path.endsWith('/')) path = path + '/';
+        var p = pages[path];
+        if (p) {
+          document.documentElement.setAttribute('lang', p.lang);
+          document.title = p.title;
+          var mDesc = document.querySelector('meta[name="description"]');
+          if (mDesc) mDesc.setAttribute('content', p.desc);
+          var ogTitle = document.querySelector('meta[property="og:title"]');
+          if (ogTitle) ogTitle.setAttribute('content', p.title);
+          var ogDesc = document.querySelector('meta[property="og:description"]');
+          if (ogDesc) ogDesc.setAttribute('content', p.desc);
+          var twTitle = document.querySelector('meta[name="twitter:title"]');
+          if (twTitle) twTitle.setAttribute('content', p.title);
+          var twDesc = document.querySelector('meta[name="twitter:description"]');
+          if (twDesc) twDesc.setAttribute('content', p.desc);
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
