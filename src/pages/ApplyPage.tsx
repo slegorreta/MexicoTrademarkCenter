@@ -134,6 +134,8 @@ function CheckoutForm({ language, finalTotal, onSuccess }: CheckoutFormProps) {
   const elements = useElements();
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const tri = (en: string, zh: string, es: string, de?: string, fr?: string, hi?: string, pt?: string, ja?: string): string =>
+    language === 'zh' ? zh : language === 'es' ? es : language === 'de' ? (de ?? en) : language === 'fr' ? (fr ?? en) : language === 'hi' ? (hi ?? en) : language === 'pt' ? (pt ?? en) : language === 'ja' ? (ja ?? en) : en;
 
   const handlePay = async (e: React.FormEvent) => {
     e.preventDefault();
