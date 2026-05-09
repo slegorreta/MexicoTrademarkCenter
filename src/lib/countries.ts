@@ -207,7 +207,7 @@ export const COUNTRIES: CountryEntry[] = [
   { code: 'ZW', en: 'Zimbabwe', zh: '津巴布韦', es: 'Zimbabue', de: 'Simbabwe', fr: 'Zimbabwe', hi: 'ज़िम्बाब्वे', pt: 'Zimbábue' },
 ];
 
-export type SupportedLang = 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt';
+export type SupportedLang = 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt' | 'ja';
 
 // Map from ISO code to ITU dial prefix
 export const DIAL_CODES: Record<string, string> = {
@@ -247,18 +247,21 @@ export const DIAL_CODES: Record<string, string> = {
 };
 
 export function getSortedDialCodes(lang: SupportedLang): Array<{ code: string; dialCode: string; name: string }> {
+  const key = lang === 'ja' ? 'en' : lang;
   return COUNTRIES
     .filter(c => DIAL_CODES[c.code])
-    .map(c => ({ code: c.code, dialCode: DIAL_CODES[c.code], name: c[lang] || c.en }))
-    .sort((a, b) => a.name.localeCompare(b.name, lang === 'zh' ? 'zh' : undefined));
+    .map(c => ({ code: c.code, dialCode: DIAL_CODES[c.code], name: c[key] || c.en }))
+    .sort((a, b) => a.name.localeCompare(b.name, key === 'zh' ? 'zh' : undefined));
 }
 
 export function getCountryName(code: string, lang: SupportedLang): string {
   const entry = COUNTRIES.find(c => c.code === code);
   if (!entry) return code;
-  return entry[lang] || entry.en;
+  const key = lang === 'ja' ? 'en' : lang;
+  return entry[key] || entry.en;
 }
 
 export function getSortedCountries(lang: SupportedLang): CountryEntry[] {
-  return [...COUNTRIES].sort((a, b) => a[lang].localeCompare(b[lang], lang === 'zh' ? 'zh' : undefined));
+  const key = lang === 'ja' ? 'en' : lang;
+  return [...COUNTRIES].sort((a, b) => a[key].localeCompare(b[key], key === 'zh' ? 'zh' : undefined));
 }

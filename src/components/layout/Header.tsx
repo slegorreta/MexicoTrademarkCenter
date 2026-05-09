@@ -7,6 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 const LANGUAGES: { code: Language; label: string }[] = [
   { code: 'en', label: 'English' },
   { code: 'zh', label: '中文' },
+  { code: 'ja', label: '日本語' },
   { code: 'es', label: 'Español' },
   { code: 'de', label: 'Deutsch' },
   { code: 'fr', label: 'Français' },

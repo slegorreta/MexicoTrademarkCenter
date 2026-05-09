@@ -43,7 +43,7 @@ interface FormData {
   whatsapp: string;
   taxId: string;
   contactPerson: string;
-  preferredLanguage: 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt';
+  preferredLanguage: 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt' | 'ja';
   markName: string;
   markType: string;
   containsNonSpanish: boolean;
@@ -174,13 +174,13 @@ function CheckoutForm({ language, finalTotal, onSuccess }: CheckoutFormProps) {
       >
         <Lock size={16} />
         {paying
-          ? (tri('Processing payment...', '处理付款中...', 'Procesando pago...', 'Zahlung wird verarbeitet...', 'Traitement du paiement...', 'भुगतान हो रहा है...', 'Processando pagamento...'))
-          : (tri(`Pay USD $${finalTotal.toFixed(2)}`, `支付 USD $${finalTotal.toFixed(2)}`, `Pagar USD $${finalTotal.toFixed(2)}`, `USD $${finalTotal.toFixed(2)} bezahlen`, `Payer USD $${finalTotal.toFixed(2)}`, `USD $${finalTotal.toFixed(2)} का भुगतान करें`, `Pagar USD $${finalTotal.toFixed(2)}`))}
+          ? (tri('Processing payment...', '处理付款中...', 'Procesando pago...', 'Zahlung wird verarbeitet...', 'Traitement du paiement...', 'भुगतान हो रहा है...', 'Processando pagamento...', '決済処理中...'))
+          : (tri(`Pay USD $${finalTotal.toFixed(2)}`, `支付 USD $${finalTotal.toFixed(2)}`, `Pagar USD $${finalTotal.toFixed(2)}`, `USD $${finalTotal.toFixed(2)} bezahlen`, `Payer USD $${finalTotal.toFixed(2)}`, `USD $${finalTotal.toFixed(2)} का भुगतान करें`, `Pagar USD $${finalTotal.toFixed(2)}`, `USD $${finalTotal.toFixed(2)} を支払う`))}
       </button>
 
       <p className="text-center text-xs text-gray-400 flex items-center justify-center gap-1">
         <Lock size={11} />
-        {tri('Secured by Stripe', '由Stripe保护', 'Pago seguro vía Stripe', 'Gesichert durch Stripe', 'Sécurisé par Stripe', 'Stripe द्वारा सुरक्षित', 'Protegido pelo Stripe')}
+        {tri('Secured by Stripe', '由Stripe保护', 'Pago seguro vía Stripe', 'Gesichert durch Stripe', 'Sécurisé par Stripe', 'Stripe द्वारा सुरक्षित', 'Protegido pelo Stripe', 'Stripeで保護')}
       </p>
     </form>
   );
@@ -190,8 +190,8 @@ function CheckoutForm({ language, finalTotal, onSuccess }: CheckoutFormProps) {
 export default function ApplyPage() {
   const { language, t } = useLanguage();
   // tri: helper for inline strings not yet moved to translation keys
-  const tri = (en: string, zh: string, es: string, de?: string, fr?: string, hi?: string, pt?: string): string =>
-    language === 'zh' ? zh : language === 'es' ? es : language === 'de' ? (de ?? en) : language === 'fr' ? (fr ?? en) : language === 'hi' ? (hi ?? en) : language === 'pt' ? (pt ?? en) : en;
+  const tri = (en: string, zh: string, es: string, de?: string, fr?: string, hi?: string, pt?: string, ja?: string): string =>
+    language === 'zh' ? zh : language === 'es' ? es : language === 'de' ? (de ?? en) : language === 'fr' ? (fr ?? en) : language === 'hi' ? (hi ?? en) : language === 'pt' ? (pt ?? en) : language === 'ja' ? (ja ?? en) : en;
   const sortedCountries = getSortedCountries(language as SupportedLang);
   const sortedDialCodes = getSortedDialCodes(language as SupportedLang);
   const { user } = useAuth();
@@ -340,13 +340,13 @@ export default function ApplyPage() {
       });
       const data = await res.json();
       if (!res.ok || data.error) {
-        setCouponError(data.error || tri('Invalid coupon code.', '无效优惠码。', 'Código de descuento inválido.', 'Ungültiger Gutscheincode.', 'Code promo invalide.', 'अमान्य कूपन कोड।', 'Código de desconto inválido.'));
+        setCouponError(data.error || tri('Invalid coupon code.', '无效优惠码。', 'Código de descuento inválido.', 'Ungültiger Gutscheincode.', 'Code promo invalide.', 'अमान्य कूपन कोड।', 'Código de desconto inválido.', '無効なクーポンコード。'));
       } else {
         setCouponApplied({ code, discountPercent: data.discountPercent });
         setCouponInput('');
       }
     } catch {
-      setCouponError(tri('Could not verify coupon. Please try again.', '无法验证优惠码，请重试。', 'No se pudo verificar el cupón. Inténtalo de nuevo.', 'Gutschein konnte nicht überprüft werden.', 'Impossible de vérifier le code promo.', 'कूपन सत्यापित नहीं हो सका।', 'Não foi possível verificar o cupom.'));
+      setCouponError(tri('Could not verify coupon. Please try again.', '无法验证优惠码，请重试。', 'No se pudo verificar el cupón. Inténtalo de nuevo.', 'Gutschein konnte nicht überprüft werden.', 'Impossible de vérifier le code promo.', 'कूपन सत्यापित नहीं हो सका।', 'Não foi possível verificar o cupom.', 'クーポンを確認できませんでした。もう一度お試しください。'));
     } finally {
       setCouponChecking(false);
     }
@@ -499,10 +499,10 @@ export default function ApplyPage() {
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
         <div className="text-center mb-8">
           <h1 className="text-2xl lg:text-3xl font-bold text-navy-900">
-            {tri('File Your Mexican Trademark', '申请您的墨西哥商标', 'Registra tu Marca en México', 'Ihre Marke in Mexiko anmelden', 'Déposez votre marque au Mexique', 'अपना मेक्सिको ट्रेडमार्क दाखिल करें', 'Registre sua Marca no México')}
+            {tri('File Your Mexican Trademark', '申请您的墨西哥商标', 'Registra tu Marca en México', 'Ihre Marke in Mexiko anmelden', 'Déposez votre marque au Mexique', 'अपना मेक्सिको ट्रेडमार्क दाखिल करें', 'Registre sua Marca no México', 'メキシコ商標出願')}
           </h1>
           <p className="text-gray-500 text-sm mt-2">
-            {tri('Complete each step to prepare your IMPI application.', '完成每个步骤以准备您的IMPI申请。', 'Completa cada paso para preparar tu solicitud ante el IMPI.', 'Füllen Sie jeden Schritt aus, um Ihren IMPI-Antrag vorzubereiten.', 'Complétez chaque étape pour préparer votre dossier IMPI.', 'अपना IMPI आवेदन तैयार करने के लिए प्रत्येक चरण पूरा करें।', 'Complete cada etapa para preparar seu pedido no IMPI.')}
+            {tri('Complete each step to prepare your IMPI application.', '完成每个步骤以准备您的IMPI申请。', 'Completa cada paso para preparar tu solicitud ante el IMPI.', 'Füllen Sie jeden Schritt aus, um Ihren IMPI-Antrag vorzubereiten.', 'Complétez chaque étape pour préparer votre dossier IMPI.', 'अपना IMPI आवेदन तैयार करने के लिए प्रत्येक चरण पूरा करें।', 'Complete cada etapa para preparar seu pedido no IMPI.', '各ステップを完了してIMPI出願を準備してください。')}
           </p>
         </div>
 
@@ -610,9 +610,10 @@ export default function ApplyPage() {
                   </div>
                   <div>
                     <label className={labelClass}>{tri('Preferred Language', '首选语言', 'Idioma de Preferencia', 'Bevorzugte Sprache', 'Langue préférée', 'पसंदीदा भाषा', 'Idioma Preferido')}</label>
-                    <select className={inputClass} value={form.preferredLanguage} onChange={e => set({ preferredLanguage: e.target.value as 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt' })}>
+                    <select className={inputClass} value={form.preferredLanguage} onChange={e => set({ preferredLanguage: e.target.value as 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt' | 'ja' })}>
                       <option value="en">English</option>
                       <option value="zh">中文 (Chinese)</option>
+                      <option value="ja">日本語 (Japanese)</option>
                       <option value="es">Español (Spanish)</option>
                       <option value="de">Deutsch (German)</option>
                       <option value="fr">Français (French)</option>
