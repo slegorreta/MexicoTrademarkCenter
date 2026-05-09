@@ -301,13 +301,56 @@ const sectionsEs = [
   },
 ];
 
+const sectionsJa = [
+  {
+    title: '1. サービスの説明',
+    body: 'MexicoTrademarkCenter.comは、メキシコ工業所有権庁（IMPI）への商標出願の準備および申請サービスを提供します。当社は独立した申請サービスであり、IMPI、いかなる政府機関、または法律事務所とも関係がありません。',
+  },
+  {
+    title: '2. 登録の保証なし',
+    body: '出願の申請は商標登録を保証するものではありません。IMPIはすべての出願を独自に審査し、拒絶理由通知の発行、登録の拒絶、または異議申立の許可を行う場合があります。当社のサービスは出願の準備および提出に限定されます。',
+  },
+  {
+    title: '3. 申請タイムライン',
+    body: '完全な情報と支払いの確認を受け取ってから24営業時間以内の申請を目標としています。これは目標であり、保証ではありません。情報が不完全な場合、支払いが保留中の場合、またはその他の状況が生じた場合、申請が遅れる可能性があります。',
+  },
+  {
+    title: '4. 区分の分類',
+    body: '当社システムが提供するニース国際分類の提案は暫定的なものであり、申請前に専門家によるレビューが行われます。最終的な分類は当社チームが確認します。分類決定の結果に対して当社は責任を負いません。',
+  },
+  {
+    title: '5. 政府手数料',
+    body: 'IMPI政府手数料は当社のサービス料金とは別であり、予告なく変更される場合があります。現在の手数料は決済時に表示されます。当社はお客様に代わって政府手数料をIMPIに送金します。',
+  },
+  {
+    title: '6. サービスの範囲',
+    body: '当社のサービスは出願の準備および申請のみを対象としています。拒絶理由通知への対応、異議申立手続、商標更新、使用証明、訴訟支援、その他の申請後サービスは、別途書面による合意がない限り含まれません。',
+  },
+  {
+    title: '7. お支払い',
+    body: '申請手続きを開始する前にお支払いが必要です。支払いはStripeを通じて処理されます。申請開始前のキャンセルは個別に対応いたします。IMPI提出後の返金はいたしません。',
+  },
+  {
+    title: '8. 責任の制限',
+    body: '当社の責任はお支払いいただいたサービス料金に限定されます。IMPIの決定、審査の遅延、第三者による異議申立、または商標の状況に起因するいかなる商業的損害についても当社は責任を負いません。',
+  },
+  {
+    title: '9. 法的アドバイスではない',
+    body: '本ウェブサイトおよびサービスを通じて提供される情報は情報提供のみを目的としており、法的アドバイスを構成するものではありません。商標戦略に関する法的アドバイスについては、資格のある知的財産弁護士への相談をお勧めします。',
+  },
+  {
+    title: '10. 準拠法',
+    body: '本規約は適用法令に準拠します。紛争は法的手続きに先立ち、交渉により解決されるものとします。',
+  },
+];
+
 export default function TermsPage() {
   const { language } = useLanguage();
 
-  const sections = language === 'zh' ? sectionsZh : language === 'es' ? sectionsEs : language === 'de' ? sectionsDe : language === 'fr' ? sectionsFr : language === 'hi' ? sectionsHi : language === 'pt' ? sectionsPt : sectionsEn;
+  const sections = language === 'zh' ? sectionsZh : language === 'es' ? sectionsEs : language === 'de' ? sectionsDe : language === 'fr' ? sectionsFr : language === 'hi' ? sectionsHi : language === 'pt' ? sectionsPt : language === 'ja' ? sectionsJa : sectionsEn;
 
-  const heading = language === 'zh' ? '服务条款' : language === 'es' ? 'Términos de Servicio' : language === 'de' ? 'Nutzungsbedingungen' : language === 'fr' ? 'Conditions d\'utilisation' : language === 'hi' ? 'सेवा की शर्तें' : language === 'pt' ? 'Termos de Serviço' : 'Terms of Service';
-  const updated = language === 'zh' ? '最后更新：2025年1月' : language === 'es' ? 'Última actualización: enero de 2025' : language === 'de' ? 'Letzte Aktualisierung: Januar 2025' : language === 'fr' ? 'Dernière mise à jour : janvier 2025' : language === 'hi' ? 'अंतिम अद्यतन: जनवरी 2025' : language === 'pt' ? 'Última atualização: janeiro de 2025' : 'Last updated: January 2025';
+  const heading = language === 'zh' ? '服务条款' : language === 'es' ? 'Términos de Servicio' : language === 'de' ? 'Nutzungsbedingungen' : language === 'fr' ? 'Conditions d\'utilisation' : language === 'hi' ? 'सेवा की शर्तें' : language === 'pt' ? 'Termos de Serviço' : language === 'ja' ? '利用規約' : 'Terms of Service';
+  const updated = language === 'zh' ? '最后更新：2025年1月' : language === 'es' ? 'Última actualización: enero de 2025' : language === 'de' ? 'Letzte Aktualisierung: Januar 2025' : language === 'fr' ? 'Dernière mise à jour : janvier 2025' : language === 'hi' ? 'अंतिम अद्यतन: जनवरी 2025' : language === 'pt' ? 'Última atualização: janeiro de 2025' : language === 'ja' ? '最終更新：2025年1月' : 'Last updated: January 2025';
   const notice = language === 'zh'
     ? '重要：本平台与IMPI、任何政府机构或任何律师事务所均无关联。申请不保证注册。'
     : language === 'es'
@@ -320,6 +363,8 @@ export default function TermsPage() {
     ? 'महत्वपूर्ण: यह प्लेटफ़ॉर्म IMPI, किसी सरकारी प्राधिकरण या किसी कानून फर्म से संबद्ध नहीं है। दाखिल करना पंजीकरण की गारंटी नहीं देता।'
     : language === 'pt'
     ? 'Importante: Esta plataforma não tem vínculo com o IMPI, nenhuma autoridade governamental ou escritório de advocacia. O protocolo não garante o registro.'
+    : language === 'ja'
+    ? '重要：本プラットフォームはIMPI、いかなる政府機関または法律事務所とも関係がありません。出願は登録を保証するものではありません。'
     : 'Important: This platform is not affiliated with IMPI, any government authority, or any law firm. Filing does not guarantee registration.';
 
   return (

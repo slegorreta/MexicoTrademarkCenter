@@ -20,6 +20,8 @@ export default function PriceGuaranteeBadge({ variant = 'float' }: Props) {
     ? 'बाज़ार में सबसे कम दाम, गारंटी के साथ।'
     : language === 'pt'
     ? 'O menor preço do mercado, garantido.'
+    : language === 'ja'
+    ? '業界最低価格、保証付き。'
     : 'Lowest price in the market, guaranteed.';
 
   if (variant === 'inline') {
@@ -61,7 +63,7 @@ export default function PriceGuaranteeBadge({ variant = 'float' }: Props) {
             {label}
           </p>
           <p className="text-[10px] text-gray-500 mt-0.5 leading-tight">
-            {language === 'zh' ? '法律费用价格匹配' : language === 'es' ? 'Igualación de precio en honorarios' : language === 'de' ? 'Preisanpassung auf Servicegebühren' : language === 'fr' ? 'Alignement de prix sur les honoraires' : language === 'hi' ? 'कानूनी शुल्क पर मूल्य समानता' : language === 'pt' ? 'Igualdade de preço em honorários' : 'Price match on legal fees'}
+            {language === 'zh' ? '法律费用价格匹配' : language === 'es' ? 'Igualación de precio en honorarios' : language === 'de' ? 'Preisanpassung auf Servicegebühren' : language === 'fr' ? 'Alignement de prix sur les honoraires' : language === 'hi' ? 'कानूनी शुल्क पर मूल्य समानता' : language === 'pt' ? 'Igualdade de preço em honorários' : language === 'ja' ? 'サービス料の価格保証' : 'Price match on legal fees'}
           </p>
         </div>
       </div>
