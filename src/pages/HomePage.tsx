@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, ArrowDown, Shield, Clock, Globe as Globe2, Zap, FileText, Award, ChevronDown, Sparkles, Search, HelpCircle, X, Star } from 'lucide-react';
+import { ArrowRight, ArrowDown, Shield, Clock, Globe as Globe2, DollarSign, FileText, Award, ChevronDown, Sparkles, Search, HelpCircle, X, Star } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import PriceGuaranteeBadge from '../components/PriceGuaranteeBadge';
 import { useState } from 'react';
@@ -12,7 +12,7 @@ export default function HomePage() {
   const trustBadges = [
     { icon: Clock, key: 'trust.filing' },
     { icon: Globe2, key: 'trust.impi', tooltip: true },
-    { icon: Zap, key: 'trust.bilingual' },
+    { icon: DollarSign, key: 'trust.bilingual' },
   ];
 
   const faqs = [
@@ -138,41 +138,12 @@ export default function HomePage() {
             </div>
             <div className="p-5">
               <p className="text-gray-600 text-sm leading-relaxed mb-5">{t('trust.impi.tooltip.body')}</p>
-              <div className="rounded-xl border border-gray-200 overflow-hidden bg-gray-50">
-                <div className="bg-gray-800 text-white text-xs font-semibold px-3 py-1.5 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-green-400 inline-block" />
-                  gob.mx — Instituto Mexicano de la Propiedad Industrial
-                </div>
-                <div className="p-4 space-y-3">
-                  <div className="text-center text-xs font-bold text-gray-700 border-b border-gray-200 pb-2">
-                    Instituto Mexicano de la Propiedad Industrial
-                  </div>
-                  <div className="flex gap-3 text-xs text-gray-600">
-                    <div className="flex-1 border border-gray-300 rounded p-2 space-y-1">
-                      <div className="font-semibold text-gray-800">DIRECCIÓN DIVISIONAL DE MARCAS</div>
-                      <div className="text-gray-500">SUBDIRECCIÓN DIVISIONAL DE PROCESAMIENTO ADMINISTRATIVO DE MARCAS</div>
-                      <div className="text-gray-500">COORDINACIÓN DEPARTAMENTAL DE RECEPCIÓN Y CONTROL DE DOCUMENTOS</div>
-                    </div>
-                    <div className="flex-1 border border-gray-300 rounded p-2 space-y-1">
-                      <div className="flex justify-between"><span className="font-semibold">EXPEDIENTE:</span><span className="bg-gray-800 text-gray-800 rounded px-2">███</span></div>
-                      <div className="flex justify-between"><span className="font-semibold">FOLIO DE RECEPCIÓN:</span><span className="bg-gray-800 text-gray-800 rounded px-2">███</span></div>
-                      <div className="text-gray-500 text-xs mt-1">FECHA Y HORA DE LA RECEPCIÓN DE LA SOLICITUD: <span className="bg-gray-800 text-gray-800 rounded px-2">████████</span></div>
-                    </div>
-                  </div>
-                  <div className="border border-gray-300 rounded p-2 space-y-1 text-xs text-gray-700">
-                    <div className="font-semibold bg-gray-100 px-1">SOLICITUD DE:</div>
-                    <div className="font-semibold bg-gray-100 px-1">REGISTRO DE MARCA</div>
-                    <div className="font-semibold bg-gray-100 px-1 mt-1">SOLICITANTE(S) O REPRESENTANTE LEGAL:</div>
-                    <div className="bg-gray-800 text-gray-800 rounded px-2 w-32">████████</div>
-                  </div>
-                  <div className="border-t border-gray-200 pt-2 text-xs text-gray-500 italic">
-                    CON LA FECHA Y HORA REFERIDA SE HA RECIBIDO SU SOLICITUD CON LOS DATOS SEÑALADOS DE LA QUE SE ACUSA RECIBO.
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    <span className="font-semibold text-gray-700">FIRMA DE ACUSE — Sello Digital del IMPI</span>
-                    <div className="mt-1 bg-gray-800 rounded h-10 w-40" />
-                  </div>
-                </div>
+              <div className="rounded-xl border border-gray-200 overflow-hidden">
+                <img
+                  src="/Captura_de_pantalla_2026-05-10_a_la(s)_4.39.02_p.m..png"
+                  alt="Constancia de Presentación IMPI"
+                  className="w-full h-auto block"
+                />
               </div>
             </div>
           </div>
