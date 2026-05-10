@@ -88,14 +88,22 @@ function AppRoutes() {
       <Route path="/privacy" element={<Layout><PrivacyPage /></Layout>} />
       <Route path="/terms" element={<Layout><TermsPage /></Layout>} />
 
-      {/* SEO Landing pages — one per language */}
+      {/* SEO Landing pages — one per language (with and without trailing slash) */}
+      <Route path="/es" element={<Layout><LandingPage lang="es" /></Layout>} />
       <Route path="/es/" element={<Layout><LandingPage lang="es" /></Layout>} />
+      <Route path="/en" element={<Layout><LandingPage lang="en" /></Layout>} />
       <Route path="/en/" element={<Layout><LandingPage lang="en" /></Layout>} />
+      <Route path="/zh" element={<Layout><LandingPage lang="zh" /></Layout>} />
       <Route path="/zh/" element={<Layout><LandingPage lang="zh" /></Layout>} />
+      <Route path="/pt" element={<Layout><LandingPage lang="pt" /></Layout>} />
       <Route path="/pt/" element={<Layout><LandingPage lang="pt" /></Layout>} />
+      <Route path="/de" element={<Layout><LandingPage lang="de" /></Layout>} />
       <Route path="/de/" element={<Layout><LandingPage lang="de" /></Layout>} />
+      <Route path="/fr" element={<Layout><LandingPage lang="fr" /></Layout>} />
       <Route path="/fr/" element={<Layout><LandingPage lang="fr" /></Layout>} />
+      <Route path="/hi" element={<Layout><LandingPage lang="hi" /></Layout>} />
       <Route path="/hi/" element={<Layout><LandingPage lang="hi" /></Layout>} />
+      <Route path="/ja" element={<Layout><LandingPage lang="ja" /></Layout>} />
       <Route path="/ja/" element={<Layout><LandingPage lang="ja" /></Layout>} />
 
       {/* Auth */}
