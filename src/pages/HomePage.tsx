@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, ArrowDown, Shield, Clock, Globe as Globe2, DollarSign, FileText, Award, ChevronDown, Sparkles, Search, HelpCircle, X, Star, Scale } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import PriceGuaranteeBadge from '../components/PriceGuaranteeBadge';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 
 export default function HomePage() {
   const { t } = useLanguage();
@@ -10,6 +10,7 @@ export default function HomePage() {
   const [showConstanciaModal, setShowConstanciaModal] = useState(false);
   const [showSavingsModal, setShowSavingsModal] = useState(false);
   const [showLawyersModal, setShowLawyersModal] = useState(false);
+  const [showCertModal, setShowCertModal] = useState(false);
 
   const trustBadges = [
     { icon: Clock, key: 'trust.filing' },
@@ -18,13 +19,39 @@ export default function HomePage() {
     { icon: Scale, key: 'trust.lawyers.label', onTooltip: () => setShowLawyersModal(true) },
   ];
 
-  const faqs = [
+  const faqs: { q: string; a: string; extra?: ReactNode }[] = [
     { q: t('faq.q1'), a: t('faq.a1') },
     { q: t('faq.q2'), a: t('faq.a2') },
     { q: t('faq.q3'), a: t('faq.a3') },
     { q: t('faq.q5'), a: t('faq.a5') },
     { q: t('faq.q7'), a: t('faq.a7') },
     { q: t('faq.q8'), a: t('faq.a8') },
+    {
+      q: t('faq.q12'),
+      a: t('faq.a12'),
+      extra: (
+        <button
+          onClick={() => setShowCertModal(true)}
+          className="mt-3 inline-flex items-center gap-2 text-xs font-medium text-gold-700 border border-gold-300 bg-gold-50 hover:bg-gold-100 rounded-lg px-3 py-1.5 transition-colors"
+        >
+          <FileText size={13} />
+          {t('faq.q12.viewCert') || 'View sample certificate'}
+        </button>
+      ),
+    },
+    {
+      q: t('faq.q13'),
+      a: t('faq.a13'),
+      extra: (
+        <Link
+          to="/trademark-check"
+          className="mt-3 inline-flex items-center gap-2 text-xs font-medium text-navy-700 border border-navy-200 bg-navy-50 hover:bg-navy-100 rounded-lg px-3 py-1.5 transition-colors"
+        >
+          <Search size={13} />
+          {t('faq.q13.checkLink') || 'Run a trademark search'}
+        </Link>
+      ),
+    },
   ];
 
   const proofLabels = [
@@ -203,6 +230,26 @@ export default function HomePage() {
         </div>
       )}
 
+      {/* Trademark Certificate modal */}
+      {showCertModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={() => setShowCertModal(false)}>
+          <div className="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-start justify-between p-5 border-b border-gray-100">
+              <h3 className="text-navy-900 font-bold text-lg leading-tight">{t('faq.q12')}</h3>
+              <button onClick={() => setShowCertModal(false)} className="ml-4 text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0 mt-0.5">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-5">
+              <p className="text-gray-600 text-sm leading-relaxed mb-5">{t('faq.a12')}</p>
+              <div className="rounded-xl border border-gray-200 overflow-hidden">
+                <img src="/Captura_de_pantalla_2026-05-10_a_la(s)_5.22.49_p.m..png" alt="Título de Registro de Marca IMPI" className="w-full h-auto block" />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Pricing Preview */}
       <section className="py-16 lg:py-20 bg-navy-950 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -308,6 +355,7 @@ export default function HomePage() {
                 {openFaq === i && (
                   <div className="px-5 pb-4 text-gray-600 text-sm leading-relaxed border-t border-gray-100">
                     <div className="pt-3">{faq.a}</div>
+                    {faq.extra && <div>{faq.extra}</div>}
                   </div>
                 )}
               </div>
