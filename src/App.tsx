@@ -36,6 +36,7 @@ import AdminClientDetail from './pages/admin/AdminClientDetail';
 import AdminEmailTemplates from './pages/admin/AdminEmailTemplates';
 import AdminSettings from './pages/admin/AdminSettings';
 import AdminStaffManagement from './pages/admin/AdminStaffManagement';
+import AdminClearanceReports from './pages/admin/AdminClearanceReports';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -154,6 +155,10 @@ function AppRoutes() {
       <Route
         path="/admin/payments"
         element={<ProtectedRoute requireStaff><AdminLayout><AdminPayments /></AdminLayout></ProtectedRoute>}
+      />
+      <Route
+        path="/admin/search-reports"
+        element={<ProtectedRoute requireStaff><AdminLayout><AdminClearanceReports /></AdminLayout></ProtectedRoute>}
       />
       <Route
         path="/admin/clients"

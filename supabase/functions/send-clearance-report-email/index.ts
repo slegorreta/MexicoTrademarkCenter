@@ -8,8 +8,9 @@ const corsHeaders = {
 };
 
 const APP_URL = "https://mexicotrademarkcenter.com";
+const ADMIN_URL = "https://mexicotrademarkcenter.com/admin/search-reports";
+const STAFF_EMAILS = ["info@mexicotrademarkcenter.com", "tm@mexicotrademarkcenter.com"];
 
-// Shield SVG logo inline (matches site branding)
 const SHIELD_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#c9a84c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`;
 
 const SUBJECTS: Record<string, (mark: string) => string> = {
@@ -99,7 +100,6 @@ const COPY: Record<string, Record<string, string>> = {
     hi: "यह रिपोर्ट AI-सहायता प्राप्त प्रारंभिक ट्रेडमार्क जांच है। यह कानूनी सलाह नहीं है। दाखिल करने से पहले हमेशा एक ट्रेडमार्क वकील से परामर्श करें।",
     pt: "Este relatório é uma triagem preliminar assistida por IA. Não constitui aconselhamento jurídico. Consulte sempre um advogado especializado antes de protocolar.",
   },
-  // Account CTA copy for anonymous buyers
   ctaNewTitle: {
     en: "Save Your Report to Your Account",
     es: "Guarda tu Reporte en tu Cuenta",
@@ -127,7 +127,6 @@ const COPY: Record<string, Record<string, string>> = {
     hi: "मुफ्त खाता बनाएं",
     pt: "Criar Conta Gratuita",
   },
-  // Account CTA copy for existing account holders
   ctaExistingTitle: {
     en: "Your Report Is Saved to Your Account",
     es: "Tu Reporte está Guardado en tu Cuenta",
@@ -268,6 +267,123 @@ function buildEmailHtml(
 </html>`;
 }
 
+function buildStaffNotificationHtml(
+  orderId: string,
+  markName: string,
+  goodsServices: string,
+  language: string,
+  risk: string,
+  finalAmountUsd: number,
+  customerEmail: string,
+  couponCode: string | null,
+  discountPercent: number,
+  paidAt: string,
+  downloadUrl: string,
+): string {
+  const shortId = orderId.slice(0, 8).toUpperCase();
+  const dateStr = new Date(paidAt).toLocaleDateString("en-US", {
+    year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit",
+  });
+  const riskColor = risk === "high" ? "#b91c1c" : risk === "medium" ? "#b45309" : "#166534";
+  const riskBg = risk === "high" ? "#fee2e2" : risk === "medium" ? "#fef3c7" : "#dcfce7";
+
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#f0f4f0;font-family:Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4f0;padding:32px 20px">
+<tr><td align="center">
+<table width="580" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);max-width:580px">
+
+  <!-- Staff header -->
+  <tr>
+    <td style="background:#1a2e1a;padding:20px 32px">
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td>
+            <div style="font-size:9px;letter-spacing:3px;color:#c9a84c;text-transform:uppercase;font-weight:bold;margin-bottom:4px">Mexico Trademark Center — Internal</div>
+            <div style="font-size:17px;color:#ffffff;font-weight:bold">TM Report Purchased</div>
+          </td>
+          <td align="right">
+            <div style="background:#c9a84c;color:#1a2e1a;font-size:11px;font-weight:bold;padding:6px 14px;border-radius:5px;white-space:nowrap">Order ${shortId}</div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- Main details -->
+  <tr>
+    <td style="padding:28px 32px">
+
+      <!-- Mark name highlight -->
+      <div style="background:#f8f7f2;border-left:4px solid #c9a84c;padding:16px 20px;border-radius:0 8px 8px 0;margin-bottom:24px">
+        <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Mark Searched</div>
+        <div style="font-size:22px;font-weight:bold;color:#1a2e1a">${markName}</div>
+        ${goodsServices ? `<div style="font-size:12px;color:#666;margin-top:6px">${goodsServices.slice(0, 200)}${goodsServices.length > 200 ? "..." : ""}</div>` : ""}
+      </div>
+
+      <!-- Risk badge -->
+      <div style="margin-bottom:24px">
+        <span style="display:inline-block;background:${riskBg};color:${riskColor};font-size:12px;font-weight:bold;padding:6px 16px;border-radius:20px;text-transform:uppercase;letter-spacing:1px">
+          Overall Risk: ${risk.toUpperCase()}
+        </span>
+      </div>
+
+      <!-- Details table -->
+      <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e8e8e0;border-radius:8px;overflow:hidden">
+        <tr style="background:#f8f8f5">
+          <td style="font-size:11px;color:#888;padding:10px 16px;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px;width:40%">Field</td>
+          <td style="font-size:11px;color:#888;padding:10px 16px;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px">Value</td>
+        </tr>
+        <tr style="border-top:1px solid #f0f0ec">
+          <td style="font-size:13px;color:#555;padding:10px 16px">Customer Email</td>
+          <td style="font-size:13px;color:#1a2e1a;padding:10px 16px;font-weight:bold">${customerEmail}</td>
+        </tr>
+        <tr style="border-top:1px solid #f0f0ec;background:#fafaf8">
+          <td style="font-size:13px;color:#555;padding:10px 16px">Report Language</td>
+          <td style="font-size:13px;color:#1a2e1a;padding:10px 16px">${language.toUpperCase()}</td>
+        </tr>
+        <tr style="border-top:1px solid #f0f0ec">
+          <td style="font-size:13px;color:#555;padding:10px 16px">Amount Paid</td>
+          <td style="font-size:13px;color:#1a2e1a;padding:10px 16px;font-weight:bold">USD $${Number(finalAmountUsd).toFixed(2)}${discountPercent > 0 ? ` (${discountPercent}% discount applied)` : ""}</td>
+        </tr>
+        ${couponCode ? `<tr style="border-top:1px solid #f0f0ec;background:#fafaf8">
+          <td style="font-size:13px;color:#555;padding:10px 16px">Coupon Used</td>
+          <td style="font-size:13px;color:#1a2e1a;padding:10px 16px;font-family:monospace">${couponCode}</td>
+        </tr>` : ""}
+        <tr style="border-top:1px solid #f0f0ec${couponCode ? "" : ";background:#fafaf8"}">
+          <td style="font-size:13px;color:#555;padding:10px 16px">Paid At</td>
+          <td style="font-size:13px;color:#1a2e1a;padding:10px 16px">${dateStr}</td>
+        </tr>
+        <tr style="border-top:1px solid #f0f0ec">
+          <td style="font-size:13px;color:#555;padding:10px 16px">Order Reference</td>
+          <td style="font-size:13px;color:#1a2e1a;padding:10px 16px;font-family:monospace">${shortId}</td>
+        </tr>
+      </table>
+
+      <!-- Action buttons -->
+      <div style="margin-top:24px;display:flex;gap:12px">
+        <a href="${ADMIN_URL}" style="display:inline-block;background:#1a2e1a;color:#ffffff;font-size:13px;font-weight:bold;padding:10px 22px;border-radius:7px;text-decoration:none;margin-right:10px">View in Admin Dashboard</a>
+        ${downloadUrl ? `<a href="${downloadUrl}" style="display:inline-block;background:#f8f7f2;color:#1a2e1a;border:1px solid #c9a84c;font-size:13px;font-weight:bold;padding:10px 22px;border-radius:7px;text-decoration:none">Download Report PDF</a>` : ""}
+      </div>
+    </td>
+  </tr>
+
+  <!-- Footer -->
+  <tr>
+    <td style="background:#f0f4f0;border-top:1px solid #e0e8e0;padding:14px 32px;text-align:center">
+      <p style="font-size:11px;color:#888;margin:0;font-family:Arial,sans-serif">This is an automated internal notification — Mexico Trademark Center</p>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 200, headers: corsHeaders });
 
@@ -287,7 +403,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: order } = await supabase
       .from("clearance_report_orders")
-      .select("id, email, mark_name, language, pdf_storage_path, final_amount_usd, paid_at, coupon_code, user_id")
+      .select("id, email, mark_name, goods_services, language, pdf_storage_path, final_amount_usd, amount_usd, discount_percent, coupon_code, paid_at, user_id, clearance_result")
       .eq("id", reportOrderId)
       .maybeSingle();
 
@@ -304,9 +420,7 @@ Deno.serve(async (req: Request) => {
       downloadUrl = signed?.signedUrl ?? "";
     }
 
-    // Determine if buyer has an account (user_id set = linked account)
     const hasAccount = !!order.user_id;
-
     const lang = order.language ?? "en";
     const subject = getSubject(lang, order.mark_name);
     const html = buildEmailHtml(
@@ -320,42 +434,84 @@ Deno.serve(async (req: Request) => {
       order.email,
     );
 
-    const emailRes = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        from: "Mexico Trademark Center <tm@mexicotrademarkcenter.com>",
-        to: [order.email],
-        subject,
-        html,
-      }),
-    });
+    const risk = order.clearance_result?.risk ?? "low";
+    const staffHtml = buildStaffNotificationHtml(
+      order.id,
+      order.mark_name,
+      order.goods_services ?? "",
+      lang,
+      risk,
+      order.final_amount_usd ?? 4.99,
+      order.email,
+      order.coupon_code ?? null,
+      order.discount_percent ?? 0,
+      order.paid_at ?? new Date().toISOString(),
+      downloadUrl,
+    );
 
-    const emailData = await emailRes.json();
-    const emailStatus = emailRes.ok ? "sent" : "failed";
+    const staffSubject = `[TM Report Purchased] ${order.mark_name} — Order ${order.id.slice(0, 8).toUpperCase()}`;
 
-    if (emailRes.ok) {
-      // Stamp delivery time on the order
+    // Send both emails independently so neither failure affects the other
+    const [clientResult, staffResult] = await Promise.allSettled([
+      fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: "Mexico Trademark Center <tm@mexicotrademarkcenter.com>",
+          to: [order.email],
+          subject,
+          html,
+        }),
+      }).then(r => r.json().then(d => ({ ok: r.ok, data: d }))),
+      fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: "Mexico Trademark Center <tm@mexicotrademarkcenter.com>",
+          to: STAFF_EMAILS,
+          subject: staffSubject,
+          html: staffHtml,
+        }),
+      }).then(r => r.json().then(d => ({ ok: r.ok, data: d }))),
+    ]);
+
+    const clientOk = clientResult.status === "fulfilled" && clientResult.value.ok;
+    const clientData = clientResult.status === "fulfilled" ? clientResult.value.data : {};
+
+    if (clientOk) {
       await supabase
         .from("clearance_report_orders")
         .update({ email_sent_at: new Date().toISOString() })
         .eq("id", reportOrderId);
     }
 
-    // Log the email
+    // Log client email
     await supabase.from("email_log").insert({
       application_id: null,
       recipient_email: order.email,
       template_key: "clearance_report",
       subject,
-      status: emailStatus,
-      resend_message_id: emailData.id ?? null,
-      error_message: emailRes.ok ? null : JSON.stringify(emailData),
+      status: clientOk ? "sent" : "failed",
+      resend_message_id: clientData.id ?? null,
+      error_message: clientOk ? null : JSON.stringify(clientData),
     });
 
-    if (!emailRes.ok) {
-      console.error("Resend error:", emailData);
-      return new Response(JSON.stringify({ error: "Failed to send email" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    // Log staff notification
+    const staffOk = staffResult.status === "fulfilled" && staffResult.value.ok;
+    const staffData = staffResult.status === "fulfilled" ? staffResult.value.data : {};
+    await supabase.from("email_log").insert({
+      application_id: null,
+      recipient_email: STAFF_EMAILS.join(", "),
+      template_key: "clearance_report_staff_notification",
+      subject: staffSubject,
+      status: staffOk ? "sent" : "failed",
+      resend_message_id: staffData.id ?? null,
+      error_message: staffOk ? null : JSON.stringify(staffData),
+    });
+
+    if (!clientOk) {
+      console.error("Client email failed:", clientData);
+      return new Response(JSON.stringify({ error: "Failed to send client email" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });

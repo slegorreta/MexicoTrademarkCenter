@@ -503,6 +503,99 @@ Risk: "high"=exact match in same/related class, "medium"=similar names or differ
   }
 }
 
+interface NiceClass {
+  classNumber: number;
+  className: string;
+  className_en: string;
+  officialHeading: string;
+  officialHeading_en: string;
+  relevantItems: string[];
+  relevantItems_en: string[];
+}
+
+async function classifyNiceClasses(
+  apiKey: string,
+  markName: string,
+  goodsServices: string,
+  language: string,
+): Promise<NiceClass[]> {
+  if (!goodsServices.trim()) return [];
+
+  const isBilingual = language !== "en";
+  const langName = LANGUAGE_NAMES[language] ?? "English";
+
+  const bilingualNote = isBilingual
+    ? `\nFor every text field, provide TWO versions: the main field in ${langName}, and a "_en" field in English.`
+    : "";
+
+  const prompt = `You are an expert in the Nice Classification system (11th edition) for trademarks.
+
+The proposed trademark "${markName}" covers the following goods/services:
+"${goodsServices}"
+${bilingualNote}
+
+Identify ALL applicable Nice Classification classes (1–45) that cover these goods/services. For each class:
+1. Provide the class number
+2. Provide the short class heading (e.g. "Chemicals", "Clothing", "Software services")
+3. Provide the official WIPO class heading for that class number
+4. List only the specific goods/services items from the user's description that fall within this class (3–8 bullet points maximum, concise)
+
+Return JSON array:
+[
+  {
+    "classNumber": 25,
+    "className": "Clothing and footwear",${isBilingual ? `\n    "className_en": "Clothing and footwear",` : ""}
+    "officialHeading": "Clothing, footwear, headgear",${isBilingual ? `\n    "officialHeading_en": "Clothing, footwear, headgear",` : ""}
+    "relevantItems": ["item 1", "item 2", ...]${isBilingual ? `,\n    "relevantItems_en": ["item 1 in English", ...]` : ""}
+  }
+]
+
+Return ONLY JSON array, no markdown. Be precise — only include classes where the user's declared goods/services genuinely fall. Do not include speculative or tangential classes.`;
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: "You are a Nice Classification expert. Return only valid JSON array, no markdown." },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.1,
+        max_tokens: 2000,
+        response_format: { type: "json_object" },
+      }),
+    });
+
+    if (!response.ok) return [];
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) return [];
+
+    const parsed = JSON.parse(content);
+    const arr: unknown[] = Array.isArray(parsed) ? parsed : (parsed.classes ?? parsed.niceClasses ?? parsed.classifications ?? []);
+    return arr
+      .filter((e): e is NiceClass =>
+        typeof e === "object" && e !== null &&
+        "classNumber" in e && "relevantItems" in e
+      )
+      .map((e) => ({
+        classNumber: Number((e as NiceClass).classNumber),
+        className: String((e as NiceClass).className ?? ""),
+        className_en: String((e as NiceClass).className_en ?? (e as NiceClass).className ?? ""),
+        officialHeading: String((e as NiceClass).officialHeading ?? ""),
+        officialHeading_en: String((e as NiceClass).officialHeading_en ?? (e as NiceClass).officialHeading ?? ""),
+        relevantItems: Array.isArray((e as NiceClass).relevantItems) ? (e as NiceClass).relevantItems : [],
+        relevantItems_en: Array.isArray((e as NiceClass).relevantItems_en) ? (e as NiceClass).relevantItems_en : (Array.isArray((e as NiceClass).relevantItems) ? (e as NiceClass).relevantItems : []),
+      }))
+      .sort((a, b) => a.classNumber - b.classNumber);
+  } catch (err) {
+    console.error("Nice class classification error:", err);
+    return [];
+  }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 200, headers: corsHeaders });
 
@@ -523,13 +616,14 @@ Deno.serve(async (req: Request) => {
 
     const lang = DISCLAIMERS[language] ? language : "en";
 
-    // Run all analyses in parallel — translation analysis runs alongside the main checks
-    const [webResult, marciaResult, domainResults, registrabilityResult, translationAnalysis] = await Promise.all([
+    // Run all analyses in parallel — classification runs alongside the main checks
+    const [webResult, marciaResult, domainResults, registrabilityResult, translationAnalysis, niceClassification] = await Promise.all([
       searchWeb(apiKey, markName.trim(), classes, goodsServices, lang),
       searchMarcia(markName.trim(), classes),
       checkDomains(markName.trim()),
       analyzeRegistrability(apiKey, markName.trim(), classes, goodsServices, lang),
       analyzeTranslations(apiKey, markName.trim(), classes, goodsServices, lang),
+      classifyNiceClasses(apiKey, markName.trim(), goodsServices, lang),
     ]);
 
     let risk: "low" | "medium" | "high" = webResult.risk;
@@ -565,6 +659,7 @@ Deno.serve(async (req: Request) => {
       riskSummary: registrabilityResult.riskSummary,
       riskSummary_en: registrabilityResult.riskSummary_en,
       translationAnalysis,
+      niceClassification,
       searchLanguage: lang,
       disclaimer: DISCLAIMERS[lang],
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });

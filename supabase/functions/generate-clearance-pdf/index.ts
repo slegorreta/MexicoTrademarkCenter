@@ -57,6 +57,15 @@ interface TranslationFlag {
   details: string;
   details_en: string;
 }
+interface NiceClass {
+  classNumber: number;
+  className: string;
+  className_en: string;
+  officialHeading: string;
+  officialHeading_en: string;
+  relevantItems: string[];
+  relevantItems_en: string[];
+}
 
 interface ClearanceResult {
   risk: "low" | "medium" | "high";
@@ -72,6 +81,7 @@ interface ClearanceResult {
   webFindings?: string[];
   domainResults?: DomainResult[];
   translationAnalysis?: TranslationFlag[];
+  niceClassification?: NiceClass[];
   disclaimer?: string;
 }
 
@@ -570,6 +580,56 @@ const L: Record<string, Record<Lang, string>> = {
   medSeverity: {
     en: "medium", es: "medio", zh: "中", de: "mittel", fr: "modere", hi: "medium", pt: "medio", ja: "medium",
   },
+  niceClassTitle: {
+    en: "Section 0 - Nice Classification",
+    es: "Seccion 0 - Clasificacion de Niza",
+    zh: "第0节 - 尼斯分类",
+    de: "Abschnitt 0 - Nizza-Klassifikation",
+    fr: "Section 0 - Classification de Nice",
+    hi: "Section 0 - Nice Classification",
+    pt: "Secao 0 - Classificacao de Nice",
+    ja: "Section 0 - Nice Classification",
+  },
+  niceClassSubtitle: {
+    en: "System-allocated Nice Classification classes based on declared goods/services",
+    es: "Clases de la Clasificacion de Niza asignadas segun los productos/servicios declarados",
+    zh: "根据申报商品/服务分配的尼斯分类类别",
+    de: "Dem System zugewiesene Nizza-Klassifikationsklassen basierend auf den angegebenen Waren/Dienstleistungen",
+    fr: "Classes de la Classification de Nice allouees par le systeme selon les produits/services declares",
+    hi: "System-allocated Nice Classification classes based on declared goods/services",
+    pt: "Classes da Classificacao de Nice alocadas pelo sistema com base nos bens/servicos declarados",
+    ja: "System-allocated Nice Classification classes based on declared goods/services",
+  },
+  niceClassCover: {
+    en: "NICE CLASSIFICATION",
+    es: "CLASIFICACION DE NIZA",
+    zh: "尼斯分类",
+    de: "NIZZA-KLASSIFIKATION",
+    fr: "CLASSIFICATION DE NICE",
+    hi: "NICE CLASSIFICATION",
+    pt: "CLASSIFICACAO DE NICE",
+    ja: "NICE CLASSIFICATION",
+  },
+  niceClassRelevant: {
+    en: "Relevant goods/services in this class:",
+    es: "Productos/servicios relevantes en esta clase:",
+    zh: "本类别中的相关商品/服务：",
+    de: "Relevante Waren/Dienstleistungen in dieser Klasse:",
+    fr: "Produits/services pertinents dans cette classe :",
+    hi: "Relevant goods/services in this class:",
+    pt: "Bens/servicos relevantes nesta classe:",
+    ja: "Relevant goods/services in this class:",
+  },
+  attorneyTitle: {
+    en: "Attorney Registrability Opinion",
+    es: "Opinion de Registrabilidad",
+    zh: "代理人可注册性意见",
+    de: "Anwaltliche Registrierbarkeitsmeinung",
+    fr: "Opinion de registrabilite",
+    hi: "Attorney Registrability Opinion",
+    pt: "Opiniao de Registrabilidade",
+    ja: "Attorney Registrability Opinion",
+  },
   // English-language section divider for bilingual reports
   englishSection: {
     en: "ENGLISH VERSION",
@@ -1055,6 +1115,229 @@ function renderDomainSection(
   }
 }
 
+function renderNiceClassSection(
+  pdfDoc: PDFDocument, pages: PDFPage[], bold: PDFFont, regular: PDFFont,
+  classes: NiceClass[], lang: Lang, useEnglish: boolean,
+) {
+  if (classes.length === 0) return;
+
+  let p = pdfDoc.addPage([PAGE_W, PAGE_H]);
+  pages.push(p);
+  let y = PAGE_H - MARGIN;
+
+  const title = useEnglish
+    ? "Section 0 - Nice Classification"
+    : safeText(lbl("niceClassTitle", lang));
+  y = addSectionHeader(p, bold, title, y);
+  y -= 8;
+
+  const subtitleText = safeText(lbl("niceClassSubtitle", useEnglish ? "en" : lang));
+  p.drawText(subtitleText, { x: MARGIN, y, size: 8, font: regular, color: C.gray });
+  y -= 28;
+
+  for (let ci = 0; ci < classes.length; ci++) {
+    const nc = classes[ci];
+    const className = useEnglish ? (nc.className_en || nc.className) : nc.className;
+    const officialHeading = useEnglish ? (nc.officialHeading_en || nc.officialHeading) : nc.officialHeading;
+    const items = useEnglish ? (nc.relevantItems_en?.length ? nc.relevantItems_en : nc.relevantItems) : nc.relevantItems;
+
+    const estimatedH = 56 + items.length * 18;
+    if (y - estimatedH < 80) {
+      p = pdfDoc.addPage([PAGE_W, PAGE_H]);
+      pages.push(p);
+      y = PAGE_H - MARGIN;
+    }
+
+    // Class number badge + heading
+    p.drawRectangle({ x: MARGIN, y: y - 28, width: 48, height: 36, color: C.darkGreen });
+    const classNumStr = `${nc.classNumber}`;
+    const classNumW = bold.widthOfTextAtSize(classNumStr, 18);
+    p.drawText(classNumStr, { x: MARGIN + (48 - classNumW) / 2, y: y - 18, size: 18, font: bold, color: C.gold });
+
+    p.drawText(safeText(className), { x: MARGIN + 56, y: y - 8, size: 11, font: bold, color: C.darkGreen });
+    p.drawText(safeText(officialHeading).slice(0, 80), { x: MARGIN + 56, y: y - 22, size: 8, font: regular, color: C.gray });
+    y -= 44;
+
+    // Gold rule under heading
+    p.drawRectangle({ x: MARGIN + 56, y: y + 2, width: CONTENT_W - 56, height: 1, color: C.gold });
+    y -= 10;
+
+    // Relevant items label
+    const relevantLabel = safeText(lbl("niceClassRelevant", useEnglish ? "en" : lang));
+    p.drawText(relevantLabel, { x: MARGIN, y, size: 9, font: bold, color: C.darkGreen });
+    y -= 16;
+
+    for (const item of items) {
+      if (y < 80) {
+        p = pdfDoc.addPage([PAGE_W, PAGE_H]);
+        pages.push(p);
+        y = PAGE_H - MARGIN;
+      }
+      p.drawRectangle({ x: MARGIN + 2, y: y - 2, width: 5, height: 5, color: C.gold });
+      y = drawWrappedText(p, safeText(item), MARGIN + 14, y, regular, 9, CONTENT_W - 14, C.black, 14);
+      y -= 2;
+    }
+
+    y -= 20;
+  }
+}
+
+async function generateAttorneyCommentary(
+  apiKey: string,
+  markName: string,
+  goodsServices: string,
+  result: ClearanceResult,
+  language: string,
+): Promise<{ native: string; english: string }> {
+  const isBilingual = language !== "en";
+  const langName = isBilingual ? (
+    language === "es" ? "Spanish" : language === "zh" ? "Chinese" :
+    language === "de" ? "German" : language === "fr" ? "French" :
+    language === "hi" ? "Hindi" : language === "pt" ? "Portuguese" : "Japanese"
+  ) : "English";
+
+  const dupontAgainst = (result.dupont ?? []).filter(f => f.verdict === "against_registration").length;
+  const dupontFavor = (result.dupont ?? []).filter(f => f.verdict === "favors_registration").length;
+  const flags = result.registrabilityFlags ?? [];
+  const marciaCount = result.marciaTotalCount ?? result.marciaFindings?.length ?? 0;
+  const tier = result.distinctiveness?.tier ?? "unknown";
+  const score = result.distinctiveness?.score ?? 0;
+  const highFlags = flags.filter(f => f.severity === "high").map(f => f.category).join(", ");
+  const niceClasses = (result.niceClassification ?? []).map(nc => `Class ${nc.classNumber} (${nc.className_en || nc.className})`).join(", ");
+
+  const contextSummary = [
+    `Mark: "${markName}"`,
+    goodsServices ? `Goods/Services: ${goodsServices}` : "",
+    niceClasses ? `Nice Classes: ${niceClasses}` : "",
+    `Overall Risk: ${result.risk}`,
+    `Distinctiveness: ${tier} (score ${score}/5)`,
+    `DuPont factors: ${dupontFavor} favoring registration, ${dupontAgainst} against`,
+    flags.length > 0 ? `LFPPI flags: ${flags.length} (${highFlags || "none high severity"})` : "LFPPI: No flags raised",
+    `IMPI MARCia conflicts: ${marciaCount} potentially conflicting marks`,
+    result.riskSummary_en ? `AI Risk Summary: ${result.riskSummary_en}` : "",
+  ].filter(Boolean).join("\n");
+
+  const englishPrompt = `You are a senior Mexican intellectual property attorney with 20+ years of experience in trademark prosecution before IMPI.
+
+Based on the following trademark clearance search results, write a professional registrability opinion as if you were advising a client.
+
+SEARCH RESULTS:
+${contextSummary}
+
+Write a structured opinion of 400-550 words with these four parts:
+1. EXECUTIVE OPINION — Overall registrability outlook in 2-3 sentences. State your professional conclusion directly.
+2. REGISTRABILITY ANALYSIS — Analyze the distinctiveness level, any LFPPI absolute grounds, and how Mexican trademark law (specifically the LFPPI Articles 90-91) applies to this mark. Be specific.
+3. CONFLICTING MARKS ASSESSMENT — Assess the IMPI MARCia findings and DuPont likelihood-of-confusion factors. Identify the biggest risks concisely.
+4. RECOMMENDED STRATEGY — 3-4 concrete next steps the client should take (e.g., file with disclaimer, conduct full clearance search, modify mark, proceed to file, etc.).
+
+Write in professional but accessible language, as if addressing a business owner client. Do NOT repeat raw numbers — interpret them. Do NOT use markdown symbols like ** or ##. Use plain paragraphs with the section titles as plain labels.`;
+
+  try {
+    const engRes = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: "You are a Mexican trademark attorney. Write professional, well-structured legal opinions. No markdown." },
+          { role: "user", content: englishPrompt },
+        ],
+        temperature: 0.3,
+        max_tokens: 900,
+      }),
+    });
+
+    let english = "";
+    let native = "";
+
+    if (engRes.ok) {
+      const engData = await engRes.json();
+      english = engData.choices?.[0]?.message?.content?.trim() ?? "";
+    }
+
+    if (isBilingual && english) {
+      const transRes = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          model: "gpt-4o",
+          messages: [
+            { role: "system", content: `You are a professional legal translator. Translate the following Mexican trademark attorney opinion into ${langName}. Maintain the formal legal tone and structure. Preserve all section titles in ${langName}. No markdown.` },
+            { role: "user", content: english },
+          ],
+          temperature: 0.1,
+          max_tokens: 1000,
+        }),
+      });
+      if (transRes.ok) {
+        const transData = await transRes.json();
+        native = transData.choices?.[0]?.message?.content?.trim() ?? english;
+      } else {
+        native = english;
+      }
+    } else {
+      native = english;
+    }
+
+    return { native, english };
+  } catch (err) {
+    console.error("Attorney commentary error:", err);
+    return { native: "", english: "" };
+  }
+}
+
+function renderAttorneyCommentarySection(
+  pdfDoc: PDFDocument, pages: PDFPage[], bold: PDFFont, regular: PDFFont,
+  commentary: string, lang: Lang, useEnglish: boolean,
+) {
+  if (!commentary.trim()) return;
+
+  let p = pdfDoc.addPage([PAGE_W, PAGE_H]);
+  pages.push(p);
+  let y = PAGE_H - MARGIN;
+
+  const title = useEnglish
+    ? "Attorney Registrability Opinion"
+    : safeText(lbl("attorneyTitle", lang));
+  y = addSectionHeader(p, bold, title, y);
+  y -= 8;
+
+  // Subtle disclaimer note
+  p.drawText("AI-generated opinion simulating professional Mexican IP attorney analysis. Not legal advice.", {
+    x: MARGIN, y, size: 7, font: regular, color: C.gray,
+  });
+  y -= 20;
+
+  // Gold left-border accent panel
+  p.drawRectangle({ x: MARGIN, y: y - 6, width: 3, height: PAGE_H - MARGIN * 2 - 60, color: C.gold });
+
+  const lines = commentary.split("\n").filter(l => l.trim() !== "");
+
+  for (const line of lines) {
+    if (y < 80) {
+      p = pdfDoc.addPage([PAGE_W, PAGE_H]);
+      pages.push(p);
+      y = PAGE_H - MARGIN;
+      // Continue gold accent
+      p.drawRectangle({ x: MARGIN, y: 80, width: 3, height: y - 80, color: C.gold });
+    }
+
+    const trimmed = line.trim();
+    // Detect section headings (all caps or known patterns)
+    const isHeading = /^(EXECUTIVE OPINION|REGISTRABILITY ANALYSIS|CONFLICTING MARKS ASSESSMENT|RECOMMENDED STRATEGY|[A-Z][A-Z\s]{5,}:?)$/.test(trimmed) ||
+      /^\d+\.\s+[A-Z]/.test(trimmed);
+
+    if (isHeading) {
+      y -= 8;
+      p.drawText(safeText(trimmed), { x: MARGIN + 12, y, size: 10, font: bold, color: C.darkGreen });
+      y -= 18;
+    } else {
+      y = drawWrappedText(p, trimmed, MARGIN + 12, y, regular, 10, CONTENT_W - 12, C.black, 16);
+      y -= 4;
+    }
+  }
+}
+
 function addDividerPage(pdfDoc: PDFDocument, pages: PDFPage[], bold: PDFFont, regular: PDFFont, dividerLabel: string) {
   const p = pdfDoc.addPage([PAGE_W, PAGE_H]);
   pages.push(p);
@@ -1073,6 +1356,7 @@ async function buildPdf(
   goodsServices: string,
   orderId: string,
   result: ClearanceResult,
+  openAiKey?: string,
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
   const regular = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -1084,6 +1368,12 @@ async function buildPdf(
 
   const searchLang = (result.searchLanguage ?? "en") as Lang;
   const isBilingual = searchLang !== "en";
+
+  // Generate attorney commentary before building pages (requires OpenAI)
+  let commentary = { native: "", english: "" };
+  if (openAiKey) {
+    commentary = await generateAttorneyCommentary(openAiKey, markName, goodsServices, result, searchLang);
+  }
 
   const pages: PDFPage[] = [];
 
@@ -1126,6 +1416,25 @@ async function buildPdf(
       p.drawText(safeText(lbl("goodsServices", searchLang)), { x: MARGIN, y, size: 8, font: bold, color: C.gray });
       y -= 16;
       y = drawWrappedText(p, goodsServices.slice(0, 300), MARGIN, y, regular, 11, CONTENT_W, C.black) + 4;
+    }
+
+    // Nice Classification summary on cover page
+    const niceClasses = result.niceClassification ?? [];
+    if (niceClasses.length > 0) {
+      y -= 14;
+      p.drawText(safeText(lbl("niceClassCover", searchLang)), { x: MARGIN, y, size: 8, font: bold, color: C.gray });
+      y -= 14;
+      // One pill per class, inline
+      let px = MARGIN;
+      for (const nc of niceClasses) {
+        const label = `Class ${nc.classNumber}`;
+        const pillW = bold.widthOfTextAtSize(label, 8) + 16;
+        if (px + pillW > MARGIN + CONTENT_W) { px = MARGIN; y -= 22; }
+        p.drawRectangle({ x: px, y: y - 14, width: pillW, height: 18, color: C.darkGreen });
+        p.drawText(label, { x: px + 8, y: y - 8, size: 8, font: bold, color: C.gold });
+        px += pillW + 6;
+      }
+      y -= 26;
     }
 
     y -= 20;
@@ -1191,6 +1500,11 @@ async function buildPdf(
   // When bilingual, render all sections in native language first
 
   const renderAllSections = (lang: Lang, useEnglish: boolean, sectionOffset: number) => {
+    // Nice Classification (Section 0)
+    if ((result.niceClassification ?? []).length > 0) {
+      renderNiceClassSection(pdfDoc, pages, bold, regular, result.niceClassification!, lang, useEnglish);
+    }
+
     // Executive Summary
     {
       const p = newPage();
@@ -1244,6 +1558,12 @@ async function buildPdf(
         p.drawText(safeText(val), { x: MARGIN + 10, y: y - 15, size: 9, font: regular, color: C.black });
         y -= 32;
       }
+    }
+
+    // Attorney Commentary
+    const commentaryText = useEnglish ? commentary.english : commentary.native;
+    if (commentaryText) {
+      renderAttorneyCommentarySection(pdfDoc, pages, bold, regular, commentaryText, lang, useEnglish);
     }
 
     let sn = sectionOffset;
@@ -1309,6 +1629,7 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({ error: "Service not configured" }), { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    const openAiKey = Deno.env.get("OPENAI_API_KEY");
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const { reportOrderId } = await req.json() as { reportOrderId: string };
     if (!reportOrderId) {
@@ -1331,6 +1652,7 @@ Deno.serve(async (req: Request) => {
       order.goods_services,
       order.id,
       order.clearance_result as ClearanceResult,
+      openAiKey ?? undefined,
     );
 
     // Ensure storage bucket exists

@@ -82,14 +82,14 @@ const translations: Record<string, Record<Language, string>> = {
 
   // Hero free clearance CTA
   'hero.clearance.cta': {
-    en: 'Review Your Trademark for Free',
-    zh: '免费检索您的商标',
-    es: 'Revisa tu Marca Gratis',
-    de: 'Ihre Marke kostenlos prüfen',
-    fr: 'Vérifiez votre marque gratuitement',
-    hi: 'अपना ट्रेडमार्क मुफ़्त जांचें',
-    pt: 'Verifique sua marca gratuitamente',
-    ja: '無料で商標を調査',
+    en: 'Review Your Trademark for Free and Get Your Registrability Report',
+    zh: '免费检索您的商标并获取可注册性报告',
+    es: 'Revisa tu Marca Gratis y Obtén tu Reporte de Registrabilidad',
+    de: 'Ihre Marke kostenlos prüfen und Ihren Registrierbarkeitsbericht erhalten',
+    fr: 'Vérifiez votre marque gratuitement et obtenez votre rapport de disponibilité',
+    hi: 'अपना ट्रेडमार्क मुफ़्त जांचें और अपनी पंजीयनीयता रिपोर्ट प्राप्त करें',
+    pt: 'Verifique sua marca gratuitamente e obtenha seu Relatório de Registrabilidade',
+    ja: '無料で商標を調査して登録可能性レポートを取得',
   },
   'hero.clearance.desc': {
     en: 'IMPI database, web & domain check — instant results',
