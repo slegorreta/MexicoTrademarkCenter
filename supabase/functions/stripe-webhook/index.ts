@@ -40,57 +40,94 @@ Deno.serve(async (req: Request) => {
         return new Response("Invalid signature", { status: 400 });
       }
     } else {
-      // Allow unsigned events in development/testing
       event = JSON.parse(body) as Stripe.Event;
     }
 
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+
     if (event.type === "payment_intent.succeeded") {
       const intent = event.data.object as Stripe.PaymentIntent;
+      const paymentType = intent.metadata?.payment_type;
+
+      // ── Clearance report payment ──────────────────────────────────────────
+      if (paymentType === "clearance_report") {
+        const reportOrderId = intent.metadata?.report_order_id;
+        if (!reportOrderId) {
+          console.error("No report_order_id in metadata for intent:", intent.id);
+          return new Response("OK", { status: 200 });
+        }
+
+        // Check if already paid (idempotency)
+        const { data: order } = await supabase
+          .from("clearance_report_orders")
+          .select("status")
+          .eq("id", reportOrderId)
+          .maybeSingle();
+
+        if (order?.status === "paid") {
+          return new Response(JSON.stringify({ received: true }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // Mark as paid
+        await supabase
+          .from("clearance_report_orders")
+          .update({
+            status: "paid",
+            paid_at: new Date().toISOString(),
+            stripe_payment_intent_id: intent.id,
+          })
+          .eq("id", reportOrderId);
+
+        // Generate PDF and send email as failsafe (client-side confirm-report-payment does this first)
+        EdgeRuntime.waitUntil(
+          fetch(`${supabaseUrl}/functions/v1/generate-clearance-pdf`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
+            body: JSON.stringify({ reportOrderId }),
+          }).catch((e) => console.error("generate-clearance-pdf (webhook failsafe) failed:", e))
+        );
+
+        return new Response(JSON.stringify({ received: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // ── Application filing payment (existing flow) ────────────────────────
       const applicationId = intent.metadata?.application_id;
 
       if (!applicationId) {
-        console.error("No application_id in metadata for intent:", intent.id);
+        console.error("No application_id or payment_type in metadata for intent:", intent.id);
         return new Response("OK", { status: 200 });
       }
 
-      // Update payment record
       await supabase
         .from("payments")
-        .update({
-          status: "paid",
-          paid_at: new Date().toISOString(),
-        })
+        .update({ status: "paid", paid_at: new Date().toISOString() })
         .eq("stripe_payment_intent_id", intent.id);
 
-      // Update application payment status and filing status
       await supabase
         .from("applications")
-        .update({
-          payment_status: "paid",
-          filing_status: "pending_review",
-        })
+        .update({ payment_status: "paid", filing_status: "pending_review" })
         .eq("id", applicationId);
 
-      // Fetch application to get client email and user_id
       const { data: app } = await supabase
         .from("applications")
         .select("user_id, client_id, clients(email, legal_name, contact_person)")
         .eq("id", applicationId)
         .maybeSingle();
 
-      const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-      const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
-
-      // Fire send-filing-emails (client confirmation + staff instruction sheet)
       EdgeRuntime.waitUntil(
         fetch(`${supabaseUrl}/functions/v1/send-filing-emails`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${anonKey}` },
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${anonKey}` },
           body: JSON.stringify({ application_id: applicationId }),
         }).catch((e) => console.error("send-filing-emails failed:", e))
       );
 
-      // Auto-create client portal account if user was not logged in
       if (!app?.user_id) {
         const clientData = app?.clients as Record<string, unknown> | null;
         const email = clientData?.email as string | undefined;
@@ -99,7 +136,7 @@ Deno.serve(async (req: Request) => {
           EdgeRuntime.waitUntil(
             fetch(`${supabaseUrl}/functions/v1/create-client-account`, {
               method: "POST",
-              headers: { "Content-Type": "application/json", "Authorization": `Bearer ${anonKey}` },
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${anonKey}` },
               body: JSON.stringify({ application_id: applicationId, email, full_name: fullName }),
             }).catch((e) => console.error("create-client-account failed:", e))
           );
@@ -109,16 +146,26 @@ Deno.serve(async (req: Request) => {
     } else if (event.type === "payment_intent.payment_failed") {
       const intent = event.data.object as Stripe.PaymentIntent;
 
-      await supabase
-        .from("payments")
-        .update({ status: "failed" })
-        .eq("stripe_payment_intent_id", intent.id);
-
-      if (intent.metadata?.application_id) {
+      if (intent.metadata?.payment_type === "clearance_report") {
+        const reportOrderId = intent.metadata?.report_order_id;
+        if (reportOrderId) {
+          await supabase
+            .from("clearance_report_orders")
+            .update({ status: "failed" })
+            .eq("id", reportOrderId);
+        }
+      } else {
         await supabase
-          .from("applications")
-          .update({ payment_status: "failed" })
-          .eq("id", intent.metadata.application_id);
+          .from("payments")
+          .update({ status: "failed" })
+          .eq("stripe_payment_intent_id", intent.id);
+
+        if (intent.metadata?.application_id) {
+          await supabase
+            .from("applications")
+            .update({ payment_status: "failed" })
+            .eq("id", intent.metadata.application_id);
+        }
       }
 
     } else if (event.type === "charge.refunded") {

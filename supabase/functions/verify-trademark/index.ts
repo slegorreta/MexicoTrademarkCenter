@@ -6,14 +6,25 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
-const DISCLAIMER =
-  "This is an automated preliminary screening only. It does not constitute legal advice or a formal clearance opinion. Always consult a qualified trademark attorney before filing.";
+const DISCLAIMERS: Record<string, string> = {
+  en: "This is an automated preliminary screening only. It does not constitute legal advice or a formal clearance opinion. Always consult a qualified trademark attorney before filing.",
+  zh: "这仅是自动初步筛查，不构成法律建议或正式检索意见。在提交申请前，请务必咨询有资质的商标代理人。",
+  es: "Esta es únicamente una verificación preliminar automatizada. No constituye asesoría legal ni una opinión formal de disponibilidad. Consulte a un especialista en marcas antes de presentar su solicitud.",
+  de: "Dies ist eine automatisierte Vorprüfung. Sie stellt keine Rechtsberatung oder formelle Freistellungsgutachten dar. Konsultieren Sie vor der Anmeldung immer einen qualifizierten Markenanwalt.",
+  fr: "Il s'agit d'un dépistage préliminaire automatisé uniquement. Il ne constitue pas un avis juridique ni une opinion formelle de disponibilité. Consultez toujours un avocat spécialisé en marques avant de déposer.",
+  hi: "यह केवल एक स्वचालित प्रारंभिक जांच है। यह कानूनी सलाह या औपचारिक क्लीयरेंस राय नहीं है। दाखिल करने से पहले हमेशा एक योग्य ट्रेडमार्क वकील से परामर्श करें।",
+  pt: "Esta é apenas uma triagem preliminar automatizada. Não constitui aconselhamento jurídico nem uma opinião formal de disponibilidade. Consulte sempre um advogado especializado em marcas antes de protocolar.",
+};
 
-const DISCLAIMER_ZH =
-  "这仅是自动初步筛查，不构成法律建议或正式检索意见。在提交申请前，请务必咨询有资质的商标代理人。";
-
-const DISCLAIMER_ES =
-  "Esta es únicamente una verificación preliminar automatizada. No constituye asesoría legal ni una opinión formal de disponibilidad. Consulte a un especialista en marcas antes de presentar su solicitud.";
+const LANGUAGE_NAMES: Record<string, string> = {
+  en: "English",
+  zh: "Simplified Chinese (中文)",
+  es: "Spanish (Español)",
+  de: "German (Deutsch)",
+  fr: "French (Français)",
+  hi: "Hindi (हिन्दी)",
+  pt: "Portuguese (Português)",
+};
 
 const RELATED_CLASSES: Record<number, number[]> = {
   3: [5, 44],
@@ -70,16 +81,10 @@ async function checkDomains(markName: string): Promise<DomainResult[]> {
           headers: { Accept: "application/dns-json" },
           signal: AbortSignal.timeout(4000),
         });
-
-        if (!res.ok) {
-          results.push({ domain, available: null, status: "unknown" });
-          return;
-        }
-
+        if (!res.ok) { results.push({ domain, available: null, status: "unknown" }); return; }
         const data = await res.json();
         const nxdomain = data.Status === 3;
         const hasAnswers = Array.isArray(data.Answer) && data.Answer.length > 0;
-
         if (nxdomain) {
           results.push({ domain, available: true, status: "available" });
         } else if (hasAnswers) {
@@ -117,10 +122,7 @@ async function searchMarcia(markName: string, classes: number[]): Promise<{
       signal: AbortSignal.timeout(10000),
     });
 
-    if (!initRes.ok) {
-      console.error("MARCia init failed:", initRes.status);
-      return { findings: [], marciaUrl, totalCount: 0 };
-    }
+    if (!initRes.ok) { return { findings: [], marciaUrl, totalCount: 0 }; }
 
     const setCookieHeaders: string[] = [];
     initRes.headers.forEach((value, key) => {
@@ -132,9 +134,7 @@ async function searchMarcia(markName: string, classes: number[]): Promise<{
       const [pair] = header.split(";");
       const eqIdx = pair.indexOf("=");
       if (eqIdx > -1) {
-        const name = pair.slice(0, eqIdx).trim();
-        const val = pair.slice(eqIdx + 1).trim();
-        cookieMap[name] = val;
+        cookieMap[pair.slice(0, eqIdx).trim()] = pair.slice(eqIdx + 1).trim();
       }
     }
 
@@ -142,11 +142,8 @@ async function searchMarcia(markName: string, classes: number[]): Promise<{
     const metaCsrf = html.match(/name=["']_csrf["'][^>]*content=["']([^"']+)["']/i)?.[1]
       ?? html.match(/content=["']([^"']+)["'][^>]*name=["']_csrf["']/i)?.[1]
       ?? "";
-
     const xsrfToken = cookieMap["XSRF-TOKEN"] ?? metaCsrf;
-    const cookieString = Object.entries(cookieMap)
-      .map(([k, v]) => `${k}=${v}`)
-      .join("; ");
+    const cookieString = Object.entries(cookieMap).map(([k, v]) => `${k}=${v}`).join("; ");
 
     const apiHeaders: Record<string, string> = {
       "Content-Type": "application/json;charset=UTF-8",
@@ -164,46 +161,25 @@ async function searchMarcia(markName: string, classes: number[]): Promise<{
       body: JSON.stringify({ _type: "Search$Quick", query: markName.trim(), images: [] }),
       signal: AbortSignal.timeout(12000),
     });
-
-    if (!recordRes.ok) {
-      console.error("MARCia record creation failed:", recordRes.status, await recordRes.text());
-      return { findings: [], marciaUrl, totalCount: 0 };
-    }
+    if (!recordRes.ok) { return { findings: [], marciaUrl, totalCount: 0 }; }
 
     const record = await recordRes.json();
     const searchId: string = record.id;
     const totalCount: number = record.count ?? 0;
+    if (!searchId) { return { findings: [], marciaUrl, totalCount: 0 }; }
 
-    if (!searchId) {
-      return { findings: [], marciaUrl, totalCount: 0 };
-    }
-
-    const allClasses = classes.length > 0
-      ? [...classes, ...getRelatedClasses(classes)]
-      : [];
+    const allClasses = classes.length > 0 ? [...classes, ...getRelatedClasses(classes)] : [];
 
     const resultRes = await fetch(`${BASE}/search/internal/result`, {
       method: "POST",
       headers: apiHeaders,
-      body: JSON.stringify({
-        searchId,
-        pageSize: 20,
-        pageNumber: 0,
-        statusFilter: [],
-        viennaCodeFilter: [],
-        niceClassFilter: allClasses.length > 0 ? allClasses : [],
-      }),
+      body: JSON.stringify({ searchId, pageSize: 20, pageNumber: 0, statusFilter: [], viennaCodeFilter: [], niceClassFilter: allClasses.length > 0 ? allClasses : [] }),
       signal: AbortSignal.timeout(12000),
     });
-
-    if (!resultRes.ok) {
-      console.error("MARCia result fetch failed:", resultRes.status);
-      return { findings: [], marciaUrl, totalCount };
-    }
+    if (!resultRes.ok) { return { findings: [], marciaUrl, totalCount }; }
 
     const resultData = await resultRes.json();
     const items: Record<string, unknown>[] = resultData.resultPage ?? [];
-
     const findings = items.slice(0, 15).map((item) => {
       const classNums: number[] = Array.isArray(item.classes) ? (item.classes as number[]) : [];
       return {
@@ -227,13 +203,13 @@ interface RegistrabilityFlag {
   explanation: string;
 }
 
-export interface DupontFactor {
+interface DupontFactor {
   factor: string;
   verdict: "favors_registration" | "neutral" | "against_registration";
   reasoning: string;
 }
 
-export interface DistinctivenessAssessment {
+interface DistinctivenessAssessment {
   tier: "generic" | "descriptive" | "suggestive" | "arbitrary" | "fanciful";
   score: number;
   explanation: string;
@@ -243,7 +219,8 @@ async function analyzeRegistrability(
   apiKey: string,
   markName: string,
   classes: number[],
-  goodsServices: string
+  goodsServices: string,
+  language: string
 ): Promise<{
   flags: RegistrabilityFlag[];
   risk: "low" | "medium" | "high";
@@ -258,93 +235,58 @@ async function analyzeRegistrability(
     ? ` covering the following goods/services: "${goodsServices}"`
     : "";
 
-  const prompt = `You are an expert Mexican trademark attorney. Analyze the proposed trademark "${markName}"${classContext}${goodsContext}.
+  const langName = LANGUAGE_NAMES[language] ?? "English";
+  const langInstruction = language !== "en"
+    ? `\n\nIMPORTANT: Write ALL free-text fields (every "explanation", "reasoning", and "riskSummary" field) in ${langName}. Only use that language for those fields — no English fallback.`
+    : "";
+
+  const prompt = `You are an expert Mexican trademark attorney. Analyze the proposed trademark "${markName}"${classContext}${goodsContext}.${langInstruction}
 
 Return a single JSON object with ALL of the following fields. Return ONLY JSON, no markdown.
 
----
-
 PART 1 — ABSOLUTE GROUNDS (LFPPI)
-Evaluate against each of these 13 categories. Only include flags that genuinely apply:
-1. "generic_descriptive" — Generic or descriptive terms (e.g., "Cremoso" for yogurt)
-2. "functional_shape" — Common or functional product shapes
-3. "deceptive" — Signs that mislead about origin, quality, or nature
-4. "official_emblems" — National flags, government symbols, international org emblems
-5. "personal_identity" — Real person's name/likeness without consent
-6. "confusingly_similar" — Visually, phonetically, or conceptually similar to well-known existing brands
-7. "famous_mark" — Imitation of a famous/notorious mark even in unrelated classes
-8. "protected_characters" — Famous fictional characters or franchise titles
-9. "geographic_indication" — Protected appellations of origin (Tequila, Mezcal, Champagne)
-10. "immoral_offensive" — Contrary to public order or morality
-11. "isolated_color" — A single color with no other distinctive elements
-12. "non_distinctive_nontrad" — Non-traditional marks lacking distinctiveness
-13. "bad_faith" — Filed to pirate an existing brand
-
-Weak generic terms to flag: Tech, Digital, AI, Legal, Fintech, Mexico, Center, Solutions, Online, Smart, Pro, Plus, Max, Global, International, Express, Fast, Premium, Elite, Quality, Best, Super, Ultra.
-
----
+Only include flags that genuinely apply from these 13 categories:
+1. "generic_descriptive", 2. "functional_shape", 3. "deceptive", 4. "official_emblems",
+5. "personal_identity", 6. "confusingly_similar", 7. "famous_mark", 8. "protected_characters",
+9. "geographic_indication", 10. "immoral_offensive", 11. "isolated_color",
+12. "non_distinctive_nontrad", 13. "bad_faith"
 
 PART 2 — DISTINCTIVENESS
-Rate the mark on the spectrum from generic to fanciful:
-- "generic": Common word for the goods/services (lowest protection, likely refused)
-- "descriptive": Describes a feature or quality of the goods/services
-- "suggestive": Suggests a quality without directly describing it
-- "arbitrary": Real word with no connection to the goods/services
-- "fanciful": Invented word with no prior meaning (strongest protection)
-
-Score: 1=generic, 2=descriptive, 3=suggestive, 4=arbitrary, 5=fanciful
-
----
+Tier: "generic" | "descriptive" | "suggestive" | "arbitrary" | "fanciful"
+Score: 1=generic to 5=fanciful
 
 PART 3 — ALL 13 DUPONT FACTORS
-Apply all 13 classic DuPont likelihood-of-confusion factors, informed by the specific goods/services described.
-Use these exact factor names (in "factor" field):
-1. "similarity_of_marks"
-2. "relatedness_of_goods"
-3. "channels_of_trade"
-4. "purchasing_conditions"
-5. "strength_of_cited_mark"
-6. "actual_confusion"
-7. "number_of_similar_marks"
-8. "length_of_use"
-9. "variety_of_goods"
-10. "market_interface"
-11. "right_to_exclude"
-12. "extent_of_confusion"
-13. "other_factors"
+Factor names (use exactly):
+"similarity_of_marks", "relatedness_of_goods", "channels_of_trade", "purchasing_conditions",
+"strength_of_cited_mark", "actual_confusion", "number_of_similar_marks", "length_of_use",
+"variety_of_goods", "market_interface", "right_to_exclude", "extent_of_confusion", "other_factors"
 
-Each factor must have one of: "favors_registration", "neutral", "against_registration"
-
----
+Each factor verdict: "favors_registration" | "neutral" | "against_registration"
 
 PART 4 — PLAIN-LANGUAGE RISK SUMMARY
-Write a 3-4 sentence plain-language paragraph summarizing the overall clearance findings. Address: (1) the mark's registrability outlook, (2) key risks or conflicts, (3) recommended next steps. Write as if explaining to a business owner who is not a lawyer.
+3-4 sentences explaining: (1) registrability outlook, (2) key risks, (3) recommended next steps.
+Written for a business owner, not a lawyer.
 
----
-
-Return exactly this JSON structure:
+Return exactly:
 {
   "flags": [{"category": "...", "severity": "low"|"medium"|"high", "explanation": "..."}],
   "risk": "low"|"medium"|"high",
-  "distinctiveness": {"tier": "generic"|"descriptive"|"suggestive"|"arbitrary"|"fanciful", "score": 1-5, "explanation": "..."},
-  "dupont": [{"factor": "...", "verdict": "favors_registration"|"neutral"|"against_registration", "reasoning": "..."}],
+  "distinctiveness": {"tier": "...", "score": 1-5, "explanation": "..."},
+  "dupont": [{"factor": "...", "verdict": "...", "reasoning": "..."}],
   "riskSummary": "..."
 }`;
 
-  const defaultDistinctiveness: DistinctivenessAssessment = { tier: "arbitrary", score: 4, explanation: "Unable to assess distinctiveness." };
+  const defaultDistinctiveness: DistinctivenessAssessment = { tier: "arbitrary", score: 4, explanation: "" };
   const defaultDupont: DupontFactor[] = [
     "similarity_of_marks", "relatedness_of_goods", "channels_of_trade", "purchasing_conditions",
     "strength_of_cited_mark", "actual_confusion", "number_of_similar_marks", "length_of_use",
     "variety_of_goods", "market_interface", "right_to_exclude", "extent_of_confusion", "other_factors"
-  ].map(factor => ({ factor, verdict: "neutral" as const, reasoning: "Analysis unavailable." }));
+  ].map(factor => ({ factor, verdict: "neutral" as const, reasoning: "" }));
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
         model: "gpt-4o",
         messages: [
@@ -358,7 +300,6 @@ Return exactly this JSON structure:
     });
 
     if (!response.ok) {
-      console.error("Registrability analysis API error:", response.status);
       return { flags: [], risk: "low", dupont: defaultDupont, distinctiveness: defaultDistinctiveness, riskSummary: "" };
     }
 
@@ -367,200 +308,124 @@ Return exactly this JSON structure:
     if (!content) return { flags: [], risk: "low", dupont: defaultDupont, distinctiveness: defaultDistinctiveness, riskSummary: "" };
 
     const parsed = JSON.parse(content);
-
     const flags: RegistrabilityFlag[] = (parsed.flags ?? []).filter(
       (f: Record<string, unknown>) => f.category && f.severity && f.explanation
     );
     const risk: "low" | "medium" | "high" = parsed.risk ?? (flags.length > 0 ? "medium" : "low");
-
     const dupont: DupontFactor[] = (parsed.dupont ?? defaultDupont).filter(
       (f: Record<string, unknown>) => f.factor && f.verdict && f.reasoning
     );
-
     const rawD = parsed.distinctiveness ?? {};
     const distinctiveness: DistinctivenessAssessment = {
       tier: rawD.tier ?? "arbitrary",
       score: typeof rawD.score === "number" ? rawD.score : 4,
       explanation: rawD.explanation ?? "",
     };
-
-    const riskSummary: string = parsed.riskSummary ?? "";
-
-    return { flags, risk, dupont, distinctiveness, riskSummary };
+    return { flags, risk, dupont, distinctiveness, riskSummary: parsed.riskSummary ?? "" };
   } catch (err) {
     console.error("Registrability analysis error:", err);
     return { flags: [], risk: "low", dupont: defaultDupont, distinctiveness: defaultDistinctiveness, riskSummary: "" };
   }
 }
 
-async function searchWeb(apiKey: string, markName: string, classes: number[], goodsServices: string): Promise<{
+async function searchWeb(apiKey: string, markName: string, classes: number[], goodsServices: string, language: string): Promise<{
   findings: string[];
   risk: "low" | "medium" | "high";
 }> {
-  const classContext = classes.length > 0
-    ? ` in Nice Classification class(es) ${classes.join(", ")}`
-    : "";
+  const classContext = classes.length > 0 ? ` in Nice Classification class(es) ${classes.join(", ")}` : "";
   const goodsContext = goodsServices ? ` for: ${goodsServices}` : "";
+  const langName = LANGUAGE_NAMES[language] ?? "English";
+  const langInstruction = language !== "en" ? ` Write all findings strings in ${langName}.` : "";
 
-  const prompt = `Search the web for existing trademark registrations, brand names, or companies named "${markName}"${classContext}${goodsContext}.
+  const prompt = `Search the web for existing trademark registrations, brand names, or companies named "${markName}"${classContext}${goodsContext}.${langInstruction}
 
-Focus on:
-1. Registered trademarks with this exact name or very similar names
-2. Well-known brands or companies using this name
-3. Any IMPI (Mexican trademark office) registered marks
-4. International trademark registrations (USPTO, EUIPO, WIPO) for this name
+Focus on: registered trademarks with this exact/similar name, well-known brands, IMPI registered marks, international registrations (USPTO, EUIPO, WIPO).
 
-Return a JSON object with:
-{
-  "risk": "low" | "medium" | "high",
-  "findings": ["finding 1", "finding 2", ...],
-  "reasoning": "brief explanation"
-}
-
-Risk levels:
-- "high": Exact match found as a registered trademark in the same or related class
-- "medium": Similar names found, or registered in different classes, or pending applications
-- "low": No significant existing trademarks found with this name
-
-Return only the JSON, no markdown.`;
+Return JSON: { "risk": "low"|"medium"|"high", "findings": ["finding 1", ...], "reasoning": "..." }
+Risk: "high"=exact match in same/related class, "medium"=similar names or different class, "low"=no significant existing marks.`;
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-search-preview",
-        messages: [{ role: "user", content: prompt }],
-        max_tokens: 800,
-      }),
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({ model: "gpt-4o-search-preview", messages: [{ role: "user", content: prompt }], max_tokens: 800 }),
     });
 
     if (!response.ok) {
-      const fallbackResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+      const fallback = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
         body: JSON.stringify({
           model: "gpt-4o",
           messages: [
-            {
-              role: "system",
-              content: "You are a trademark clearance assistant. Based on your training knowledge, assess if a trademark name is likely already in use. Return JSON only.",
-            },
-            {
-              role: "user",
-              content: `Assess trademark "${markName}"${classContext}${goodsContext}: { "risk": "low"|"medium"|"high", "findings": [...strings], "reasoning": "..." }`,
-            },
+            { role: "system", content: "You are a trademark clearance assistant. Return JSON only." },
+            { role: "user", content: `Assess trademark "${markName}"${classContext}${goodsContext}: { "risk": "low"|"medium"|"high", "findings": [...], "reasoning": "..." }` },
           ],
-          temperature: 0.1,
-          max_tokens: 600,
-          response_format: { type: "json_object" },
+          temperature: 0.1, max_tokens: 600, response_format: { type: "json_object" },
         }),
       });
-
-      if (!fallbackResponse.ok) {
-        return { findings: ["Web search unavailable — manual clearance search recommended"], risk: "medium" };
-      }
-
-      const fallbackData = await fallbackResponse.json();
-      const content = fallbackData.choices?.[0]?.message?.content;
-      if (!content) return { findings: [], risk: "low" };
-      const parsed = JSON.parse(content);
-      return { findings: parsed.findings || [], risk: parsed.risk || "medium" };
+      if (!fallback.ok) return { findings: [], risk: "medium" };
+      const d = await fallback.json();
+      const c = d.choices?.[0]?.message?.content;
+      if (!c) return { findings: [], risk: "low" };
+      const p = JSON.parse(c);
+      return { findings: p.findings || [], risk: p.risk || "medium" };
     }
 
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content;
     if (!content) return { findings: [], risk: "low" };
-
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return { findings: [], risk: "low" };
     const parsed = JSON.parse(jsonMatch[0]);
     return { findings: parsed.findings || [], risk: parsed.risk || "low" };
   } catch (err) {
     console.error("Web search error:", err);
-    return { findings: ["Web search unavailable — manual clearance search recommended"], risk: "medium" };
+    return { findings: [], risk: "medium" };
   }
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { status: 200, headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { status: 200, headers: corsHeaders });
 
   try {
     const apiKey = Deno.env.get("OPENAI_API_KEY");
     if (!apiKey) {
-      return new Response(
-        JSON.stringify({ error: "AI service not configured" }),
-        { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "AI service not configured" }), { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const body = await req.json();
-    const {
-      markName,
-      classes = [],
-      language = "en",
-      goodsServices = "",
-    } = body as {
-      markName: string;
-      classes?: number[];
-      language?: string;
-      goodsServices?: string;
+    const { markName, classes = [], language = "en", goodsServices = "" } = body as {
+      markName: string; classes?: number[]; language?: string; goodsServices?: string;
     };
 
-    if (!markName || markName.trim().length < 1) {
-      return new Response(
-        JSON.stringify({ error: "markName is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (!markName?.trim()) {
+      return new Response(JSON.stringify({ error: "markName is required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+
+    const lang = DISCLAIMERS[language] ? language : "en";
 
     const [webResult, marciaResult, domainResults, registrabilityResult] = await Promise.all([
-      searchWeb(apiKey, markName.trim(), classes, goodsServices),
+      searchWeb(apiKey, markName.trim(), classes, goodsServices, lang),
       searchMarcia(markName.trim(), classes),
       checkDomains(markName.trim()),
-      analyzeRegistrability(apiKey, markName.trim(), classes, goodsServices),
+      analyzeRegistrability(apiKey, markName.trim(), classes, goodsServices, lang),
     ]);
 
-    // Compute combined risk
     let risk: "low" | "medium" | "high" = webResult.risk;
     if (marciaResult.totalCount > 0) {
-      const hasExactMatch = marciaResult.findings.some(
-        f => f.name.toLowerCase().trim() === markName.toLowerCase().trim()
-      );
-      if (hasExactMatch || marciaResult.totalCount >= 5) {
-        risk = "high";
-      } else if (risk === "low") {
-        risk = "medium";
-      }
+      const hasExactMatch = marciaResult.findings.some(f => f.name.toLowerCase().trim() === markName.toLowerCase().trim());
+      if (hasExactMatch || marciaResult.totalCount >= 5) risk = "high";
+      else if (risk === "low") risk = "medium";
     }
-    if (registrabilityResult.risk === "high") {
-      risk = "high";
-    } else if (registrabilityResult.risk === "medium" && risk === "low") {
-      risk = "medium";
-    }
+    if (registrabilityResult.risk === "high") risk = "high";
+    else if (registrabilityResult.risk === "medium" && risk === "low") risk = "medium";
 
-    // Factor in DuPont: 3+ against_registration → at least medium; 5+ → high
     const dupontAgainst = registrabilityResult.dupont.filter(f => f.verdict === "against_registration").length;
-    if (dupontAgainst >= 5 && risk !== "high") {
-      risk = "high";
-    } else if (dupontAgainst >= 3 && risk === "low") {
-      risk = "medium";
-    }
+    if (dupontAgainst >= 5 && risk !== "high") risk = "high";
+    else if (dupontAgainst >= 3 && risk === "low") risk = "medium";
 
-    const disclaimer =
-      language === "zh" ? DISCLAIMER_ZH :
-      language === "es" ? DISCLAIMER_ES :
-      DISCLAIMER;
-
-    const result = {
+    return new Response(JSON.stringify({
       risk,
       webFindings: webResult.findings,
       marciaFindings: marciaResult.findings,
@@ -572,17 +437,10 @@ Deno.serve(async (req: Request) => {
       dupont: registrabilityResult.dupont,
       distinctiveness: registrabilityResult.distinctiveness,
       riskSummary: registrabilityResult.riskSummary,
-      disclaimer,
-    };
-
-    return new Response(JSON.stringify(result), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+      disclaimer: DISCLAIMERS[lang],
+    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err) {
     console.error("verify-trademark error:", err);
-    return new Response(
-      JSON.stringify({ error: "Internal error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: "Internal error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
