@@ -1,1 +1,6 @@
+# Serve static XML and text files directly — never rewrite to index.html
+/sitemap.xml  /sitemap.xml  200
+/robots.txt   /robots.txt   200
+
+# SPA catch-all — must be last
 /*  /index.html  200
