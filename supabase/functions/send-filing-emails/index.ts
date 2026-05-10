@@ -67,9 +67,10 @@ ul.classes { font-size: 14px; color: #3a4a3a; padding-left: 20px; line-height: 1
 </style></head>
 <body>
 <div class="wrapper">
-  <div class="header">
-    <h1>Mexico Trademark Center</h1>
-    <p>Official Filing Confirmation</p>
+  <div class="header" style="text-align:center">
+    <div style="margin-bottom:10px"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#c9a84c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+    <div style="font-size:10px;letter-spacing:3px;color:#c9a84c;font-family:Arial,sans-serif;text-transform:uppercase;margin-bottom:6px;font-weight:bold">Mexico Trademark Center</div>
+    <h1 style="margin:0;font-size:19px;font-weight:bold;font-family:Georgia,serif">Official Filing Confirmation</h1>
   </div>
   <div class="body">
     <p style="font-size:15px;">Dear ${String(client.legal_name ?? client.contact_person ?? "Valued Client")},</p>
@@ -105,9 +106,10 @@ ul.classes { font-size: 14px; color: #3a4a3a; padding-left: 20px; line-height: 1
 
     <p style="font-size:13px;color:#6a6a6a;line-height:1.7;">Questions? Contact us at <a href="mailto:tm@mexicotrademarkcenter.com" style="color:#1a2e1a;">tm@mexicotrademarkcenter.com</a></p>
   </div>
-  <div class="footer">
-    Mexico Trademark Center &bull; Professional Trademark Filing Services<br>
-    This email confirms your paid filing instruction. Please retain it for your records.
+  <div class="footer" style="background:#1a2e1a;padding:18px 40px;text-align:center">
+    <p style="font-size:11px;color:#9db89d;margin:0 0 4px;font-family:Arial,sans-serif;font-weight:bold;letter-spacing:1px">MEXICO TRADEMARK CENTER</p>
+    <p style="font-size:11px;color:#6a8a6a;margin:0;font-family:Arial,sans-serif">mexicotrademarkcenter.com &nbsp;·&nbsp; tm@mexicotrademarkcenter.com</p>
+    <p style="font-size:11px;color:#4a6a4a;margin:6px 0 0;font-family:Arial,sans-serif">This email confirms your paid filing instruction. Please retain it for your records.</p>
   </div>
 </div>
 </body></html>`;
@@ -135,6 +137,7 @@ function buildStaffInstructionEmail(
 <html>
 <head><meta charset="utf-8"></head>
 <body style="font-family:Arial,sans-serif;font-size:13px;color:#111;max-width:700px;margin:0 auto;padding:20px;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#1a2e1a;margin-bottom:20px"><tr><td style="padding:16px 20px;text-align:center"><span style="font-size:10px;letter-spacing:3px;color:#c9a84c;font-family:Arial,sans-serif;text-transform:uppercase;font-weight:bold">Mexico Trademark Center</span><span style="font-size:11px;color:#9db89d;font-family:Arial,sans-serif;margin-left:12px">— Internal Filing Instruction</span></td></tr></table>
 <h2 style="text-align:center;border-bottom:2px solid #111;padding-bottom:10px;">Checklist of MEXICO Trademark Application for Registration</h2>
 
 <p><strong>1. Our Reference:</strong> <span style="font-family:monospace;font-size:15px;background:#f0f0f0;padding:2px 8px;">${String(app.case_number)}</span></p>

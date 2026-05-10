@@ -5,7 +5,7 @@ import {
   ChevronRight, Download, MessageSquare, User, Settings,
   Bell, ArrowLeft, Send, Lock, Building2,
   Inbox, Shield, Pencil, CreditCard, Loader2, Tag, X,
-  Printer, Sheet, Trash2, Receipt, ChevronDown, ChevronUp, RefreshCw, Eye
+  Printer, Sheet, Trash2, Receipt, ChevronDown, ChevronUp, RefreshCw, Eye, FileSearch
 } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
@@ -1436,7 +1436,18 @@ function AccountSettings() {
 
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 
-type View = 'docket' | 'detail' | 'settings';
+interface ClearanceReport {
+  id: string;
+  mark_name: string;
+  goods_services: string;
+  language: string;
+  final_amount_usd: number;
+  paid_at: string;
+  pdf_storage_path: string | null;
+  email_sent_at: string | null;
+}
+
+type View = 'docket' | 'detail' | 'settings' | 'reports';
 
 export default function DashboardPage() {
   const { user, profile, signOut } = useAuth();
@@ -1449,6 +1460,9 @@ export default function DashboardPage() {
   const [selectedAppId, setSelectedAppId] = useState<string | null>(params.id ?? null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [draft, setDraft] = useState<FilingDraft | null>(null);
+  const [reports, setReports] = useState<ClearanceReport[]>([]);
+  const [reportsLoading, setReportsLoading] = useState(false);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (profile?.password_change_required) setView('settings');
@@ -1548,6 +1562,38 @@ export default function DashboardPage() {
 
   useEffect(() => { loadDocket(); }, [loadDocket]);
 
+  const loadReports = useCallback(async () => {
+    if (!user) return;
+    setReportsLoading(true);
+    const { data } = await supabase
+      .from('clearance_report_orders')
+      .select('id, mark_name, goods_services, language, final_amount_usd, paid_at, pdf_storage_path, email_sent_at')
+      .eq('user_id', user.id)
+      .eq('status', 'paid')
+      .order('paid_at', { ascending: false });
+    setReports((data as ClearanceReport[]) ?? []);
+    setReportsLoading(false);
+  }, [user]);
+
+  useEffect(() => { if (view === 'reports') loadReports(); }, [view, loadReports]);
+
+  const handleDownloadReport = async (reportId: string) => {
+    setDownloadingId(reportId);
+    try {
+      const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+      const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/get-report-download-url`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({ reportOrderId: reportId }),
+      });
+      const d = await res.json();
+      if (d.url) window.open(d.url, '_blank');
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
   const stats = [
     { label: 'Total Cases', value: docketRows.length, icon: FileText, color: 'text-blue-600', bg: 'bg-blue-50' },
     { label: 'In Progress', value: docketRows.filter(r => ['new','pending_review','filed','ready_to_file'].includes(r.filing_status)).length, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
@@ -1561,6 +1607,7 @@ export default function DashboardPage() {
 
   const navItems = [
     { key: 'docket', label: 'My Docket', icon: FileText },
+    { key: 'reports', label: 'Search Reports', icon: FileSearch },
     { key: 'settings', label: 'Account Settings', icon: Settings },
   ] as const;
 
@@ -1703,6 +1750,96 @@ export default function DashboardPage() {
           {/* Detail view */}
           {view === 'detail' && selectedAppId && (
             <ApplicationDetail appId={selectedAppId} onBack={() => { setView('docket'); setSelectedAppId(null); }} />
+          )}
+
+          {/* Search Reports view */}
+          {view === 'reports' && (
+            <>
+              <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
+                <div>
+                  <h1 className="text-xl font-bold text-gray-900">Search Reports</h1>
+                  <p className="text-sm text-gray-500 mt-0.5">Trademark clearance reports you have purchased</p>
+                </div>
+                <button onClick={loadReports} disabled={reportsLoading} className="flex items-center gap-1.5 text-xs font-medium text-gray-600 border border-gray-200 bg-white hover:bg-gray-50 px-3 py-2 rounded-lg transition-colors disabled:opacity-50">
+                  <RefreshCw size={14} className={reportsLoading ? 'animate-spin' : ''} /> Refresh
+                </button>
+              </div>
+
+              {reportsLoading ? (
+                <div className="flex items-center justify-center py-20">
+                  <div className="w-8 h-8 border-2 border-[#2d5a2d] border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : reports.length === 0 ? (
+                <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+                  <div className="w-14 h-14 bg-[#f0f7f0] rounded-full flex items-center justify-center mx-auto mb-4">
+                    <FileSearch size={24} className="text-[#2d5a2d]" />
+                  </div>
+                  <h3 className="text-base font-semibold text-gray-800 mb-2">No search reports yet</h3>
+                  <p className="text-sm text-gray-500 mb-6 max-w-xs mx-auto">Run a trademark clearance check and purchase the full PDF report to see it here.</p>
+                  <Link to="/trademark-check" className="inline-flex items-center gap-2 bg-[#1a2e1a] hover:bg-[#2d5a2d] text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors">
+                    <FileSearch size={15} /> Run a Trademark Search
+                  </Link>
+                </div>
+              ) : (
+                <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-gray-100 bg-gray-50">
+                          <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Mark Name</th>
+                          <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Goods / Services</th>
+                          <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden sm:table-cell">Date</th>
+                          <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden sm:table-cell">Amount</th>
+                          <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Report</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {reports.map(r => (
+                          <tr key={r.id} className="hover:bg-gray-50 transition-colors">
+                            <td className="px-5 py-4">
+                              <div className="flex items-center gap-2.5">
+                                <div className="w-8 h-8 bg-[#f0f7f0] rounded-lg flex items-center justify-center flex-shrink-0">
+                                  <Shield size={14} className="text-[#2d5a2d]" />
+                                </div>
+                                <div>
+                                  <p className="font-semibold text-gray-900">{r.mark_name}</p>
+                                  <p className="text-xs text-gray-400 mt-0.5 sm:hidden">{r.paid_at ? new Date(r.paid_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-5 py-4 hidden md:table-cell">
+                              <p className="text-gray-600 text-xs max-w-[200px] truncate">{r.goods_services || '—'}</p>
+                            </td>
+                            <td className="px-5 py-4 hidden sm:table-cell text-gray-600">
+                              {r.paid_at ? new Date(r.paid_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                            </td>
+                            <td className="px-5 py-4 hidden sm:table-cell text-right text-gray-700 font-medium">
+                              USD ${Number(r.final_amount_usd).toFixed(2)}
+                            </td>
+                            <td className="px-5 py-4 text-right">
+                              {r.pdf_storage_path ? (
+                                <button
+                                  onClick={() => handleDownloadReport(r.id)}
+                                  disabled={downloadingId === r.id}
+                                  className="inline-flex items-center gap-1.5 bg-[#c9a84c] hover:bg-[#b8963e] text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors disabled:opacity-60"
+                                >
+                                  {downloadingId === r.id ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+                                  PDF
+                                </button>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-xs text-amber-600 bg-amber-50 border border-amber-200 px-2.5 py-1.5 rounded-lg">
+                                  <Loader2 size={12} className="animate-spin" /> Generating…
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           {/* Settings */}

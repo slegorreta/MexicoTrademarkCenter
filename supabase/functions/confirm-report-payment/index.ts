@@ -19,9 +19,10 @@ Deno.serve(async (req: Request) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    const { paymentIntentId, reportOrderId } = await req.json() as {
+    const { paymentIntentId, reportOrderId, userId } = await req.json() as {
       paymentIntentId: string;
       reportOrderId: string;
+      userId?: string;
     };
 
     if (!paymentIntentId || !reportOrderId) {
@@ -43,7 +44,7 @@ Deno.serve(async (req: Request) => {
     // Check order exists and isn't already paid
     const { data: order } = await supabase
       .from("clearance_report_orders")
-      .select("id, status, email, mark_name, language")
+      .select("id, status, email, mark_name, language, user_id")
       .eq("id", reportOrderId)
       .maybeSingle();
 
@@ -55,13 +56,25 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({ success: true, reportOrderId, alreadyProcessed: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Mark as paid
+    // Resolve user_id: prefer explicitly passed userId, else backfill by email match
+    let resolvedUserId: string | null = userId ?? order.user_id ?? null;
+    if (!resolvedUserId && order.email) {
+      const { data: matchedProfile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("email", order.email)
+        .maybeSingle();
+      if (matchedProfile?.id) resolvedUserId = matchedProfile.id;
+    }
+
+    // Mark as paid and link user account
     await supabase
       .from("clearance_report_orders")
       .update({
         status: "paid",
         paid_at: new Date().toISOString(),
         stripe_payment_intent_id: paymentIntentId,
+        ...(resolvedUserId ? { user_id: resolvedUserId } : {}),
       })
       .eq("id", reportOrderId);
 

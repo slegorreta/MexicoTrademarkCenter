@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Eye, EyeOff, AlertCircle, ArrowLeft, Globe, ChevronDown } from 'lucide-react';
 import { useLanguage, Language } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
@@ -83,8 +83,11 @@ export default function LoginPage() {
   const { language, setLanguage, t } = useLanguage();
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
-  const [mode, setMode] = useState<Mode>('login');
-  const [form, setForm] = useState({ email: '', password: '', fullName: '' });
+  const [searchParams] = useSearchParams();
+  const prefilledEmail = searchParams.get('email') ?? '';
+  const initialMode: Mode = searchParams.get('register') === '1' ? 'register' : 'login';
+  const [mode, setMode] = useState<Mode>(initialMode);
+  const [form, setForm] = useState({ email: prefilledEmail, password: '', fullName: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');

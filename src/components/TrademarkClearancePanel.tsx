@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import {
@@ -170,11 +171,12 @@ interface CheckoutProps {
   clientSecret: string;
   paymentIntentId: string;
   reportOrderId: string;
+  userId?: string;
   onSuccess: () => void;
   onBack: () => void;
 }
 
-function InlineCheckout({ lang, finalAmount, clientSecret, paymentIntentId, reportOrderId, onSuccess, onBack }: CheckoutProps) {
+function InlineCheckout({ lang, finalAmount, clientSecret, paymentIntentId, reportOrderId, userId, onSuccess, onBack }: CheckoutProps) {
   const stripe = useStripe();
   const elements = useElements();
   const [paying, setPaying] = useState(false);
@@ -195,7 +197,7 @@ function InlineCheckout({ lang, finalAmount, clientSecret, paymentIntentId, repo
       await fetch(`${SUPABASE_URL}/functions/v1/confirm-report-payment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
-        body: JSON.stringify({ paymentIntentId, reportOrderId }),
+        body: JSON.stringify({ paymentIntentId, reportOrderId, userId }),
       });
     } catch (e) { console.error('confirm-report-payment failed:', e); }
     onSuccess();
@@ -247,6 +249,7 @@ export default function TrademarkClearancePanel({
   markName, goodsServices = '', classes, language, autoRun = true, onResult, onSelectDespiteRisk,
 }: Props) {
   const lang = (language in (UI.clearanceAnalysis)) ? language : 'en' as Lang;
+  const { user } = useAuth();
 
   const [status, setStatus] = useState<'idle' | 'checking' | 'done' | 'error'>('idle');
   const [result, setResult] = useState<ClearanceResult | null>(null);
@@ -441,6 +444,7 @@ export default function TrademarkClearancePanel({
           clearanceResult: result,
           email: email.trim().toLowerCase(),
           couponCode: couponApplied ? couponInput.trim().toUpperCase() : undefined,
+          userId: user?.id ?? undefined,
         }),
       });
       const d = await res.json();
@@ -1043,6 +1047,7 @@ export default function TrademarkClearancePanel({
                 clientSecret={clientSecret}
                 paymentIntentId={paymentIntentId}
                 reportOrderId={reportOrderId}
+                userId={user?.id}
                 onSuccess={handlePaymentSuccess}
                 onBack={() => setPurchaseStep('coupon')}
               />

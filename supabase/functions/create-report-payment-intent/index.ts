@@ -22,13 +22,14 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const body = await req.json();
-    const { markName, goodsServices, language, clearanceResult, email, couponCode } = body as {
+    const { markName, goodsServices, language, clearanceResult, email, couponCode, userId } = body as {
       markName: string;
       goodsServices: string;
       language: string;
       clearanceResult: Record<string, unknown>;
       email: string;
       couponCode?: string;
+      userId?: string;
     };
 
     if (!markName || !email || !clearanceResult) {
@@ -79,6 +80,7 @@ Deno.serve(async (req: Request) => {
         discount_percent: discountPercent,
         final_amount_usd: finalAmountUsd,
         status: "pending",
+        ...(userId ? { user_id: userId } : {}),
       })
       .select("id")
       .single();
@@ -97,6 +99,8 @@ Deno.serve(async (req: Request) => {
     const piBody = new URLSearchParams({
       amount: String(amountCents),
       currency: "usd",
+      description: `TM Search Report – ${markName.trim().slice(0, 200)}`,
+      statement_descriptor_suffix: "TM SEARCH",
       "metadata[payment_type]": "clearance_report",
       "metadata[report_order_id]": order.id,
       "metadata[mark_name]": markName.trim().slice(0, 200),

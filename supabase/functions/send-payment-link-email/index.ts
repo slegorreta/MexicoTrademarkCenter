@@ -89,7 +89,11 @@ body { font-family: Georgia, serif; color: #1a1a1a; background: #f9f8f6; margin:
 </style></head>
 <body>
 <div class="wrapper">
-  <div class="header"><h1>Mexico Trademark Center</h1></div>
+  <div class="header" style="text-align:center">
+    <div style="margin-bottom:10px"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#c9a84c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+    <div style="font-size:10px;letter-spacing:3px;color:#c9a84c;font-family:Arial,sans-serif;text-transform:uppercase;font-weight:bold;margin-bottom:4px">Mexico Trademark Center</div>
+    <h1 style="color:#fff;font-size:18px;margin:0;font-weight:bold;font-family:Georgia,serif">Payment Request</h1>
+  </div>
   <div class="body">
     <p style="font-size:15px;">Dear ${clientName},</p>
     <p style="font-size:14px;color:#4a4a4a;line-height:1.7;">Your trademark application for <strong>${markName}</strong> has been prepared and is ready for payment. Once your payment is confirmed, our team will begin the filing process immediately.</p>
@@ -111,8 +115,10 @@ body { font-family: Georgia, serif; color: #1a1a1a; background: #f9f8f6; margin:
     <p style="font-size:13px;color:#6a6a6a;line-height:1.7;">Payment is processed securely via Stripe. We accept all major credit cards and bank transfers. If you have any questions about this invoice, please contact us at <a href="mailto:tm@mexicotrademarkcenter.com" style="color:#1a2e1a;">tm@mexicotrademarkcenter.com</a>.</p>
     <p style="font-size:12px;color:#999;">After payment, you will receive a confirmation email with instructions to access your client portal where you can track your application.</p>
   </div>
-  <div class="footer">Mexico Trademark Center &bull; Professional Trademark Filing Services &bull; Mexico<br>
-  This payment request was sent on behalf of Mexico Trademark Center.</div>
+  <div class="footer" style="background:#1a2e1a;padding:18px 40px;text-align:center">
+    <p style="font-size:11px;color:#9db89d;margin:0 0 4px;font-family:Arial,sans-serif;font-weight:bold;letter-spacing:1px">MEXICO TRADEMARK CENTER</p>
+    <p style="font-size:11px;color:#6a8a6a;margin:0;font-family:Arial,sans-serif">mexicotrademarkcenter.com &nbsp;·&nbsp; tm@mexicotrademarkcenter.com</p>
+  </div>
 </div>
 </body></html>`;
 
