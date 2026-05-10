@@ -60,6 +60,9 @@ function WeChatWidget() {
 }
 
 export default function Layout({ children }: { children: React.ReactNode }) {
+  const { language } = useLanguage();
+  const showWeChat = language === 'zh' || language === 'en';
+
   return (
     <div className="min-h-screen flex flex-col bg-white">
       <Header />
@@ -67,7 +70,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         {children}
       </main>
       <Footer />
-      <WeChatWidget />
+      {showWeChat && <WeChatWidget />}
       <PriceGuaranteeBadge variant="float" />
     </div>
   );
