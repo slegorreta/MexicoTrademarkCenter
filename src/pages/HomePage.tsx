@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, ArrowDown, Shield, Clock, Globe as Globe2, DollarSign, FileText, Award, ChevronDown, Sparkles, Search, HelpCircle, X, Star } from 'lucide-react';
+import { ArrowRight, ArrowDown, Shield, Clock, Globe as Globe2, DollarSign, FileText, Award, ChevronDown, Sparkles, Search, HelpCircle, X, Star, Scale } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import PriceGuaranteeBadge from '../components/PriceGuaranteeBadge';
 import { useState } from 'react';
@@ -8,11 +8,14 @@ export default function HomePage() {
   const { t } = useLanguage();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [showConstanciaModal, setShowConstanciaModal] = useState(false);
+  const [showSavingsModal, setShowSavingsModal] = useState(false);
+  const [showLawyersModal, setShowLawyersModal] = useState(false);
 
   const trustBadges = [
     { icon: Clock, key: 'trust.filing' },
-    { icon: Globe2, key: 'trust.impi', tooltip: true },
-    { icon: DollarSign, key: 'trust.bilingual' },
+    { icon: Globe2, key: 'trust.impi', onTooltip: () => setShowConstanciaModal(true) },
+    { icon: DollarSign, key: 'trust.bilingual', onTooltip: () => setShowSavingsModal(true) },
+    { icon: Scale, key: 'trust.lawyers.label', onTooltip: () => setShowLawyersModal(true) },
   ];
 
   const faqs = [
@@ -99,11 +102,10 @@ export default function HomePage() {
                 <div key={i} className="flex items-center gap-2 text-gray-300">
                   <badge.icon size={16} className="text-gold-400 flex-shrink-0" />
                   <span className="text-sm">{t(badge.key)}</span>
-                  {badge.tooltip && (
+                  {badge.onTooltip && (
                     <button
-                      onClick={() => setShowConstanciaModal(true)}
+                      onClick={badge.onTooltip}
                       className="text-gold-400/70 hover:text-gold-300 transition-colors flex-shrink-0"
-                      aria-label={t('trust.impi.tooltip.title')}
                     >
                       <HelpCircle size={13} />
                     </button>
@@ -117,33 +119,84 @@ export default function HomePage() {
 
       {/* Constancia de Presentación modal */}
       {showConstanciaModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
-          onClick={() => setShowConstanciaModal(false)}
-        >
-          <div
-            className="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto"
-            onClick={e => e.stopPropagation()}
-          >
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={() => setShowConstanciaModal(false)}>
+          <div className="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-start justify-between p-5 border-b border-gray-100">
-              <div>
-                <h3 className="text-navy-900 font-bold text-lg leading-tight">{t('trust.impi.tooltip.title')}</h3>
-              </div>
-              <button
-                onClick={() => setShowConstanciaModal(false)}
-                className="ml-4 text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0 mt-0.5"
-              >
+              <h3 className="text-navy-900 font-bold text-lg leading-tight">{t('trust.impi.tooltip.title')}</h3>
+              <button onClick={() => setShowConstanciaModal(false)} className="ml-4 text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0 mt-0.5">
                 <X size={20} />
               </button>
             </div>
             <div className="p-5">
               <p className="text-gray-600 text-sm leading-relaxed mb-5">{t('trust.impi.tooltip.body')}</p>
               <div className="rounded-xl border border-gray-200 overflow-hidden">
-                <img
-                  src="/Captura_de_pantalla_2026-05-10_a_la(s)_4.39.02_p.m..png"
-                  alt="Constancia de Presentación IMPI"
-                  className="w-full h-auto block"
-                />
+                <img src="/Captura_de_pantalla_2026-05-10_a_la(s)_4.39.02_p.m..png" alt="Constancia de Presentación IMPI" className="w-full h-auto block" />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Savings / Why cheaper modal */}
+      {showSavingsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={() => setShowSavingsModal(false)}>
+          <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full" onClick={e => e.stopPropagation()}>
+            <div className="flex items-start justify-between p-5 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-green-50 flex items-center justify-center flex-shrink-0">
+                  <DollarSign size={18} className="text-green-600" />
+                </div>
+                <h3 className="text-navy-900 font-bold text-lg leading-tight">{t('trust.savings.tooltip.title')}</h3>
+              </div>
+              <button onClick={() => setShowSavingsModal(false)} className="ml-4 text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0 mt-0.5">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="flex items-center gap-4 bg-gray-50 rounded-xl p-4">
+                <div className="text-center flex-1 border-r border-gray-200">
+                  <div className="text-2xl font-bold text-gray-400 line-through">$800+</div>
+                  <div className="text-xs text-gray-500 mt-0.5">Traditional firms</div>
+                </div>
+                <div className="text-center flex-1">
+                  <div className="text-2xl font-bold text-green-600">$270</div>
+                  <div className="text-xs text-gray-500 mt-0.5">Mexico Trademark Center</div>
+                </div>
+              </div>
+              <p className="text-gray-600 text-sm leading-relaxed">{t('trust.savings.tooltip.body')}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Lawyers modal */}
+      {showLawyersModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={() => setShowLawyersModal(false)}>
+          <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full" onClick={e => e.stopPropagation()}>
+            <div className="flex items-start justify-between p-5 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-navy-50 flex items-center justify-center flex-shrink-0">
+                  <Scale size={18} className="text-navy-700" />
+                </div>
+                <h3 className="text-navy-900 font-bold text-lg leading-tight">{t('trust.lawyers.tooltip.title')}</h3>
+              </div>
+              <button onClick={() => setShowLawyersModal(false)} className="ml-4 text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0 mt-0.5">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <p className="text-gray-600 text-sm leading-relaxed">{t('trust.lawyers.tooltip.body')}</p>
+              <div className="border border-gray-100 rounded-xl p-4 flex items-center gap-4 bg-gray-50">
+                <div className="flex-shrink-0">
+                  <div className="bg-white rounded-lg px-3 py-2 shadow-sm border border-gray-200">
+                    <div className="text-xs font-black tracking-tight text-gray-900 leading-none">Managing</div>
+                    <div className="text-xs font-black tracking-tight text-[#c8102e] leading-none">IP</div>
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-gray-800">Managing IP</div>
+                  <div className="text-xs text-gray-500">Leading global directory for top-ranked IP practitioners</div>
+                </div>
               </div>
             </div>
           </div>
