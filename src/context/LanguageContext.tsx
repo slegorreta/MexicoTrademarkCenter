@@ -35,24 +35,24 @@ const translations: Record<string, Record<Language, string>> = {
 
   // Hero
   'hero.headline': {
-    en: 'File Your Trademark in Mexico — Fast, Affordable, and Fully Managed',
-    zh: '在墨西哥注册您的商标 — 快速、实惠、全程托管',
-    es: 'Registra tu Marca en México — Rápido, Accesible y Completamente Gestionado',
-    de: 'Ihre Marke in Mexiko anmelden — Schnell, günstig und vollständig betreut',
-    fr: 'Déposez votre marque au Mexique — Rapide, abordable et entièrement géré',
-    hi: 'मेक्सिको ट्रेडमार्क पंजीकरण',
-    pt: 'Registre sua Marca no México — Rápido, Acessível e Totalmente Gerenciado',
-    ja: 'メキシコで商標を出願 — 迅速・低価格・フルサポート',
+    en: 'File Your Trademark in Mexico — 100% Online, AI-Assisted and Expert-Reviewed',
+    zh: '在墨西哥注册您的商标 — 100% 在线，AI 辅助，专家审核',
+    es: 'Registra tu Marca en México — 100% en línea, gestionado con inteligencia artificial y revisado por expertos',
+    de: 'Ihre Marke in Mexiko anmelden — 100% online, KI-gestützt und von Experten geprüft',
+    fr: 'Déposez votre marque au Mexique — 100% en ligne, assisté par IA et vérifié par des experts',
+    hi: 'मेक्सिको में अपना ट्रेडमार्क दर्ज करें — 100% ऑनलाइन, AI-सहायक और विशेषज्ञ-समीक्षित',
+    pt: 'Registre sua Marca no México — 100% online, com IA e revisado por especialistas',
+    ja: 'メキシコで商標を出願 — 100%オンライン、AI活用・専門家確認済み',
   },
   'hero.subheading': {
-    en: 'For international businesses, exporters, and brands selling, manufacturing, or expanding into Mexico. We prepare and file your Mexican trademark application before IMPI within 24 business hours after receiving complete information and payment.',
-    zh: '专为在墨西哥销售、制造或扩张的中国和国际企业服务。在收到完整信息和付款后，我们将在24个工作小时内准备并向IMPI提交您的墨西哥商标申请。',
-    es: 'Para individuos y empresas que desean proteger su nombre, logo o slogan en México ante el Instituto Mexicano de la Propiedad Industrial (IMPI). Presentamos tu solicitud en 24 horas hábiles tras recibir la información completa y el pago.',
-    de: 'Für internationale Unternehmen, Exporteure und Marken, die in Mexiko tätig sind oder expandieren möchten. Wir bereiten Ihre Markenanmeldung beim IMPI vor und reichen sie innerhalb von 24 Geschäftsstunden nach Eingang aller Unterlagen und der Zahlung ein.',
-    fr: 'Pour les entreprises internationales, les exportateurs et les marques qui vendent, fabriquent ou s\'implantent au Mexique. Nous préparons et déposons votre demande de marque mexicaine auprès de l\'IMPI dans les 24 heures ouvrées suivant la réception des informations complètes et du paiement.',
-    hi: 'IMPI के साथ अपना ट्रेडमार्क पंजीकृत करें — सरल, तेज़, और भरोसेमंद',
-    pt: 'Para empresas internacionais, exportadores e marcas que vendem, fabricam ou se expandem para o México. Preparamos e protocolamos seu pedido de marca mexicana no IMPI em até 24 horas úteis após recebermos as informações completas e o pagamento.',
-    ja: '海外でビジネスを展開する企業や輸出業者のために、IMPIへの商標出願を代行します。完全な情報と入金確認後、24営業時間以内に出願します。',
+    en: 'One all-inclusive price of $270 USD per trademark class.',
+    zh: '每个商标类别统一全包价格 $270 美元。',
+    es: 'Un precio todo incluido de $270 USD por clase de marca.',
+    de: 'Ein All-inclusive-Preis von $270 USD pro Markenklasse.',
+    fr: 'Un prix tout compris de $270 USD par classe de marque.',
+    hi: 'प्रति ट्रेडमार्क वर्ग $270 USD का एक समावेशी मूल्य।',
+    pt: 'Um preço tudo incluído de $270 USD por classe de marca.',
+    ja: '商標区分ごとに $270 USD のオールインクルーシブ価格。',
   },
   'hero.cta.start': { en: 'Start Trademark Filing', zh: '开始商标注册', es: 'Iniciar Registro de Marca', de: 'Markenanmeldung starten', fr: 'Déposer ma marque', hi: 'अभी आवेदन करें', pt: 'Iniciar Registro de Marca', ja: '商標出願を開始' },
   'hero.cta.pricing': { en: 'Check Pricing', zh: '查看定价', es: 'Ver Precios', de: 'Preise ansehen', fr: 'Voir les tarifs', hi: 'और जानें', pt: 'Ver Preços', ja: '料金を確認' },
@@ -82,14 +82,14 @@ const translations: Record<string, Record<Language, string>> = {
 
   // Hero free clearance CTA
   'hero.clearance.cta': {
-    en: 'Review Your Trademark for Free and Get Your Registrability Report',
-    zh: '免费检索您的商标并获取可注册性报告',
-    es: 'Revisa tu Marca Gratis y Obtén tu Reporte de Registrabilidad',
-    de: 'Ihre Marke kostenlos prüfen und Ihren Registrierbarkeitsbericht erhalten',
-    fr: 'Vérifiez votre marque gratuitement et obtenez votre rapport de disponibilité',
-    hi: 'अपना ट्रेडमार्क मुफ़्त जांचें और अपनी पंजीयनीयता रिपोर्ट प्राप्त करें',
-    pt: 'Verifique sua marca gratuitamente e obtenha seu Relatório de Registrabilidade',
-    ja: '無料で商標を調査して登録可能性レポートを取得',
+    en: 'Review if your trademark is available',
+    zh: '检索您的商标是否可注册',
+    es: 'Revisa si tu marca está disponible',
+    de: 'Prüfen Sie die Verfügbarkeit Ihrer Marke',
+    fr: 'Vérifiez la disponibilité de votre marque',
+    hi: 'जांचें कि आपका ट्रेडमार्क उपलब्ध है या नहीं',
+    pt: 'Verifique se sua marca está disponível',
+    ja: 'あなたの商標が登録可能か確認する',
   },
   'hero.clearance.desc': {
     en: 'IMPI database, web & domain check — instant results',
@@ -289,7 +289,7 @@ const translations: Record<string, Record<Language, string>> = {
 
   // Pricing section on homepage
   'pricing.eyebrow': { en: 'Affordable Pricing', zh: '实惠定价', es: 'Precios Accesibles', de: 'Faire Preise', fr: 'Tarifs abordables', hi: 'किफायती मूल्य निर्धारण', pt: 'Preços Acessíveis', ja: '手頃な料金' },
-  'pricing.package.label': { en: 'Standard Package', zh: '标准套餐', es: 'Paquete Estándar', de: 'Standardpaket', fr: 'Forfait standard', hi: 'मानक पैकेज', pt: 'Pacote Padrão', ja: 'スタンダードパッケージ' },
+  'pricing.package.label': { en: 'All-Inclusive Price', zh: '全包价格', es: 'Precio Todo Incluido', de: 'All-inclusive-Preis', fr: 'Prix tout compris', hi: 'सर्व-समावेशी मूल्य', pt: 'Preço Tudo Incluído', ja: 'オールインクルーシブ価格' },
   'pricing.package.perClass': {
     en: 'USD per trademark · per class',
     zh: 'USD/每个商标 · 每个类别',

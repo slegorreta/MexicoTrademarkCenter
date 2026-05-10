@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, Shield, Clock, Globe as Globe2, Star, Zap, FileText, Award, ChevronDown, Sparkles, Search } from 'lucide-react';
+import { ArrowRight, ArrowDown, Shield, Clock, Globe as Globe2, Star, Zap, FileText, Award, ChevronDown, Sparkles, Search } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import PriceGuaranteeBadge from '../components/PriceGuaranteeBadge';
 import { useState } from 'react';
@@ -42,12 +42,6 @@ export default function HomePage() {
         </div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28">
           <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 bg-gold-500/20 border border-gold-500/30 rounded-full px-4 py-1.5 mb-6">
-              <div className="w-2 h-2 bg-gold-400 rounded-full animate-pulse" />
-              <span className="text-gold-300 text-sm font-medium">
-                {t('hero.badge')}
-              </span>
-            </div>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight mb-6">
               {t('hero.headline')}
             </h1>
@@ -56,34 +50,33 @@ export default function HomePage() {
             </p>
 
             {/* Primary CTAs */}
-            <div className="flex flex-col sm:flex-row gap-3 mb-4">
+            <div className="flex flex-col gap-1 mb-4 max-w-md">
               {/* CTA 1 — Check availability */}
               <Link
                 to="/trademark-check"
-                className="group inline-flex items-center gap-3 bg-white text-navy-900 font-bold px-6 py-4 rounded-2xl transition-all duration-200 shadow-xl hover:shadow-2xl hover:-translate-y-0.5"
+                className="group flex items-center gap-3 bg-white text-navy-900 font-bold px-6 py-4 rounded-2xl transition-all duration-200 shadow-xl hover:shadow-2xl hover:-translate-y-0.5"
               >
                 <div className="w-9 h-9 rounded-xl bg-gold-500 flex items-center justify-center flex-shrink-0 group-hover:bg-gold-400 transition-colors">
                   <Search size={18} className="text-white" />
                 </div>
-                <div className="text-left">
-                  <div className="text-base font-bold text-navy-900 leading-tight">{t('hero.clearance.cta')}</div>
-                  <div className="text-xs text-gray-500 font-normal mt-0.5">{t('hero.clearance.desc')}</div>
-                </div>
+                <span className="text-base font-bold text-navy-900 leading-tight">{t('hero.clearance.cta')}</span>
                 <ArrowRight size={18} className="ml-auto text-gold-500 group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
               </Link>
+
+              {/* Sequence arrow */}
+              <div className="flex justify-center py-0.5">
+                <ArrowDown size={18} className="text-gold-400/60" />
+              </div>
 
               {/* CTA 2 — Register now */}
               <Link
                 to="/apply"
-                className="group inline-flex items-center gap-3 bg-gold-500 hover:bg-gold-400 text-white font-bold px-6 py-4 rounded-2xl transition-all duration-200 shadow-lg hover:shadow-gold-500/25 hover:-translate-y-0.5"
+                className="group flex items-center gap-3 bg-gold-500 hover:bg-gold-400 text-white font-bold px-6 py-4 rounded-2xl transition-all duration-200 shadow-lg hover:shadow-gold-500/25 hover:-translate-y-0.5"
               >
                 <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 group-hover:bg-white/30 transition-colors">
                   <FileText size={18} className="text-white" />
                 </div>
-                <div className="text-left">
-                  <div className="text-base font-bold leading-tight">{t('hero.cta.start')}</div>
-                  <div className="text-xs text-white/70 font-normal mt-0.5">{t('hero.cta.pricing')}</div>
-                </div>
+                <span className="text-base font-bold leading-tight">{t('hero.cta.start')}</span>
                 <ArrowRight size={18} className="ml-auto group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
               </Link>
             </div>
