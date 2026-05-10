@@ -15,7 +15,6 @@ const DISCLAIMER_ZH =
 const DISCLAIMER_ES =
   "Esta es únicamente una verificación preliminar automatizada. No constituye asesoría legal ni una opinión formal de disponibilidad. Consulte a un especialista en marcas antes de presentar su solicitud.";
 
-// Related Nice classes that are commonly examined together
 const RELATED_CLASSES: Record<number, number[]> = {
   3: [5, 44],
   5: [3, 44],
@@ -40,19 +39,18 @@ function getRelatedClasses(classes: number[]): number[] {
   return Array.from(related);
 }
 
-// Normalize a mark name into a domain-safe slug
 function toDomainSlug(name: string): string {
   return name
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "") // strip accents
-    .replace(/[^a-z0-9]/g, "")       // keep only alphanumeric
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, "")
     .trim();
 }
 
 interface DomainResult {
   domain: string;
-  available: boolean | null; // null = could not determine
+  available: boolean | null;
   status: "available" | "taken" | "unknown";
 }
 
@@ -67,7 +65,6 @@ async function checkDomains(markName: string): Promise<DomainResult[]> {
     tlds.map(async (tld) => {
       const domain = `${slug}${tld}`;
       try {
-        // Use Cloudflare DNS-over-HTTPS to check if a domain resolves
         const url = `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(domain)}&type=A`;
         const res = await fetch(url, {
           headers: { Accept: "application/dns-json" },
@@ -80,8 +77,6 @@ async function checkDomains(markName: string): Promise<DomainResult[]> {
         }
 
         const data = await res.json();
-        // Status 3 = NXDOMAIN (domain does not exist → likely available)
-        // Status 0 = NOERROR with answers → domain is taken
         const nxdomain = data.Status === 3;
         const hasAnswers = Array.isArray(data.Answer) && data.Answer.length > 0;
 
@@ -90,7 +85,6 @@ async function checkDomains(markName: string): Promise<DomainResult[]> {
         } else if (hasAnswers) {
           results.push({ domain, available: false, status: "taken" });
         } else {
-          // No error, no answers — parked or NS-only; treat as taken
           results.push({ domain, available: false, status: "taken" });
         }
       } catch {
@@ -99,7 +93,6 @@ async function checkDomains(markName: string): Promise<DomainResult[]> {
     })
   );
 
-  // Return in consistent tld order
   const order = tlds.map(t => `${slug}${t}`);
   results.sort((a, b) => order.indexOf(a.domain) - order.indexOf(b.domain));
   return results;
@@ -115,7 +108,6 @@ async function searchMarcia(markName: string, classes: number[]): Promise<{
   const marciaUrl = `${BASE}/search/quick?query=${encoded}`;
 
   try {
-    // Step 1: Load the SPA shell to obtain session cookies + CSRF token
     const initRes = await fetch(`${BASE}/search/quick`, {
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
@@ -130,7 +122,6 @@ async function searchMarcia(markName: string, classes: number[]): Promise<{
       return { findings: [], marciaUrl, totalCount: 0 };
     }
 
-    // Parse cookies from the init response
     const setCookieHeaders: string[] = [];
     initRes.headers.forEach((value, key) => {
       if (key.toLowerCase() === "set-cookie") setCookieHeaders.push(value);
@@ -147,7 +138,6 @@ async function searchMarcia(markName: string, classes: number[]): Promise<{
       }
     }
 
-    // Also try to extract CSRF from HTML meta tag
     const html = await initRes.text();
     const metaCsrf = html.match(/name=["']_csrf["'][^>]*content=["']([^"']+)["']/i)?.[1]
       ?? html.match(/content=["']([^"']+)["'][^>]*name=["']_csrf["']/i)?.[1]
@@ -168,7 +158,6 @@ async function searchMarcia(markName: string, classes: number[]): Promise<{
     if (cookieString) apiHeaders["Cookie"] = cookieString;
     if (xsrfToken) apiHeaders["X-XSRF-TOKEN"] = xsrfToken;
 
-    // Step 2: Create a search record
     const recordRes = await fetch(`${BASE}/search/internal/record`, {
       method: "POST",
       headers: apiHeaders,
@@ -189,7 +178,6 @@ async function searchMarcia(markName: string, classes: number[]): Promise<{
       return { findings: [], marciaUrl, totalCount: 0 };
     }
 
-    // Step 3: Fetch first page of results (up to 20)
     const allClasses = classes.length > 0
       ? [...classes, ...getRelatedClasses(classes)]
       : [];
@@ -239,47 +227,116 @@ interface RegistrabilityFlag {
   explanation: string;
 }
 
-async function analyzeRegistrability(apiKey: string, markName: string, classes: number[]): Promise<{
+export interface DupontFactor {
+  factor: string;
+  verdict: "favors_registration" | "neutral" | "against_registration";
+  reasoning: string;
+}
+
+export interface DistinctivenessAssessment {
+  tier: "generic" | "descriptive" | "suggestive" | "arbitrary" | "fanciful";
+  score: number;
+  explanation: string;
+}
+
+async function analyzeRegistrability(
+  apiKey: string,
+  markName: string,
+  classes: number[],
+  goodsServices: string
+): Promise<{
   flags: RegistrabilityFlag[];
   risk: "low" | "medium" | "high";
+  dupont: DupontFactor[];
+  distinctiveness: DistinctivenessAssessment;
+  riskSummary: string;
 }> {
   const classContext = classes.length > 0
     ? ` applied for goods/services in Nice Classification class(es) ${classes.join(", ")}`
     : "";
+  const goodsContext = goodsServices
+    ? ` covering the following goods/services: "${goodsServices}"`
+    : "";
 
-  const prompt = `You are an expert Mexican trademark attorney. Analyze the trademark "${markName}"${classContext} against each of the following 13 absolute grounds for refusal under Mexico's Ley Federal de Protección a la Propiedad Industrial (LFPPI). For every category that may apply, return a flag. Return ONLY a JSON object.
+  const prompt = `You are an expert Mexican trademark attorney. Analyze the proposed trademark "${markName}"${classContext}${goodsContext}.
 
-Categories to evaluate:
-1. "generic_descriptive" — Generic or descriptive terms that directly describe the product/service (e.g., "Cremoso" for yogurt, "Fast Delivery" for courier)
-2. "functional_shape" — Common or functional product shapes/forms necessary for technical function
-3. "deceptive" — Signs that mislead about geographic origin, quality, or nature (e.g., "Swiss Chocolate" for non-Swiss products)
-4. "official_emblems" — National flags, government emblems, symbols of international organizations (UN, Red Cross, etc.)
-5. "personal_identity" — Names, likenesses, signatures of real persons without consent (celebrities, public figures)
-6. "confusingly_similar" — Names visually, phonetically, or conceptually similar to well-known existing brands that could cause consumer confusion
-7. "famous_mark" — Reproduction or imitation of a famous or notorious mark even in unrelated classes (e.g., Apple, Google, Ferrari)
-8. "protected_characters" — Titles of famous works or well-known fictional characters/franchises (Harry Potter, Marvel, Star Wars)
-9. "geographic_indication" — Protected geographic indications or appellations of origin (Tequila, Mezcal, Champagne, Roquefort)
-10. "immoral_offensive" — Signs contrary to public order, morality, or applicable law (offensive, discriminatory, or illegal terms)
+Return a single JSON object with ALL of the following fields. Return ONLY JSON, no markdown.
+
+---
+
+PART 1 — ABSOLUTE GROUNDS (LFPPI)
+Evaluate against each of these 13 categories. Only include flags that genuinely apply:
+1. "generic_descriptive" — Generic or descriptive terms (e.g., "Cremoso" for yogurt)
+2. "functional_shape" — Common or functional product shapes
+3. "deceptive" — Signs that mislead about origin, quality, or nature
+4. "official_emblems" — National flags, government symbols, international org emblems
+5. "personal_identity" — Real person's name/likeness without consent
+6. "confusingly_similar" — Visually, phonetically, or conceptually similar to well-known existing brands
+7. "famous_mark" — Imitation of a famous/notorious mark even in unrelated classes
+8. "protected_characters" — Famous fictional characters or franchise titles
+9. "geographic_indication" — Protected appellations of origin (Tequila, Mezcal, Champagne)
+10. "immoral_offensive" — Contrary to public order or morality
 11. "isolated_color" — A single color with no other distinctive elements
-12. "non_distinctive_nontrad" — Non-traditional marks (sounds, scents, trade dress) that lack distinctiveness or are functional
-13. "bad_faith" — Marks that appear to be filed in bad faith to pirate an existing brand or block legitimate use
+12. "non_distinctive_nontrad" — Non-traditional marks lacking distinctiveness
+13. "bad_faith" — Filed to pirate an existing brand
 
-Highly weak terms to flag under generic_descriptive: "Tech", "Digital", "AI", "Legal", "Fintech", "Mexico", "Center", "Solutions", "Digital", "Online", "Smart", "Pro", "Plus", "Max", "Global", "International", "Express", "Fast", "Premium", "Elite", "Quality", "Best", "Super", "Ultra".
+Weak generic terms to flag: Tech, Digital, AI, Legal, Fintech, Mexico, Center, Solutions, Online, Smart, Pro, Plus, Max, Global, International, Express, Fast, Premium, Elite, Quality, Best, Super, Ultra.
 
-Return:
+---
+
+PART 2 — DISTINCTIVENESS
+Rate the mark on the spectrum from generic to fanciful:
+- "generic": Common word for the goods/services (lowest protection, likely refused)
+- "descriptive": Describes a feature or quality of the goods/services
+- "suggestive": Suggests a quality without directly describing it
+- "arbitrary": Real word with no connection to the goods/services
+- "fanciful": Invented word with no prior meaning (strongest protection)
+
+Score: 1=generic, 2=descriptive, 3=suggestive, 4=arbitrary, 5=fanciful
+
+---
+
+PART 3 — ALL 13 DUPONT FACTORS
+Apply all 13 classic DuPont likelihood-of-confusion factors, informed by the specific goods/services described.
+Use these exact factor names (in "factor" field):
+1. "similarity_of_marks"
+2. "relatedness_of_goods"
+3. "channels_of_trade"
+4. "purchasing_conditions"
+5. "strength_of_cited_mark"
+6. "actual_confusion"
+7. "number_of_similar_marks"
+8. "length_of_use"
+9. "variety_of_goods"
+10. "market_interface"
+11. "right_to_exclude"
+12. "extent_of_confusion"
+13. "other_factors"
+
+Each factor must have one of: "favors_registration", "neutral", "against_registration"
+
+---
+
+PART 4 — PLAIN-LANGUAGE RISK SUMMARY
+Write a 3-4 sentence plain-language paragraph summarizing the overall clearance findings. Address: (1) the mark's registrability outlook, (2) key risks or conflicts, (3) recommended next steps. Write as if explaining to a business owner who is not a lawyer.
+
+---
+
+Return exactly this JSON structure:
 {
-  "flags": [
-    {
-      "category": "<one of the 13 keys above>",
-      "severity": "low" | "medium" | "high",
-      "explanation": "<one sentence explaining why this category may apply to this specific mark>"
-    }
-  ],
-  "risk": "low" | "medium" | "high",
-  "summary": "<one sentence overall assessment>"
-}
+  "flags": [{"category": "...", "severity": "low"|"medium"|"high", "explanation": "..."}],
+  "risk": "low"|"medium"|"high",
+  "distinctiveness": {"tier": "generic"|"descriptive"|"suggestive"|"arbitrary"|"fanciful", "score": 1-5, "explanation": "..."},
+  "dupont": [{"factor": "...", "verdict": "favors_registration"|"neutral"|"against_registration", "reasoning": "..."}],
+  "riskSummary": "..."
+}`;
 
-Only include flags that genuinely apply. If no issues are found, return an empty flags array with risk "low". Return ONLY the JSON, no markdown.`;
+  const defaultDistinctiveness: DistinctivenessAssessment = { tier: "arbitrary", score: 4, explanation: "Unable to assess distinctiveness." };
+  const defaultDupont: DupontFactor[] = [
+    "similarity_of_marks", "relatedness_of_goods", "channels_of_trade", "purchasing_conditions",
+    "strength_of_cited_mark", "actual_confusion", "number_of_similar_marks", "length_of_use",
+    "variety_of_goods", "market_interface", "right_to_exclude", "extent_of_confusion", "other_factors"
+  ].map(factor => ({ factor, verdict: "neutral" as const, reasoning: "Analysis unavailable." }));
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -291,45 +348,61 @@ Only include flags that genuinely apply. If no issues are found, return an empty
       body: JSON.stringify({
         model: "gpt-4o",
         messages: [
-          { role: "system", content: "You are a Mexican trademark law expert. Return only valid JSON." },
+          { role: "system", content: "You are a Mexican trademark law expert. Return only valid JSON with no markdown wrapping." },
           { role: "user", content: prompt },
         ],
         temperature: 0.1,
-        max_tokens: 1000,
+        max_tokens: 3000,
         response_format: { type: "json_object" },
       }),
     });
 
     if (!response.ok) {
       console.error("Registrability analysis API error:", response.status);
-      return { flags: [], risk: "low" };
+      return { flags: [], risk: "low", dupont: defaultDupont, distinctiveness: defaultDistinctiveness, riskSummary: "" };
     }
 
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content;
-    if (!content) return { flags: [], risk: "low" };
+    if (!content) return { flags: [], risk: "low", dupont: defaultDupont, distinctiveness: defaultDistinctiveness, riskSummary: "" };
 
     const parsed = JSON.parse(content);
+
     const flags: RegistrabilityFlag[] = (parsed.flags ?? []).filter(
       (f: Record<string, unknown>) => f.category && f.severity && f.explanation
     );
     const risk: "low" | "medium" | "high" = parsed.risk ?? (flags.length > 0 ? "medium" : "low");
-    return { flags, risk };
+
+    const dupont: DupontFactor[] = (parsed.dupont ?? defaultDupont).filter(
+      (f: Record<string, unknown>) => f.factor && f.verdict && f.reasoning
+    );
+
+    const rawD = parsed.distinctiveness ?? {};
+    const distinctiveness: DistinctivenessAssessment = {
+      tier: rawD.tier ?? "arbitrary",
+      score: typeof rawD.score === "number" ? rawD.score : 4,
+      explanation: rawD.explanation ?? "",
+    };
+
+    const riskSummary: string = parsed.riskSummary ?? "";
+
+    return { flags, risk, dupont, distinctiveness, riskSummary };
   } catch (err) {
     console.error("Registrability analysis error:", err);
-    return { flags: [], risk: "low" };
+    return { flags: [], risk: "low", dupont: defaultDupont, distinctiveness: defaultDistinctiveness, riskSummary: "" };
   }
 }
 
-async function searchWeb(apiKey: string, markName: string, classes: number[]): Promise<{
+async function searchWeb(apiKey: string, markName: string, classes: number[], goodsServices: string): Promise<{
   findings: string[];
   risk: "low" | "medium" | "high";
 }> {
   const classContext = classes.length > 0
     ? ` in Nice Classification class(es) ${classes.join(", ")}`
     : "";
+  const goodsContext = goodsServices ? ` for: ${goodsServices}` : "";
 
-  const prompt = `Search the web for existing trademark registrations, brand names, or companies named "${markName}"${classContext}.
+  const prompt = `Search the web for existing trademark registrations, brand names, or companies named "${markName}"${classContext}${goodsContext}.
 
 Focus on:
 1. Registered trademarks with this exact name or very similar names
@@ -381,7 +454,7 @@ Return only the JSON, no markdown.`;
             },
             {
               role: "user",
-              content: `Assess trademark "${markName}"${classContext}: { "risk": "low"|"medium"|"high", "findings": [...strings], "reasoning": "..." }`,
+              content: `Assess trademark "${markName}"${classContext}${goodsContext}: { "risk": "low"|"medium"|"high", "findings": [...strings], "reasoning": "..." }`,
             },
           ],
           temperature: 0.1,
@@ -434,10 +507,12 @@ Deno.serve(async (req: Request) => {
       markName,
       classes = [],
       language = "en",
+      goodsServices = "",
     } = body as {
       markName: string;
       classes?: number[];
       language?: string;
+      goodsServices?: string;
     };
 
     if (!markName || markName.trim().length < 1) {
@@ -447,12 +522,11 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Run all checks in parallel
     const [webResult, marciaResult, domainResults, registrabilityResult] = await Promise.all([
-      searchWeb(apiKey, markName.trim(), classes),
+      searchWeb(apiKey, markName.trim(), classes, goodsServices),
       searchMarcia(markName.trim(), classes),
       checkDomains(markName.trim()),
-      analyzeRegistrability(apiKey, markName.trim(), classes),
+      analyzeRegistrability(apiKey, markName.trim(), classes, goodsServices),
     ]);
 
     // Compute combined risk
@@ -467,10 +541,17 @@ Deno.serve(async (req: Request) => {
         risk = "medium";
       }
     }
-    // Factor in registrability risk
     if (registrabilityResult.risk === "high") {
       risk = "high";
     } else if (registrabilityResult.risk === "medium" && risk === "low") {
+      risk = "medium";
+    }
+
+    // Factor in DuPont: 3+ against_registration → at least medium; 5+ → high
+    const dupontAgainst = registrabilityResult.dupont.filter(f => f.verdict === "against_registration").length;
+    if (dupontAgainst >= 5 && risk !== "high") {
+      risk = "high";
+    } else if (dupontAgainst >= 3 && risk === "low") {
       risk = "medium";
     }
 
@@ -488,6 +569,9 @@ Deno.serve(async (req: Request) => {
       domainResults,
       registrabilityFlags: registrabilityResult.flags,
       registrabilityRisk: registrabilityResult.risk,
+      dupont: registrabilityResult.dupont,
+      distinctiveness: registrabilityResult.distinctiveness,
+      riskSummary: registrabilityResult.riskSummary,
       disclaimer,
     };
 
