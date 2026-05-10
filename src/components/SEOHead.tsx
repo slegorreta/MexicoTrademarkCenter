@@ -17,16 +17,65 @@ interface SEOHeadProps {
   description: string;
   canonicalPath: string;
   lang: string;
+  ogLocale: string;
+  ogImageAlt: string;
   hreflangAlternates: HreflangAlternate[];
   faqs?: FaqItem[];
   ogImage?: string;
 }
+
+const ORGANIZATION_SCHEMA = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': ['Organization', 'LegalService'],
+  name: 'MexicoTrademarkCenter',
+  url: BASE_URL,
+  logo: `${BASE_URL}/IMG_2221_2.jpg`,
+  description: 'Affordable trademark registration in Mexico with IMPI — AI-powered classification, 24-hour filing, all fees included from USD $270 per class.',
+  areaServed: {
+    '@type': 'Country',
+    name: 'Mexico',
+  },
+  serviceType: 'Trademark Registration',
+  priceRange: '$',
+  sameAs: [],
+  contactPoint: {
+    '@type': 'ContactPoint',
+    contactType: 'customer support',
+    url: `${BASE_URL}/contact`,
+    availableLanguage: ['English', 'Spanish', 'Chinese', 'Portuguese', 'German', 'French', 'Hindi', 'Japanese'],
+  },
+});
+
+const OFFER_SCHEMA = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'Service',
+  name: 'Trademark Registration in Mexico',
+  provider: {
+    '@type': 'Organization',
+    name: 'MexicoTrademarkCenter',
+    url: BASE_URL,
+  },
+  areaServed: {
+    '@type': 'Country',
+    name: 'Mexico',
+  },
+  offers: {
+    '@type': 'Offer',
+    price: '270',
+    priceCurrency: 'USD',
+    description: 'All-inclusive price per Nice class — covers service fees and official IMPI government fees. No hidden charges.',
+    availability: 'https://schema.org/InStock',
+    url: `${BASE_URL}/apply`,
+  },
+});
 
 export default function SEOHead({
   title,
   description,
   canonicalPath,
   lang,
+  ogLocale,
+  ogImageAlt,
   hreflangAlternates,
   faqs,
   ogImage = `${BASE_URL}/IMG_2221_2.jpg`,
@@ -60,15 +109,21 @@ export default function SEOHead({
       <meta property="og:description" content={description} />
       <meta property="og:type" content="website" />
       <meta property="og:url" content={canonicalUrl} />
+      <meta property="og:locale" content={ogLocale} />
       <meta property="og:image" content={ogImage} />
       <meta property="og:image:width" content="1200" />
       <meta property="og:image:height" content="630" />
+      <meta property="og:image:alt" content={ogImageAlt} />
       <meta property="og:site_name" content="MexicoTrademarkCenter" />
 
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content={title} />
       <meta name="twitter:description" content={description} />
       <meta name="twitter:image" content={ogImage} />
+      <meta name="twitter:image:alt" content={ogImageAlt} />
+
+      <script type="application/ld+json">{ORGANIZATION_SCHEMA}</script>
+      <script type="application/ld+json">{OFFER_SCHEMA}</script>
 
       {faqSchema && (
         <script type="application/ld+json">{faqSchema}</script>

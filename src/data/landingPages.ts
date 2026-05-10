@@ -20,6 +20,8 @@ export interface LandingPageData {
   url: string;
   lang: string;
   bcp47: string;
+  ogLocale: string;
+  ogImageAlt: string;
   targetCurrency: string;
   title: string;
   metaDescription: string;
@@ -51,6 +53,8 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
     url: '/es/',
     lang: 'es',
     bcp47: 'es',
+    ogLocale: 'es_MX',
+    ogImageAlt: 'Registro de marca asequible en México — MexicoTrademarkCenter',
     targetCurrency: 'MXN',
     title: 'Registro de Marca Asequible en México | IMPI Online — MexicoTrademarkCenter',
     metaDescription: 'Registro de marca asequible en México ante el IMPI, 100% en línea. Desde USD $270 por clase, todo incluido. Presentación en 24 horas hábiles.',
@@ -151,6 +155,8 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
     url: '/en/',
     lang: 'en',
     bcp47: 'en',
+    ogLocale: 'en_US',
+    ogImageAlt: 'Affordable trademark registration in Mexico — MexicoTrademarkCenter',
     targetCurrency: 'USD',
     title: 'Affordable Trademark Registration in Mexico | IMPI Filing — MexicoTrademarkCenter',
     metaDescription: 'Affordable trademark registration in Mexico with IMPI — all fees included from USD $270 per class. AI-powered classification, 24-hour filing, no hidden charges.',
@@ -251,6 +257,8 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
     url: '/zh/',
     lang: 'zh',
     bcp47: 'zh-Hans',
+    ogLocale: 'zh_CN',
+    ogImageAlt: '墨西哥商标注册低价全包 — MexicoTrademarkCenter',
     targetCurrency: 'CNY',
     title: '墨西哥商标注册低价全包 | IMPI在线申请 — MexicoTrademarkCenter',
     metaDescription: '墨西哥商标注册费用低廉，每类仅USD $270全包含官费，IMPI官方在线申请，24工作小时内提交。AI智能分类，中文服务。',
@@ -351,6 +359,8 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
     url: '/pt/',
     lang: 'pt',
     bcp47: 'pt',
+    ogLocale: 'pt_BR',
+    ogImageAlt: 'Registro de marca acessível no México — MexicoTrademarkCenter',
     targetCurrency: 'BRL',
     title: 'Registro de Marca Acessível no México | Protocolo IMPI Online — MexicoTrademarkCenter',
     metaDescription: 'Registro de marca acessível no México junto ao IMPI — a partir de USD $270 por classe, tudo incluído. Protocolo em 24 horas úteis, classificação por IA, sem taxas ocultas.',
@@ -447,6 +457,8 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
     url: '/de/',
     lang: 'de',
     bcp47: 'de',
+    ogLocale: 'de_DE',
+    ogImageAlt: 'Günstige Markenanmeldung in Mexiko — MexicoTrademarkCenter',
     targetCurrency: 'EUR',
     title: 'Günstige Markenanmeldung in Mexiko | IMPI Online — MexicoTrademarkCenter',
     metaDescription: 'Günstige Markenanmeldung in Mexiko beim IMPI — Komplettpreis ab USD $270 pro Klasse, alle Gebühren inklusive. Einreichung innerhalb von 24 Geschäftsstunden, vollständig online.',
@@ -543,6 +555,8 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
     url: '/fr/',
     lang: 'fr',
     bcp47: 'fr',
+    ogLocale: 'fr_FR',
+    ogImageAlt: 'Enregistrement de marque abordable au Mexique — MexicoTrademarkCenter',
     targetCurrency: 'EUR',
     title: 'Enregistrement de Marque Abordable au Mexique | Dépôt IMPI — MexicoTrademarkCenter',
     metaDescription: 'Enregistrement de marque abordable au Mexique auprès de l\'IMPI — à partir de USD $270 par classe, tous frais inclus. Dépôt en 24 heures ouvrées, sans frais cachés.',
@@ -639,6 +653,8 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
     url: '/hi/',
     lang: 'hi',
     bcp47: 'hi',
+    ogLocale: 'hi_IN',
+    ogImageAlt: 'मेक्सिको में किफायती ट्रेडमार्क पंजीकरण — MexicoTrademarkCenter',
     targetCurrency: 'INR',
     title: 'मेक्सिको में किफायती ट्रेडमार्क पंजीकरण | IMPI ऑनलाइन — MexicoTrademarkCenter',
     metaDescription: 'मेक्सिको में किफायती ट्रेडमार्क पंजीकरण — USD $270 प्रति वर्ग, सभी शुल्क सहित। IMPI के साथ 24 व्यावसायिक घंटों में दाखिल। Amazon Brand Registry के लिए मान्य।',
@@ -735,6 +751,8 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
     url: '/ja/',
     lang: 'ja',
     bcp47: 'ja',
+    ogLocale: 'ja_JP',
+    ogImageAlt: 'メキシコ商標登録 低価格・全費用込み — MexicoTrademarkCenter',
     targetCurrency: 'JPY',
     title: 'メキシコ商標登録 低価格・全費用込み | IMPI オンライン申請 — MexicoTrademarkCenter',
     metaDescription: 'メキシコ商標登録が低価格・全費用込みでUSD $270/区分から。IMPIにオンラインで申請、AIによる区分分類、24営業時間以内の提出。Amazon Brand Registryにも対応。',

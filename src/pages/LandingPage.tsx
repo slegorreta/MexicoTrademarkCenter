@@ -62,6 +62,8 @@ export default function LandingPage({ lang }: Props) {
         description={data.metaDescription}
         canonicalPath={data.url}
         lang={data.bcp47}
+        ogLocale={data.ogLocale}
+        ogImageAlt={data.ogImageAlt}
         hreflangAlternates={HREFLANG_ALTERNATES}
         faqs={data.faqs}
       />

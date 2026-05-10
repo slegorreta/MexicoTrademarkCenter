@@ -30,6 +30,8 @@ const BASE_URL = 'https://www.mexicotrademarkcenter.com';
 const PAGES = {
   es: {
     bcp47: 'es',
+    ogLocale: 'es_MX',
+    ogImageAlt: 'Registro de marca asequible en México — MexicoTrademarkCenter',
     title: 'Registro de Marca Asequible en México | IMPI Online — MexicoTrademarkCenter',
     desc: 'Registro de marca asequible en México ante el IMPI, 100% en línea. Desde USD $270 por clase, todo incluido. Presentación en 24 horas hábiles.',
     h1: 'Registra tu marca en México ante el IMPI',
@@ -64,6 +66,8 @@ const PAGES = {
   },
   en: {
     bcp47: 'en',
+    ogLocale: 'en_US',
+    ogImageAlt: 'Affordable trademark registration in Mexico — MexicoTrademarkCenter',
     title: 'Affordable Trademark Registration in Mexico | IMPI Filing — MexicoTrademarkCenter',
     desc: 'Affordable trademark registration in Mexico with IMPI — all fees included from USD $270 per class. AI-powered classification, 24-hour filing, no hidden charges.',
     h1: 'Register a Trademark in Mexico with IMPI',
@@ -98,6 +102,8 @@ const PAGES = {
   },
   zh: {
     bcp47: 'zh-Hans',
+    ogLocale: 'zh_CN',
+    ogImageAlt: '墨西哥商标注册低价全包 — MexicoTrademarkCenter',
     title: '墨西哥商标注册低价全包 | IMPI在线申请 — MexicoTrademarkCenter',
     desc: '墨西哥商标注册费用低廉，每类仅USD $270全包含官费，IMPI官方在线申请，24工作小时内提交。AI智能分类，中文服务。',
     h1: '墨西哥商标注册 — IMPI在线申请',
@@ -132,6 +138,8 @@ const PAGES = {
   },
   pt: {
     bcp47: 'pt',
+    ogLocale: 'pt_BR',
+    ogImageAlt: 'Registro de marca acessível no México — MexicoTrademarkCenter',
     title: 'Registro de Marca Acessível no México | Protocolo IMPI Online — MexicoTrademarkCenter',
     desc: 'Registro de marca acessível no México junto ao IMPI — a partir de USD $270 por classe, tudo incluído. Protocolo em 24 horas úteis, classificação por IA, sem taxas ocultas.',
     h1: 'Registro de Marca no México — Protocolo IMPI Online',
@@ -166,6 +174,8 @@ const PAGES = {
   },
   de: {
     bcp47: 'de',
+    ogLocale: 'de_DE',
+    ogImageAlt: 'Günstige Markenanmeldung in Mexiko — MexicoTrademarkCenter',
     title: 'Günstige Markenanmeldung in Mexiko | IMPI Online — MexicoTrademarkCenter',
     desc: 'Günstige Markenanmeldung in Mexiko beim IMPI — Komplettpreis ab USD $270 pro Klasse, alle Gebühren inklusive. Einreichung innerhalb von 24 Geschäftsstunden, vollständig online.',
     h1: 'Markenanmeldung in Mexiko beim IMPI',
@@ -200,6 +210,8 @@ const PAGES = {
   },
   fr: {
     bcp47: 'fr',
+    ogLocale: 'fr_FR',
+    ogImageAlt: 'Enregistrement de marque abordable au Mexique — MexicoTrademarkCenter',
     title: 'Enregistrement de Marque Abordable au Mexique | Dépôt IMPI — MexicoTrademarkCenter',
     desc: "Enregistrement de marque abordable au Mexique auprès de l'IMPI — à partir de USD $270 par classe, tous frais inclus. Dépôt en 24 heures ouvrées, sans frais cachés.",
     h1: 'Enregistrement de marque au Mexique — Dépôt IMPI en ligne',
@@ -234,6 +246,8 @@ const PAGES = {
   },
   hi: {
     bcp47: 'hi',
+    ogLocale: 'hi_IN',
+    ogImageAlt: 'मेक्सिको में किफायती ट्रेडमार्क पंजीकरण — MexicoTrademarkCenter',
     title: 'मेक्सिको में किफायती ट्रेडमार्क पंजीकरण | IMPI ऑनलाइन — MexicoTrademarkCenter',
     desc: 'मेक्सिको में किफायती ट्रेडमार्क पंजीकरण — USD $270 प्रति वर्ग, सभी शुल्क सहित। IMPI के साथ 24 व्यावसायिक घंटों में दाखिल। Amazon Brand Registry के लिए मान्य।',
     h1: 'मेक्सिको में ट्रेडमार्क पंजीकरण — IMPI ऑनलाइन',
@@ -268,6 +282,8 @@ const PAGES = {
   },
   ja: {
     bcp47: 'ja',
+    ogLocale: 'ja_JP',
+    ogImageAlt: 'メキシコ商標登録 低価格・全費用込み — MexicoTrademarkCenter',
     title: 'メキシコ商標登録 低価格・全費用込み | IMPI オンライン申請 — MexicoTrademarkCenter',
     desc: 'メキシコ商標登録が低価格・全費用込みでUSD $270/区分から。IMPIにオンラインで申請、AIによる区分分類、24営業時間以内の提出。Amazon Brand Registryにも対応。',
     h1: 'メキシコ商標登録 — IMPI オンライン申請',
@@ -366,6 +382,52 @@ function renderPage(lang, p) {
     </div>`;
 }
 
+const ORGANIZATION_SCHEMA = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': ['Organization', 'LegalService'],
+  name: 'MexicoTrademarkCenter',
+  url: BASE_URL,
+  logo: `${BASE_URL}/IMG_2221_2.jpg`,
+  description: 'Affordable trademark registration in Mexico with IMPI — AI-powered classification, 24-hour filing, all fees included from USD $270 per class.',
+  areaServed: { '@type': 'Country', name: 'Mexico' },
+  serviceType: 'Trademark Registration',
+  priceRange: '$',
+  contactPoint: {
+    '@type': 'ContactPoint',
+    contactType: 'customer support',
+    url: `${BASE_URL}/contact`,
+    availableLanguage: ['English', 'Spanish', 'Chinese', 'Portuguese', 'German', 'French', 'Hindi', 'Japanese'],
+  },
+});
+
+const OFFER_SCHEMA = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'Service',
+  name: 'Trademark Registration in Mexico',
+  provider: { '@type': 'Organization', name: 'MexicoTrademarkCenter', url: BASE_URL },
+  areaServed: { '@type': 'Country', name: 'Mexico' },
+  offers: {
+    '@type': 'Offer',
+    price: '270',
+    priceCurrency: 'USD',
+    description: 'All-inclusive price per Nice class — covers service fees and official IMPI government fees. No hidden charges.',
+    availability: 'https://schema.org/InStock',
+    url: `${BASE_URL}/apply`,
+  },
+});
+
+function buildFaqSchema(faqs) {
+  return JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map(f => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
+  });
+}
+
 function buildPage(lang, p, shellHtml) {
   let html = shellHtml;
 
@@ -391,12 +453,46 @@ function buildPage(lang, p, shellHtml) {
     `$1${p.desc.replace(/"/g, '&quot;')}$2`
   );
 
-  // 5. Replace og:url and canonical to point to language-specific URL
+  // 5. Replace og:url to point to language-specific URL
   const pageUrl = `${BASE_URL}/${lang}/`;
   html = html.replace(
     /(<meta\s+property="og:url"\s+content=")[^"]*(")/,
     `$1${pageUrl}$2`
   );
+
+  // 5a. Inject or replace og:locale
+  const ogLocaleTag = `<meta property="og:locale" content="${p.ogLocale}" />`;
+  if (html.includes('property="og:locale"')) {
+    html = html.replace(/(<meta\s+property="og:locale"\s+content=")[^"]*(")/,
+      `$1${p.ogLocale}$2`);
+  } else {
+    html = html.replace('property="og:url"', `property="og:url"`); // no-op anchor
+    html = html.replace(/(<meta\s+property="og:url"[^>]*>)/, `$1\n    ${ogLocaleTag}`);
+  }
+
+  // 5b. Inject or replace og:image:alt
+  const ogImageAltEsc = p.ogImageAlt.replace(/"/g, '&quot;');
+  if (html.includes('property="og:image:alt"')) {
+    html = html.replace(/(<meta\s+property="og:image:alt"\s+content=")[^"]*(")/,
+      `$1${ogImageAltEsc}$2`);
+  } else {
+    html = html.replace(
+      /(<meta\s+property="og:image:height"[^>]*>)/,
+      `$1\n    <meta property="og:image:alt" content="${ogImageAltEsc}" />`
+    );
+  }
+
+  // 5c. Inject or replace twitter:image:alt
+  const twitterImageAltEsc = p.ogImageAlt.replace(/"/g, '&quot;');
+  if (html.includes('name="twitter:image:alt"')) {
+    html = html.replace(/(<meta\s+name="twitter:image:alt"\s+content=")[^"]*(")/,
+      `$1${twitterImageAltEsc}$2`);
+  } else {
+    html = html.replace(
+      /(<meta\s+name="twitter:image"[^>]*>)/,
+      `$1\n    <meta name="twitter:image:alt" content="${twitterImageAltEsc}" />`
+    );
+  }
 
   // 6. Replace twitter:title and twitter:description
   html = html.replace(
@@ -416,15 +512,21 @@ function buildPage(lang, p, shellHtml) {
   // 8. Inject the canonical link for this language page before </head>
   html = html.replace('</head>', `    <link rel="canonical" href="${pageUrl}" />\n  </head>`);
 
-  // 9. Inject pre-rendered body content into #root
+  // 9. Inject JSON-LD structured data before </head>
+  const faqSchema = buildFaqSchema(p.faqs);
+  const jsonLdBlock = [
+    `    <script type="application/ld+json">${ORGANIZATION_SCHEMA}</script>`,
+    `    <script type="application/ld+json">${OFFER_SCHEMA}</script>`,
+    `    <script type="application/ld+json">${faqSchema}</script>`,
+  ].join('\n');
+  html = html.replace('</head>', `${jsonLdBlock}\n  </head>`);
+
+  // 10. Inject pre-rendered body content into #root
   const preRendered = renderPage(lang, p);
   html = html.replace(
     '<div id="root"></div>',
     `<div id="root">${preRendered}</div>`
   );
-
-  // 10. Remove the pre-JS inline script (no longer needed; head already has correct meta)
-  // Keep it as a no-op by letting it run — it will just re-set the same values.
 
   return html;
 }
