@@ -120,7 +120,7 @@ const UI: Record<string, Record<Lang, string>> = {
   // Coupon step
   couponTitle: { en: 'Review & Pay', es: 'Revisar y Pagar', zh: '确认并付款', de: 'Überprüfen & Bezahlen', fr: 'Vérifier et payer', hi: 'समीक्षा करें और भुगतान करें', pt: 'Revisar e Pagar' },
   haveCoupon: { en: 'Have a discount code?', es: '¿Tienes un código de descuento?', zh: '有优惠码？', de: 'Haben Sie einen Rabattcode?', fr: 'Vous avez un code de réduction ?', hi: 'डिस्काउंट कोड है?', pt: 'Tem um código de desconto?' },
-  couponPlaceholder: { en: 'e.g. AYRTON', es: 'ej. AYRTON', zh: '例如 AYRTON', de: 'z.B. AYRTON', fr: 'ex. AYRTON', hi: 'उदा. AYRTON', pt: 'ex. AYRTON' },
+  couponPlaceholder: { en: 'Enter code', es: 'Ingresar código', zh: '输入代码', de: 'Code eingeben', fr: 'Saisir le code', hi: 'कोड दर्ज करें', pt: 'Inserir código' },
   applyCode: { en: 'Apply', es: 'Aplicar', zh: '应用', de: 'Anwenden', fr: 'Appliquer', hi: 'लागू करें', pt: 'Aplicar' },
   invalidCoupon: { en: 'Invalid or expired coupon code', es: 'Código de cupón inválido o expirado', zh: '无效或过期的优惠码', de: 'Ungültiger oder abgelaufener Gutscheincode', fr: 'Code de réduction invalide ou expiré', hi: 'अमान्य या समाप्त कूपन कोड', pt: 'Código de cupão inválido ou expirado' },
   discountApplied: { en: 'Discount applied!', es: '¡Descuento aplicado!', zh: '折扣已应用！', de: 'Rabatt angewendet!', fr: 'Réduction appliquée !', hi: 'छूट लागू!', pt: 'Desconto aplicado!' },
@@ -413,11 +413,11 @@ export default function TrademarkClearancePanel({
       const res = await fetch(`${SUPABASE_URL}/functions/v1/validate-coupon`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
-        body: JSON.stringify({ code: couponInput.trim().toUpperCase() }),
+        body: JSON.stringify({ couponCode: couponInput.trim().toUpperCase() }),
       });
       const d = await res.json();
       if (!res.ok || d.error) { setCouponError(tr('invalidCoupon', lang)); return; }
-      const pct: number = d.discount_percent ?? 0;
+      const pct: number = d.discountPercent ?? d.discount_percent ?? 0;
       setDiscountPercent(pct);
       const final = pct > 0 ? Math.max(0.50, 4.99 * (1 - pct / 100)) : 4.99;
       setFinalAmount(parseFloat(final.toFixed(2)));
