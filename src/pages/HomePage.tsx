@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, ArrowDown, Clock, Globe as Globe2, Zap, FileText, Award, ChevronDown, Sparkles, Search, HelpCircle, X, Star } from 'lucide-react';
+import { ArrowRight, ArrowDown, Shield, Clock, Globe as Globe2, Zap, FileText, Award, ChevronDown, Sparkles, Search, HelpCircle, X, Star } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import PriceGuaranteeBadge from '../components/PriceGuaranteeBadge';
 import { useState } from 'react';
