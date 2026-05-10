@@ -45,14 +45,14 @@ const translations: Record<string, Record<Language, string>> = {
     ja: 'メキシコで商標を出願 — 100%オンライン、AI活用・専門家確認済み',
   },
   'hero.subheading': {
-    en: 'One all-inclusive price of $270 USD per trademark class.',
-    zh: '每个商标类别统一全包价格 $270 美元。',
-    es: 'Un precio todo incluido de $270 USD por clase de marca.',
-    de: 'Ein All-inclusive-Preis von $270 USD pro Markenklasse.',
-    fr: 'Un prix tout compris de $270 USD par classe de marque.',
-    hi: 'प्रति ट्रेडमार्क वर्ग $270 USD का एक समावेशी मूल्य।',
-    pt: 'Um preço tudo incluído de $270 USD por classe de marca.',
-    ja: '商標区分ごとに $270 USD のオールインクルーシブ価格。',
+    en: 'One all-inclusive price of just $270 USD per trademark class. The lowest price on the market, guaranteed*',
+    zh: '每个商标类别仅需 $270 美元全包价格。市场上最低价，有保障*',
+    es: 'Un precio todo incluido de solo $270 USD por clase de marca. El precio más bajo del mercado, garantizado*',
+    de: 'Ein All-inclusive-Preis von nur $270 USD pro Markenklasse. Der günstigste Preis auf dem Markt, garantiert*',
+    fr: 'Un prix tout compris de seulement $270 USD par classe de marque. Le prix le plus bas du marché, garanti*',
+    hi: 'प्रति ट्रेडमार्क वर्ग केवल $270 USD का समावेशी मूल्य। बाज़ार में सबसे कम कीमत, गारंटीड*',
+    pt: 'Um preço tudo incluído de apenas $270 USD por classe de marca. O menor preço do mercado, garantido*',
+    ja: '商標区分ごとにわずか $270 USD のオールインクルーシブ価格。市場最安値保証*',
   },
   'hero.cta.start': { en: 'Start Trademark Filing', zh: '开始商标注册', es: 'Iniciar Registro de Marca', de: 'Markenanmeldung starten', fr: 'Déposer ma marque', hi: 'अभी आवेदन करें', pt: 'Iniciar Registro de Marca', ja: '商標出願を開始' },
   'hero.cta.pricing': { en: 'Check Pricing', zh: '查看定价', es: 'Ver Precios', de: 'Preise ansehen', fr: 'Voir les tarifs', hi: 'और जानें', pt: 'Ver Preços', ja: '料金を確認' },
@@ -78,7 +78,7 @@ const translations: Record<string, Record<Language, string>> = {
     pt: 'Nossa IA sugere nomes criativos e registráveis com base no seu negócio.',
     ja: 'AIがビジネス内容に基づいて、登録可能なクリエイティブな名前を提案します。',
   },
-  'hero.ai.cta': { en: 'Try It', zh: '立即体验', es: 'Probar', de: 'Jetzt ausprobieren', fr: 'Essayer', hi: 'आज़माएं', pt: 'Experimentar', ja: '試してみる' },
+  'hero.ai.cta': { en: 'Try our idea generator', zh: '试试我们的创意生成器', es: 'Prueba nuestro generador de ideas', de: 'Probiere unseren Ideengenerator', fr: 'Essayez notre générateur d\'idées', hi: 'हमारा आइडिया जनरेटर आज़माएं', pt: 'Experimente nosso gerador de ideias', ja: 'アイデアジェネレーターを試す' },
 
   // Hero free clearance CTA
   'hero.clearance.cta': {
@@ -104,9 +104,10 @@ const translations: Record<string, Record<Language, string>> = {
 
   // Trust badges
   'trust.filing': { en: '24-Hour Filing Target', zh: '24小时内提交目标', es: 'Objetivo: 24 horas hábiles', de: 'Einreichungsziel: 24 Stunden', fr: 'Objectif : dépôt en 24 h ouvrées', hi: '24 घंटे में दाखिल करने का लक्ष्य', pt: 'Meta: 24 horas úteis', ja: '24営業時間以内の出願目標' },
-  'trust.impi': { en: 'IMPI Official Filing', zh: 'IMPI官方申请', es: 'Solicitud oficial ante IMPI', de: 'Offizielle IMPI-Einreichung', fr: 'Dépôt officiel IMPI', hi: 'IMPI आधिकारिक दाखिल', pt: 'Protocolo oficial no IMPI', ja: 'IMPI正式出願' },
-  'trust.secure': { en: 'Secure & Confidential', zh: '安全保密', es: 'Seguro y Confidencial', de: 'Sicher & Vertraulich', fr: 'Sécurisé et confidentiel', hi: 'सुरक्षित और गोपनीय', pt: 'Seguro e Confidencial', ja: '安全・機密保持' },
-  'trust.bilingual': { en: 'Bilingual Service', zh: '双语服务', es: 'Servicio Bilingüe', de: 'Mehrsprachiger Service', fr: 'Service multilingue', hi: 'बहुभाषी सेवा', pt: 'Atendimento multilíngue', ja: '多言語対応サービス' },
+  'trust.impi': { en: 'Receive your Filing Certificate in 24 hrs.', zh: '24小时内获得受理通知书', es: 'Recibe tu Constancia de Presentación en 24 hrs.', de: 'Erhalte deine Einreichungsbestätigung in 24 Std.', fr: 'Recevez votre accusé de dépôt en 24 h', hi: '24 घंटे में अपना दाखिल प्रमाणपत्र प्राप्त करें', pt: 'Receba sua Certidão de Protocolo em 24 hrs.', ja: '24時間以内に受理証明書を受け取る' },
+  'trust.bilingual': { en: 'Save on lawyers and translators', zh: '节省律师和翻译费用', es: 'Ahorra en abogados y traductores', de: 'Spare bei Anwälten und Übersetzern', fr: 'Économisez sur les avocats et traducteurs', hi: 'वकीलों और अनुवादकों पर बचत करें', pt: 'Economize em advogados e tradutores', ja: '弁護士・翻訳者費用を節約' },
+  'trust.impi.tooltip.title': { en: 'What is the Filing Certificate?', zh: '什么是受理通知书？', es: '¿Qué es la Constancia de Presentación?', de: 'Was ist die Einreichungsbestätigung?', fr: 'Qu\'est-ce que l\'accusé de dépôt ?', hi: 'दाखिल प्रमाणपत्र क्या है?', pt: 'O que é a Certidão de Protocolo?', ja: '受理証明書とは？' },
+  'trust.impi.tooltip.body': { en: 'This is the official IMPI filing receipt issued immediately upon submission. Amazon Brand Registry, Mercado Libre, and other major marketplaces accept this document as proof that your trademark application is pending.', zh: '这是提交申请后立即签发的IMPI官方受理通知书。亚马逊品牌注册、Mercado Libre及其他主要平台接受此文件作为您商标申请待审中的证明。', es: 'Es el comprobante oficial del IMPI emitido al momento de presentar la solicitud. Amazon Brand Registry, Mercado Libre y otros marketplaces aceptan este documento como prueba de que tu marca está en trámite.', de: 'Dies ist die offizielle IMPI-Eingangsbestätigung, die sofort nach der Einreichung ausgestellt wird. Amazon Brand Registry, Mercado Libre und andere große Marktplätze akzeptieren dieses Dokument als Nachweis, dass Ihre Markenanmeldung anhängig ist.', fr: 'Il s\'agit du récépissé officiel de l\'IMPI émis immédiatement après le dépôt. Amazon Brand Registry, Mercado Libre et d\'autres grandes plateformes acceptent ce document comme preuve que votre demande de marque est en cours.', hi: 'यह IMPI की आधिकारिक प्राप्ति रसीद है जो जमा करने के तुरंत बाद जारी की जाती है। Amazon Brand Registry, Mercado Libre और अन्य प्रमुख मार्केटप्लेस इस दस्तावेज़ को आपके ट्रेडमार्क आवेदन के लंबित होने के प्रमाण के रूप में स्वीकार करते हैं।', pt: 'Este é o comprovante oficial do IMPI emitido imediatamente após o protocolo. Amazon Brand Registry, Mercado Libre e outros grandes marketplaces aceitam este documento como prova de que seu pedido de marca está em andamento.', ja: 'これはIMPIが申請直後に発行する公式受理証明書です。Amazon Brand Registry、Mercado Libre、その他の主要マーケットプレイスは、商標出願中の証拠としてこの書類を受け付けています。' },
 
   // Why protect
   'why.eyebrow': { en: 'Why Mexico?', zh: '为什么选择墨西哥？', es: '¿Por qué registrar en México?', de: 'Warum Mexiko?', fr: 'Pourquoi le Mexique ?', hi: 'मेक्सिको क्यों?', pt: 'Por que o México?', ja: 'なぜメキシコ？' },
