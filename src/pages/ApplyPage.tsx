@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { CheckCircle2, ChevronRight, Upload, X, Plus, Trash2, Lock, CreditCard, AlertCircle, AlertTriangle, Sparkles, Tag, Loader2, Pencil, Eye, EyeOff, UserPlus, HelpCircle, Info, Save } from 'lucide-react';
+import { CheckCircle2, ChevronRight, Upload, X, Plus, Trash2, Lock, CreditCard, AlertCircle, AlertTriangle, Sparkles, Tag, Loader2, Pencil, Eye, EyeOff, UserPlus, HelpCircle, Info, Save, Shield, Search } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { useLanguage } from '../context/LanguageContext';
@@ -517,6 +517,10 @@ export default function ApplyPage() {
 
   const [clearanceResults, setClearanceResults] = useState<Record<string, ClearanceResult>>({});
   const [showConflictModal, setShowConflictModal] = useState(false);
+
+  // Pre-payment clearance gate state
+  const [clearanceGateChoice, setClearanceGateChoice] = useState<'pending' | 'yes' | 'no'>('pending');
+  const [clearanceGateAcknowledged, setClearanceGateAcknowledged] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [agreedToDisclaimer, setAgreedToDisclaimer] = useState(false);
   const [disclaimerError, setDisclaimerError] = useState(false);
@@ -2011,6 +2015,80 @@ export default function ApplyPage() {
             <div>
               <h2 className="text-lg font-bold text-navy-900 mb-6">{t('form.step6')}</h2>
 
+              {/* Pre-payment clearance gate */}
+              {clearanceGateChoice === 'pending' && (
+                <div className="mb-6 bg-navy-50 border border-navy-200 rounded-2xl p-5">
+                  <div className="flex items-start gap-3 mb-4">
+                    <div className="w-9 h-9 rounded-xl bg-navy-900 flex items-center justify-center flex-shrink-0">
+                      <Shield size={18} className="text-gold-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-navy-900">{t('clearance.gate.question')}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{tri('Recommended — takes about 30 seconds', '推荐 — 约需30秒', 'Recomendado — tarda unos 30 segundos', 'Empfohlen — dauert ca. 30 Sekunden', 'Recommandé — prend environ 30 secondes', 'अनुशंसित — लगभग 30 सेकंड', 'Recomendado — leva cerca de 30 segundos', '推奨 — 約30秒')}</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setClearanceGateChoice('yes')}
+                      className="flex-1 inline-flex items-center justify-center gap-2 bg-navy-900 hover:bg-navy-800 text-white font-semibold px-4 py-2.5 rounded-xl transition-colors text-sm"
+                    >
+                      <Search size={15} />
+                      {t('clearance.gate.yes')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setClearanceGateChoice('no')}
+                      className="flex-1 inline-flex items-center justify-center gap-2 bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 font-semibold px-4 py-2.5 rounded-xl transition-colors text-sm"
+                    >
+                      {t('clearance.gate.no')}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Inline clearance panel when user chose yes */}
+              {clearanceGateChoice === 'yes' && (
+                <div className="mb-6 bg-white border border-gray-200 rounded-2xl overflow-hidden">
+                  <div className="flex items-center gap-2 px-5 py-3 border-b border-gray-100 bg-navy-50">
+                    <Shield size={15} className="text-navy-700" />
+                    <span className="text-sm font-semibold text-navy-900">
+                      {tri('Trademark Availability Check', '商标可用性检索', 'Verificación de Disponibilidad', 'Markenverfügbarkeitsprüfung', 'Vérification de disponibilité', 'ट्रेडमार्क उपलब्धता जांच', 'Verificação de Disponibilidade', '商標利用可能性確認')}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setClearanceGateChoice('no')}
+                      className="ml-auto text-xs text-gray-500 hover:text-gray-700 underline underline-offset-2 transition-colors"
+                    >
+                      {tri('Skip', '跳过', 'Omitir', 'Überspringen', 'Passer', 'छोड़ें', 'Pular', 'スキップ')}
+                    </button>
+                  </div>
+                  <div className="p-5">
+                    <TrademarkClearancePanel
+                      markName={form.markName}
+                      goodsServices={form.classEntries.map(e => e.description).filter(Boolean).join('; ')}
+                      classes={[]}
+                      language={(language === 'zh' ? 'zh' : language === 'es' ? 'es' : language === 'de' ? 'de' : language === 'fr' ? 'fr' : language === 'hi' ? 'hi' : language === 'pt' ? 'pt' : 'en') as 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt'}
+                      autoRun
+                    />
+                  </div>
+                  {/* Acknowledgment checkbox */}
+                  <div className="px-5 pb-5">
+                    <label className="flex items-start gap-3 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={clearanceGateAcknowledged}
+                        onChange={e => setClearanceGateAcknowledged(e.target.checked)}
+                        className="mt-0.5 rounded border-gray-300 text-gold-500 focus:ring-gold-400 flex-shrink-0"
+                      />
+                      <span className="text-xs text-gray-600 group-hover:text-gray-800 transition-colors leading-relaxed">
+                        {t('clearance.gate.acknowledge')}
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              )}
+
               {/* Order summary — always visible */}
               <div className="bg-gray-50 rounded-xl border border-gray-200 overflow-hidden mb-6">
                 <div className="px-5 py-3 border-b border-gray-200 bg-white flex items-center gap-2">
@@ -2149,10 +2227,16 @@ export default function ApplyPage() {
                     </div>
                   )}
 
+                  {clearanceGateChoice === 'yes' && !clearanceGateAcknowledged && (
+                    <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl p-3">
+                      <AlertCircle size={15} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                      <p className="text-xs text-amber-800">{t('clearance.gate.conflicts')}</p>
+                    </div>
+                  )}
                   <button
                     type="button"
                     onClick={handleProceedToPayment}
-                    disabled={submitting}
+                    disabled={submitting || (clearanceGateChoice === 'yes' && !clearanceGateAcknowledged)}
                     className="w-full flex items-center justify-center gap-2 bg-gold-500 hover:bg-gold-600 disabled:opacity-60 text-white font-bold py-4 rounded-xl text-base transition-colors shadow-md"
                   >
                     <Lock size={16} />

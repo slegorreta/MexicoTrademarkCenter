@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, Shield, Clock, Globe as Globe2, CheckCircle2, Star, Zap, FileText, Award, Users, TrendingUp, ChevronDown, Sparkles, Search } from 'lucide-react';
+import { ArrowRight, Shield, Clock, Globe as Globe2, Star, Zap, FileText, Award, ChevronDown, Sparkles, Search } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import PriceGuaranteeBadge from '../components/PriceGuaranteeBadge';
 import { useState } from 'react';
@@ -22,21 +22,6 @@ export default function HomePage() {
     { q: t('faq.q5'), a: t('faq.a5') },
     { q: t('faq.q7'), a: t('faq.a7') },
     { q: t('faq.q8'), a: t('faq.a8') },
-  ];
-
-  const cards = [
-    { icon: TrendingUp, titleKey: 'for.card1.title', descKey: 'for.card1.desc' },
-    { icon: Globe2, titleKey: 'for.card2.title', descKey: 'for.card2.desc' },
-    { icon: FileText, titleKey: 'for.card3.title', descKey: 'for.card3.desc' },
-    { icon: Users, titleKey: 'for.card4.title', descKey: 'for.card4.desc' },
-  ];
-
-  const whyBullets = [
-    'why.bullet1',
-    'why.bullet2',
-    'why.bullet3',
-    'why.bullet4',
-    'why.bullet5',
   ];
 
   const proofLabels = [
@@ -70,52 +55,48 @@ export default function HomePage() {
               {t('hero.subheading')}
             </p>
 
-            {/* Primary CTA: Free trademark review */}
-            <Link
-              to="/trademark-check"
-              className="group inline-flex items-center gap-3 bg-white text-navy-900 font-bold px-6 py-4 rounded-2xl transition-all duration-200 shadow-xl hover:shadow-2xl hover:-translate-y-0.5 mb-4 w-full sm:w-auto"
-            >
-              <div className="w-9 h-9 rounded-xl bg-gold-500 flex items-center justify-center flex-shrink-0 group-hover:bg-gold-400 transition-colors">
-                <Search size={18} className="text-white" />
-              </div>
-              <div className="text-left">
-                <div className="text-base font-bold text-navy-900 leading-tight">{t('hero.clearance.cta')}</div>
-                <div className="text-xs text-gray-500 font-normal mt-0.5">{t('hero.clearance.desc')}</div>
-              </div>
-              <ArrowRight size={18} className="ml-auto text-gold-500 group-hover:translate-x-0.5 transition-transform" />
-            </Link>
+            {/* Primary CTAs */}
+            <div className="flex flex-col sm:flex-row gap-3 mb-4">
+              {/* CTA 1 — Check availability */}
+              <Link
+                to="/trademark-check"
+                className="group inline-flex items-center gap-3 bg-white text-navy-900 font-bold px-6 py-4 rounded-2xl transition-all duration-200 shadow-xl hover:shadow-2xl hover:-translate-y-0.5"
+              >
+                <div className="w-9 h-9 rounded-xl bg-gold-500 flex items-center justify-center flex-shrink-0 group-hover:bg-gold-400 transition-colors">
+                  <Search size={18} className="text-white" />
+                </div>
+                <div className="text-left">
+                  <div className="text-base font-bold text-navy-900 leading-tight">{t('hero.clearance.cta')}</div>
+                  <div className="text-xs text-gray-500 font-normal mt-0.5">{t('hero.clearance.desc')}</div>
+                </div>
+                <ArrowRight size={18} className="ml-auto text-gold-500 group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
+              </Link>
 
-            <div className="flex flex-wrap gap-3">
+              {/* CTA 2 — Register now */}
               <Link
                 to="/apply"
-                className="inline-flex items-center gap-2 bg-gold-500 hover:bg-gold-400 text-white font-semibold px-6 py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-gold-500/25"
+                className="group inline-flex items-center gap-3 bg-gold-500 hover:bg-gold-400 text-white font-bold px-6 py-4 rounded-2xl transition-all duration-200 shadow-lg hover:shadow-gold-500/25 hover:-translate-y-0.5"
               >
-                {t('hero.cta.start')}
-                <ArrowRight size={18} />
-              </Link>
-              <Link
-                to="/pricing"
-                className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-semibold px-6 py-3 rounded-xl transition-all duration-200"
-              >
-                {t('hero.cta.pricing')}
+                <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 group-hover:bg-white/30 transition-colors">
+                  <FileText size={18} className="text-white" />
+                </div>
+                <div className="text-left">
+                  <div className="text-base font-bold leading-tight">{t('hero.cta.start')}</div>
+                  <div className="text-xs text-white/70 font-normal mt-0.5">{t('hero.cta.pricing')}</div>
+                </div>
+                <ArrowRight size={18} className="ml-auto group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
               </Link>
             </div>
 
-            {/* AI Idea Generator nudge */}
-            <div className="mt-6 inline-flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-3">
-              <div className="w-8 h-8 rounded-lg bg-gold-500/20 flex items-center justify-center flex-shrink-0">
-                <Sparkles size={16} className="text-gold-400" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-200 font-medium">{t('hero.ai.question')}</p>
-                <p className="text-xs text-gray-400">{t('hero.ai.desc')}</p>
-              </div>
+            {/* AI Idea Generator — secondary nudge */}
+            <div className="inline-flex items-center gap-2.5 bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5">
+              <Sparkles size={14} className="text-gold-400 flex-shrink-0" />
+              <span className="text-gray-400 text-xs">{t('hero.ai.question')}</span>
               <Link
                 to="/trademark-ideas"
-                className="flex-shrink-0 flex items-center gap-1.5 bg-gold-500 hover:bg-gold-400 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
+                className="flex-shrink-0 text-gold-300 hover:text-gold-200 text-xs font-semibold underline underline-offset-2 transition-colors"
               >
                 {t('hero.ai.cta')}
-                <ArrowRight size={12} />
               </Link>
             </div>
 
@@ -128,106 +109,6 @@ export default function HomePage() {
                 </div>
               ))}
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Why protect */}
-      <section className="py-16 lg:py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <div className="text-gold-600 font-semibold text-sm uppercase tracking-wider mb-3">
-                {t('why.eyebrow')}
-              </div>
-              <h2 className="text-3xl lg:text-4xl font-bold text-navy-900 mb-6">
-                {t('why.title')}
-              </h2>
-              <p className="text-gray-600 leading-relaxed mb-6">
-                {t('why.sub')}
-              </p>
-              <ul className="space-y-3">
-                {whyBullets.map((key, i) => (
-                  <li key={i} className="flex items-start gap-3">
-                    <CheckCircle2 size={18} className="text-gold-500 mt-0.5 flex-shrink-0" />
-                    <span className="text-gray-700 text-sm">{t(key)}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="relative">
-              <img
-                src="https://images.pexels.com/photos/3184465/pexels-photo-3184465.jpeg"
-                alt="Business professionals"
-                className="rounded-2xl shadow-xl w-full object-cover h-80 lg:h-96"
-              />
-              <div className="absolute -bottom-4 -left-4 bg-gold-500 rounded-xl p-4 shadow-xl">
-                <div className="text-white font-bold text-2xl">45</div>
-                <div className="text-gold-100 text-xs">{t('why.niceClasses')}</div>
-              </div>
-              <div className="absolute -top-4 -right-4 bg-white rounded-xl p-4 shadow-xl border border-gray-100">
-                <div className="text-navy-900 font-bold text-2xl">24h</div>
-                <div className="text-gray-500 text-xs">{t('why.filingTarget')}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* For businesses */}
-      <section className="py-16 lg:py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <div className="text-gold-600 font-semibold text-sm uppercase tracking-wider mb-3">
-              {t('for.eyebrow')}
-            </div>
-            <h2 className="text-3xl lg:text-4xl font-bold text-navy-900 mb-4">{t('for.title')}</h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">{t('for.sub')}</p>
-          </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-            {cards.map((card, i) => (
-              <div key={i} className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-                <div className="w-10 h-10 bg-gold-50 rounded-lg flex items-center justify-center mb-4">
-                  <card.icon size={20} className="text-gold-600" />
-                </div>
-                <h3 className="font-semibold text-navy-900 mb-2">{t(card.titleKey)}</h3>
-                <p className="text-gray-600 text-sm leading-relaxed">{t(card.descKey)}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* 3-Step Process */}
-      <section className="py-16 lg:py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <div className="text-gold-600 font-semibold text-sm uppercase tracking-wider mb-3">
-              {t('process.eyebrow')}
-            </div>
-            <h2 className="text-3xl lg:text-4xl font-bold text-navy-900 mb-4">{t('process.title')}</h2>
-          </div>
-          <div className="grid md:grid-cols-3 gap-8 relative">
-            <div className="hidden md:block absolute top-12 left-1/3 right-1/3 h-0.5 bg-gold-200" />
-            {[
-              { num: '01', title: t('process.step1.title'), desc: t('process.step1.desc'), icon: FileText },
-              { num: '02', title: t('process.step2.title'), desc: t('process.step2.desc'), icon: Shield },
-              { num: '03', title: t('process.step3.title'), desc: t('process.step3.desc'), icon: Award },
-            ].map((step, i) => (
-              <div key={i} className="relative text-center">
-                <div className="w-16 h-16 bg-navy-900 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
-                  <step.icon size={28} className="text-gold-400" />
-                </div>
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-3 bg-gold-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
-                  {i + 1}
-                </div>
-                <h3 className="text-lg font-bold text-navy-900 mb-3">{step.title}</h3>
-                <p className="text-gray-600 text-sm leading-relaxed">{step.desc}</p>
-              </div>
-            ))}
-          </div>
-          <div className="mt-10 p-4 bg-amber-50 border border-amber-200 rounded-xl text-center">
-            <p className="text-amber-800 text-sm">{t('disclaimer.filing')}</p>
           </div>
         </div>
       </section>
@@ -281,8 +162,42 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* FAQ Preview */}
+      {/* 3-Step Process */}
       <section className="py-16 lg:py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <div className="text-gold-600 font-semibold text-sm uppercase tracking-wider mb-3">
+              {t('process.eyebrow')}
+            </div>
+            <h2 className="text-3xl lg:text-4xl font-bold text-navy-900 mb-4">{t('process.title')}</h2>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8 relative">
+            <div className="hidden md:block absolute top-12 left-1/3 right-1/3 h-0.5 bg-gold-200" />
+            {[
+              { num: '01', title: t('process.step1.title'), desc: t('process.step1.desc'), icon: FileText },
+              { num: '02', title: t('process.step2.title'), desc: t('process.step2.desc'), icon: Shield },
+              { num: '03', title: t('process.step3.title'), desc: t('process.step3.desc'), icon: Award },
+            ].map((step, i) => (
+              <div key={i} className="relative text-center">
+                <div className="w-16 h-16 bg-navy-900 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+                  <step.icon size={28} className="text-gold-400" />
+                </div>
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-3 bg-gold-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+                  {i + 1}
+                </div>
+                <h3 className="text-lg font-bold text-navy-900 mb-3">{step.title}</h3>
+                <p className="text-gray-600 text-sm leading-relaxed">{step.desc}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-10 p-4 bg-amber-50 border border-amber-200 rounded-xl text-center">
+            <p className="text-amber-800 text-sm">{t('disclaimer.filing')}</p>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ Preview */}
+      <section className="py-16 lg:py-20 bg-gray-50">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl lg:text-4xl font-bold text-navy-900 mb-4">{t('faq.title')}</h2>
