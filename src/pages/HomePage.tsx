@@ -213,16 +213,18 @@ export default function HomePage() {
             </div>
             <div className="p-5 space-y-4">
               <p className="text-gray-600 text-sm leading-relaxed">{t('trust.lawyers.tooltip.body')}</p>
-              <div className="border border-gray-100 rounded-xl p-4 flex items-center gap-4 bg-gray-50">
-                <div className="flex-shrink-0">
-                  <div className="bg-white rounded-lg px-3 py-2 shadow-sm border border-gray-200">
-                    <div className="text-xs font-black tracking-tight text-gray-900 leading-none">Managing</div>
-                    <div className="text-xs font-black tracking-tight text-[#c8102e] leading-none">IP</div>
-                  </div>
+              <div className="border border-gray-100 rounded-xl p-4 flex items-center gap-5 bg-gray-50">
+                <div className="flex-shrink-0 bg-white rounded-lg p-2 shadow-sm border border-gray-200">
+                  <img
+                    src="/download.png"
+                    alt="Managing Intellectual Property — IP Stars"
+                    className="block object-contain"
+                    style={{ width: 80, height: 80 }}
+                  />
                 </div>
                 <div>
-                  <div className="text-sm font-semibold text-gray-800">Managing IP</div>
-                  <div className="text-xs text-gray-500">Leading global directory for top-ranked IP practitioners</div>
+                  <div className="text-sm font-semibold text-gray-800">Managing IP · IP Stars</div>
+                  <div className="text-xs text-gray-500 mt-0.5">Leading global directory for top-ranked IP practitioners</div>
                 </div>
               </div>
             </div>
