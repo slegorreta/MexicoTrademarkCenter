@@ -24,20 +24,24 @@ const LANGUAGE_NAMES: Record<string, string> = {
   fr: "French (Français)",
   hi: "Hindi (हिन्दी)",
   pt: "Portuguese (Português)",
+  ja: "Japanese (日本語)",
 };
 
+// All 8 site languages for translation analysis
+const ALL_LANGUAGES = [
+  { code: "en", name: "English" },
+  { code: "es", name: "Spanish" },
+  { code: "zh", name: "Chinese (Simplified)" },
+  { code: "de", name: "German" },
+  { code: "fr", name: "French" },
+  { code: "hi", name: "Hindi" },
+  { code: "pt", name: "Portuguese" },
+  { code: "ja", name: "Japanese" },
+];
+
 const RELATED_CLASSES: Record<number, number[]> = {
-  3: [5, 44],
-  5: [3, 44],
-  9: [42, 38],
-  25: [18, 24, 26],
-  18: [25],
-  24: [25],
-  35: [42, 36],
-  42: [9, 35, 38],
-  43: [30, 29, 32, 33],
-  41: [42, 35],
-  44: [3, 5],
+  3: [5, 44], 5: [3, 44], 9: [42, 38], 25: [18, 24, 26], 18: [25],
+  24: [25], 35: [42, 36], 42: [9, 35, 38], 43: [30, 29, 32, 33], 41: [42, 35], 44: [3, 5],
 };
 
 function getRelatedClasses(classes: number[]): number[] {
@@ -201,18 +205,31 @@ interface RegistrabilityFlag {
   category: string;
   severity: "low" | "medium" | "high";
   explanation: string;
+  explanation_en?: string;
 }
 
 interface DupontFactor {
   factor: string;
   verdict: "favors_registration" | "neutral" | "against_registration";
   reasoning: string;
+  reasoning_en?: string;
 }
 
 interface DistinctivenessAssessment {
   tier: "generic" | "descriptive" | "suggestive" | "arbitrary" | "fanciful";
   score: number;
   explanation: string;
+  explanation_en?: string;
+}
+
+export interface TranslationFlag {
+  languageCode: string;
+  languageName: string;
+  translatedForm: string;
+  risk: "none" | "low" | "medium" | "high";
+  issueCategory: string | null;
+  details: string;
+  details_en: string;
 }
 
 async function analyzeRegistrability(
@@ -227,6 +244,7 @@ async function analyzeRegistrability(
   dupont: DupontFactor[];
   distinctiveness: DistinctivenessAssessment;
   riskSummary: string;
+  riskSummary_en: string;
 }> {
   const classContext = classes.length > 0
     ? ` applied for goods/services in Nice Classification class(es) ${classes.join(", ")}`
@@ -236,11 +254,16 @@ async function analyzeRegistrability(
     : "";
 
   const langName = LANGUAGE_NAMES[language] ?? "English";
-  const langInstruction = language !== "en"
-    ? `\n\nIMPORTANT: Write ALL free-text fields (every "explanation", "reasoning", and "riskSummary" field) in ${langName}. Only use that language for those fields — no English fallback.`
+  const isBilingual = language !== "en";
+
+  const bilingualInstruction = isBilingual
+    ? `\n\nIMPORTANT BILINGUAL REQUIREMENT: For every free-text field, provide TWO versions:
+- The main field (e.g. "explanation", "reasoning", "riskSummary") MUST be written in ${langName}.
+- An additional "_en" field (e.g. "explanation_en", "reasoning_en", "riskSummary_en") MUST contain the same content translated into English.
+Both versions are required. Do not omit either.`
     : "";
 
-  const prompt = `You are an expert Mexican trademark attorney. Analyze the proposed trademark "${markName}"${classContext}${goodsContext}.${langInstruction}
+  const prompt = `You are an expert Mexican trademark attorney. Analyze the proposed trademark "${markName}"${classContext}${goodsContext}.${bilingualInstruction}
 
 Return a single JSON object with ALL of the following fields. Return ONLY JSON, no markdown.
 
@@ -260,28 +283,27 @@ Factor names (use exactly):
 "similarity_of_marks", "relatedness_of_goods", "channels_of_trade", "purchasing_conditions",
 "strength_of_cited_mark", "actual_confusion", "number_of_similar_marks", "length_of_use",
 "variety_of_goods", "market_interface", "right_to_exclude", "extent_of_confusion", "other_factors"
-
 Each factor verdict: "favors_registration" | "neutral" | "against_registration"
 
 PART 4 — PLAIN-LANGUAGE RISK SUMMARY
-3-4 sentences explaining: (1) registrability outlook, (2) key risks, (3) recommended next steps.
+3-4 sentences: (1) registrability outlook, (2) key risks, (3) recommended next steps.
 Written for a business owner, not a lawyer.
 
 Return exactly:
 {
-  "flags": [{"category": "...", "severity": "low"|"medium"|"high", "explanation": "..."}],
+  "flags": [{"category": "...", "severity": "low"|"medium"|"high", "explanation": "..."${isBilingual ? ', "explanation_en": "..."' : ""}}],
   "risk": "low"|"medium"|"high",
-  "distinctiveness": {"tier": "...", "score": 1-5, "explanation": "..."},
-  "dupont": [{"factor": "...", "verdict": "...", "reasoning": "..."}],
-  "riskSummary": "..."
+  "distinctiveness": {"tier": "...", "score": 1-5, "explanation": "..."${isBilingual ? ', "explanation_en": "..."' : ""}},
+  "dupont": [{"factor": "...", "verdict": "...", "reasoning": "..."${isBilingual ? ', "reasoning_en": "..."' : ""}}],
+  "riskSummary": "..."${isBilingual ? ',\n  "riskSummary_en": "..."' : ""}
 }`;
 
-  const defaultDistinctiveness: DistinctivenessAssessment = { tier: "arbitrary", score: 4, explanation: "" };
+  const defaultDistinctiveness: DistinctivenessAssessment = { tier: "arbitrary", score: 4, explanation: "", explanation_en: "" };
   const defaultDupont: DupontFactor[] = [
     "similarity_of_marks", "relatedness_of_goods", "channels_of_trade", "purchasing_conditions",
     "strength_of_cited_mark", "actual_confusion", "number_of_similar_marks", "length_of_use",
     "variety_of_goods", "market_interface", "right_to_exclude", "extent_of_confusion", "other_factors"
-  ].map(factor => ({ factor, verdict: "neutral" as const, reasoning: "" }));
+  ].map(factor => ({ factor, verdict: "neutral" as const, reasoning: "", reasoning_en: "" }));
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -294,18 +316,18 @@ Return exactly:
           { role: "user", content: prompt },
         ],
         temperature: 0.1,
-        max_tokens: 3000,
+        max_tokens: isBilingual ? 5000 : 3000,
         response_format: { type: "json_object" },
       }),
     });
 
     if (!response.ok) {
-      return { flags: [], risk: "low", dupont: defaultDupont, distinctiveness: defaultDistinctiveness, riskSummary: "" };
+      return { flags: [], risk: "low", dupont: defaultDupont, distinctiveness: defaultDistinctiveness, riskSummary: "", riskSummary_en: "" };
     }
 
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content;
-    if (!content) return { flags: [], risk: "low", dupont: defaultDupont, distinctiveness: defaultDistinctiveness, riskSummary: "" };
+    if (!content) return { flags: [], risk: "low", dupont: defaultDupont, distinctiveness: defaultDistinctiveness, riskSummary: "", riskSummary_en: "" };
 
     const parsed = JSON.parse(content);
     const flags: RegistrabilityFlag[] = (parsed.flags ?? []).filter(
@@ -320,11 +342,107 @@ Return exactly:
       tier: rawD.tier ?? "arbitrary",
       score: typeof rawD.score === "number" ? rawD.score : 4,
       explanation: rawD.explanation ?? "",
+      explanation_en: rawD.explanation_en ?? rawD.explanation ?? "",
     };
-    return { flags, risk, dupont, distinctiveness, riskSummary: parsed.riskSummary ?? "" };
+    return {
+      flags,
+      risk,
+      dupont,
+      distinctiveness,
+      riskSummary: parsed.riskSummary ?? "",
+      riskSummary_en: parsed.riskSummary_en ?? parsed.riskSummary ?? "",
+    };
   } catch (err) {
     console.error("Registrability analysis error:", err);
-    return { flags: [], risk: "low", dupont: defaultDupont, distinctiveness: defaultDistinctiveness, riskSummary: "" };
+    return { flags: [], risk: "low", dupont: defaultDupont, distinctiveness: defaultDistinctiveness, riskSummary: "", riskSummary_en: "" };
+  }
+}
+
+async function analyzeTranslations(
+  apiKey: string,
+  markName: string,
+  classes: number[],
+  goodsServices: string,
+  searchLanguage: string,
+): Promise<TranslationFlag[]> {
+  const classContext = classes.length > 0
+    ? ` for goods/services in Nice Classification class(es) ${classes.join(", ")}`
+    : "";
+  const goodsContext = goodsServices ? ` covering: "${goodsServices}"` : "";
+  const langList = ALL_LANGUAGES.map(l => `${l.name} (${l.code})`).join(", ");
+
+  const prompt = `You are an expert Mexican trademark attorney and linguistics specialist.
+
+The proposed trademark is: "${markName}"${classContext}${goodsContext}.
+The user's search language is: ${LANGUAGE_NAMES[searchLanguage] ?? "English"}.
+
+TASK: Analyze the trademark name for cross-language trademark risks by checking its translations and transliterations.
+
+For EACH of these 8 languages: ${langList}
+
+1. Determine the translation or transliteration of "${markName}" into that language.
+   - For languages that use non-Latin scripts (Chinese, Hindi, Japanese), provide the script form AND a Latin romanization.
+   - If the mark is already in a non-Latin script, provide transliteration to Latin and to other non-Latin scripts.
+   - If the mark is a proper noun or invented word with no direct translation, note what it means or evokes phonetically in that language.
+
+2. For each translation/transliteration, assess:
+   a. Does this translated/transliterated form conflict with any known trademark (registered or famous) in any jurisdiction?
+   b. Does this form trigger any LFPPI absolute grounds in that language context? (e.g. is it generic, descriptive, deceptive, immoral, or offensive in that language?)
+   c. Could the phonetic sound of the mark, when heard by a ${LANGUAGE_NAMES[searchLanguage] ?? "English"}-speaker, be confused with a word that has problematic trademark implications?
+
+3. Assign risk:
+   - "none": No trademark issues in this language
+   - "low": Minor phonetic similarity or very weak risk
+   - "medium": Meaningful similarity to existing mark or LFPPI concern
+   - "high": Direct conflict with a known trademark or clear LFPPI violation in this language
+
+Return a JSON array. For each language, include an entry even if risk is "none":
+[
+  {
+    "languageCode": "es",
+    "languageName": "Spanish",
+    "translatedForm": "translated or transliterated form here",
+    "risk": "none"|"low"|"medium"|"high",
+    "issueCategory": null or one of: "confusingly_similar"|"generic_descriptive"|"deceptive"|"immoral_offensive"|"famous_mark"|"phonetic_conflict"|"geographic_indication",
+    "details": "Explanation in ${LANGUAGE_NAMES[searchLanguage] ?? "English"} of what the translation means and what risk was found (2-3 sentences)",
+    "details_en": "Same explanation always in English (2-3 sentences)"
+  },
+  ...
+]
+
+Be thorough and specific. If "${markName}" is already in English and has no meaningful translation (e.g. a made-up word), still check what it sounds like or evokes in each language. Return exactly 8 entries, one per language.`;
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: "You are a trademark law and linguistics expert. Return only a valid JSON array, no markdown." },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.1,
+        max_tokens: 3000,
+        response_format: { type: "json_object" },
+      }),
+    });
+
+    if (!response.ok) return [];
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) return [];
+
+    const parsed = JSON.parse(content);
+    // Model may return { translations: [...] } or just [...]
+    const arr: unknown[] = Array.isArray(parsed) ? parsed : (parsed.translations ?? parsed.results ?? []);
+    return arr.filter((e): e is TranslationFlag =>
+      typeof e === "object" && e !== null &&
+      "languageCode" in e && "translatedForm" in e && "risk" in e && "details" in e
+    );
+  } catch (err) {
+    console.error("Translation analysis error:", err);
+    return [];
   }
 }
 
@@ -405,11 +523,13 @@ Deno.serve(async (req: Request) => {
 
     const lang = DISCLAIMERS[language] ? language : "en";
 
-    const [webResult, marciaResult, domainResults, registrabilityResult] = await Promise.all([
+    // Run all analyses in parallel — translation analysis runs alongside the main checks
+    const [webResult, marciaResult, domainResults, registrabilityResult, translationAnalysis] = await Promise.all([
       searchWeb(apiKey, markName.trim(), classes, goodsServices, lang),
       searchMarcia(markName.trim(), classes),
       checkDomains(markName.trim()),
       analyzeRegistrability(apiKey, markName.trim(), classes, goodsServices, lang),
+      analyzeTranslations(apiKey, markName.trim(), classes, goodsServices, lang),
     ]);
 
     let risk: "low" | "medium" | "high" = webResult.risk;
@@ -425,6 +545,12 @@ Deno.serve(async (req: Request) => {
     if (dupontAgainst >= 5 && risk !== "high") risk = "high";
     else if (dupontAgainst >= 3 && risk === "low") risk = "medium";
 
+    // Escalate overall risk if any translation carries a high-risk conflict
+    const translationHighRisk = translationAnalysis.some(t => t.risk === "high");
+    const translationMedRisk = translationAnalysis.some(t => t.risk === "medium");
+    if (translationHighRisk && risk !== "high") risk = "high";
+    else if (translationMedRisk && risk === "low") risk = "medium";
+
     return new Response(JSON.stringify({
       risk,
       webFindings: webResult.findings,
@@ -437,6 +563,9 @@ Deno.serve(async (req: Request) => {
       dupont: registrabilityResult.dupont,
       distinctiveness: registrabilityResult.distinctiveness,
       riskSummary: registrabilityResult.riskSummary,
+      riskSummary_en: registrabilityResult.riskSummary_en,
+      translationAnalysis,
+      searchLanguage: lang,
       disclaimer: DISCLAIMERS[lang],
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err) {

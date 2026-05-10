@@ -13,9 +13,10 @@ import {
 
 interface MarciaFinding { name: string; status: string; classNum: string; holder: string; }
 interface DomainResult { domain: string; available: boolean | null; status: 'available' | 'taken' | 'unknown'; }
-export interface RegistrabilityFlag { category: string; severity: 'low' | 'medium' | 'high'; explanation: string; }
-export interface DupontFactor { factor: string; verdict: 'favors_registration' | 'neutral' | 'against_registration'; reasoning: string; }
-export interface DistinctivenessAssessment { tier: 'generic' | 'descriptive' | 'suggestive' | 'arbitrary' | 'fanciful'; score: number; explanation: string; }
+export interface RegistrabilityFlag { category: string; severity: 'low' | 'medium' | 'high'; explanation: string; explanation_en?: string; }
+export interface DupontFactor { factor: string; verdict: 'favors_registration' | 'neutral' | 'against_registration'; reasoning: string; reasoning_en?: string; }
+export interface DistinctivenessAssessment { tier: 'generic' | 'descriptive' | 'suggestive' | 'arbitrary' | 'fanciful'; score: number; explanation: string; explanation_en?: string; }
+export interface TranslationFlag { languageCode: string; languageName: string; translatedForm: string; risk: 'none' | 'low' | 'medium' | 'high'; issueCategory: string | null; details: string; details_en: string; }
 
 interface ClearanceResult {
   risk: 'low' | 'medium' | 'high';
@@ -29,6 +30,9 @@ interface ClearanceResult {
   dupont?: DupontFactor[];
   distinctiveness?: DistinctivenessAssessment;
   riskSummary?: string;
+  riskSummary_en?: string;
+  translationAnalysis?: TranslationFlag[];
+  searchLanguage?: string;
   disclaimer: string;
 }
 
@@ -142,6 +146,10 @@ const UI: Record<string, Record<Lang, string>> = {
   distinctivenessTitle: { en: 'Distinctiveness Assessment', es: 'Evaluación de Distintividad', zh: '显著性评估', de: 'Unterscheidungskraft-Bewertung', fr: 'Évaluation de la distinctivité', hi: 'विशिष्टता मूल्यांकन', pt: 'Avaliação de Distintividade' },
   dupontTitle: { en: 'DuPont Analysis (13 Factors)', es: 'Análisis DuPont (13 Factores)', zh: '杜邦因素分析（13项）', de: 'DuPont-Analyse (13 Faktoren)', fr: 'Analyse DuPont (13 facteurs)', hi: 'DuPont विश्लेषण (13 कारक)', pt: 'Análise DuPont (13 Fatores)' },
   lfppiTitle: { en: 'LFPPI Registrability Analysis', es: 'Análisis de Registrabilidad LFPPI', zh: 'LFPPI可注册性分析', de: 'LFPPI-Registrierbarkeitsanalyse', fr: 'Analyse de registrabilité LFPPI', hi: 'LFPPI पंजीकरण योग्यता विश्लेषण', pt: 'Análise de Registrabilidade LFPPI' },
+  translationTitle: { en: 'Translation & Transliteration Analysis', es: 'Análisis de Traducción y Transliteración', zh: '翻译与音译分析', de: 'Übersetzungs- & Transliterationsanalyse', fr: 'Analyse de traduction et translittération', hi: 'अनुवाद और लिप्यंतरण विश्लेषण', pt: 'Análise de Tradução e Transliteração' },
+  translationNoConflicts: { en: 'No conflicts detected across 8 languages', es: 'Sin conflictos en 8 idiomas', zh: '8种语言中未发现冲突', de: 'Keine Konflikte in 8 Sprachen', fr: 'Aucun conflit détecté dans 8 langues', hi: '8 भाषाओं में कोई संघर्ष नहीं', pt: 'Nenhum conflito detectado em 8 idiomas' },
+  translationConflicts: { en: 'conflict(s) found in translation/transliteration', es: 'conflicto(s) en traducción/transliteración', zh: '个翻译/音译冲突', de: 'Konflikt(e) bei Übersetzung/Transliteration', fr: 'conflit(s) en traduction/translittération', hi: 'अनुवाद/लिप्यंतरण में संघर्ष', pt: 'conflito(s) em tradução/transliteração' },
+  translatedAs: { en: 'Translated as', es: 'Traducido como', zh: '翻译为', de: 'Übersetzt als', fr: 'Traduit en', hi: 'इस रूप में अनुवादित', pt: 'Traduzido como' },
   marciaTitle: { en: 'IMPI MARCia Results', es: 'Resultados IMPI MARCia', zh: 'IMPI MARCia结果', de: 'IMPI MARCia-Ergebnisse', fr: 'Résultats IMPI MARCia', hi: 'IMPI MARCia परिणाम', pt: 'Resultados IMPI MARCia' },
   webTitle: { en: 'Web Presence Findings', es: 'Hallazgos de Presencia Web', zh: '网络检索结果', de: 'Web-Präsenz-Ergebnisse', fr: 'Résultats de présence web', hi: 'वेब उपस्थिति निष्कर्ष', pt: 'Resultados de Presença Web' },
   domainsTitle: { en: 'Domain Availability', es: 'Disponibilidad de Dominios', zh: '域名可用性', de: 'Domainverfügbarkeit', fr: 'Disponibilité des domaines', hi: 'डोमेन उपलब्धता', pt: 'Disponibilidade de Domínios' },
@@ -279,6 +287,7 @@ export default function TrademarkClearancePanel({
   const [paid, setPaid] = useState(false);
   const [dupontExpanded, setDupontExpanded] = useState(false);
   const [lfppiExpanded, setLfppiExpanded] = useState(true);
+  const [translationExpanded, setTranslationExpanded] = useState(true);
   const [marciaExpanded, setMarciaExpanded] = useState(false);
   const [webExpanded, setWebExpanded] = useState(false);
   const [domainExpanded, setDomainExpanded] = useState(false);
@@ -791,6 +800,60 @@ export default function TrademarkClearancePanel({
               </div>
             )}
           </div>
+
+          {/* Translation & Transliteration Analysis */}
+          {result.translationAnalysis && result.translationAnalysis.length >= 0 && (() => {
+            const tflags = result.translationAnalysis!;
+            const conflictFlags = tflags.filter(f => f.risk !== 'none');
+            const hasConflicts = conflictFlags.length > 0;
+            return (
+              <div className="border-b border-gray-100">
+                <button type="button" onClick={() => setTranslationExpanded(v => !v)}
+                  className="w-full flex items-center justify-between px-4 py-2 text-xs font-medium text-gray-600 hover:bg-white/80 transition-colors">
+                  <span className="flex items-center gap-1.5">
+                    <Globe size={12} className="text-[#1a2e1a]" />
+                    {tr('translationTitle', lang)}
+                    {!hasConflicts
+                      ? <span className="text-[10px] text-emerald-600 font-medium">— {tr('noConflicts', lang) ?? 'No conflicts'}</span>
+                      : <span className="text-[10px] text-amber-600 font-medium">— {conflictFlags.length} {tr('translationConflicts', lang)}</span>
+                    }
+                  </span>
+                  {translationExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                </button>
+                {translationExpanded && (
+                  <div className="px-4 pb-3">
+                    {!hasConflicts ? (
+                      <div className="flex items-center gap-2 text-xs text-emerald-700">
+                        <CheckCircle2 size={13} className="text-emerald-500" />
+                        <span>{tr('translationNoConflicts', lang)}</span>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {conflictFlags.map((f, i) => {
+                          const sc = { high: 'bg-red-50 border-red-200 text-red-800', medium: 'bg-amber-50 border-amber-200 text-amber-800', low: 'bg-blue-50 border-blue-200 text-blue-800', none: 'bg-gray-50 border-gray-200 text-gray-700' }[f.risk];
+                          const sb = { high: 'bg-red-100 text-red-700', medium: 'bg-amber-100 text-amber-700', low: 'bg-blue-100 text-blue-700', none: 'bg-gray-100 text-gray-500' }[f.risk];
+                          return (
+                            <div key={i} className={`border rounded-lg px-3 py-2.5 ${sc}`}>
+                              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide ${sb}`}>{f.risk}</span>
+                                <span className="text-xs font-semibold">{f.languageName}</span>
+                                <span className="text-[10px] text-gray-500 font-mono bg-white/60 px-1.5 py-0.5 rounded border border-current/10">{tr('translatedAs', lang)}: &ldquo;{f.translatedForm}&rdquo;</span>
+                              </div>
+                              {f.issueCategory && <p className="text-[10px] font-medium opacity-70 mb-0.5 uppercase tracking-wide">{f.issueCategory}</p>}
+                              <p className="text-xs leading-relaxed opacity-90">{f.details}</p>
+                            </div>
+                          );
+                        })}
+                        <p className="text-[10px] text-gray-400 mt-1 flex items-center gap-1">
+                          <Info size={9} className="flex-shrink-0" />Full translation conflict details are included in the purchased PDF report.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* MARCia full */}
           <div className="border-b border-gray-100">
