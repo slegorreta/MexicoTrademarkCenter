@@ -154,7 +154,9 @@ export default function TrademarkCheckPage() {
   const [searchName, setSearchName] = useState('');
   const [searchGoods, setSearchGoods] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const resultsRef = useRef<HTMLDivElement>(null);
+  const heroRef = useRef<HTMLElement>(null);
 
   const canSearch = markInput.trim().length > 0 && goodsInput.trim().length > 0;
 
@@ -172,10 +174,23 @@ export default function TrademarkCheckPage() {
     if (e.key === 'Enter' && canSearch) runSearch();
   };
 
+  const handleSearchAnother = () => setShowClearConfirm(true);
+  const confirmClear = () => {
+    setSearchName('');
+    setSearchGoods('');
+    setMarkInput('');
+    setGoodsInput('');
+    setHasSearched(false);
+    setShowClearConfirm(false);
+    setTimeout(() => {
+      heroRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero */}
-      <section className="bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800 text-white">
+      <section ref={heroRef} className="bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800 text-white">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-14 lg:py-20">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl bg-gold-500/20 border border-gold-500/30 flex items-center justify-center">
@@ -303,37 +318,38 @@ export default function TrademarkCheckPage() {
             </div>
 
             {/* Search another mark */}
-            <div>
-              <p className="text-sm font-semibold text-gray-700 mb-3">{tr('searchAgain')}</p>
-              <div className="space-y-3">
-                <div className="relative">
-                  <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                  <input
-                    type="text"
-                    value={markInput}
-                    onChange={e => setMarkInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder={tr('placeholder')}
-                    className="w-full border border-gray-300 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-transparent"
-                  />
-                </div>
-                <textarea
-                  value={goodsInput}
-                  onChange={e => setGoodsInput(e.target.value)}
-                  placeholder={tr('goodsPlaceholder')}
-                  rows={2}
-                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-transparent resize-none"
-                />
+            <div className="text-center">
+              {!showClearConfirm ? (
                 <button
                   type="button"
-                  onClick={runSearch}
-                  disabled={!canSearch}
-                  className="inline-flex items-center gap-2 bg-navy-900 hover:bg-navy-800 disabled:opacity-50 text-white font-semibold px-5 py-2.5 rounded-xl transition-colors text-sm"
+                  onClick={handleSearchAnother}
+                  className="text-sm text-gray-500 hover:text-navy-800 underline underline-offset-2 transition-colors"
                 >
-                  {tr('searchBtn')}
-                  <Search size={14} />
+                  {tr('searchAgain')}
                 </button>
-              </div>
+              ) : (
+                <div className="inline-flex flex-col items-center gap-3 bg-white border border-amber-200 rounded-2xl px-5 py-4 shadow-sm">
+                  <p className="text-sm text-gray-700 font-medium">
+                    {lang === 'es' ? 'Esto eliminará el reporte actual. ¿Continuar?' : lang === 'zh' ? '这将清除当前搜索报告。是否继续？' : lang === 'de' ? 'Aktueller Bericht wird gelöscht. Fortfahren?' : lang === 'fr' ? 'Cela effacera le rapport actuel. Continuer ?' : lang === 'hi' ? 'यह वर्तमान खोज रिपोर्ट हटा देगा। जारी रखें?' : lang === 'pt' ? 'Isso excluirá o relatório atual. Continuar?' : 'This will clear the current search report. Continue?'}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={confirmClear}
+                      className="text-sm font-semibold bg-navy-900 hover:bg-navy-800 text-white px-4 py-1.5 rounded-xl transition-colors"
+                    >
+                      {lang === 'es' ? 'Confirmar' : lang === 'zh' ? '确认' : lang === 'de' ? 'Bestätigen' : lang === 'fr' ? 'Confirmer' : lang === 'hi' ? 'पुष्टि करें' : lang === 'pt' ? 'Confirmar' : 'Confirm'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowClearConfirm(false)}
+                      className="text-sm text-gray-500 hover:text-gray-700 px-4 py-1.5 rounded-xl border border-gray-200 hover:border-gray-300 transition-colors"
+                    >
+                      {lang === 'es' ? 'Cancelar' : lang === 'zh' ? '取消' : lang === 'de' ? 'Abbrechen' : lang === 'fr' ? 'Annuler' : lang === 'hi' ? 'रद्द करें' : lang === 'pt' ? 'Cancelar' : 'Cancel'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         ) : (

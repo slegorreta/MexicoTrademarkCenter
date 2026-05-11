@@ -22,3 +22,16 @@
     @apply text-lg font-bold text-navy-900 mb-2 mt-6;
   }
 }
+
+@media print {
+  /* Hide everything except the clearance panel */
+  body > * { display: none !important; }
+  #clearance-print-root { display: block !important; }
+
+  /* Hide payment UI, locked rows, blurred content, and tooltips */
+  .print\:hidden { display: none !important; }
+
+  /* Clean page */
+  @page { margin: 18mm 15mm; }
+  body { font-family: 'Inter', system-ui, sans-serif; font-size: 11pt; color: #111; }
+}
