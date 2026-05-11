@@ -1,90 +1,109 @@
 import { useState, useRef } from 'react';
 import { Upload, CheckCircle2, AlertCircle, Film, Loader2 } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import * as tus from 'tus-js-client';
 
 const BUCKET = 'landing-videos';
+const PROJECT_ID = import.meta.env.VITE_SUPABASE_URL?.match(/https:\/\/([^.]+)/)?.[1] ?? '';
+const ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+// Use direct storage hostname for large file performance
+const TUS_ENDPOINT = `https://${PROJECT_ID}.storage.supabase.co/storage/v1/upload/resumable`;
+const PUBLIC_BASE = `https://${PROJECT_ID}.supabase.co/storage/v1/object/public/${BUCKET}`;
 
 export default function AdminVideoUpload() {
   const inputRef = useRef<HTMLInputElement>(null);
+  const uploadRef = useRef<tus.Upload | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [filename, setFilename] = useState('zh-hero.mp4');
   const [progress, setProgress] = useState(0);
-  const [status, setStatus] = useState<'idle' | 'uploading' | 'done' | 'error'>('idle');
+  const [uploaded, setUploaded] = useState(0);
+  const [total, setTotal] = useState(0);
+  const [status, setStatus] = useState<'idle' | 'uploading' | 'paused' | 'done' | 'error'>('idle');
   const [publicUrl, setPublicUrl] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [dragging, setDragging] = useState(false);
-  const xhrRef = useRef<XMLHttpRequest | null>(null);
 
   function pickFile(f: File) {
     setFile(f);
     setStatus('idle');
     setProgress(0);
+    setUploaded(0);
+    setTotal(0);
     setPublicUrl('');
     setErrorMsg('');
+    uploadRef.current = null;
   }
 
-  function cancel() {
-    xhrRef.current?.abort();
-    setStatus('idle');
-    setProgress(0);
+  function formatMB(bytes: number) {
+    return (bytes / 1024 / 1024).toFixed(1);
   }
 
-  async function upload() {
+  function startUpload(f: File) {
+    const upload = new tus.Upload(f, {
+      endpoint: TUS_ENDPOINT,
+      retryDelays: [0, 3000, 5000, 10000, 20000],
+      headers: {
+        authorization: `Bearer ${ANON_KEY}`,
+        'x-upsert': 'true',
+      },
+      uploadDataDuringCreation: true,
+      removeFingerprintOnSuccess: true,
+      metadata: {
+        bucketName: BUCKET,
+        objectName: filename,
+        contentType: f.type || 'video/mp4',
+        cacheControl: '3600',
+      },
+      chunkSize: 6 * 1024 * 1024, // 6 MB chunks as required by Supabase
+      onError(error) {
+        console.error('TUS upload error', error);
+        setStatus('error');
+        setErrorMsg(String(error));
+      },
+      onProgress(bytesUploaded, bytesTotal) {
+        setUploaded(bytesUploaded);
+        setTotal(bytesTotal);
+        setProgress(Math.round((bytesUploaded / bytesTotal) * 100));
+      },
+      onSuccess() {
+        setPublicUrl(`${PUBLIC_BASE}/${filename}`);
+        setStatus('done');
+        setProgress(100);
+      },
+    });
+
+    upload.findPreviousUploads().then((prev) => {
+      if (prev.length) upload.resumeFromPreviousUpload(prev[0]);
+      upload.start();
+    });
+
+    uploadRef.current = upload;
+  }
+
+  function handleUpload() {
     if (!file) return;
     setStatus('uploading');
-    setProgress(0);
     setErrorMsg('');
+    startUpload(file);
+  }
 
-    try {
-      await new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhrRef.current = xhr;
+  function handlePause() {
+    uploadRef.current?.abort();
+    setStatus('paused');
+  }
 
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-        const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-        // PUT upserts cleanly without requiring DELETE first
-        const url = `${supabaseUrl}/storage/v1/object/${BUCKET}/${encodeURIComponent(filename)}`;
+  function handleResume() {
+    if (!file) return;
+    setStatus('uploading');
+    uploadRef.current?.start();
+  }
 
-        xhr.open('POST', url);
-        xhr.setRequestHeader('Authorization', `Bearer ${anonKey}`);
-        xhr.setRequestHeader('x-upsert', 'true');
-        // Let the browser set Content-Type with the correct boundary for FormData,
-        // or set explicitly for raw body
-        xhr.setRequestHeader('Content-Type', file.type || 'video/mp4');
-
-        xhr.upload.onprogress = (e) => {
-          if (e.lengthComputable) {
-            setProgress(Math.round((e.loaded / e.total) * 100));
-          }
-        };
-
-        xhr.onload = () => {
-          if (xhr.status === 200 || xhr.status === 201) {
-            resolve();
-          } else {
-            reject(new Error(`Server responded ${xhr.status}: ${xhr.responseText}`));
-          }
-        };
-
-        xhr.onerror = () => reject(new Error('Network error — check your connection and try again.'));
-        xhr.onabort = () => reject(new Error('Upload cancelled.'));
-
-        // Send the File object directly — no ArrayBuffer conversion.
-        // The browser streams it from disk, so memory stays low regardless of file size.
-        xhr.send(file);
-      });
-
-      const { data } = supabase.storage.from(BUCKET).getPublicUrl(filename);
-      setPublicUrl(data.publicUrl);
-      setStatus('done');
-      setProgress(100);
-    } catch (err) {
-      const msg = String(err);
-      if (!msg.includes('cancelled')) {
-        setStatus('error');
-        setErrorMsg(msg);
-      }
-    }
+  function handleCancel() {
+    uploadRef.current?.abort();
+    uploadRef.current = null;
+    setStatus('idle');
+    setProgress(0);
+    setUploaded(0);
+    setTotal(0);
   }
 
   return (
@@ -96,7 +115,7 @@ export default function AdminVideoUpload() {
             <Film size={20} className="text-gold-400" />
             <div>
               <h1 className="text-white font-bold text-lg leading-tight">Landing Video Upload</h1>
-              <p className="text-gray-400 text-sm">Upload a video directly to Supabase storage</p>
+              <p className="text-gray-400 text-sm">Resumable upload — large files fully supported</p>
             </div>
           </div>
         </div>
@@ -111,7 +130,7 @@ export default function AdminVideoUpload() {
               type="text"
               value={filename}
               onChange={e => setFilename(e.target.value)}
-              disabled={status === 'uploading'}
+              disabled={status === 'uploading' || status === 'paused'}
               className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-navy-500 focus:border-transparent disabled:opacity-50"
               placeholder="zh-hero.mp4"
             />
@@ -120,18 +139,18 @@ export default function AdminVideoUpload() {
 
           {/* Drop zone */}
           <div
-            onClick={() => status !== 'uploading' && inputRef.current?.click()}
-            onDragOver={e => { e.preventDefault(); if (status !== 'uploading') setDragging(true); }}
+            onClick={() => status === 'idle' && inputRef.current?.click()}
+            onDragOver={e => { e.preventDefault(); if (status === 'idle') setDragging(true); }}
             onDragLeave={() => setDragging(false)}
             onDrop={e => {
               e.preventDefault();
               setDragging(false);
-              if (status === 'uploading') return;
+              if (status !== 'idle') return;
               const f = e.dataTransfer.files[0];
               if (f) pickFile(f);
             }}
             className={`border-2 border-dashed rounded-2xl p-10 text-center transition-colors duration-150 ${
-              status === 'uploading'
+              status !== 'idle'
                 ? 'border-gray-200 bg-gray-50 cursor-default'
                 : dragging
                 ? 'border-navy-400 bg-navy-50 cursor-pointer'
@@ -152,38 +171,43 @@ export default function AdminVideoUpload() {
                 <Film size={32} className={status === 'uploading' ? 'text-navy-400' : 'text-emerald-500'} />
                 <p className="text-sm font-semibold text-gray-800">{file.name}</p>
                 <p className="text-xs text-gray-400">
-                  {(file.size / 1024 / 1024).toFixed(1)} MB
-                  {status !== 'uploading' && ' — click to change'}
+                  {formatMB(file.size)} MB
+                  {status === 'idle' && ' — click to change'}
                 </p>
               </div>
             ) : (
               <div className="flex flex-col items-center gap-2">
                 <Upload size={32} className="text-gray-300" />
                 <p className="text-sm font-semibold text-gray-600">Drop your video here, or click to browse</p>
-                <p className="text-xs text-gray-400">MP4, MOV, WebM — large files supported</p>
+                <p className="text-xs text-gray-400">MP4, MOV, WebM — any size, resumable</p>
               </div>
             )}
           </div>
 
-          {/* Progress bar */}
-          {status === 'uploading' && (
-            <div className="space-y-1.5">
+          {/* Progress */}
+          {(status === 'uploading' || status === 'paused') && (
+            <div className="space-y-2">
               <div className="flex justify-between text-xs text-gray-500">
                 <span className="flex items-center gap-1.5">
-                  <Loader2 size={12} className="animate-spin" />
-                  Uploading {file ? `${(file.size / 1024 / 1024).toFixed(0)} MB` : ''}…
+                  {status === 'uploading'
+                    ? <><Loader2 size={12} className="animate-spin" /> Uploading…</>
+                    : '⏸ Paused'}
                 </span>
-                <span>{progress}%</span>
+                <span>
+                  {total > 0 ? `${formatMB(uploaded)} / ${formatMB(total)} MB` : `${progress}%`}
+                </span>
               </div>
               <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
                 <div
-                  className="h-2.5 bg-navy-600 rounded-full transition-all duration-300"
+                  className={`h-2.5 rounded-full transition-all duration-300 ${status === 'paused' ? 'bg-amber-400' : 'bg-navy-600'}`}
                   style={{ width: `${progress}%` }}
                 />
               </div>
-              <p className="text-xs text-gray-400 text-center">
-                Keep this tab open — large uploads may take several minutes.
-              </p>
+              {status === 'uploading' && (
+                <p className="text-xs text-gray-400 text-center">
+                  Keep this tab open. If interrupted, you can resume from where it left off.
+                </p>
+              )}
             </div>
           )}
 
@@ -205,27 +229,48 @@ export default function AdminVideoUpload() {
             </div>
           )}
 
-          {/* Buttons */}
+          {/* Action buttons */}
           <div className="flex gap-3">
-            <button
-              onClick={upload}
-              disabled={!file || status === 'uploading'}
-              className="flex-1 flex items-center justify-center gap-2 bg-navy-900 hover:bg-navy-800 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-xl transition-colors text-sm"
-            >
-              {status === 'uploading' ? (
-                <><Loader2 size={16} className="animate-spin" /> Uploading…</>
-              ) : (
-                <><Upload size={16} /> Upload to Supabase</>
-              )}
-            </button>
-            {status === 'uploading' && (
+            {status === 'idle' || status === 'done' || status === 'error' ? (
               <button
-                onClick={cancel}
-                className="px-5 py-3 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-semibold transition-colors"
+                onClick={handleUpload}
+                disabled={!file || status === 'uploading'}
+                className="flex-1 flex items-center justify-center gap-2 bg-navy-900 hover:bg-navy-800 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-xl transition-colors text-sm"
               >
-                Cancel
+                <Upload size={16} />
+                {status === 'error' ? 'Retry Upload' : 'Upload to Supabase'}
               </button>
-            )}
+            ) : status === 'uploading' ? (
+              <>
+                <button
+                  onClick={handlePause}
+                  className="flex-1 flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-semibold py-3 rounded-xl transition-colors text-sm"
+                >
+                  Pause
+                </button>
+                <button
+                  onClick={handleCancel}
+                  className="px-5 py-3 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-semibold transition-colors"
+                >
+                  Cancel
+                </button>
+              </>
+            ) : status === 'paused' ? (
+              <>
+                <button
+                  onClick={handleResume}
+                  className="flex-1 flex items-center justify-center gap-2 bg-navy-900 hover:bg-navy-800 text-white font-semibold py-3 rounded-xl transition-colors text-sm"
+                >
+                  <Loader2 size={16} /> Resume
+                </button>
+                <button
+                  onClick={handleCancel}
+                  className="px-5 py-3 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-semibold transition-colors"
+                >
+                  Cancel
+                </button>
+              </>
+            ) : null}
           </div>
         </div>
       </div>
