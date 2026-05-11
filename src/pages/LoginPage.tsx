@@ -209,14 +209,12 @@ export default function LoginPage() {
       <div className="flex-1 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <Link to="/" className="inline-flex items-center gap-2 mb-6">
-              <div className="w-9 h-9 bg-navy-900 rounded-lg flex items-center justify-center">
-                <span className="text-gold-500 font-bold text-sm">MX</span>
-              </div>
-              <div>
-                <div className="text-navy-900 font-bold text-sm leading-tight">Mexico Trademark</div>
-                <div className="text-gold-600 text-xs font-medium tracking-wide">CENTER</div>
-              </div>
+            <Link to="/" className="inline-flex items-center mb-6">
+              <img
+                src="/logo.png"
+                alt="Mexico Trademark Center"
+                className="h-11 w-auto object-contain"
+              />
             </Link>
             <h1 className="text-2xl font-bold text-navy-900">
               {mode === 'reset' ? c.sendResetLink : mode === 'login' ? t('auth.login') : t('auth.register')}

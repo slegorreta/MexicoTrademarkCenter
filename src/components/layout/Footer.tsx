@@ -12,13 +12,13 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
           {/* Brand */}
           <div className="lg:col-span-2">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 bg-gold-500 rounded flex items-center justify-center">
-                <span className="text-white font-bold text-sm">MX</span>
-              </div>
-              <div>
-                <div className="text-white font-bold text-base leading-tight">Mexico Trademark</div>
-                <div className="text-gold-500 text-xs font-medium tracking-wide">CENTER</div>
+            <div className="mb-4">
+              <div className="inline-block bg-white rounded-lg px-3 py-1.5">
+                <img
+                  src="/logo.png"
+                  alt="Mexico Trademark Center"
+                  className="h-9 w-auto object-contain"
+                />
               </div>
             </div>
             <p className="text-sm leading-relaxed max-w-xs mb-4">

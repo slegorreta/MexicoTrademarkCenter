@@ -80,14 +80,12 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center h-16 lg:h-20 gap-4">
           {/* Logo — never shrinks */}
-          <Link to="/" className="flex items-center gap-2 flex-shrink-0">
-            <div className="w-8 h-8 bg-navy-900 rounded flex items-center justify-center flex-shrink-0">
-              <span className="text-gold-500 font-bold text-sm">MX</span>
-            </div>
-            <div className="flex-shrink-0">
-              <div className="text-navy-900 font-bold text-sm sm:text-base leading-tight whitespace-nowrap">Mexico Trademark</div>
-              <div className="text-gold-600 text-xs font-medium tracking-wide">CENTER</div>
-            </div>
+          <Link to="/" className="flex items-center flex-shrink-0">
+            <img
+              src="/logo.png"
+              alt="Mexico Trademark Center"
+              className="h-10 w-auto object-contain"
+            />
           </Link>
 
           {/* Desktop Nav — centered, only renders when there is genuinely enough room.
