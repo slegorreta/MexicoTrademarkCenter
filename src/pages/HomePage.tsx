@@ -21,7 +21,7 @@ export default function HomePage() {
   const [showImpiModal, setShowImpiModal] = useState(false);
 
   const trustBadges = [
-    { icon: Clock, key: 'trust.filing' },
+    { icon: Clock, key: 'trust.filing', onTooltip: () => setShowImpiModal(true) },
     { icon: Globe2, key: 'trust.impi', onTooltip: () => setShowConstanciaModal(true) },
     { icon: DollarSign, key: 'trust.bilingual', onTooltip: () => setShowSavingsModal(true) },
     { icon: Scale, key: 'trust.lawyers.label', onTooltip: () => setShowLawyersModal(true) },
