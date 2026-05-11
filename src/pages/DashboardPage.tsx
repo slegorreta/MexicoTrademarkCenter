@@ -5,11 +5,13 @@ import {
   ChevronRight, Download, MessageSquare, User, Settings,
   Bell, ArrowLeft, Send, Lock, Building2,
   Inbox, Shield, Pencil, CreditCard, Loader2, Tag, X,
-  Printer, Sheet, Trash2, Receipt, ChevronDown, ChevronUp, RefreshCw, Eye, FileSearch
+  Printer, Sheet, Trash2, Receipt, ChevronDown, ChevronUp, RefreshCw, Eye, FileSearch,
+  Globe, Phone, MessageCircle
 } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage, type Language } from '../context/LanguageContext';
 import { supabase } from '../lib/supabase';
 import { COUNTRIES } from '../lib/countries';
 
@@ -572,24 +574,33 @@ function DeleteConfirmDialog({
   onConfirm,
   onCancel,
   deleting,
+  deleteError,
 }: {
   caseNumber: string;
   onConfirm: () => void;
   onCancel: () => void;
   deleting: boolean;
+  deleteError?: string | null;
 }) {
   return (
-    <div className="mt-1 bg-red-50 border border-red-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-3">
-      <div className="flex-1">
-        <p className="text-sm font-semibold text-red-900">Delete case {caseNumber}?</p>
-        <p className="text-xs text-red-700 mt-0.5">This will permanently remove the application and all associated data. This cannot be undone.</p>
-      </div>
-      <div className="flex gap-2 flex-shrink-0">
-        <button onClick={onCancel} className="px-3 py-1.5 text-xs font-medium border border-red-200 text-red-700 rounded-lg hover:bg-red-100">Cancel</button>
-        <button onClick={onConfirm} disabled={deleting} className="px-3 py-1.5 text-xs font-semibold bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-60 flex items-center gap-1.5">
-          {deleting ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
-          {deleting ? 'Deleting...' : 'Delete'}
-        </button>
+    <div className="mt-1 bg-red-50 border border-red-200 rounded-xl p-4 flex flex-col gap-3">
+      {deleteError && (
+        <div className="flex items-center gap-2 bg-red-100 border border-red-300 rounded-lg px-3 py-2 text-xs text-red-800">
+          <AlertCircle size={13} className="flex-shrink-0" /> {deleteError}
+        </div>
+      )}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+        <div className="flex-1">
+          <p className="text-sm font-semibold text-red-900">Delete case {caseNumber}?</p>
+          <p className="text-xs text-red-700 mt-0.5">This will permanently remove the application and all associated data. This cannot be undone.</p>
+        </div>
+        <div className="flex gap-2 flex-shrink-0">
+          <button onClick={onCancel} className="px-3 py-1.5 text-xs font-medium border border-red-200 text-red-700 rounded-lg hover:bg-red-100">Cancel</button>
+          <button onClick={onConfirm} disabled={deleting} className="px-3 py-1.5 text-xs font-semibold bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-60 flex items-center gap-1.5">
+            {deleting ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+            {deleting ? 'Deleting...' : 'Delete'}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -609,6 +620,7 @@ function DocketTable({
   const [paymentRow, setPaymentRow] = useState<string | null>(null); // app_id of row with open payment panel
   const [deleteRow, setDeleteRow] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
 
   const toggleComment = (key: string) =>
@@ -620,20 +632,28 @@ function DocketTable({
 
   const handleDelete = async (appId: string) => {
     setDeleting(true);
+    setDeleteError(null);
     try {
       // Delete child records first, then the application
-      await supabase.from('trademark_classes').delete().eq('application_id', appId);
-      await supabase.from('trademarks').delete().eq('application_id', appId);
-      await supabase.from('goods_services').delete().eq('application_id', appId);
-      await supabase.from('payments').delete().eq('application_id', appId);
-      await supabase.from('timeline_events').delete().eq('application_id', appId);
-      await supabase.from('client_messages').delete().eq('application_id', appId);
-      await supabase.from('uploaded_files').delete().eq('application_id', appId);
-      await supabase.from('applications').delete().eq('id', appId);
+      const steps = [
+        supabase.from('filing_drafts').delete().eq('application_id', appId),
+        supabase.from('trademark_classes').delete().eq('application_id', appId),
+        supabase.from('trademarks').delete().eq('application_id', appId),
+        supabase.from('goods_services').delete().eq('application_id', appId),
+        supabase.from('payments').delete().eq('application_id', appId),
+        supabase.from('timeline_events').delete().eq('application_id', appId),
+        supabase.from('client_messages').delete().eq('application_id', appId),
+        supabase.from('uploaded_files').delete().eq('application_id', appId),
+      ];
+      for (const step of steps) { await step; }
+      const { error } = await supabase.from('applications').delete().eq('id', appId);
+      if (error) throw new Error(error.message);
+      setDeleteRow(null);
+      setTimeout(() => onRefresh(), 300);
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Delete failed. Please try again.');
     } finally {
       setDeleting(false);
-      setDeleteRow(null);
-      onRefresh();
     }
   };
 
@@ -797,13 +817,15 @@ function DocketTable({
                             >
                               <Pencil size={12} />
                             </Link>
-                            <button
-                              onClick={() => setDeleteRow(isDeleteOpen ? null : row.app_id)}
-                              className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-red-200 text-red-400 hover:bg-red-50 transition-colors"
-                              title="Delete case"
-                            >
-                              <Trash2 size={12} />
-                            </button>
+                            {row.filing_status === 'pending_payment' && (
+                              <button
+                                onClick={() => { setDeleteRow(isDeleteOpen ? null : row.app_id); setDeleteError(null); }}
+                                className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-red-200 text-red-400 hover:bg-red-50 transition-colors"
+                                title="Delete case"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            )}
                           </>
                         ) : (
                           <button
@@ -837,8 +859,9 @@ function DocketTable({
                         <DeleteConfirmDialog
                           caseNumber={row.case_number}
                           onConfirm={() => handleDelete(row.app_id)}
-                          onCancel={() => setDeleteRow(null)}
+                          onCancel={() => { setDeleteRow(null); setDeleteError(null); }}
                           deleting={deleting}
+                          deleteError={deleteError}
                         />
                       </td>
                     </tr>
@@ -1093,6 +1116,8 @@ function ApplicationDetail({ appId, onBack }: { appId: string; onBack: () => voi
     const paidDate = paymentInfo.paid_at ? new Date(paymentInfo.paid_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '—';
     const amount = `USD $${Number(paymentInfo.amount_usd).toFixed(2)}`;
 
+    const logoUrl = `${window.location.origin}/Captura_de_pantalla_2026-05-10_a_la(s)_1.35.26_p.m..png`;
+
     const win = window.open('', '_blank');
     if (!win) return;
     win.document.write(`<!DOCTYPE html><html><head><title>Receipt — ${app.case_number}</title>
@@ -1100,10 +1125,13 @@ function ApplicationDetail({ appId, onBack }: { appId: string; onBack: () => voi
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;color:#111;background:#fff;padding:0}
   .page{max-width:680px;margin:0 auto;padding:48px 40px}
-  .header{background:#1a2e1a;color:#fff;border-radius:10px 10px 0 0;padding:28px 32px;display:flex;align-items:center;justify-content:space-between}
-  .brand{font-size:22px;font-weight:800;letter-spacing:-0.5px;color:#fff}
-  .brand-sub{font-size:11px;color:#a3c4a3;margin-top:2px;letter-spacing:.04em}
-  .stamp{background:#22c55e;color:#fff;font-size:13px;font-weight:800;padding:6px 18px;border-radius:20px;letter-spacing:.08em;text-transform:uppercase}
+  .header{background:#1a2e1a;color:#fff;border-radius:10px 10px 0 0;padding:24px 32px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .header-left{display:flex;align-items:center;gap:16px}
+  .logo-wrap{background:#fff;border-radius:8px;padding:6px 10px;display:flex;align-items:center;justify-content:center}
+  .logo-wrap img{height:38px;width:auto;object-fit:contain;display:block}
+  .brand{font-size:18px;font-weight:800;letter-spacing:-0.3px;color:#fff;line-height:1.2}
+  .brand-sub{font-size:10px;color:#a3c4a3;margin-top:3px;letter-spacing:.04em}
+  .stamp{background:#22c55e;color:#fff;font-size:13px;font-weight:800;padding:6px 18px;border-radius:20px;letter-spacing:.08em;text-transform:uppercase;flex-shrink:0}
   .receipt-title{margin:28px 0 6px;font-size:20px;font-weight:700;color:#1a2e1a}
   .receipt-sub{font-size:12px;color:#6b7280}
   .ref{font-size:11px;color:#9ca3af;margin-top:4px;font-family:monospace}
@@ -1124,15 +1152,18 @@ function ApplicationDetail({ appId, onBack }: { appId: string; onBack: () => voi
 </head><body>
 <div class="page">
   <div class="header">
-    <div>
-      <div class="brand">MarcaTec</div>
-      <div class="brand-sub">Mexico Trademark Filing Services</div>
+    <div class="header-left">
+      <div class="logo-wrap"><img src="${logoUrl}" alt="Mexico Trademark Center" /></div>
+      <div>
+        <div class="brand">Lawtaem LLC</div>
+        <div class="brand-sub">2 S Biscayne Blvd, Suite 3200-2833 &middot; Miami, FL 33131, USA</div>
+      </div>
     </div>
     <div class="stamp">PAID</div>
   </div>
 
   <div class="receipt-title">Official Payment Receipt</div>
-  <div class="receipt-sub">This document serves as proof of payment for trademark filing services.</div>
+  <div class="receipt-sub">This document serves as proof of payment for trademark filing services rendered through Mexico Trademark Center.</div>
   <div class="ref">Reference: ${piShort} &nbsp;·&nbsp; Issued: ${paidDate}</div>
 
   <hr class="divider" />
@@ -1165,8 +1196,9 @@ function ApplicationDetail({ appId, onBack }: { appId: string; onBack: () => voi
   </table>
 
   <div class="footer">
-    MarcaTec — Mexico Trademark Filing Services<br>
-    Payment processed on ${paidDate} · Transaction ref: ${paymentInfo.stripe_payment_intent_id}<br>
+    Lawtaem LLC &mdash; Mexico Trademark Center<br>
+    2 S Biscayne Boulevard, Suite 3200-2833, Miami, Florida 33131, USA<br>
+    Payment processed on ${paidDate} &middot; Transaction ref: ${paymentInfo.stripe_payment_intent_id}<br>
     This receipt confirms that full payment has been received and your application is being processed.
   </div>
 </div>
@@ -1369,8 +1401,23 @@ function ApplicationDetail({ appId, onBack }: { appId: string; onBack: () => voi
 
 // ─── Account Settings ─────────────────────────────────────────────────────────
 
-function AccountSettings() {
+function AccountSettings({ language }: { language: string }) {
   const { user, profile } = useAuth();
+
+  // Profile editing
+  const [editName, setEditName] = useState(profile?.full_name ?? '');
+  const [editPhone, setEditPhone] = useState(profile?.phone ?? '');
+  const [editWhatsapp, setEditWhatsapp] = useState(profile?.whatsapp ?? '');
+  const [editWechat, setEditWechat] = useState(profile?.wechat ?? '');
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileMsg, setProfileMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Email change
+  const [editEmail, setEditEmail] = useState('');
+  const [emailChanging, setEmailChanging] = useState(false);
+  const [emailMsg, setEmailMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Password
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [saving, setSaving] = useState(false);
@@ -1378,14 +1425,59 @@ function AccountSettings() {
   const [resetSent, setResetSent] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
 
+  const l = (en: string, zh: string, es: string, de?: string, fr?: string, hi?: string, pt?: string, ja?: string) =>
+    language === 'zh' ? zh : language === 'es' ? es : language === 'de' ? (de ?? en) : language === 'fr' ? (fr ?? en) : language === 'hi' ? (hi ?? en) : language === 'pt' ? (pt ?? en) : language === 'ja' ? (ja ?? en) : en;
+
+  useEffect(() => {
+    if (profile) {
+      setEditName(profile.full_name ?? '');
+      setEditPhone(profile.phone ?? '');
+      setEditWhatsapp(profile.whatsapp ?? '');
+      setEditWechat(profile.wechat ?? '');
+    }
+  }, [profile]);
+
+  const saveProfile = async () => {
+    if (!user) return;
+    setProfileSaving(true);
+    setProfileMsg(null);
+    const { error } = await supabase.from('profiles').update({
+      full_name: editName,
+      phone: editPhone,
+      whatsapp: editWhatsapp,
+      wechat: editWechat,
+      updated_at: new Date().toISOString(),
+    }).eq('id', user.id);
+    if (error) {
+      setProfileMsg({ type: 'error', text: error.message });
+    } else {
+      setProfileMsg({ type: 'success', text: l('Profile saved.', '个人资料已保存。', 'Perfil guardado.', 'Profil gespeichert.', 'Profil enregistré.', 'प्रोफ़ाइल सहेजा गया।', 'Perfil salvo.', 'プロフィールを保存しました。') });
+    }
+    setProfileSaving(false);
+  };
+
+  const changeEmail = async () => {
+    if (!editEmail.trim()) return;
+    setEmailChanging(true);
+    setEmailMsg(null);
+    const { error } = await supabase.auth.updateUser({ email: editEmail.trim() });
+    if (error) {
+      setEmailMsg({ type: 'error', text: error.message });
+    } else {
+      setEmailMsg({ type: 'success', text: l('Verification link sent. Check your new inbox to confirm the change.', '验证链接已发送。请检查新邮箱以确认更改。', 'Enlace de verificación enviado. Revisa tu nueva bandeja para confirmar.', 'Bestätigungslink gesendet. Prüfen Sie Ihr neues Postfach.', 'Lien de vérification envoyé. Vérifiez votre nouvelle boîte mail.', 'सत्यापन लिंक भेजा गया। परिवर्तन की पुष्टि के लिए अपना नया इनबॉक्स जांचें।', 'Link de verificação enviado. Verifique sua nova caixa de entrada.', '確認リンクを送信しました。新しいメールボックスを確認してください。') });
+      setEditEmail('');
+    }
+    setEmailChanging(false);
+  };
+
   const changePassword = async () => {
-    if (newPassword !== confirmPassword) { setMsg({ type: 'error', text: 'Passwords do not match.' }); return; }
-    if (newPassword.length < 8) { setMsg({ type: 'error', text: 'Password must be at least 8 characters.' }); return; }
+    if (newPassword !== confirmPassword) { setMsg({ type: 'error', text: l('Passwords do not match.', '密码不匹配。', 'Las contraseñas no coinciden.') }); return; }
+    if (newPassword.length < 8) { setMsg({ type: 'error', text: l('Password must be at least 8 characters.', '密码至少需要8个字符。', 'La contraseña debe tener al menos 8 caracteres.') }); return; }
     setSaving(true);
     const { error } = await supabase.auth.updateUser({ password: newPassword });
     if (error) { setMsg({ type: 'error', text: error.message }); }
     else {
-      setMsg({ type: 'success', text: 'Password updated successfully.' });
+      setMsg({ type: 'success', text: l('Password updated successfully.', '密码更新成功。', 'Contraseña actualizada correctamente.') });
       setNewPassword(''); setConfirmPassword('');
       if (profile) await supabase.from('profiles').update({ password_change_required: false }).eq('id', user!.id);
     }
@@ -1399,34 +1491,104 @@ function AccountSettings() {
     setResetSent(true); setResetLoading(false);
   };
 
+  const inputClass = 'w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2d5a2d]';
+  const labelClass = 'text-xs text-gray-500 uppercase tracking-wide mb-1 block';
+
   return (
     <div className="space-y-5 max-w-lg">
+      {/* Profile card */}
       <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2"><User size={15} className="text-[#2d5a2d]" /> Profile</h3>
-        <div className="space-y-2 text-sm">
-          <div className="flex justify-between"><span className="text-gray-500">Name</span><span className="font-medium">{profile?.full_name ?? '—'}</span></div>
-          <div className="flex justify-between"><span className="text-gray-500">Email</span><span className="font-medium">{user?.email}</span></div>
+        <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <User size={15} className="text-[#2d5a2d]" />
+          {l('Profile', '个人资料', 'Perfil', 'Profil', 'Profil', 'प्रोफ़ाइल', 'Perfil', 'プロフィール')}
+        </h3>
+        {profileMsg && (
+          <div className={`mb-4 px-3 py-2 rounded-lg text-sm ${profileMsg.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+            {profileMsg.text}
+          </div>
+        )}
+        <div className="space-y-3">
+          <div>
+            <label className={labelClass}>{l('Full Name', '全名', 'Nombre completo', 'Vollständiger Name', 'Nom complet', 'पूरा नाम', 'Nome completo', '氏名')}</label>
+            <input type="text" value={editName} onChange={e => setEditName(e.target.value)} className={inputClass} />
+          </div>
+          <div>
+            <label className={labelClass}>{l('Phone', '电话', 'Teléfono', 'Telefon', 'Téléphone', 'फ़ोन', 'Telefone', '電話')}</label>
+            <div className="relative">
+              <Phone size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input type="tel" value={editPhone} onChange={e => setEditPhone(e.target.value)} className={`${inputClass} pl-8`} placeholder="+1 555 000 0000" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelClass}>WhatsApp</label>
+              <div className="relative">
+                <MessageCircle size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input type="tel" value={editWhatsapp} onChange={e => setEditWhatsapp(e.target.value)} className={`${inputClass} pl-8`} placeholder="+1 555 000 0000" />
+              </div>
+            </div>
+            <div>
+              <label className={labelClass}>WeChat</label>
+              <input type="text" value={editWechat} onChange={e => setEditWechat(e.target.value)} className={inputClass} placeholder="WeChat ID" />
+            </div>
+          </div>
+          <button onClick={saveProfile} disabled={profileSaving} className="w-full bg-[#1a2e1a] text-white text-sm font-medium py-2.5 rounded-lg hover:bg-[#2d5a2d] disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
+            {profileSaving ? <Loader2 size={14} className="animate-spin" /> : null}
+            {profileSaving ? l('Saving…', '保存中…', 'Guardando…', 'Speichern…', 'Enregistrement…', 'सहेज रहे हैं…', 'Salvando…', '保存中…') : l('Save Profile', '保存个人资料', 'Guardar perfil', 'Profil speichern', 'Enregistrer le profil', 'प्रोफ़ाइल सहेजें', 'Salvar perfil', 'プロフィールを保存')}
+          </button>
         </div>
       </div>
+
+      {/* Email change card */}
       <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2"><Lock size={15} className="text-[#2d5a2d]" /> Change Password</h3>
+        <h3 className="text-sm font-semibold text-gray-900 mb-1 flex items-center gap-2">
+          <Inbox size={15} className="text-[#2d5a2d]" />
+          {l('Email Address', '电子邮件地址', 'Dirección de correo', 'E-Mail-Adresse', 'Adresse e-mail', 'ईमेल पता', 'Endereço de e-mail', 'メールアドレス')}
+        </h3>
+        <p className="text-xs text-gray-400 mb-4">
+          {l('Current:', '当前：', 'Actual:', 'Aktuell:', 'Actuel:', 'वर्तमान:', 'Atual:', '現在：')} <strong className="text-gray-600">{user?.email}</strong>
+        </p>
+        {emailMsg && (
+          <div className={`mb-3 px-3 py-2 rounded-lg text-sm ${emailMsg.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+            {emailMsg.text}
+          </div>
+        )}
+        <div className="space-y-2">
+          <label className={labelClass}>{l('New Email Address', '新电子邮件', 'Nuevo correo electrónico', 'Neue E-Mail', 'Nouvel e-mail', 'नया ईमेल', 'Novo e-mail', '新しいメール')}</label>
+          <input type="email" value={editEmail} onChange={e => setEditEmail(e.target.value)} className={inputClass} placeholder={l('new@email.com', 'new@email.com', 'nuevo@correo.com', 'neu@email.de', 'nouveau@email.fr', 'new@email.com', 'novo@email.com', 'new@email.com')} />
+          <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+            {l('A verification link will be sent to the new address. The change takes effect after you click it.', '验证链接将发送至新地址。点击后更改生效。', 'Se enviará un enlace al nuevo correo. El cambio tendrá efecto tras hacer clic.', 'Ein Bestätigungslink wird an die neue Adresse gesendet.', 'Un lien de vérification sera envoyé à la nouvelle adresse.', 'नए पते पर सत्यापन लिंक भेजा जाएगा।', 'Um link de verificação será enviado ao novo endereço.', '新しいアドレスに確認リンクが送信されます。')}
+          </p>
+          <button onClick={changeEmail} disabled={emailChanging || !editEmail.trim()} className="w-full bg-[#1a2e1a] text-white text-sm font-medium py-2.5 rounded-lg hover:bg-[#2d5a2d] disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
+            {emailChanging ? <Loader2 size={14} className="animate-spin" /> : null}
+            {l('Send Verification Link', '发送验证链接', 'Enviar enlace de verificación', 'Bestätigungslink senden', 'Envoyer le lien', 'सत्यापन लिंक भेजें', 'Enviar link de verificação', '確認リンクを送信')}
+          </button>
+        </div>
+      </div>
+
+      {/* Password card */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <Lock size={15} className="text-[#2d5a2d]" />
+          {l('Change Password', '更改密码', 'Cambiar contraseña', 'Passwort ändern', 'Changer le mot de passe', 'पासवर्ड बदलें', 'Alterar senha', 'パスワード変更')}
+        </h3>
         {msg && <div className={`mb-4 px-3 py-2 rounded-lg text-sm ${msg.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>{msg.text}</div>}
         <div className="space-y-3">
           <div>
-            <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">New Password</label>
-            <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2d5a2d]" placeholder="Min. 8 characters" />
+            <label className={labelClass}>{l('New Password', '新密码', 'Nueva contraseña', 'Neues Passwort', 'Nouveau mot de passe', 'नया पासवर्ड', 'Nova senha', '新しいパスワード')}</label>
+            <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className={inputClass} placeholder={l('Min. 8 characters', '至少8个字符', 'Mín. 8 caracteres')} />
           </div>
           <div>
-            <label className="text-xs text-gray-500 uppercase tracking-wide mb-1 block">Confirm Password</label>
-            <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2d5a2d]" placeholder="Repeat new password" />
+            <label className={labelClass}>{l('Confirm Password', '确认密码', 'Confirmar contraseña', 'Passwort bestätigen', 'Confirmer le mot de passe', 'पासवर्ड की पुष्टि', 'Confirmar senha', 'パスワード確認')}</label>
+            <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className={inputClass} placeholder={l('Repeat new password', '重复新密码', 'Repite la nueva contraseña')} />
           </div>
           <button onClick={changePassword} disabled={saving} className="w-full bg-[#1a2e1a] text-white text-sm font-medium py-2.5 rounded-lg hover:bg-[#2d5a2d] disabled:opacity-50 transition-colors">
-            {saving ? 'Saving…' : 'Update Password'}
+            {saving ? l('Saving…', '保存中…', 'Guardando…') : l('Update Password', '更新密码', 'Actualizar contraseña', 'Passwort aktualisieren', 'Mettre à jour le mot de passe', 'पासवर्ड अपडेट करें', 'Atualizar senha', 'パスワードを更新')}
           </button>
           <div className="pt-1 border-t border-gray-100 text-center">
             {resetSent
-              ? <p className="text-xs text-green-600 font-medium">Reset link sent to {user?.email}</p>
-              : <button type="button" onClick={sendResetEmail} disabled={resetLoading} className="text-xs text-gray-400 hover:text-[#2d5a2d] transition-colors disabled:opacity-50">{resetLoading ? 'Sending…' : 'Or send a reset link to my email'}</button>}
+              ? <p className="text-xs text-green-600 font-medium">{l('Reset link sent to', 'リセットリンクを送信しました', 'Enlace enviado a')} {user?.email}</p>
+              : <button type="button" onClick={sendResetEmail} disabled={resetLoading} className="text-xs text-gray-400 hover:text-[#2d5a2d] transition-colors disabled:opacity-50">{resetLoading ? l('Sending…', '发送中…', 'Enviando…') : l('Or send a reset link to my email', '或发送重置链接至我的邮箱', 'O enviar un enlace a mi correo')}</button>}
           </div>
         </div>
       </div>
@@ -1449,8 +1611,20 @@ interface ClearanceReport {
 
 type View = 'docket' | 'detail' | 'settings' | 'reports';
 
+const LANG_OPTIONS: { code: Language; label: string; flag: string }[] = [
+  { code: 'en', label: 'English', flag: '🇺🇸' },
+  { code: 'es', label: 'Español', flag: '🇲🇽' },
+  { code: 'zh', label: '中文', flag: '🇨🇳' },
+  { code: 'de', label: 'Deutsch', flag: '🇩🇪' },
+  { code: 'fr', label: 'Français', flag: '🇫🇷' },
+  { code: 'hi', label: 'हिंदी', flag: '🇮🇳' },
+  { code: 'pt', label: 'Português', flag: '🇧🇷' },
+  { code: 'ja', label: '日本語', flag: '🇯🇵' },
+];
+
 export default function DashboardPage() {
   const { user, profile, signOut } = useAuth();
+  const { language, setLanguage } = useLanguage();
   const navigate = useNavigate();
   const params = useParams<{ id?: string }>();
 
@@ -1459,10 +1633,30 @@ export default function DashboardPage() {
   const [view, setView] = useState<View>(params.id ? 'detail' : 'docket');
   const [selectedAppId, setSelectedAppId] = useState<string | null>(params.id ?? null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [langMenuOpen, setLangMenuOpen] = useState(false);
   const [draft, setDraft] = useState<FilingDraft | null>(null);
   const [reports, setReports] = useState<ClearanceReport[]>([]);
   const [reportsLoading, setReportsLoading] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+  const tri = (en: string, zh: string, es: string, de?: string, fr?: string, hi?: string, pt?: string, ja?: string): string =>
+    language === 'zh' ? zh : language === 'es' ? es : language === 'de' ? (de ?? en) : language === 'fr' ? (fr ?? en) : language === 'hi' ? (hi ?? en) : language === 'pt' ? (pt ?? en) : language === 'ja' ? (ja ?? en) : en;
+
+  // Apply profile language preference on mount
+  useEffect(() => {
+    if (profile?.preferred_language && profile.preferred_language !== language) {
+      setLanguage(profile.preferred_language as Language);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.preferred_language]);
+
+  const handleSetLanguage = async (lang: Language) => {
+    setLanguage(lang);
+    setLangMenuOpen(false);
+    if (user) {
+      await supabase.from('profiles').update({ preferred_language: lang }).eq('id', user.id);
+    }
+  };
 
   useEffect(() => {
     if (profile?.password_change_required) setView('settings');
@@ -1595,10 +1789,10 @@ export default function DashboardPage() {
   };
 
   const stats = [
-    { label: 'Total Cases', value: docketRows.length, icon: FileText, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: 'In Progress', value: docketRows.filter(r => ['new','pending_review','filed','ready_to_file'].includes(r.filing_status)).length, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
-    { label: 'Registered', value: docketRows.filter(r => r.filing_status === 'registered').length, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-    { label: 'Action Needed', value: docketRows.filter(r => ['info_requested','office_action_pending','pending_payment'].includes(r.filing_status)).length, icon: AlertCircle, color: 'text-rose-600', bg: 'bg-rose-50' },
+    { label: tri('Total Cases', '案件总数', 'Casos totales', 'Gesamt', 'Total', 'कुल मामले', 'Total', '総件数'), value: docketRows.length, icon: FileText, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { label: tri('In Progress', '进行中', 'En proceso', 'Laufend', 'En cours', 'प्रगति में', 'Em andamento', '処理中'), value: docketRows.filter(r => ['new','pending_review','filed','ready_to_file'].includes(r.filing_status)).length, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
+    { label: tri('Registered', '已注册', 'Registradas', 'Eingetragen', 'Enregistrées', 'पंजीकृत', 'Registradas', '登録済み'), value: docketRows.filter(r => r.filing_status === 'registered').length, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { label: tri('Action Needed', '需要操作', 'Acción requerida', 'Aktion nötig', 'Action requise', 'कार्रवाई आवश्यक', 'Ação necessária', '対応必要'), value: docketRows.filter(r => ['info_requested','office_action_pending','pending_payment'].includes(r.filing_status)).length, icon: AlertCircle, color: 'text-rose-600', bg: 'bg-rose-50' },
   ];
 
   const initials = profile?.full_name
@@ -1606,14 +1800,15 @@ export default function DashboardPage() {
     : (user?.email?.[0] ?? 'U').toUpperCase();
 
   const navItems = [
-    { key: 'docket', label: 'My Docket', icon: FileText },
-    { key: 'reports', label: 'Search Reports', icon: FileSearch },
-    { key: 'settings', label: 'Account Settings', icon: Settings },
+    { key: 'docket', label: tri('My Docket', '我的案件', 'Mi Expediente', 'Mein Docket', 'Mon dossier', 'मेरी सूची', 'Meu Painel', '自分のドケット'), icon: FileText },
+    { key: 'reports', label: tri('Search Reports', '搜索报告', 'Informes de búsqueda', 'Suchberichte', 'Rapports de recherche', 'खोज रिपोर्ट', 'Relatórios de busca', '検索レポート'), icon: FileSearch },
+    { key: 'settings', label: tri('Account Settings', '账户设置', 'Configuración de cuenta', 'Kontoeinstellungen', 'Paramètres du compte', 'खाता सेटिंग', 'Configurações da conta', 'アカウント設定'), icon: Settings },
   ] as const;
 
   return (
     <div className="min-h-screen bg-[#f8f7f4] flex">
       {sidebarOpen && <div className="fixed inset-0 bg-black/40 z-20 lg:hidden" onClick={() => setSidebarOpen(false)} />}
+      {langMenuOpen && <div className="fixed inset-0 z-40" onClick={() => setLangMenuOpen(false)} />}
 
       {/* Sidebar */}
       <aside className={`fixed lg:static inset-y-0 left-0 z-30 w-64 bg-[#0f1f0f] text-white flex flex-col transition-transform duration-200 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
@@ -1622,7 +1817,7 @@ export default function DashboardPage() {
             <div className="w-7 h-7 bg-[#c9a84c] rounded flex items-center justify-center"><Shield size={14} className="text-white" /></div>
             <div>
               <p className="text-xs font-bold text-white leading-none">Mexico Trademark</p>
-              <p className="text-[10px] text-green-400 mt-0.5">Client Portal</p>
+              <p className="text-[10px] text-green-400 mt-0.5">{tri('Client Portal', '客户门户', 'Portal del Cliente', 'Kundenportal', 'Portail client', 'क्लाइंट पोर्टल', 'Portal do Cliente', 'クライアントポータル')}</p>
             </div>
           </Link>
         </div>
@@ -1630,13 +1825,13 @@ export default function DashboardPage() {
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-[#2d5a2d] flex items-center justify-center text-xs font-bold text-white flex-shrink-0">{initials}</div>
             <div className="min-w-0">
-              <p className="text-sm font-medium text-white truncate">{profile?.full_name ?? 'Client'}</p>
+              <p className="text-sm font-medium text-white truncate">{profile?.full_name ?? tri('Client', '客户', 'Cliente', 'Kunde', 'Client', 'क्लाइंट', 'Cliente', 'クライアント')}</p>
               <p className="text-xs text-gray-400 truncate">{user?.email}</p>
             </div>
           </div>
           {profile?.password_change_required && (
             <div className="mt-2 flex items-center gap-1.5 text-xs text-amber-400 bg-amber-900/30 rounded-lg px-2.5 py-1.5">
-              <Bell size={11} /> Please set your password
+              <Bell size={11} /> {tri('Please set your password', '请设置您的密码', 'Por favor establece tu contraseña', 'Bitte Passwort setzen', 'Veuillez définir votre mot de passe', 'कृपया अपना पासवर्ड सेट करें', 'Por favor defina sua senha', 'パスワードを設定してください')}
             </div>
           )}
         </div>
@@ -1648,13 +1843,35 @@ export default function DashboardPage() {
               <item.icon size={16} />{item.label}
             </button>
           ))}
-          <Link to="/apply" className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-400 hover:bg-white/5 hover:text-white transition-colors mt-1">
-            <Plus size={16} /> New Filing
-          </Link>
         </nav>
-        <div className="px-3 py-4 border-t border-white/10">
+        <div className="px-3 py-4 border-t border-white/10 space-y-1">
+          {/* Language selector */}
+          <div className="relative">
+            <button
+              onClick={() => setLangMenuOpen(v => !v)}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-400 hover:bg-white/5 hover:text-white transition-colors"
+            >
+              <Globe size={16} />
+              <span className="flex-1 text-left">{LANG_OPTIONS.find(l => l.code === language)?.label ?? 'Language'}</span>
+              <ChevronRight size={12} className={`transition-transform ${langMenuOpen ? 'rotate-90' : ''}`} />
+            </button>
+            {langMenuOpen && (
+              <div className="absolute bottom-full left-0 w-full mb-1 bg-[#1a2e1a] border border-white/10 rounded-xl overflow-hidden shadow-xl z-50">
+                {LANG_OPTIONS.map(opt => (
+                  <button
+                    key={opt.code}
+                    onClick={() => handleSetLanguage(opt.code)}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${language === opt.code ? 'bg-white/15 text-white font-medium' : 'text-gray-300 hover:bg-white/10 hover:text-white'}`}
+                  >
+                    <span className="text-base">{opt.flag}</span> {opt.label}
+                    {language === opt.code && <CheckCircle2 size={12} className="ml-auto text-green-400" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <button onClick={() => signOut()} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-400 hover:bg-white/5 hover:text-rose-400 transition-colors">
-            <LogOut size={16} /> Sign Out
+            <LogOut size={16} /> {tri('Sign Out', '退出登录', 'Cerrar sesión', 'Abmelden', 'Se déconnecter', 'साइन आउट', 'Sair', 'サインアウト')}
           </button>
         </div>
       </aside>
@@ -1669,8 +1886,24 @@ export default function DashboardPage() {
               <div className="w-5 h-0.5 bg-gray-600 rounded" />
             </div>
           </button>
-          <span className="text-sm font-semibold text-gray-800">Client Portal</span>
-          <div className="w-8 h-8 rounded-full bg-[#2d5a2d] flex items-center justify-center text-xs font-bold text-white">{initials}</div>
+          <span className="text-sm font-semibold text-gray-800">{tri('Client Portal', '客户门户', 'Portal del Cliente', 'Kundenportal', 'Portail client', 'क्लाइंट पोर्टल', 'Portal do Cliente', 'クライアントポータル')}</span>
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <button onClick={() => setLangMenuOpen(v => !v)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500">
+                <Globe size={18} />
+              </button>
+              {langMenuOpen && (
+                <div className="absolute top-full right-0 mt-1 w-44 bg-white border border-gray-200 rounded-xl overflow-hidden shadow-xl z-50">
+                  {LANG_OPTIONS.map(opt => (
+                    <button key={opt.code} onClick={() => handleSetLanguage(opt.code)} className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm ${language === opt.code ? 'bg-[#f0f7f0] text-[#1a2e1a] font-medium' : 'text-gray-700 hover:bg-gray-50'}`}>
+                      <span>{opt.flag}</span> {opt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="w-8 h-8 rounded-full bg-[#2d5a2d] flex items-center justify-center text-xs font-bold text-white">{initials}</div>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
@@ -1680,26 +1913,23 @@ export default function DashboardPage() {
             <>
               <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
                 <div>
-                  <h1 className="text-xl font-bold text-gray-900">My Docket</h1>
-                  <p className="text-sm text-gray-500 mt-0.5">All your trademark cases in one place</p>
+                  <h1 className="text-xl font-bold text-gray-900">{tri('My Docket', '我的案件', 'Mi Expediente', 'Mein Docket', 'Mon dossier', 'मेरी सूची', 'Meu Painel', '自分のドケット')}</h1>
+                  <p className="text-sm text-gray-500 mt-0.5">{tri('All your trademark cases in one place', '您的所有商标案件', 'Todos tus casos de marca en un lugar', 'Alle Ihre Markenfälle an einem Ort', 'Tous vos dossiers de marque au même endroit', 'आपके सभी ट्रेडमार्क मामले एक जगह', 'Todos os seus casos de marca em um lugar', 'すべての商標案件を一か所で')}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button onClick={loadDocket} disabled={loading} className="flex items-center gap-1.5 text-xs font-medium text-gray-600 border border-gray-200 bg-white hover:bg-gray-50 px-3 py-2 rounded-lg transition-colors disabled:opacity-50" title="Refresh">
-                    <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
+                  <button onClick={loadDocket} disabled={loading} className="flex items-center gap-1.5 text-xs font-medium text-gray-600 border border-gray-200 bg-white hover:bg-gray-50 px-3 py-2 rounded-lg transition-colors disabled:opacity-50" title={tri('Refresh', '刷新', 'Actualizar', 'Aktualisieren', 'Actualiser', 'ताज़ा करें', 'Atualizar', '更新')}>
+                    <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> {tri('Refresh', '刷新', 'Actualizar', 'Aktualisieren', 'Actualiser', 'ताज़ा करें', 'Atualizar', '更新')}
                   </button>
                   {docketRows.length > 0 && (
                     <>
                       <button onClick={() => exportDocketCSV(docketRows, 'trademark-docket.csv')} className="flex items-center gap-1.5 text-xs font-medium text-gray-600 border border-gray-200 bg-white hover:bg-gray-50 px-3 py-2 rounded-lg transition-colors">
-                        <Sheet size={14} /> Export
+                        <Sheet size={14} /> {tri('Export', '导出', 'Exportar', 'Exportieren', 'Exporter', 'निर्यात', 'Exportar', 'エクスポート')}
                       </button>
                       <button onClick={() => printDocket(docketRows)} className="flex items-center gap-1.5 text-xs font-medium text-gray-600 border border-gray-200 bg-white hover:bg-gray-50 px-3 py-2 rounded-lg transition-colors">
-                        <Printer size={14} /> Print
+                        <Printer size={14} /> {tri('Print', '打印', 'Imprimir', 'Drucken', 'Imprimer', 'प्रिंट', 'Imprimir', '印刷')}
                       </button>
                     </>
                   )}
-                  <Link to="/apply" className="inline-flex items-center gap-2 bg-[#1a2e1a] hover:bg-[#2d5a2d] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
-                    <Plus size={15} /> New Filing
-                  </Link>
                 </div>
               </div>
 
@@ -1710,12 +1940,11 @@ export default function DashboardPage() {
                     {draft.logo_preview_data ? <img src={draft.logo_preview_data} alt="" className="w-full h-full object-contain" /> : <Pencil size={18} className="text-amber-600" />}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-amber-900">{draft.mark_name ? `"${draft.mark_name}" — ` : ''}Draft Filing in Progress</p>
-                    <p className="text-xs text-amber-700 mt-0.5">Step {draft.current_step} of 6 &middot; Last saved {new Date(draft.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                    <p className="text-sm font-semibold text-amber-900">{draft.mark_name ? `"${draft.mark_name}" — ` : ''}{tri('Draft Filing in Progress', '草稿申请进行中', 'Borrador en progreso', 'Entwurf in Bearbeitung', 'Brouillon en cours', 'ड्राफ्ट प्रगति में', 'Rascunho em andamento', '下書き作成中')}</p>
+                    <p className="text-xs text-amber-700 mt-0.5">{tri('Step', '步骤', 'Paso', 'Schritt', 'Étape', 'चरण', 'Etapa', 'ステップ')} {draft.current_step} {tri('of 6', '共6步', 'de 6', 'von 6', 'sur 6', '/ 6', 'de 6', '/ 6')} &middot; {tri('Last saved', '最后保存', 'Guardado', 'Zuletzt gespeichert', 'Dernière sauvegarde', 'अंतिम सहेजा', 'Último salvo', '最終保存')} {new Date(draft.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
                   </div>
                   <div className="flex gap-2 flex-shrink-0">
-                    <Link to="/apply?resume=1" className="inline-flex items-center gap-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors">Continue <ChevronRight size={13} /></Link>
-                    <Link to="/apply?fresh=1" className="inline-flex items-center gap-1.5 border border-amber-300 text-amber-700 hover:bg-amber-100 text-xs font-medium px-3 py-2 rounded-lg transition-colors">Start new</Link>
+                    <Link to="/apply?resume=1" className="inline-flex items-center gap-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors">{tri('Continue', '继续', 'Continuar', 'Fortfahren', 'Continuer', 'जारी रखें', 'Continuar', '続ける')} <ChevronRight size={13} /></Link>
                   </div>
                 </div>
               )}
@@ -1757,11 +1986,11 @@ export default function DashboardPage() {
             <>
               <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
                 <div>
-                  <h1 className="text-xl font-bold text-gray-900">Search Reports</h1>
-                  <p className="text-sm text-gray-500 mt-0.5">Trademark clearance reports you have purchased</p>
+                  <h1 className="text-xl font-bold text-gray-900">{tri('Search Reports', '搜索报告', 'Informes de búsqueda', 'Suchberichte', 'Rapports de recherche', 'खोज रिपोर्ट', 'Relatórios de busca', '検索レポート')}</h1>
+                  <p className="text-sm text-gray-500 mt-0.5">{tri('Trademark clearance reports you have purchased', '您购买的商标检索报告', 'Informes de disponibilidad de marca adquiridos', 'Erworbene Markenrecherche-Berichte', 'Rapports de disponibilité de marque achetés', 'आपके द्वारा खरीदी गई ट्रेडमार्क क्लीयरेंस रिपोर्ट', 'Relatórios de disponibilidade de marca adquiridos', '購入した商標調査レポート')}</p>
                 </div>
                 <button onClick={loadReports} disabled={reportsLoading} className="flex items-center gap-1.5 text-xs font-medium text-gray-600 border border-gray-200 bg-white hover:bg-gray-50 px-3 py-2 rounded-lg transition-colors disabled:opacity-50">
-                  <RefreshCw size={14} className={reportsLoading ? 'animate-spin' : ''} /> Refresh
+                  <RefreshCw size={14} className={reportsLoading ? 'animate-spin' : ''} /> {tri('Refresh', '刷新', 'Actualizar')}
                 </button>
               </div>
 
@@ -1846,14 +2075,14 @@ export default function DashboardPage() {
           {view === 'settings' && (
             <>
               <div className="mb-6">
-                <h1 className="text-xl font-bold text-gray-900">Account Settings</h1>
+                <h1 className="text-xl font-bold text-gray-900">{tri('Account Settings', '账户设置', 'Configuración de cuenta', 'Kontoeinstellungen', 'Paramètres du compte', 'खाता सेटिंग', 'Configurações da conta', 'アカウント設定')}</h1>
                 {profile?.password_change_required && (
                   <div className="mt-2 inline-flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                    <Bell size={14} /> Please set a personal password to secure your account.
+                    <Bell size={14} /> {tri('Please set a personal password to secure your account.', '请设置个人密码以保护您的账户。', 'Por favor establece una contraseña personal para asegurar tu cuenta.', 'Bitte setzen Sie ein persönliches Passwort.', 'Veuillez définir un mot de passe personnel.', 'कृपया अपना खाता सुरक्षित करने के लिए व्यक्तिगत पासवर्ड सेट करें।', 'Por favor defina uma senha pessoal para proteger sua conta.', '個人パスワードを設定してアカウントを保護してください。')}
                   </div>
                 )}
               </div>
-              <AccountSettings />
+              <AccountSettings language={language} />
             </>
           )}
         </div>

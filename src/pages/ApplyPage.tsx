@@ -486,6 +486,68 @@ function AuthGateModal({ language, onSuccess, onClose }: AuthGateProps) {
     </div>
   );
 }
+// ─── Fireworks overlay ────────────────────────────────────────────────────────
+
+const FW_COLORS = ['#f59e0b','#10b981','#3b82f6','#ef4444','#a855f7','#ec4899','#84cc16','#06b6d4'];
+
+function FireworksOverlay({ onDone }: { onDone: () => void }) {
+  useEffect(() => {
+    const timer = setTimeout(onDone, 3500);
+    return () => clearTimeout(timer);
+  }, [onDone]);
+
+  const particles = Array.from({ length: 60 }, (_, i) => {
+    const angle = (i / 60) * 360;
+    const distance = 80 + Math.random() * 120;
+    const x = Math.cos((angle * Math.PI) / 180) * distance;
+    const y = Math.sin((angle * Math.PI) / 180) * distance;
+    const color = FW_COLORS[i % FW_COLORS.length];
+    const delay = Math.random() * 0.8;
+    const size = 4 + Math.random() * 6;
+    return { x, y, color, delay, size, angle };
+  });
+
+  const bursts = [
+    { left: '20%', top: '30%' },
+    { left: '75%', top: '25%' },
+    { left: '50%', top: '15%' },
+    { left: '30%', top: '60%' },
+    { left: '70%', top: '55%' },
+  ];
+
+  return (
+    <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
+      <style>{`
+        @keyframes fw-particle {
+          0% { transform: translate(0,0) scale(1); opacity: 1; }
+          100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+        }
+        .fw-p { animation: fw-particle 1.2s ease-out forwards; }
+      `}</style>
+      {bursts.map((burst, bi) => (
+        <div key={bi} className="absolute" style={{ left: burst.left, top: burst.top }}>
+          {particles.map((p, pi) => (
+            <div
+              key={pi}
+              className="fw-p absolute rounded-full"
+              style={{
+                width: p.size,
+                height: p.size,
+                background: p.color,
+                left: 0,
+                top: 0,
+                '--tx': `${p.x}px`,
+                '--ty': `${p.y}px`,
+                animationDelay: `${(bi * 0.4) + p.delay}s`,
+              } as React.CSSProperties}
+            />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function ApplyPage() {
@@ -553,6 +615,7 @@ export default function ApplyPage() {
   const [postPaymentLoginError, setPostPaymentLoginError] = useState('');
   const [postPaymentLoginLoading, setPostPaymentLoginLoading] = useState(false);
   const [postPaymentShowPassword, setPostPaymentShowPassword] = useState(false);
+  const [fireworksDone, setFireworksDone] = useState(false);
 
   const suggestedName = useRef<string>('');
 
@@ -706,49 +769,94 @@ export default function ApplyPage() {
     return rest;
   }, []);
 
-  // Load existing draft on mount (authenticated users only)
+  const LS_DRAFT_KEY = 'mtc_filing_draft';
+
+  // Load existing draft on mount
   useEffect(() => {
-    if (!user) {
-      draftLoaded.current = true;
-      return;
-    }
-    (async () => {
-      const { data } = await supabase
-        .from('filing_drafts')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle();
+    if (user) {
+      // Authenticated: load from Supabase
+      (async () => {
+        const { data } = await supabase
+          .from('filing_drafts')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle();
 
-      if (data) {
-        // User wants a fresh start — delete the saved draft and begin clean
-        if (searchParams.get('fresh') === '1') {
-          await supabase.from('filing_drafts').delete().eq('id', data.id);
-          draftLoaded.current = true;
-          return;
+        if (data) {
+          if (searchParams.get('fresh') === '1') {
+            await supabase.from('filing_drafts').delete().eq('id', data.id);
+            localStorage.removeItem(LS_DRAFT_KEY);
+            draftLoaded.current = true;
+            return;
+          }
+          setDraftId(data.id);
+          const savedStep = (data.current_step ?? 1) as Step;
+          const savedForm = data.form_data as Partial<FormData> | null;
+          const savedEntries = data.class_entries as ClassEntry[] | null;
+          if (savedForm) {
+            setForm(f => ({
+              ...f,
+              ...savedForm,
+              logoFile: null,
+              classEntries: savedEntries && savedEntries.length > 0 ? savedEntries : f.classEntries,
+            }));
+          }
+          if (data.logo_preview_data) setLogoPreview(data.logo_preview_data);
+          if (searchParams.get('resume') === '1') setStep(savedStep);
+        } else {
+          // No Supabase draft — check if there's a localStorage draft to migrate
+          const lsRaw = localStorage.getItem(LS_DRAFT_KEY);
+          if (lsRaw && searchParams.get('fresh') !== '1') {
+            try {
+              const lsDraft = JSON.parse(lsRaw);
+              const savedForm = lsDraft.form_data as Partial<FormData> | null;
+              const savedEntries = lsDraft.class_entries as ClassEntry[] | null;
+              if (savedForm) {
+                setForm(f => ({
+                  ...f,
+                  ...savedForm,
+                  logoFile: null,
+                  classEntries: savedEntries && savedEntries.length > 0 ? savedEntries : f.classEntries,
+                }));
+              }
+              if (lsDraft.logo_preview_data) setLogoPreview(lsDraft.logo_preview_data);
+              if (searchParams.get('resume') === '1' && lsDraft.current_step) setStep(lsDraft.current_step as Step);
+            } catch {
+              localStorage.removeItem(LS_DRAFT_KEY);
+            }
+          }
         }
-
-        setDraftId(data.id);
-        const savedStep = (data.current_step ?? 1) as Step;
-        const savedForm = data.form_data as Partial<FormData> | null;
-        const savedEntries = data.class_entries as ClassEntry[] | null;
-        if (savedForm) {
-          setForm(f => ({
-            ...f,
-            ...savedForm,
-            logoFile: null,
-            classEntries: savedEntries && savedEntries.length > 0 ? savedEntries : f.classEntries,
-          }));
-        }
-        if (data.logo_preview_data) {
-          setLogoPreview(data.logo_preview_data);
-        }
-        // If the user navigated here to resume, go to their saved step
-        if (searchParams.get('resume') === '1') {
-          setStep(savedStep);
+        draftLoaded.current = true;
+      })();
+    } else {
+      // Unauthenticated: load from localStorage
+      if (searchParams.get('fresh') === '1') {
+        localStorage.removeItem(LS_DRAFT_KEY);
+        draftLoaded.current = true;
+        return;
+      }
+      const lsRaw = localStorage.getItem(LS_DRAFT_KEY);
+      if (lsRaw) {
+        try {
+          const lsDraft = JSON.parse(lsRaw);
+          const savedForm = lsDraft.form_data as Partial<FormData> | null;
+          const savedEntries = lsDraft.class_entries as ClassEntry[] | null;
+          if (savedForm) {
+            setForm(f => ({
+              ...f,
+              ...savedForm,
+              logoFile: null,
+              classEntries: savedEntries && savedEntries.length > 0 ? savedEntries : f.classEntries,
+            }));
+          }
+          if (lsDraft.logo_preview_data) setLogoPreview(lsDraft.logo_preview_data);
+          if (searchParams.get('resume') === '1' && lsDraft.current_step) setStep(lsDraft.current_step as Step);
+        } catch {
+          localStorage.removeItem(LS_DRAFT_KEY);
         }
       }
       draftLoaded.current = true;
-    })();
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
@@ -837,13 +945,12 @@ export default function ApplyPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  // Auto-save draft on form/step change (debounced 1.5s, authenticated users only, not in edit mode)
+  // Auto-save draft on form/step change (debounced 1.5s, not on step 8 or in edit mode)
   useEffect(() => {
-    if (!user || !draftLoaded.current || step === 8 || editingAppId) return;
+    if (!draftLoaded.current || step === 8 || editingAppId) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
       const payload = {
-        user_id: user.id,
         current_step: step,
         mark_name: form.markName,
         form_data: serializeForm(form),
@@ -851,17 +958,26 @@ export default function ApplyPage() {
         logo_preview_data: logoPreview ?? null,
         updated_at: new Date().toISOString(),
       };
-      if (draftId) {
-        await supabase.from('filing_drafts').update(payload).eq('id', draftId);
+      if (user) {
+        // Authenticated: save to Supabase
+        const dbPayload = { ...payload, user_id: user.id };
+        if (draftId) {
+          await supabase.from('filing_drafts').update(dbPayload).eq('id', draftId);
+        } else {
+          const { data } = await supabase.from('filing_drafts').insert(dbPayload).select('id').maybeSingle();
+          if (data?.id) setDraftId(data.id);
+        }
       } else {
-        const { data } = await supabase.from('filing_drafts').insert(payload).select('id').maybeSingle();
-        if (data?.id) setDraftId(data.id);
+        // Unauthenticated: save to localStorage
+        try { localStorage.setItem(LS_DRAFT_KEY, JSON.stringify(payload)); } catch { /* storage full */ }
       }
     }, 1500);
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, step, form, logoPreview, draftId, serializeForm]);
 
   const deleteDraft = useCallback(async () => {
+    localStorage.removeItem(LS_DRAFT_KEY);
     if (!draftId || !user) return;
     await supabase.from('filing_drafts').delete().eq('id', draftId);
     setDraftId(null);
@@ -2355,11 +2471,16 @@ export default function ApplyPage() {
 
           {/* STEP 8 — Confirmation */}
           {step === 8 && (
-            <div className="py-4">
+            <div className="py-4 relative">
+              {/* Fireworks particles */}
+              {!fireworksDone && (
+                <FireworksOverlay onDone={() => setFireworksDone(true)} />
+              )}
+
               {/* Success header */}
               <div className="text-center mb-6">
-                <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <CheckCircle2 size={36} className="text-emerald-600" />
+                <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                  <CheckCircle2 size={42} className="text-emerald-600" />
                 </div>
                 <h2 className="text-2xl font-bold text-navy-900 mb-2">
                   {tri('Payment Confirmed!', '付款已确认！', '¡Pago Confirmado!', 'Zahlung bestätigt!', 'Paiement confirmé !', 'भुगतान की पुष्टि हुई!', 'Pagamento Confirmado!')}
@@ -2374,6 +2495,51 @@ export default function ApplyPage() {
                   {tri('Your payment has been received and your trademark filing is confirmed. Our team will review, classify, and file before IMPI within 24 business hours. A confirmation has been sent to', 'We收到您的付款，您的商标申请已确认。我们的团队将在24个工作小时内审查、分类并向IMPI提交。确认已发送至', 'Hemos recibido tu pago y tu solicitud está confirmada. Nuestro equipo presentará ante el IMPI en 24 horas hábiles. Se ha enviado confirmación a', 'Ihre Zahlung wurde empfangen und Ihre Markenanmeldung ist bestätigt. Unser Team reicht innerhalb von 24 Geschäftsstunden beim IMPI ein. Bestätigung gesendet an', 'Votre paiement a été reçu et votre dépôt est confirmé. Notre équipe déposera à l\'IMPI sous 24 heures ouvrées. Confirmation envoyée à', 'आपका भुगतान प्राप्त हुआ और आपकी ट्रेडमार्क फाइलिंग की पुष्टि हुई। हमारी टीम 24 व्यावसायिक घंटों में IMPI को दाखिल करेगी। पुष्टि भेजी गई:', 'Seu pagamento foi recebido e seu pedido está confirmado. Nossa equipe protocola no IMPI em 24 horas úteis. Confirmação enviada para')}
                   {' '}<strong>{form.email}</strong>.
                 </p>
+              </div>
+
+              {/* Payment summary */}
+              <div className="bg-gray-50 border border-gray-200 rounded-2xl overflow-hidden mb-5">
+                <div className="px-5 py-3 border-b border-gray-200 bg-white flex items-center gap-2">
+                  <CreditCard size={15} className="text-gray-400" />
+                  <span className="text-sm font-semibold text-navy-900">{tri('Payment Summary', '付款摘要', 'Resumen de pago', 'Zahlungsübersicht', 'Récapitulatif du paiement', 'भुगतान सारांश', 'Resumo do pagamento')}</span>
+                  <span className="ml-auto inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 text-xs font-bold px-2.5 py-0.5 rounded-full">
+                    <CheckCircle2 size={11} /> {tri('Paid', '已付款', 'Pagado', 'Bezahlt', 'Payé', 'भुगतान हुआ', 'Pago')}
+                  </span>
+                </div>
+                <div className="divide-y divide-gray-100">
+                  <div className="flex justify-between items-center px-5 py-3">
+                    <span className="text-sm text-gray-600">{tri('Mark', '商标', 'Marca', 'Marke', 'Marque', 'मार्क', 'Marca')}</span>
+                    <span className="text-sm font-semibold text-navy-900">{form.markName}</span>
+                  </div>
+                  {form.classEntries.filter(e => e.classNumber !== null || e.fallbackClasses.length > 0).map((entry, i) => (
+                    <div key={i} className="flex justify-between items-center px-5 py-2">
+                      <span className="text-xs text-gray-500">
+                        {tri('Class', '类别', 'Clase', 'Klasse', 'Classe', 'वर्ग', 'Classe')} {entry.classNumber ?? entry.fallbackClasses[0]}
+                        {entry.classTitleEn ? ` — ${entry.classTitleEn}` : ''}
+                      </span>
+                    </div>
+                  ))}
+                  <div className="flex justify-between px-5 py-2">
+                    <span className="text-sm text-gray-600">{tri('Service Fee', '服务费', 'Honorarios', 'Servicegebühr', 'Frais de service', 'सेवा शुल्क', 'Taxa de serviço')}</span>
+                    <span className="text-sm font-medium">USD ${serviceFee.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between px-5 py-2">
+                    <span className="text-sm text-gray-600">{tri('Government Fees (IMPI)', 'IMPI政府费用', 'Tasas IMPI', 'IMPI-Gebühren', 'Frais IMPI', 'IMPI शुल्क', 'Taxas IMPI')}</span>
+                    <span className="text-sm font-medium">USD ${govFee.toFixed(2)}</span>
+                  </div>
+                  {couponApplied && (
+                    <div className="flex justify-between px-5 py-2 bg-emerald-50">
+                      <span className="text-sm text-emerald-700 flex items-center gap-1.5">
+                        <Tag size={12} /> {couponApplied.code} (-{couponApplied.discountPercent}%)
+                      </span>
+                      <span className="text-sm font-medium text-emerald-700">-USD ${(grandTotal - discountedTotal).toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between px-5 py-4 bg-white">
+                    <span className="text-base font-bold text-navy-900">{tri('Total Paid', '已付总额', 'Total pagado', 'Gezahlter Betrag', 'Total payé', 'कुल भुगतान', 'Total pago')}</span>
+                    <span className="text-base font-bold text-navy-900">USD ${(finalTotal ?? discountedTotal).toFixed(2)}</span>
+                  </div>
+                </div>
               </div>
 
               {/* Account access panel */}
