@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Star, Shield, Zap, Tag, ChevronDown, ChevronUp, CheckCircle2, Sparkles, Globe } from 'lucide-react';
+import { ArrowRight, Star, Shield, Zap, Tag, ChevronDown, ChevronUp, CheckCircle2, Sparkles, Globe, Play, Pause } from 'lucide-react';
 import { useLanguage, type Language } from '../context/LanguageContext';
 import SEOHead from '../components/SEOHead';
 import CurrencyDisplay from '../components/CurrencyDisplay';
@@ -39,9 +39,13 @@ function FAQItem({ q, a }: { q: string; a: string }) {
   );
 }
 
+const ZH_VIDEO_URL = 'https://xrqbwozlvnrfbckbfbsc.supabase.co/storage/v1/object/public/landing-videos/zh-hero.mp4';
+
 export default function LandingPage({ lang }: Props) {
   const { language, setLanguage } = useLanguage();
   const data: LandingPageData | undefined = LANDING_PAGES[lang];
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [videoPlaying, setVideoPlaying] = useState(false);
 
   // Keep context language in sync when navigating between language routes within the SPA.
   // Using a ref to avoid a render loop — this runs synchronously during render, not as an effect.
@@ -74,8 +78,9 @@ export default function LandingPage({ lang }: Props) {
           <div className="absolute top-16 left-8 w-72 h-72 bg-gold-500 rounded-full blur-3xl" />
           <div className="absolute bottom-12 right-8 w-96 h-96 bg-blue-500 rounded-full blur-3xl" />
         </div>
-        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28">
-          <div className="max-w-3xl">
+        <div className={`relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28 ${lang === 'zh' ? 'grid grid-cols-1 lg:grid-cols-2 gap-12 items-center' : ''}`}>
+          {/* Text content */}
+          <div className={lang === 'zh' ? '' : 'max-w-3xl'}>
             <div className="inline-flex items-center gap-2 bg-gold-500/20 border border-gold-500/30 rounded-full px-4 py-1.5 mb-6">
               <div className="w-2 h-2 bg-gold-400 rounded-full animate-pulse" />
               <span className="text-gold-300 text-sm font-medium">MexicoTrademarkCenter</span>
@@ -117,6 +122,41 @@ export default function LandingPage({ lang }: Props) {
               <ArrowRight size={18} />
             </Link>
           </div>
+
+          {/* Chinese hero video */}
+          {lang === 'zh' && (
+            <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-black aspect-video group">
+              <video
+                ref={videoRef}
+                src={ZH_VIDEO_URL}
+                className="w-full h-full object-cover"
+                playsInline
+                preload="metadata"
+                onPlay={() => setVideoPlaying(true)}
+                onPause={() => setVideoPlaying(false)}
+                onEnded={() => setVideoPlaying(false)}
+              />
+              {/* Play/Pause overlay button */}
+              <button
+                onClick={() => {
+                  if (!videoRef.current) return;
+                  videoPlaying ? videoRef.current.pause() : videoRef.current.play();
+                }}
+                className="absolute inset-0 flex items-center justify-center transition-opacity duration-200"
+                aria-label={videoPlaying ? '暂停' : '播放'}
+              >
+                <div className={`w-16 h-16 rounded-full bg-black/60 border-2 border-white/60 flex items-center justify-center backdrop-blur-sm transition-all duration-200 ${videoPlaying ? 'opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100' : 'opacity-100 scale-100'}`}>
+                  {videoPlaying
+                    ? <Pause size={24} className="text-white" />
+                    : <Play size={24} className="text-white translate-x-0.5" />}
+                </div>
+              </button>
+              {/* Caption */}
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-4 py-3 pointer-events-none">
+                <p className="text-xs text-gray-300 text-center">墨西哥商标注册流程介绍</p>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
