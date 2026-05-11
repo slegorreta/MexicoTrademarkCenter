@@ -1260,14 +1260,6 @@ export default function ApplyPage() {
       {/* Hero */}
       <section className="bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800 text-white">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-14 lg:py-20">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-gold-500/20 border border-gold-500/30 flex items-center justify-center">
-              <Shield size={20} className="text-gold-400" />
-            </div>
-            <span className="text-gold-300 text-sm font-medium tracking-wide uppercase">
-              {tri('Official IMPI Trademark Filing', '官方IMPI商标申请', 'Solicitud Oficial ante el IMPI', 'Offizielle IMPI-Markenanmeldung', 'Dépôt officiel auprès de l\'IMPI', 'आधिकारिक IMPI ट्रेडमार्क फाइलिंग', 'Registro Oficial no IMPI', '公式IMPI商標出願')}
-            </span>
-          </div>
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight mb-4">
             {tri('File Your Mexican Trademark', '申请您的墨西哥商标', 'Registra tu Marca en México', 'Ihre Marke in Mexiko anmelden', 'Déposez votre marque au Mexique', 'अपना मेक्सिको ट्रेडमार्क दाखिल करें', 'Registre sua Marca no México', 'メキシコ商標出願')}
           </h1>

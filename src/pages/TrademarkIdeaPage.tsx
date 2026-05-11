@@ -210,14 +210,6 @@ export default function TrademarkIdeaPage() {
       {/* Hero */}
       <section className="bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800 text-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-20">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-gold-500/20 border border-gold-500/30 flex items-center justify-center">
-              <Sparkles size={20} className="text-gold-400" />
-            </div>
-            <span className="text-gold-300 text-sm font-medium tracking-wide uppercase">
-              {tri('AI-Powered', 'AI 驱动', 'Con Inteligencia Artificial', 'KI-gestützt', 'Propulsé par l\'IA', 'AI-संचालित')}
-            </span>
-          </div>
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight mb-4">
             {tri(
               'Trademark Idea Generator',
