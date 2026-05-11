@@ -1257,16 +1257,19 @@ export default function ApplyPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl lg:text-3xl font-bold text-navy-900">
+      {/* Hero */}
+      <section className="bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800 text-white">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16 text-center">
+          <h1 className="text-3xl lg:text-4xl font-bold leading-tight">
             {tri('File Your Mexican Trademark', '申请您的墨西哥商标', 'Registra tu Marca en México', 'Ihre Marke in Mexiko anmelden', 'Déposez votre marque au Mexique', 'अपना मेक्सिको ट्रेडमार्क दाखिल करें', 'Registre sua Marca no México', 'メキシコ商標出願')}
           </h1>
-          <p className="text-gray-500 text-sm mt-2">
+          <p className="text-gray-300 text-sm mt-3">
             {tri('Complete each step to prepare your IMPI application.', '完成每个步骤以准备您的IMPI申请。', 'Completa cada paso para preparar tu solicitud ante el IMPI.', 'Füllen Sie jeden Schritt aus, um Ihren IMPI-Antrag vorzubereiten.', 'Complétez chaque étape pour préparer votre dossier IMPI.', 'अपना IMPI आवेदन तैयार करने के लिए प्रत्येक चरण पूरा करें।', 'Complete cada etapa para preparar seu pedido no IMPI.', '各ステップを完了してIMPI出願を準備してください。')}
           </p>
         </div>
+      </section>
 
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-10">
         {step < 8 && <StepIndicator current={step} total={8} t={t} />}
 
         {/* Edit-mode loading */}
