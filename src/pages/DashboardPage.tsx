@@ -1798,8 +1798,8 @@ export default function DashboardPage() {
       {sidebarOpen && <div className="fixed inset-0 bg-black/40 z-20 lg:hidden" onClick={() => setSidebarOpen(false)} />}
       {langMenuOpen && <div className="fixed inset-0 z-40" onClick={() => setLangMenuOpen(false)} />}
 
-      {/* Sidebar */}
-      <aside className={`fixed lg:static inset-y-0 left-0 z-30 w-64 bg-[#0f1f0f] text-white flex flex-col transition-transform duration-200 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+      {/* Sidebar — z-50 keeps it above the lang backdrop (z-40) so the language button stays clickable */}
+      <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-[#0f1f0f] text-white flex flex-col transition-transform duration-200 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
         <div className="px-6 py-5 border-b border-white/10">
           <Link to="/" className="flex items-center gap-2">
             <div className="w-7 h-7 bg-[#c9a84c] rounded flex items-center justify-center"><Shield size={14} className="text-white" /></div>
@@ -1844,7 +1844,7 @@ export default function DashboardPage() {
               <ChevronRight size={12} className={`transition-transform ${langMenuOpen ? 'rotate-90' : ''}`} />
             </button>
             {langMenuOpen && (
-              <div className="absolute bottom-full left-0 w-full mb-1 bg-[#1a2e1a] border border-white/10 rounded-xl overflow-hidden shadow-xl z-50">
+              <div className="absolute bottom-full left-0 w-full mb-1 bg-[#1a2e1a] border border-white/10 rounded-xl overflow-hidden shadow-xl z-60">
                 {LANG_OPTIONS.map(opt => (
                   <button
                     key={opt.code}
@@ -1881,7 +1881,7 @@ export default function DashboardPage() {
                 <Globe size={18} />
               </button>
               {langMenuOpen && (
-                <div className="absolute top-full right-0 mt-1 w-44 bg-white border border-gray-200 rounded-xl overflow-hidden shadow-xl z-50">
+                <div className="absolute top-full right-0 mt-1 w-44 bg-white border border-gray-200 rounded-xl overflow-hidden shadow-xl z-60">
                   {LANG_OPTIONS.map(opt => (
                     <button key={opt.code} onClick={() => handleSetLanguage(opt.code)} className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm ${language === opt.code ? 'bg-[#f0f7f0] text-[#1a2e1a] font-medium' : 'text-gray-700 hover:bg-gray-50'}`}>
                       <span>{opt.flag}</span> {opt.label}
