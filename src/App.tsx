@@ -37,6 +37,7 @@ import AdminEmailTemplates from './pages/admin/AdminEmailTemplates';
 import AdminSettings from './pages/admin/AdminSettings';
 import AdminStaffManagement from './pages/admin/AdminStaffManagement';
 import AdminClearanceReports from './pages/admin/AdminClearanceReports';
+import AdminVideoUpload from './pages/admin/AdminVideoUpload';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -184,6 +185,9 @@ function AppRoutes() {
         path="/admin/settings"
         element={<ProtectedRoute requireStaff><AdminLayout><AdminSettings /></AdminLayout></ProtectedRoute>}
       />
+
+      {/* Video upload utility */}
+      <Route path="/admin/upload-video" element={<AdminVideoUpload />} />
 
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
