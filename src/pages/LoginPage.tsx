@@ -211,7 +211,7 @@ export default function LoginPage() {
           <div className="text-center mb-8">
             <Link to="/" className="inline-flex items-center mb-6">
               <img
-                src="/logo.png"
+                src="/logo.svg"
                 alt="Mexico Trademark Center"
                 className="h-11 w-auto object-contain"
               />

@@ -68,7 +68,7 @@ ul.classes { font-size: 14px; color: #3a4a3a; padding-left: 20px; line-height: 1
 <body>
 <div class="wrapper">
   <div class="header" style="text-align:center">
-    <div style="margin-bottom:12px"><img src="https://mexicotrademarkcenter.com/logo.png" alt="Mexico Trademark Center" style="height:44px;width:auto;display:block;margin:0 auto;" /></div>
+    <div style="margin-bottom:12px"><img src="https://mexicotrademarkcenter.com/logo.svg" alt="Mexico Trademark Center" style="height:44px;width:auto;display:block;margin:0 auto;" /></div>
     <h1 style="margin:0;font-size:19px;font-weight:bold;font-family:Georgia,serif">Official Filing Confirmation</h1>
   </div>
   <div class="body">
@@ -136,7 +136,7 @@ function buildStaffInstructionEmail(
 <html>
 <head><meta charset="utf-8"></head>
 <body style="font-family:Arial,sans-serif;font-size:13px;color:#111;max-width:700px;margin:0 auto;padding:20px;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#1a2e1a;margin-bottom:20px"><tr><td style="padding:16px 20px;text-align:center"><img src="https://mexicotrademarkcenter.com/logo.png" alt="Mexico Trademark Center" style="height:36px;width:auto;display:inline-block;background:#fff;padding:4px 8px;border-radius:6px;" /><span style="font-size:11px;color:#9db89d;font-family:Arial,sans-serif;margin-left:12px">— Internal Filing Instruction</span></td></tr></table>
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#1a2e1a;margin-bottom:20px"><tr><td style="padding:16px 20px;text-align:center"><img src="https://mexicotrademarkcenter.com/logo.svg" alt="Mexico Trademark Center" style="height:36px;width:auto;display:inline-block;background:#fff;padding:4px 8px;border-radius:6px;" /><span style="font-size:11px;color:#9db89d;font-family:Arial,sans-serif;margin-left:12px">— Internal Filing Instruction</span></td></tr></table>
 <h2 style="text-align:center;border-bottom:2px solid #111;padding-bottom:10px;">Checklist of MEXICO Trademark Application for Registration</h2>
 
 <p><strong>1. Our Reference:</strong> <span style="font-family:monospace;font-size:15px;background:#f0f0f0;padding:2px 8px;">${String(app.case_number)}</span></p>

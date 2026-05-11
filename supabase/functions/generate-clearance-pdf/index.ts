@@ -1370,7 +1370,7 @@ async function buildPdf(
   // Embed brand logo — fall back gracefully if fetch fails
   let logoImage: Awaited<ReturnType<typeof pdfDoc.embedPng>> | null = null;
   try {
-    const logoRes = await fetch("https://mexicotrademarkcenter.com/logo.png");
+    const logoRes = await fetch("https://mexicotrademarkcenter.com/logo.svg");
     if (logoRes.ok) {
       const logoBytes = await logoRes.arrayBuffer();
       logoImage = await pdfDoc.embedPng(new Uint8Array(logoBytes));

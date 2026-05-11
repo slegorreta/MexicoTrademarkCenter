@@ -1116,7 +1116,7 @@ function ApplicationDetail({ appId, onBack }: { appId: string; onBack: () => voi
     const paidDate = paymentInfo.paid_at ? new Date(paymentInfo.paid_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '—';
     const amount = `USD $${Number(paymentInfo.amount_usd).toFixed(2)}`;
 
-    const logoUrl = `${window.location.origin}/logo.png`;
+    const logoUrl = `${window.location.origin}/logo.svg`;
 
     const win = window.open('', '_blank');
     if (!win) return;

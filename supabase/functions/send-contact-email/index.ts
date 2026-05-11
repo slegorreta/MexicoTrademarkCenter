@@ -82,7 +82,7 @@ function buildEmailHtml(
     <table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border:1px solid #e0ddd8;border-radius:8px;overflow:hidden;">
       <tr>
         <td style="background:#0d1f3c;padding:28px 40px;">
-          <div style="margin-bottom:12px"><img src="https://mexicotrademarkcenter.com/logo.png" alt="Mexico Trademark Center" style="height:40px;width:auto;display:block;margin:0 auto;background:#fff;padding:4px 10px;border-radius:8px;" /></div>
+          <div style="margin-bottom:12px"><img src="https://mexicotrademarkcenter.com/logo.svg" alt="Mexico Trademark Center" style="height:40px;width:auto;display:block;margin:0 auto;background:#fff;padding:4px 10px;border-radius:8px;" /></div>
           <div style="color:#fff;font-size:20px;font-weight:400;letter-spacing:0.04em;">New Contact Form Message</div>
         </td>
       </tr>

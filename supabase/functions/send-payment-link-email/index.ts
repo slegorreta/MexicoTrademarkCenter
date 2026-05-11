@@ -90,7 +90,7 @@ body { font-family: Georgia, serif; color: #1a1a1a; background: #f9f8f6; margin:
 <body>
 <div class="wrapper">
   <div class="header" style="text-align:center">
-    <div style="margin-bottom:12px"><img src="https://mexicotrademarkcenter.com/logo.png" alt="Mexico Trademark Center" style="height:44px;width:auto;display:block;margin:0 auto;background:#fff;padding:4px 10px;border-radius:8px;" /></div>
+    <div style="margin-bottom:12px"><img src="https://mexicotrademarkcenter.com/logo.svg" alt="Mexico Trademark Center" style="height:44px;width:auto;display:block;margin:0 auto;background:#fff;padding:4px 10px;border-radius:8px;" /></div>
     <h1 style="color:#fff;font-size:18px;margin:0;font-weight:bold;font-family:Georgia,serif">Payment Request</h1>
   </div>
   <div class="body">

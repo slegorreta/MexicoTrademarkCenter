@@ -15,7 +15,7 @@ export default function Footer() {
             <div className="mb-4">
               <div className="inline-block bg-white rounded-lg px-3 py-1.5">
                 <img
-                  src="/logo.png"
+                  src="/logo.svg"
                   alt="Mexico Trademark Center"
                   className="h-9 w-auto object-contain"
                 />

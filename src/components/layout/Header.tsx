@@ -82,7 +82,7 @@ export default function Header() {
           {/* Logo — never shrinks */}
           <Link to="/" className="flex items-center flex-shrink-0">
             <img
-              src="/logo.png"
+              src="/logo.svg"
               alt="Mexico Trademark Center"
               className="h-10 w-auto object-contain"
             />

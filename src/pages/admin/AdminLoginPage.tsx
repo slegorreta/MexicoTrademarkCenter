@@ -55,7 +55,7 @@ export default function AdminLoginPage() {
         <div className="flex flex-col items-center mb-10">
           <div className="bg-white rounded-xl px-4 py-2 mb-4 shadow-xl">
             <img
-              src="/logo.png"
+              src="/logo.svg"
               alt="Mexico Trademark Center"
               className="h-10 w-auto object-contain"
             />

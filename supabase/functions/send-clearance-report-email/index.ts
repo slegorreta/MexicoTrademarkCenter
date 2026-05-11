@@ -204,7 +204,7 @@ function buildEmailHtml(
   <!-- Header -->
   <tr>
     <td style="background:#1a2e1a;padding:28px 40px;text-align:center">
-      <div style="margin-bottom:14px"><img src="https://mexicotrademarkcenter.com/logo.png" alt="Mexico Trademark Center" style="height:44px;width:auto;display:block;margin:0 auto;background:#fff;padding:4px 10px;border-radius:8px;" /></div>
+      <div style="margin-bottom:14px"><img src="https://mexicotrademarkcenter.com/logo.svg" alt="Mexico Trademark Center" style="height:44px;width:auto;display:block;margin:0 auto;background:#fff;padding:4px 10px;border-radius:8px;" /></div>
       <div style="font-size:20px;color:#ffffff;font-weight:bold;font-family:Georgia,serif">Trademark Clearance Report</div>
       <div style="font-size:13px;color:#9db89d;margin-top:6px;font-family:Arial,sans-serif">${markName}</div>
     </td>
@@ -300,7 +300,7 @@ function buildStaffNotificationHtml(
       <table width="100%" cellpadding="0" cellspacing="0">
         <tr>
           <td>
-            <div style="margin-bottom:6px"><img src="https://mexicotrademarkcenter.com/logo.png" alt="Mexico Trademark Center" style="height:30px;width:auto;display:inline-block;background:#fff;padding:3px 7px;border-radius:5px;" /></div>
+            <div style="margin-bottom:6px"><img src="https://mexicotrademarkcenter.com/logo.svg" alt="Mexico Trademark Center" style="height:30px;width:auto;display:inline-block;background:#fff;padding:3px 7px;border-radius:5px;" /></div>
             <div style="font-size:9px;letter-spacing:3px;color:#c9a84c;text-transform:uppercase;font-weight:bold;margin-bottom:4px">Internal</div>
             <div style="font-size:17px;color:#ffffff;font-weight:bold">TM Report Purchased</div>
           </td>
