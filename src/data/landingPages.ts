@@ -355,7 +355,7 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
     perClass: '每类',
     socialProofLabel: '已有数百家企业和卖家信赖我们',
     starLabel: '客户评分',
-    heroVideoId: 'eUYiRSK7JjA',
+    heroVideoId: 'UOtEg9rUrlA',
   },
 
   pt: {
