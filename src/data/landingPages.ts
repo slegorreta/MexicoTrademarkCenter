@@ -46,6 +46,7 @@ export interface LandingPageData {
   perClass: string;
   socialProofLabel: string;
   starLabel: string;
+  heroVideoId?: string;
 }
 
 export const LANDING_PAGES: Record<string, LandingPageData> = {
@@ -353,6 +354,7 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
     perClass: '每类',
     socialProofLabel: '已有数百家企业和卖家信赖我们',
     starLabel: '客户评分',
+    heroVideoId: 'Qr5rDAwXu20',
   },
 
   pt: {

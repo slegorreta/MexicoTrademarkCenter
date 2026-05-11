@@ -74,9 +74,9 @@ export default function LandingPage({ lang }: Props) {
           <div className="absolute top-16 left-8 w-72 h-72 bg-gold-500 rounded-full blur-3xl" />
           <div className="absolute bottom-12 right-8 w-96 h-96 bg-blue-500 rounded-full blur-3xl" />
         </div>
-        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28">
+        <div className={`relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28 ${data.heroVideoId ? 'flex flex-col lg:flex-row items-center gap-12' : ''}`}>
           {/* Text content */}
-          <div className="max-w-3xl">
+          <div className={data.heroVideoId ? 'flex-1 min-w-0' : 'max-w-3xl'}>
             <div className="inline-flex items-center gap-2 bg-gold-500/20 border border-gold-500/30 rounded-full px-4 py-1.5 mb-6">
               <div className="w-2 h-2 bg-gold-400 rounded-full animate-pulse" />
               <span className="text-gold-300 text-sm font-medium">MexicoTrademarkCenter</span>
@@ -119,6 +119,20 @@ export default function LandingPage({ lang }: Props) {
             </Link>
           </div>
 
+          {/* Hero video */}
+          {data.heroVideoId && (
+            <div className="w-full lg:w-[45%] flex-shrink-0">
+              <div className="relative w-full rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10" style={{ paddingBottom: '56.25%' }}>
+                <iframe
+                  src={`https://www.youtube.com/embed/${data.heroVideoId}`}
+                  title="Hero video"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  className="absolute inset-0 w-full h-full"
+                />
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
