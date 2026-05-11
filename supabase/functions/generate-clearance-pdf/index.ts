@@ -1344,14 +1344,9 @@ function addDividerPage(pdfDoc: PDFDocument, pages: PDFPage[], bold: PDFFont, re
   p.drawRectangle({ x: 0, y: 0, width: PAGE_W, height: PAGE_H, color: C.darkGreen });
   const labelW = bold.widthOfTextAtSize(dividerLabel, 22);
   p.drawText(dividerLabel, { x: (PAGE_W - labelW) / 2, y: PAGE_H / 2 + 10, size: 22, font: bold, color: C.gold });
-  if (logoImage) {
-    const logoDims = logoImage.scaleToFit(140, 30);
-    p.drawImage(logoImage, { x: (PAGE_W - logoDims.width) / 2, y: PAGE_H / 2 - 22, width: logoDims.width, height: logoDims.height });
-  } else {
-    const subLabel = "Mexico Trademark Center";
-    const subW = regular.widthOfTextAtSize(subLabel, 11);
-    p.drawText(subLabel, { x: (PAGE_W - subW) / 2, y: PAGE_H / 2 - 18, size: 11, font: regular, color: rgb(0.75, 0.85, 0.75) });
-  }
+  const subLabel = "Mexico Trademark Center";
+  const subW = regular.widthOfTextAtSize(subLabel, 11);
+  p.drawText(subLabel, { x: (PAGE_W - subW) / 2, y: PAGE_H / 2 - 18, size: 11, font: regular, color: rgb(0.75, 0.85, 0.75) });
 }
 
 // ─── PDF builder ──────────────────────────────────────────────────────────────
@@ -1366,16 +1361,6 @@ async function buildPdf(
   const pdfDoc = await PDFDocument.create();
   const regular = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-
-  // Embed brand logo — fall back gracefully if fetch fails
-  let logoImage: Awaited<ReturnType<typeof pdfDoc.embedPng>> | null = null;
-  try {
-    const logoRes = await fetch("https://mexicotrademarkcenter.com/logo.svg");
-    if (logoRes.ok) {
-      const logoBytes = await logoRes.arrayBuffer();
-      logoImage = await pdfDoc.embedPng(new Uint8Array(logoBytes));
-    }
-  } catch { /* logo unavailable — continue without it */ }
 
   const timestamp = new Date().toISOString().replace("T", " ").slice(0, 19) + " UTC";
   const shortId = orderId.slice(0, 8).toUpperCase();
@@ -1409,12 +1394,7 @@ async function buildPdf(
   {
     const p = newPage();
     p.drawRectangle({ x: 0, y: PAGE_H - 200, width: PAGE_W, height: 200, color: C.darkGreen });
-    if (logoImage) {
-      const logoDims = logoImage.scaleToFit(160, 36);
-      p.drawImage(logoImage, { x: MARGIN, y: PAGE_H - 58 - logoDims.height, width: logoDims.width, height: logoDims.height });
-    } else {
-      p.drawText("MEXICO TRADEMARK CENTER", { x: MARGIN, y: PAGE_H - 60, size: 11, font: bold, color: C.gold });
-    }
+    p.drawText("MEXICO TRADEMARK CENTER", { x: MARGIN, y: PAGE_H - 60, size: 11, font: bold, color: C.gold });
 
     const coverTitle = isBilingual ? safeText(lbl("coverTitle", searchLang)) : "TRADEMARK CLEARANCE REPORT";
     p.drawText(coverTitle, { x: MARGIN, y: PAGE_H - 88, size: isBilingual ? 16 : 22, font: bold, color: C.white });

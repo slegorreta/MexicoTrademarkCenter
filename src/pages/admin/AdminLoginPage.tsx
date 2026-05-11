@@ -53,13 +53,10 @@ export default function AdminLoginPage() {
       <div className="relative w-full max-w-sm">
         {/* Logo mark */}
         <div className="flex flex-col items-center mb-10">
-          <div className="bg-white rounded-xl px-4 py-2 mb-4 shadow-xl">
-            <img
-              src="/logo.svg"
-              alt="Mexico Trademark Center"
-              className="h-10 w-auto object-contain"
-            />
+          <div className="w-14 h-14 bg-gray-800 border border-gray-700 rounded-2xl flex items-center justify-center mb-4 shadow-xl">
+            <span className="text-amber-400 font-bold text-xl tracking-tight">MX</span>
           </div>
+          <h1 className="text-white font-semibold text-lg tracking-tight">Mexico Trademark Center</h1>
           <div className="flex items-center gap-1.5 mt-2 text-gray-500 text-xs font-medium tracking-widest uppercase">
             <Shield size={11} />
             <span>Staff Portal</span>
