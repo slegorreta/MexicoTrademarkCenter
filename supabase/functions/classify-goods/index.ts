@@ -12,6 +12,17 @@ GOODS: 1-Chemicals, 2-Paints/Varnishes, 3-Cosmetics/Cleaning, 4-Fuels/Oils, 5-Ph
 SERVICES: 35-Advertising/Business Management/Retail/Import-Export, 36-Insurance/Finance/Real Estate, 37-Building/Repair/Installation, 38-Telecommunications/Internet, 39-Transport/Logistics/Storage, 40-Treatment of Materials/Manufacturing, 41-Education/Entertainment/Training, 42-Technology/Software/IT/SaaS/AI Services, 43-Food & Beverage Services/Hospitality, 44-Medical/Veterinary/Beauty Services, 45-Legal/Security/IP Services.
 `;
 
+const LANGUAGE_NAMES: Record<string, string> = {
+  en: "English",
+  zh: "Chinese (Simplified)",
+  es: "Spanish",
+  de: "German",
+  fr: "French",
+  hi: "Hindi",
+  pt: "Portuguese (Brazilian)",
+  ja: "Japanese",
+};
+
 const SYSTEM_PROMPT = `You are an expert Mexican trademark attorney and Nice Classification specialist with 20+ years of experience filing trademarks before the Instituto Mexicano de la Propiedad Industrial (IMPI).
 
 Your role is to help applicants identify the correct Nice Classification class(es) for their trademark filing in Mexico.
@@ -33,18 +44,19 @@ CRITICAL RULES:
 RESPONSE FORMAT (always return valid JSON):
 {
   "status": "needs_clarification" | "classified",
-  "questions": ["question 1", "question 2"],  // only if status = needs_clarification (max 3)
+  "questions": ["question 1", "question 2"],  // only if status = needs_clarification (max 3); write in the user's language
   "classes": [
     {
       "classNumber": 9,
       "titleEn": "Electronics, Technology",
+      "titleLocalized": "Electronics, Technology",  // same as titleEn but translated into the user's language
       "confidence": 0.95,
-      "reasoning": "Your wireless earbuds are electronic audio devices...",
+      "reasoning": "Your wireless earbuds are electronic audio devices...",  // write in the user's language
       "descriptionEn": "Wireless Bluetooth earphones; audio headsets; earbuds; electronic audio devices",
       "descriptionEs": "Audífonos inalámbricos Bluetooth; auriculares; audífonos internos; dispositivos electrónicos de audio"
     }
   ],
-  "summary": "Brief explanation of the classification decision in 1-2 sentences"
+  "summary": "Brief explanation of the classification decision in 1-2 sentences"  // write in the user's language
 }
 
 Return ONLY the JSON object, no markdown, no preamble.`;
@@ -77,10 +89,21 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const languageInstruction =
-      language === "zh"
-        ? "The applicant may write in Chinese. Understand Chinese descriptions. Always respond with the JSON in English (for descriptionEn) and Spanish (for descriptionEs). Your reasoning and questions should be in English."
-        : "The applicant writes in English or Spanish. Always respond with the JSON in English (for descriptionEn) and Spanish (for descriptionEs).";
+    const langName = LANGUAGE_NAMES[language] ?? "English";
+    const isEnglish = language === "en";
+
+    const languageInstruction = isEnglish
+      ? `The applicant writes in English. Respond with reasoning, summary, questions, and titleLocalized all in English. descriptionEn must be in English; descriptionEs must be in formal legal Spanish for IMPI.`
+      : `The applicant may write in ${langName} or English. Understand their input regardless of language.
+IMPORTANT: Write the following fields in ${langName}:
+  - "questions" array (if asking clarifications)
+  - "reasoning" for each class
+  - "summary"
+  - "titleLocalized" for each class (translate the English Nice class title into ${langName})
+Keep these fields always as specified:
+  - "titleEn": always in English (the standard Nice class title in English)
+  - "descriptionEn": always in English
+  - "descriptionEs": always in formal legal Spanish for IMPI filing`;
 
     const systemContent = `${SYSTEM_PROMPT}\n\n${languageInstruction}`;
 
@@ -99,7 +122,7 @@ Deno.serve(async (req: Request) => {
         model: "gpt-4o",
         messages: openAIMessages,
         temperature: 0.2,
-        max_tokens: 1200,
+        max_tokens: 1500,
         response_format: { type: "json_object" },
       }),
     });

@@ -8,6 +8,7 @@ import { classifyGoods, type ClassSuggestion } from '../lib/classifier';
 interface AIClass {
   classNumber: number;
   titleEn: string;
+  titleLocalized?: string;
   confidence: number;
   reasoning: string;
   descriptionEn: string;
@@ -31,7 +32,7 @@ export interface RelatedClass {
   titleEn: string;
 }
 
-type Lang = 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt';
+type Lang = 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt' | 'ja';
 
 interface Props {
   language: Lang;
@@ -58,6 +59,7 @@ const ui: Record<string, Record<Lang, string>> = {
     fr: 'Sur la base de vos classes existantes, notre IA suggérera des biens ou services complémentaires.',
     hi: 'आपकी मौजूदा कक्षाओं के आधार पर, हमारी AI पूरक वस्तुओं या सेवाओं का सुझाव देगी।',
     pt: 'Com base nas suas classes existentes, nossa IA sugerirá bens ou serviços complementares.',
+    ja: '既存のクラスを基に、AIが補完的な商品またはサービスを提案します。',
   },
   describeLabel: {
     en: 'Describe Your Goods or Services *',
@@ -67,6 +69,7 @@ const ui: Record<string, Record<Lang, string>> = {
     fr: 'Décrivez vos Produits ou Services *',
     hi: 'अपनी वस्तुओं या सेवाओं का वर्णन करें *',
     pt: 'Descreva seus Bens ou Serviços *',
+    ja: '商品またはサービスを説明してください *',
   },
   aiPowered: {
     en: 'AI-Powered Classification',
@@ -76,6 +79,7 @@ const ui: Record<string, Record<Lang, string>> = {
     fr: 'Classification par IA',
     hi: 'AI-संचालित वर्गीकरण',
     pt: 'Classificação por IA',
+    ja: 'AI分類',
   },
   descPlaceholder: {
     en: 'Describe your goods or services in detail — the more specific, the better. Write in any language...',
@@ -85,6 +89,7 @@ const ui: Record<string, Record<Lang, string>> = {
     fr: 'Décrivez vos produits ou services en détail — plus c\'est précis, mieux c\'est...',
     hi: 'अपनी वस्तुओं या सेवाओं का विस्तार से वर्णन करें — जितना विशिष्ट, उतना बेहतर...',
     pt: 'Descreva seus bens ou serviços em detalhes — quanto mais específico, melhor...',
+    ja: '商品やサービスを詳しく説明してください — 具体的であるほど良いです。どの言語でも入力できます...',
   },
   industryLabel: {
     en: 'Business Industry',
@@ -94,6 +99,7 @@ const ui: Record<string, Record<Lang, string>> = {
     fr: 'Secteur d\'activité',
     hi: 'व्यवसाय उद्योग',
     pt: 'Setor do Negócio',
+    ja: 'ビジネス業種',
   },
   industryPlaceholder: {
     en: 'e.g. Consumer Electronics',
@@ -103,6 +109,7 @@ const ui: Record<string, Record<Lang, string>> = {
     fr: 'ex. Électronique grand public',
     hi: 'उदा. उपभोक्ता इलेक्ट्रॉनिक्स',
     pt: 'ex. Eletrônicos de consumo',
+    ja: '例：コンシューマーエレクトロニクス',
   },
   analyzing: {
     en: 'Analyzing...',
@@ -112,6 +119,7 @@ const ui: Record<string, Record<Lang, string>> = {
     fr: 'Analyse en cours...',
     hi: 'विश्लेषण हो रहा है...',
     pt: 'Analisando...',
+    ja: '分析中...',
   },
   reAnalyze: {
     en: 'Re-analyze',
@@ -121,6 +129,7 @@ const ui: Record<string, Record<Lang, string>> = {
     fr: 'Ré-analyser',
     hi: 'पुनः विश्लेषण करें',
     pt: 'Reanalisar',
+    ja: '再分析',
   },
   analyzeWithAI: {
     en: 'Let AI classify your trademark',
@@ -130,6 +139,7 @@ const ui: Record<string, Record<Lang, string>> = {
     fr: 'Laisser l\'IA classer votre marque',
     hi: 'AI को आपके ट्रेडमार्क को वर्गीकृत करने दें',
     pt: 'Deixar a IA classificar sua marca',
+    ja: 'AIに商標を分類させる',
   },
   classifyingTitle: {
     en: 'Classifying your goods & services...',
@@ -139,6 +149,7 @@ const ui: Record<string, Record<Lang, string>> = {
     fr: 'Classification de vos produits et services...',
     hi: 'आपकी वस्तुओं और सेवाओं का वर्गीकरण हो रहा है...',
     pt: 'Classificando seus bens e serviços...',
+    ja: '商品・サービスを分類中...',
   },
   classifyingSubtitle: {
     en: 'Our AI is reviewing all 45 Nice Classification classes against your description',
@@ -148,6 +159,7 @@ const ui: Record<string, Record<Lang, string>> = {
     fr: 'Notre IA examine les 45 classes de la Classification de Nice',
     hi: 'हमारी AI आपके विवरण के आधार पर सभी 45 नाइस वर्गीकरण कक्षाओं की समीक्षा कर रही है',
     pt: 'Nossa IA está revisando todas as 45 classes da Classificação de Nice em relação à sua descrição',
+    ja: 'AIがあなたの説明に対して全45ニース分類クラスを確認しています',
   },
   clarifyingTitle: {
     en: 'A few clarifying questions',
@@ -157,6 +169,7 @@ const ui: Record<string, Record<Lang, string>> = {
     fr: 'Quelques questions de clarification',
     hi: 'कुछ स्पष्टीकरण प्रश्न',
     pt: 'Algumas perguntas de esclarecimento',
+    ja: 'いくつかの確認事項',
   },
   round: {
     en: 'Round',
@@ -166,6 +179,7 @@ const ui: Record<string, Record<Lang, string>> = {
     fr: 'Tour',
     hi: 'चक्र',
     pt: 'Rodada',
+    ja: 'ラウンド',
   },
   clarifyingIntro: {
     en: 'To identify the most precise Nice class(es) for your filing, please answer these questions:',
@@ -175,6 +189,7 @@ const ui: Record<string, Record<Lang, string>> = {
     fr: 'Pour identifier les classes de Nice les plus précises pour votre dépôt, veuillez répondre à ces questions :',
     hi: 'आपके आवेदन के लिए सबसे सटीक नाइस कक्षाएं पहचानने के लिए, कृपया इन प्रश्नों का उत्तर दें:',
     pt: 'Para identificar as classes de Nice mais precisas para o seu registro, por favor responda estas perguntas:',
+    ja: '出願に最適なニース分類クラスを特定するため、以下の質問にお答えください：',
   },
   yourAnswer: {
     en: 'Your answer...',
@@ -184,6 +199,7 @@ const ui: Record<string, Record<Lang, string>> = {
     fr: 'Votre réponse...',
     hi: 'आपका उत्तर...',
     pt: 'Sua resposta...',
+    ja: '回答を入力...',
   },
   submitAnswers: {
     en: 'Submit Answers & Classify',
@@ -193,6 +209,7 @@ const ui: Record<string, Record<Lang, string>> = {
     fr: 'Soumettre les réponses et classer',
     hi: 'उत्तर जमा करें और वर्गीकृत करें',
     pt: 'Enviar Respostas e Classificar',
+    ja: '回答を送信して分類する',
   },
   aiResultsTitle: {
     en: 'AI Classification Results',
@@ -202,6 +219,7 @@ const ui: Record<string, Record<Lang, string>> = {
     fr: 'Résultats de classification IA',
     hi: 'AI वर्गीकरण परिणाम',
     pt: 'Resultados da Classificação por IA',
+    ja: 'AI分類結果',
   },
   classesFound: {
     en: 'class(es) found',
@@ -211,6 +229,7 @@ const ui: Record<string, Record<Lang, string>> = {
     fr: 'classe(s) trouvée(s)',
     hi: 'कक्षा(एं) मिली',
     pt: 'classe(s) encontrada(s)',
+    ja: 'クラス見つかりました',
   },
   acceptAll: {
     en: 'Accept All',
@@ -220,6 +239,7 @@ const ui: Record<string, Record<Lang, string>> = {
     fr: 'Tout accepter',
     hi: 'सभी स्वीकार करें',
     pt: 'Aceitar Tudo',
+    ja: 'すべて承認',
   },
   accepted: {
     en: 'Accepted',
@@ -229,6 +249,7 @@ const ui: Record<string, Record<Lang, string>> = {
     fr: 'Accepté',
     hi: 'स्वीकृत',
     pt: 'Aceito',
+    ja: '承認済み',
   },
   accept: {
     en: 'Accept',
@@ -238,6 +259,7 @@ const ui: Record<string, Record<Lang, string>> = {
     fr: 'Accepter',
     hi: 'स्वीकार करें',
     pt: 'Aceitar',
+    ja: '承認',
   },
   editDescriptions: {
     en: 'You can edit these descriptions:',
@@ -247,6 +269,7 @@ const ui: Record<string, Record<Lang, string>> = {
     fr: 'Vous pouvez modifier ces descriptions :',
     hi: 'आप इन विवरणों को संपादित कर सकते हैं:',
     pt: 'Você pode editar estas descrições:',
+    ja: 'これらの説明を編集できます：',
   },
   descriptionEn: {
     en: 'Description (English)',
@@ -256,6 +279,7 @@ const ui: Record<string, Record<Lang, string>> = {
     fr: 'Description (Anglais)',
     hi: 'विवरण (अंग्रेज़ी)',
     pt: 'Descrição (Inglês)',
+    ja: '説明（英語）',
   },
   descriptionEs: {
     en: 'Description (Spanish — for IMPI filing)',
@@ -265,6 +289,7 @@ const ui: Record<string, Record<Lang, string>> = {
     fr: 'Description (Espagnol — pour le dépôt IMPI)',
     hi: 'विवरण (स्पेनिश — IMPI आवेदन के लिए)',
     pt: 'Descrição (Espanhol — para protocolo IMPI)',
+    ja: '説明（スペイン語 — IMPI出願用）',
   },
   classificationPreliminary: {
     en: 'Classification is preliminary and subject to professional review before IMPI filing. Final classification is confirmed by our team.',
@@ -274,6 +299,7 @@ const ui: Record<string, Record<Lang, string>> = {
     fr: 'La classification est préliminaire et soumise à un examen professionnel avant le dépôt à l\'IMPI.',
     hi: 'वर्गीकरण प्रारंभिक है और IMPI आवेदन से पहले पेशेवर समीक्षा के अधीन है।',
     pt: 'A classificação é preliminar e sujeita a revisão profissional antes do protocolo no IMPI.',
+    ja: '分類は暫定的であり、IMPI出願前に専門的な審査を受けます。最終分類は当チームが確認します。',
   },
   keywordResults: {
     en: 'Keyword Classification Results',
@@ -283,6 +309,7 @@ const ui: Record<string, Record<Lang, string>> = {
     fr: 'Résultats de classification par mots-clés',
     hi: 'कीवर्ड वर्गीकरण परिणाम',
     pt: 'Resultados da Classificação por Palavras-chave',
+    ja: 'キーワード分類結果',
   },
   aiUnavailable: {
     en: 'AI unavailable — using keyword matching',
@@ -292,6 +319,7 @@ const ui: Record<string, Record<Lang, string>> = {
     fr: 'IA indisponible — utilisation de la correspondance par mots-clés',
     hi: 'AI उपलब्ध नहीं — कीवर्ड मिलान का उपयोग हो रहा है',
     pt: 'IA indisponível — usando correspondência por palavras-chave',
+    ja: 'AI利用不可 — キーワードマッチングを使用中',
   },
   classificationPreliminaryShort: {
     en: 'Classification is preliminary and subject to professional review.',
@@ -301,6 +329,7 @@ const ui: Record<string, Record<Lang, string>> = {
     fr: 'La classification est préliminaire et soumise à révision professionnelle.',
     hi: 'वर्गीकरण प्रारंभिक है और पेशेवर समीक्षा के अधीन है।',
     pt: 'A classificação é preliminar e sujeita a revisão profissional.',
+    ja: '分類は暫定的であり、専門的な審査を受けます。',
   },
   browseAllClasses: {
     en: 'or Select your classes manually from the 45 Nice Classification',
@@ -310,6 +339,7 @@ const ui: Record<string, Record<Lang, string>> = {
     fr: 'ou Sélectionner vos classes manuellement parmi les 45 classes de Nice',
     hi: 'या 45 नाइस वर्गीकरण से अपनी कक्षाएं मैन्युअल रूप से चुनें',
     pt: 'ou Selecione suas classes manualmente das 45 classes de Nice',
+    ja: 'または45のニース分類から手動でクラスを選択する',
   },
   classModalTitle: {
     en: 'Select Nice Classification Classes',
@@ -319,6 +349,7 @@ const ui: Record<string, Record<Lang, string>> = {
     fr: 'Sélectionner les classes de la Classification de Nice',
     hi: 'नाइस वर्गीकरण कक्षाएं चुनें',
     pt: 'Selecionar Classes da Classificação de Nice',
+    ja: 'ニース分類クラスを選択',
   },
   classModalSubtitle: {
     en: 'Select all classes that apply to your goods or services. Each class covers a different category.',
@@ -328,6 +359,7 @@ const ui: Record<string, Record<Lang, string>> = {
     fr: 'Sélectionnez toutes les classes qui s\'appliquent à vos produits ou services.',
     hi: 'अपनी वस्तुओं या सेवाओं पर लागू सभी कक्षाएं चुनें।',
     pt: 'Selecione todas as classes que se aplicam aos seus bens ou serviços.',
+    ja: '商品やサービスに該当するすべてのクラスを選択してください。各クラスは異なるカテゴリをカバーします。',
   },
   classModalConfirm: {
     en: 'Confirm Selection',
@@ -337,6 +369,7 @@ const ui: Record<string, Record<Lang, string>> = {
     fr: 'Confirmer la sélection',
     hi: 'चयन की पुष्टि करें',
     pt: 'Confirmar Seleção',
+    ja: '選択を確認',
   },
   goods: {
     en: 'Goods',
@@ -346,6 +379,7 @@ const ui: Record<string, Record<Lang, string>> = {
     fr: 'Produits',
     hi: 'वस्तुएं',
     pt: 'Bens',
+    ja: '商品',
   },
   services: {
     en: 'Services',
@@ -355,6 +389,7 @@ const ui: Record<string, Record<Lang, string>> = {
     fr: 'Services',
     hi: 'सेवाएं',
     pt: 'Serviços',
+    ja: 'サービス',
   },
   classesSelected: {
     en: 'class(es) selected',
@@ -364,6 +399,7 @@ const ui: Record<string, Record<Lang, string>> = {
     fr: 'classe(s) sélectionnée(s)',
     hi: 'कक्षा(एं) चुनी गई',
     pt: 'classe(s) selecionada(s)',
+    ja: 'クラス選択済み',
   },
   highConfidence: {
     en: 'High confidence',
@@ -373,6 +409,7 @@ const ui: Record<string, Record<Lang, string>> = {
     fr: 'Haute confiance',
     hi: 'उच्च विश्वास',
     pt: 'Alta confiança',
+    ja: '高い確信度',
   },
   moderateConfidence: {
     en: 'Moderate confidence',
@@ -382,6 +419,7 @@ const ui: Record<string, Record<Lang, string>> = {
     fr: 'Confiance modérée',
     hi: 'मध्यम विश्वास',
     pt: 'Confiança moderada',
+    ja: '中程度の確信度',
   },
   lowConfidence: {
     en: 'Low confidence',
@@ -391,6 +429,7 @@ const ui: Record<string, Record<Lang, string>> = {
     fr: 'Faible confiance',
     hi: 'कम विश्वास',
     pt: 'Baixa confiança',
+    ja: '低い確信度',
   },
 };
 
@@ -758,7 +797,7 @@ export default function AIDescriptionAssistant({
                           Class {cls.classNumber}
                         </span>
                         <span className="text-sm text-gray-600">—</span>
-                        <span className="text-sm text-gray-700">{cls.titleEn}</span>
+                        <span className="text-sm text-gray-700">{cls.titleLocalized || cls.titleEn}</span>
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${confidenceColor(cls.confidence)}`}>
                           {confidenceLabel(cls.confidence)} · {Math.round(cls.confidence * 100)}%
                         </span>
