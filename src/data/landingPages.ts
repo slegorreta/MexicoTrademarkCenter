@@ -553,6 +553,7 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
     perClass: 'pro Klasse',
     socialProofLabel: 'Von Unternehmen weltweit genutzt',
     starLabel: 'Kundenbewertung',
+    heroVideoId: 'pl_AUmsc_gU',
   },
 
   fr: {
