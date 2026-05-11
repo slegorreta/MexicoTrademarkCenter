@@ -1511,7 +1511,7 @@ export default function ApplyPage() {
                     )}
                   </div>
                   <div className="sm:col-span-2">
-                    <label className={labelClass}>{tri('Phone / WeChat / WhatsApp', '电话/微信/WhatsApp', 'Teléfono / WhatsApp', 'Telefon / WeChat / WhatsApp', 'Téléphone / WeChat / WhatsApp', 'फोन / WeChat / WhatsApp', 'Telefone / WhatsApp')}</label>
+                    <label className={labelClass}>{tri('Phone / WeChat', '电话 / 微信', 'Teléfono / WeChat', 'Telefon / WeChat', 'Téléphone / WeChat', 'फोन / WeChat', 'Telefone / WeChat')}</label>
                     <div className="flex gap-2">
                       <select
                         className="border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-transparent w-48 flex-shrink-0"

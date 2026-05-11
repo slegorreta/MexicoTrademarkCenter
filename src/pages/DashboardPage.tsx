@@ -6,7 +6,7 @@ import {
   Bell, ArrowLeft, Send, Lock, Building2,
   Inbox, Shield, Pencil, CreditCard, Loader2, Tag, X,
   Printer, Sheet, Trash2, Receipt, ChevronDown, ChevronUp, RefreshCw, Eye, FileSearch,
-  Globe, Phone, MessageCircle
+  Globe, Phone
 } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
@@ -1407,7 +1407,6 @@ function AccountSettings({ language }: { language: string }) {
   // Profile editing
   const [editName, setEditName] = useState(profile?.full_name ?? '');
   const [editPhone, setEditPhone] = useState(profile?.phone ?? '');
-  const [editWhatsapp, setEditWhatsapp] = useState(profile?.whatsapp ?? '');
   const [editWechat, setEditWechat] = useState(profile?.wechat ?? '');
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileMsg, setProfileMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -1432,7 +1431,6 @@ function AccountSettings({ language }: { language: string }) {
     if (profile) {
       setEditName(profile.full_name ?? '');
       setEditPhone(profile.phone ?? '');
-      setEditWhatsapp(profile.whatsapp ?? '');
       setEditWechat(profile.wechat ?? '');
     }
   }, [profile]);
@@ -1444,7 +1442,6 @@ function AccountSettings({ language }: { language: string }) {
     const { error } = await supabase.from('profiles').update({
       full_name: editName,
       phone: editPhone,
-      whatsapp: editWhatsapp,
       wechat: editWechat,
       updated_at: new Date().toISOString(),
     }).eq('id', user.id);
@@ -1519,18 +1516,9 @@ function AccountSettings({ language }: { language: string }) {
               <input type="tel" value={editPhone} onChange={e => setEditPhone(e.target.value)} className={`${inputClass} pl-8`} placeholder="+1 555 000 0000" />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={labelClass}>WhatsApp</label>
-              <div className="relative">
-                <MessageCircle size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input type="tel" value={editWhatsapp} onChange={e => setEditWhatsapp(e.target.value)} className={`${inputClass} pl-8`} placeholder="+1 555 000 0000" />
-              </div>
-            </div>
-            <div>
-              <label className={labelClass}>WeChat</label>
-              <input type="text" value={editWechat} onChange={e => setEditWechat(e.target.value)} className={inputClass} placeholder="WeChat ID" />
-            </div>
+          <div>
+            <label className={labelClass}>WeChat</label>
+            <input type="text" value={editWechat} onChange={e => setEditWechat(e.target.value)} className={inputClass} placeholder="WeChat ID" />
           </div>
           <button onClick={saveProfile} disabled={profileSaving} className="w-full bg-[#1a2e1a] text-white text-sm font-medium py-2.5 rounded-lg hover:bg-[#2d5a2d] disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
             {profileSaving ? <Loader2 size={14} className="animate-spin" /> : null}
