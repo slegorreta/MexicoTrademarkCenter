@@ -651,6 +651,7 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
     perClass: 'par classe',
     socialProofLabel: 'Des entreprises du monde entier nous font confiance',
     starLabel: 'Avis clients',
+    heroVideoId: 'Du3E8fxOU18',
   },
 
   hi: {
