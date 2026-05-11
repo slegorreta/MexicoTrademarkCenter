@@ -1460,22 +1460,6 @@ export default function ApplyPage() {
                             <Trash2 size={14} />
                           </button>
                         </div>
-                        {form.markName.trim() && classNums.length > 0 && (
-                          <div>
-                            <div className="flex items-center gap-1 mt-1 mb-0.5 px-1">
-                              <span className="text-xs text-gray-400 italic">{tri('IMPI database & conflict check', 'IMPI数据库冲突检索', 'Verificación en base IMPI')}</span>
-                              <InfoTooltip text={t('tooltip.clearance')} />
-                            </div>
-                            <TrademarkClearancePanel
-                              markName={form.markName}
-                              classes={classNums}
-                              language={(language === 'zh' ? 'zh' : language === 'es' ? 'es' : language === 'de' ? 'de' : language === 'fr' ? 'fr' : language === 'hi' ? 'hi' : language === 'pt' ? 'pt' : 'en') as 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt'}
-                              autoRun={true}
-                              onResult={r => setClearanceResults(prev => ({ ...prev, [entry.id]: r }))}
-                              onSelectDespiteRisk={() => { setShowConflictModal(false); setStep(3); }}
-                            />
-                          </div>
-                        )}
                       </div>
                     );
                   })}
@@ -1512,22 +1496,6 @@ export default function ApplyPage() {
                               <Trash2 size={14} />
                             </button>
                           </div>
-                          {form.markName.trim() && classNums.length > 0 && (
-                            <div>
-                              <div className="flex items-center gap-1 mt-1 mb-0.5 px-1">
-                                <span className="text-xs text-gray-400 italic">{tri('IMPI database & conflict check', 'IMPI数据库冲突检索', 'Verificación en base IMPI')}</span>
-                                <InfoTooltip text={t('tooltip.clearance')} />
-                              </div>
-                              <TrademarkClearancePanel
-                                markName={form.markName}
-                                classes={classNums}
-                                language={(language === 'zh' ? 'zh' : language === 'es' ? 'es' : language === 'de' ? 'de' : language === 'fr' ? 'fr' : language === 'hi' ? 'hi' : language === 'pt' ? 'pt' : 'en') as 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt'}
-                                autoRun={true}
-                                onResult={r => setClearanceResults(prev => ({ ...prev, [activeEntry.id]: r }))}
-                                onSelectDespiteRisk={() => { setShowConflictModal(false); setStep(3); }}
-                              />
-                            </div>
-                          )}
                         </div>
                       );
                     })()}
@@ -1630,7 +1598,6 @@ export default function ApplyPage() {
                       goodsServices={priorGoods}
                       classes={allSelectedClassNumbers}
                       language={panelLang}
-                      autoRun
                       onResult={r => setClearanceResults(prev => ({ ...prev, _prior: r }))}
                     />
                     <button
@@ -1649,7 +1616,6 @@ export default function ApplyPage() {
                         goodsServices={form.classEntries.map(e => e.description).filter(Boolean).join('; ')}
                         classes={allSelectedClassNumbers}
                         language={panelLang}
-                        autoRun
                         onResult={r => setClearanceResults(prev => ({ ...prev, _step3: r }))}
                         onSelectDespiteRisk={() => setShowConflictModal(false)}
                       />
