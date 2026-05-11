@@ -1259,11 +1259,19 @@ export default function ApplyPage() {
     <div className="min-h-screen bg-gray-50">
       {/* Hero */}
       <section className="bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800 text-white">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16 text-center">
-          <h1 className="text-3xl lg:text-4xl font-bold leading-tight">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-14 lg:py-20">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-xl bg-gold-500/20 border border-gold-500/30 flex items-center justify-center">
+              <Shield size={20} className="text-gold-400" />
+            </div>
+            <span className="text-gold-300 text-sm font-medium tracking-wide uppercase">
+              {tri('Official IMPI Trademark Filing', '官方IMPI商标申请', 'Solicitud Oficial ante el IMPI', 'Offizielle IMPI-Markenanmeldung', 'Dépôt officiel auprès de l\'IMPI', 'आधिकारिक IMPI ट्रेडमार्क फाइलिंग', 'Registro Oficial no IMPI', '公式IMPI商標出願')}
+            </span>
+          </div>
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight mb-4">
             {tri('File Your Mexican Trademark', '申请您的墨西哥商标', 'Registra tu Marca en México', 'Ihre Marke in Mexiko anmelden', 'Déposez votre marque au Mexique', 'अपना मेक्सिको ट्रेडमार्क दाखिल करें', 'Registre sua Marca no México', 'メキシコ商標出願')}
           </h1>
-          <p className="text-gray-300 text-sm mt-3">
+          <p className="text-lg text-gray-300 leading-relaxed">
             {tri('Complete each step to prepare your IMPI application.', '完成每个步骤以准备您的IMPI申请。', 'Completa cada paso para preparar tu solicitud ante el IMPI.', 'Füllen Sie jeden Schritt aus, um Ihren IMPI-Antrag vorzubereiten.', 'Complétez chaque étape pour préparer votre dossier IMPI.', 'अपना IMPI आवेदन तैयार करने के लिए प्रत्येक चरण पूरा करें।', 'Complete cada etapa para preparar seu pedido no IMPI.', '各ステップを完了してIMPI出願を準備してください。')}
           </p>
         </div>
@@ -2219,7 +2227,7 @@ export default function ApplyPage() {
                     <button
                       type="button"
                       onClick={() => setClearanceGateChoice('yes')}
-                      className="flex-1 inline-flex items-center justify-center gap-2 bg-navy-900 hover:bg-navy-800 text-white font-semibold px-4 py-2.5 rounded-xl transition-colors text-sm"
+                      className="flex-1 inline-flex items-center justify-center gap-2 bg-gold-500 hover:bg-gold-400 text-white font-semibold px-4 py-2.5 rounded-xl transition-colors text-sm shadow-md"
                     >
                       <Search size={15} />
                       {t('clearance.gate.yes')}
@@ -2362,7 +2370,7 @@ export default function ApplyPage() {
                           type="button"
                           onClick={handleApplyCoupon}
                           disabled={couponChecking || !couponInput.trim()}
-                          className="flex items-center gap-2 bg-navy-900 hover:bg-navy-800 disabled:opacity-50 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors whitespace-nowrap"
+                          className="flex items-center gap-2 bg-gold-500 hover:bg-gold-400 disabled:opacity-50 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors whitespace-nowrap shadow-md"
                         >
                           {couponChecking
                             ? <Loader2 size={14} className="animate-spin" />
@@ -2776,7 +2784,7 @@ export default function ApplyPage() {
                   <button
                     type="button"
                     onClick={() => { setShowConflictModal(false); setStep(3); }}
-                    className="flex-1 px-4 py-2.5 rounded-xl bg-navy-900 hover:bg-navy-800 text-white text-sm font-semibold transition-colors"
+                    className="flex-1 px-4 py-2.5 rounded-xl bg-gold-500 hover:bg-gold-400 text-white text-sm font-semibold transition-colors shadow-md"
                   >
                     {tri('Continue anyway', '仍然继续', 'Continuar de todas formas', 'Trotzdem fortfahren', 'Continuer quand même', 'फिर भी जारी रखें', 'Continuar mesmo assim')}
                   </button>
@@ -2835,7 +2843,7 @@ export default function ApplyPage() {
                     (step === 2 && confirmedEntries.length === 0 && !activeEntryIsConfirmed) ||
                     (step === 3 && Object.values(clearanceResults).some(r => r.risk === 'high' || r.risk === 'medium') && !step3RiskAcknowledged)
                   }
-                  className="px-5 py-2.5 rounded-xl bg-navy-900 hover:bg-navy-800 text-white text-sm font-semibold transition-colors disabled:opacity-40"
+                  className="px-5 py-2.5 rounded-xl bg-gold-500 hover:bg-gold-400 text-white text-sm font-semibold transition-colors disabled:opacity-40 shadow-md"
                 >
                   {t('form.next')} <ChevronRight size={16} className="inline" />
                 </button>
