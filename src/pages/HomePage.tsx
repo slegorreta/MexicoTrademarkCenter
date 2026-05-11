@@ -18,6 +18,7 @@ export default function HomePage() {
   const [showSavingsModal, setShowSavingsModal] = useState(false);
   const [showLawyersModal, setShowLawyersModal] = useState(false);
   const [showCertModal, setShowCertModal] = useState(false);
+  const [showFilingCertModal, setShowFilingCertModal] = useState(false);
   const [showImpiModal, setShowImpiModal] = useState(false);
 
   const trustBadges = [
@@ -83,6 +84,30 @@ export default function HomePage() {
             </Link>
           ),
         },
+        {
+          q: t('faq.q14'),
+          a: t('faq.a14'),
+          extra: (
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                onClick={() => setShowFilingCertModal(true)}
+                className="inline-flex items-center gap-2 text-xs font-medium text-navy-700 border border-navy-200 bg-navy-50 hover:bg-navy-100 rounded-lg px-3 py-1.5 transition-colors"
+              >
+                <FileText size={13} />
+                {t('faq.q14.viewFiling')}
+              </button>
+              <button
+                onClick={() => setShowCertModal(true)}
+                className="inline-flex items-center gap-2 text-xs font-medium text-gold-700 border border-gold-300 bg-gold-50 hover:bg-gold-100 rounded-lg px-3 py-1.5 transition-colors"
+              >
+                <FileText size={13} />
+                {t('faq.q14.viewReg')}
+              </button>
+            </div>
+          ),
+        },
+        { q: t('faq.q15'), a: t('faq.a15') },
+        { q: t('faq.q16'), a: t('faq.a16') },
       ],
     },
   ];
@@ -279,6 +304,25 @@ export default function HomePage() {
               <p className="text-gray-600 text-sm leading-relaxed mb-5">{t('faq.a12')}</p>
               <div className="rounded-xl border border-gray-200 overflow-hidden">
                 <img src="/Captura_de_pantalla_2026-05-10_a_la(s)_5.22.49_p.m..png" alt="Título de Registro de Marca IMPI" className="w-full h-auto block" />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Filing Certificate modal */}
+      {showFilingCertModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={() => setShowFilingCertModal(false)}>
+          <div className="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-start justify-between p-5 border-b border-gray-100">
+              <h3 className="text-navy-900 font-bold text-base leading-tight">{t('faq.q14.viewFiling')}</h3>
+              <button onClick={() => setShowFilingCertModal(false)} className="ml-4 text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0 mt-0.5">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-5">
+              <div className="rounded-xl border border-gray-200 overflow-hidden">
+                <img src="/Captura_de_pantalla_2026-05-10_a_la(s)_4.39.02_p.m..png" alt="Constancia de Presentación IMPI" className="w-full h-auto block" />
               </div>
             </div>
           </div>

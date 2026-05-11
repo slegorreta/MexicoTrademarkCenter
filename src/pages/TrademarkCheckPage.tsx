@@ -258,7 +258,6 @@ export default function TrademarkCheckPage() {
                 rows={2}
                 className="w-full bg-white/10 border border-white/20 text-white placeholder-gray-400 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-transparent transition-all resize-none"
               />
-              <p className="text-xs text-gold-300/70 mt-1.5">{tr('goodsRequired')}</p>
             </div>
 
             <button
