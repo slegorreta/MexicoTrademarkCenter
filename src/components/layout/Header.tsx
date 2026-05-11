@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, Globe, ChevronDown, LayoutDashboard, LogOut, Shield } from 'lucide-react';
 import { useLanguage, Language } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
+import { LANDING_PAGES } from '../../data/landingPages';
 
 const LANGUAGES: { code: Language; label: string }[] = [
   { code: 'en', label: 'English' },
@@ -56,6 +57,21 @@ export default function Header() {
   ];
 
   const isActive = (href: string) => location.pathname === href;
+
+  // Returns the landing-page URL for `targetLang` if the user is currently
+  // on any language landing page route, otherwise returns null.
+  function landingPageTarget(targetLang: Language): string | null {
+    const onLandingPage = Object.values(LANDING_PAGES).some(
+      p => location.pathname === p.url || location.pathname === p.url.replace(/\/$/, '')
+    );
+    return onLandingPage ? (LANDING_PAGES[targetLang]?.url ?? null) : null;
+  }
+
+  function handleLanguageSelect(code: Language) {
+    setLanguage(code);
+    const target = landingPageTarget(code);
+    if (target) navigate(target);
+  }
 
   return (
     <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 print-hide ${
@@ -115,7 +131,7 @@ export default function Header() {
                   {LANGUAGES.map(lang => (
                     <button
                       key={lang.code}
-                      onClick={() => { setLanguage(lang.code); setIsLangOpen(false); }}
+                      onClick={() => { handleLanguageSelect(lang.code); setIsLangOpen(false); }}
                       className={`w-full text-left px-4 py-2 text-sm transition-colors ${
                         language === lang.code
                           ? 'text-gold-600 font-semibold bg-gold-50'
@@ -221,7 +237,7 @@ export default function Header() {
                 {LANGUAGES.map(lang => (
                   <button
                     key={lang.code}
-                    onClick={() => setLanguage(lang.code)}
+                    onClick={() => handleLanguageSelect(lang.code)}
                     className={`flex-1 py-2 text-xs font-medium rounded-lg border transition-colors ${
                       language === lang.code
                         ? 'border-gold-400 bg-gold-50 text-gold-700'
