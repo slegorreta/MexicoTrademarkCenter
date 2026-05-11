@@ -151,9 +151,9 @@ export default function TrademarkCheckPage() {
 
   const [markInput, setMarkInput] = useState('');
   const [goodsInput, setGoodsInput] = useState('');
-  const [searchName, setSearchName] = useState('');
-  const [searchGoods, setSearchGoods] = useState('');
-  const [hasSearched, setHasSearched] = useState(false);
+  const [searchName, setSearchName] = useState(() => sessionStorage.getItem('tcpSearchName') ?? '');
+  const [searchGoods, setSearchGoods] = useState(() => sessionStorage.getItem('tcpSearchGoods') ?? '');
+  const [hasSearched, setHasSearched] = useState(() => !!sessionStorage.getItem('tcpSearchName'));
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const resultsRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLElement>(null);
@@ -162,9 +162,13 @@ export default function TrademarkCheckPage() {
 
   const runSearch = () => {
     if (!canSearch) return;
-    setSearchName(markInput.trim());
-    setSearchGoods(goodsInput.trim());
+    const name = markInput.trim();
+    const goods = goodsInput.trim();
+    setSearchName(name);
+    setSearchGoods(goods);
     setHasSearched(true);
+    sessionStorage.setItem('tcpSearchName', name);
+    sessionStorage.setItem('tcpSearchGoods', goods);
     setTimeout(() => {
       resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 80);
@@ -176,6 +180,8 @@ export default function TrademarkCheckPage() {
 
   const handleSearchAnother = () => setShowClearConfirm(true);
   const confirmClear = () => {
+    sessionStorage.removeItem('tcpSearchName');
+    sessionStorage.removeItem('tcpSearchGoods');
     setSearchName('');
     setSearchGoods('');
     setMarkInput('');
@@ -190,7 +196,7 @@ export default function TrademarkCheckPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero */}
-      <section ref={heroRef} className="bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800 text-white">
+      <section ref={heroRef} className="bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800 text-white print-hide">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-14 lg:py-20">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl bg-gold-500/20 border border-gold-500/30 flex items-center justify-center">
@@ -304,7 +310,7 @@ export default function TrademarkCheckPage() {
             </div>
 
             {/* CTA to file */}
-            <div className="bg-gradient-to-r from-navy-900 to-navy-800 rounded-2xl p-6 flex flex-col sm:flex-row items-center gap-4">
+            <div className="bg-gradient-to-r from-navy-900 to-navy-800 rounded-2xl p-6 flex flex-col sm:flex-row items-center gap-4 print-hide">
               <div className="flex-1 text-center sm:text-left">
                 <p className="text-white font-semibold text-base">{tr('readyToFile')}</p>
               </div>
@@ -318,7 +324,7 @@ export default function TrademarkCheckPage() {
             </div>
 
             {/* Search another mark */}
-            <div className="text-center">
+            <div className="text-center print-hide">
               {!showClearConfirm ? (
                 <button
                   type="button"

@@ -108,7 +108,7 @@ const UI: Record<string, Record<string, string>> = {
   against: { en: 'against', es: 'desfavorables', zh: '不利', de: 'ungünstig', fr: 'défavorables', hi: 'प्रतिकूल', pt: 'desfavoráveis' },
   matches: { en: 'matches', es: 'coincidencias', zh: '条匹配', de: 'Treffer', fr: 'correspondances', hi: 'मिलान', pt: 'correspondências' },
   // Teaser / locked
-  inFullReport: { en: 'Included in Full Report', es: 'Incluido en el Reporte Completo', zh: '完整报告中包含', de: 'Im vollständigen Bericht enthalten', fr: 'Inclus dans le rapport complet', hi: 'पूर्ण रिपोर्ट में शामिल', pt: 'Incluído no Relatório Completo' },
+  inFullReport: { en: 'More info in Full Report', es: 'Más info en el Reporte Completo', zh: '完整报告中有更多信息', de: 'Mehr Info im vollständigen Bericht', fr: 'Plus d\'info dans le rapport complet', hi: 'पूर्ण रिपोर्ट में अधिक जानकारी', pt: 'Mais info no Relatório Completo' },
   andMore: { en: 'and {n} more — see full report', es: 'y {n} más — ver reporte completo', zh: '及另{n}条 — 见完整报告', de: 'und {n} weitere — vollständiger Bericht', fr: 'et {n} de plus — voir le rapport complet', hi: 'और {n} और — पूरी रिपोर्ट देखें', pt: 'e mais {n} — ver relatório completo' },
   // CTA card
   ctaTitle: { en: 'Get the Full Trademark Clearance Report', es: 'Obtén el Reporte Completo de Disponibilidad de Marca', zh: '获取完整商标检索报告', de: 'Vollständigen Markenrecherche-Bericht erhalten', fr: 'Obtenir le rapport complet de disponibilité de marque', hi: 'पूर्ण ट्रेडमार्क क्लीयरेंस रिपोर्ट प्राप्त करें', pt: 'Obter o Relatório Completo de Disponibilidade de Marca' },
@@ -177,13 +177,22 @@ const UI: Record<string, Record<string, string>> = {
     pt: 'A disponibilidade de domínios verifica se endereços web correspondentes à sua marca já estão registrados. Embora a propriedade de domínio não crie direitos de marca, um terceiro com um domínio .com ou .mx correspondente pode complicar o lançamento da marca. Verificamos 13 TLDs.',
   },
   fullReportNotice: {
-    en: 'Full details available in the paid clearance report.',
-    es: 'Detalles completos disponibles en el reporte de disponibilidad pagado.',
-    zh: '完整详情请见付费检索报告。',
-    de: 'Vollständige Details im kostenpflichtigen Recherchebericht.',
-    fr: 'Détails complets disponibles dans le rapport payant.',
-    hi: 'पूर्ण विवरण भुगतान किए गए क्लीयरेंस रिपोर्ट में उपलब्ध है।',
-    pt: 'Detalhes completos disponíveis no relatório pago.',
+    en: 'More information available in the Full Report.',
+    es: 'Más información disponible en el Reporte Completo.',
+    zh: '完整报告中有更多信息。',
+    de: 'Im vollständigen Bericht sind weitere Informationen verfügbar.',
+    fr: 'Plus d\'informations disponibles dans le rapport complet.',
+    hi: 'पूर्ण रिपोर्ट में अधिक जानकारी उपलब्ध है।',
+    pt: 'Mais informações disponíveis no Relatório Completo.',
+  },
+  fullReportTooltip: {
+    en: 'The Full Clearance Report includes: all 13 DuPont likelihood-of-confusion factors with detailed reasoning, full LFPPI absolute-grounds analysis, all IMPI MARCia registry results, translation and transliteration conflicts in 8 languages, 13 domain TLDs, web presence findings, and professional PDF delivered in your language and in English — timestamped and ready to share.',
+    es: 'El Reporte Completo incluye: los 13 factores DuPont con razonamiento detallado, análisis LFPPI completo, todos los resultados MARCia, conflictos de traducción en 8 idiomas, 13 dominios, hallazgos web y PDF profesional en español e inglés con sello de tiempo.',
+    zh: '完整报告包括：13个杜邦因素（含详细推理）、完整LFPPI分析、所有MARCia结果、8种语言的翻译冲突、13个域名、网络检索结果，以及中英文专业PDF（带时间戳）。',
+    de: 'Der vollständige Bericht umfasst: alle 13 DuPont-Faktoren mit detaillierter Begründung, vollständige LFPPI-Analyse, alle MARCia-Ergebnisse, Übersetzungskonflikte in 8 Sprachen, 13 Domains, Web-Recherche und professionelles PDF auf Deutsch und Englisch.',
+    fr: 'Le rapport complet comprend : les 13 facteurs DuPont avec raisonnement détaillé, analyse LFPPI complète, tous les résultats MARCia, conflits de traduction en 8 langues, 13 domaines, recherche web et PDF professionnel en français et anglais.',
+    hi: 'पूर्ण रिपोर्ट में शामिल हैं: 13 DuPont कारक (विस्तृत तर्क के साथ), पूर्ण LFPPI विश्लेषण, सभी MARCia परिणाम, 8 भाषाओं में अनुवाद संघर्ष, 13 डोमेन, वेब खोज और हिंदी व अंग्रेजी में PDF।',
+    pt: 'O Relatório Completo inclui: todos os 13 fatores DuPont com raciocínio detalhado, análise LFPPI completa, todos os resultados MARCia, conflitos de tradução em 8 idiomas, 13 domínios, pesquisa web e PDF profissional em português e inglês.',
   },
   // Email step
   emailStepTitle: { en: 'Enter your email to receive the report', es: 'Ingresa tu email para recibir el reporte', zh: '输入您的邮箱以接收报告', de: 'E-Mail-Adresse für den Berichtsempfang', fr: 'Entrez votre e-mail pour recevoir le rapport', hi: 'रिपोर्ट प्राप्त करने के लिए अपना ईमेल दर्ज करें', pt: 'Insira seu e-mail para receber o relatório' },
@@ -466,7 +475,6 @@ function LockedRow({ lang }: { lang: Lang }) {
       <div className="flex-1 min-w-0">
         <div className="h-2 bg-gray-200 rounded-full w-3/4 blur-[2px]" />
       </div>
-      <span className="text-[9px] text-gray-400 whitespace-nowrap font-medium">{tr('inFullReport', lang)}</span>
     </div>
   );
 }
@@ -503,6 +511,15 @@ function InfoTooltip({ text, className = '' }: { text: string; className?: strin
         </div>
       )}
     </>
+  );
+}
+
+function FullReportNotice({ lang }: { lang: Lang }) {
+  return (
+    <p className="text-[9px] text-gray-500 mt-1 flex items-center gap-1">
+      <span>{tr('fullReportNotice', lang)}</span>
+      <InfoTooltip text={tr('fullReportTooltip', lang)} />
+    </p>
   );
 }
 
@@ -785,11 +802,7 @@ export default function TrademarkClearancePanel({
                 <span className="text-[10px] text-gray-400">·</span>
                 <span className="text-[10px] font-bold text-red-600">{dupontAgainst} {tr('against', lang)}</span>
               </div>
-              {!paid && (
-                <p className="text-[9px] text-gray-300 mt-1.5 flex items-center gap-0.5">
-                  <Lock size={8} />{tr('inFullReport', lang)}
-                </p>
-              )}
+              {!paid && <FullReportNotice lang={lang} />}
             </div>
           )}
           {/* LFPPI */}
@@ -799,21 +812,13 @@ export default function TrademarkClearancePanel({
               ? <span className="text-[10px] font-bold text-emerald-600">{tr('noIssues', lang)}</span>
               : <span className="text-[10px] font-bold text-red-600">{regFlags.length} {regFlags.length === 1 ? tr('issueDetected', lang) : tr('issuesDetected', lang)}</span>
             }
-            {!paid && regFlags.length > 0 && (
-              <p className="text-[9px] text-gray-300 mt-1.5 flex items-center gap-0.5">
-                <Lock size={8} />{tr('inFullReport', lang)}
-              </p>
-            )}
+            {!paid && regFlags.length > 0 && <FullReportNotice lang={lang} />}
           </div>
           {/* MARCia */}
           <div className="rounded-lg border border-gray-100 bg-white px-3 py-2">
             <p className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide mb-1">{tr('marciaHits', lang)}</p>
             <span className={`text-[10px] font-bold ${totalMarcia > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>{totalMarcia} {tr('matches', lang)}</span>
-            {!paid && totalMarcia > 1 && (
-              <p className="text-[9px] text-gray-300 mt-1.5 flex items-center gap-0.5">
-                <Lock size={8} />{tr('inFullReport', lang)}
-              </p>
-            )}
+            {!paid && totalMarcia > 1 && <FullReportNotice lang={lang} />}
           </div>
         </div>
       </div>
@@ -851,9 +856,7 @@ export default function TrademarkClearancePanel({
               </>
             )}
             {totalMarcia > 1 && (
-              <p className="text-[9px] text-gray-400 mt-0.5 flex items-center gap-1">
-                <Lock size={8} className="flex-shrink-0" />{tr('fullReportNotice', lang)}
-              </p>
+              <FullReportNotice lang={lang} />
             )}
           </div>
 
@@ -876,9 +879,7 @@ export default function TrademarkClearancePanel({
                 </div>
               ))}
               {regFlags.length > 1 && <LockedRow lang={lang} />}
-              <p className="text-[9px] text-gray-400 mt-0.5 flex items-center gap-1">
-                <Lock size={8} className="flex-shrink-0" />{tr('fullReportNotice', lang)}
-              </p>
+              <FullReportNotice lang={lang} />
             </div>
           )}
 
@@ -899,9 +900,7 @@ export default function TrademarkClearancePanel({
                 </div>
               ))}
               <LockedRow lang={lang} />
-              <p className="text-[9px] text-gray-400 mt-0.5 flex items-center gap-1">
-                <Lock size={8} className="flex-shrink-0" />{tr('fullReportNotice', lang)}
-              </p>
+              <FullReportNotice lang={lang} />
             </div>
           )}
 
@@ -929,9 +928,7 @@ export default function TrademarkClearancePanel({
                 <Lock size={8} className="flex-shrink-0" />
                 <span className="blur-[3px] select-none">{result.distinctiveness.explanation?.slice(0, 60) ?? 'Full explanation available in report'}...</span>
               </p>
-              <p className="text-[9px] text-gray-400 mt-0.5 flex items-center gap-1">
-                <Lock size={8} className="flex-shrink-0" />{tr('fullReportNotice', lang)}
-              </p>
+              <FullReportNotice lang={lang} />
             </div>
           )}
 
@@ -951,9 +948,7 @@ export default function TrademarkClearancePanel({
                   {d.status === 'unknown' && <span className="text-[9px] font-semibold text-gray-500 bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded-full flex items-center gap-0.5"><Minus size={8} />{tr('unknown', lang)}</span>}
                 </div>
               ))}
-              <p className="text-[9px] text-gray-400 flex items-center gap-0.5 py-0.5">
-                <Lock size={8} className="flex-shrink-0" />{tr('fullReportNotice', lang)}
-              </p>
+              <FullReportNotice lang={lang} />
             </div>
           </div>
         </div>
@@ -1249,7 +1244,7 @@ export default function TrademarkClearancePanel({
       )}
 
       {/* ── Purchase / Post-payment flow ───────────────────────────────────── */}
-      <div className="border-t border-gray-100">
+      <div className="border-t border-gray-100 print:hidden">
 
         {/* POST-PAYMENT state */}
         {paid && purchaseStep === 'done' && (

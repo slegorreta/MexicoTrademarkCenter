@@ -24,14 +24,17 @@
 }
 
 @media print {
-  /* Hide everything except the clearance panel */
-  body > * { display: none !important; }
-  #clearance-print-root { display: block !important; }
+  /* Hide site navigation, hero, and non-report UI */
+  header, footer, nav,
+  .print-hide { display: none !important; }
 
-  /* Hide payment UI, locked rows, blurred content, and tooltips */
+  /* Tailwind print:hidden utility */
   .print\:hidden { display: none !important; }
 
-  /* Clean page */
+  /* Clean page margins */
   @page { margin: 18mm 15mm; }
-  body { font-family: 'Inter', system-ui, sans-serif; font-size: 11pt; color: #111; }
+  body { font-family: 'Inter', system-ui, sans-serif; font-size: 11pt; color: #111; background: #fff; }
+
+  /* Expand all collapsed sections for print */
+  .print-expand { display: block !important; }
 }
