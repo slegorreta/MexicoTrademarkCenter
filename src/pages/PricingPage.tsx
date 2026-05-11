@@ -21,11 +21,6 @@ export default function PricingPage() {
     { labelKey: 'pricing.notIncluded4.label', noteKey: 'pricing.notIncluded4.note' },
   ];
 
-  const examples = [
-    { classes: 1, labelKey: 'pricing.examples.1class' },
-    { classes: 3, labelKey: 'pricing.examples.3class' },
-    { classes: 5, labelKey: 'pricing.examples.5class' },
-  ];
 
   return (
     <div className="bg-white">
@@ -156,27 +151,6 @@ export default function PricingPage() {
         </div>
       </section>
 
-      {/* Example calculation */}
-      <section className="py-12 bg-gray-50 border-t border-gray-100">
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-center text-lg font-bold text-navy-900 mb-6">
-            {t('pricing.examples.title')}
-          </h2>
-          <div className="space-y-3">
-            {examples.map(({ classes, labelKey }) => (
-              <div key={classes} className="flex items-center justify-between bg-white rounded-xl px-5 py-4 border border-gray-200 shadow-sm">
-                <div>
-                  <div className="font-semibold text-navy-900 text-sm">{t(labelKey)}</div>
-                  <div className="text-xs text-gray-500">{classes} × USD $100 + {classes} × USD $170</div>
-                </div>
-                <div className="text-right">
-                  <div className="text-lg font-bold text-navy-900">USD ${(classes * 270).toLocaleString()}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* CTA */}
       <section className="py-14 bg-navy-950 text-white">
