@@ -528,11 +528,12 @@ export default function ApplyPage() {
   const suggestedName = useRef<string>('');
 
   const [form, setForm] = useState<FormData>(() => {
-    const suggested = sessionStorage.getItem('suggestedMarkName') || '';
-    if (suggested) {
+    const fromUrl = new URLSearchParams(window.location.search).get('mark') ?? '';
+    const suggested = fromUrl || sessionStorage.getItem('suggestedMarkName') || '';
+    if (!fromUrl && suggested) {
       sessionStorage.removeItem('suggestedMarkName');
-      suggestedName.current = suggested;
     }
+    if (suggested) suggestedName.current = suggested;
     return {
       applicantType: 'company',
       legalName: '', country: '', address: '', city: '',
