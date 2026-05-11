@@ -163,13 +163,12 @@ export default function ContactPage() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                        {t('contact.phone')} <span className="text-red-500">*</span>
+                        {t('contact.phone')}
                       </label>
                       <div className="relative">
                         <Phone size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                         <input
                           type="tel"
-                          required
                           className="w-full border border-gray-300 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-transparent"
                           value={form.phone}
                           onChange={e => setForm({ ...form, phone: e.target.value })}
@@ -182,10 +181,11 @@ export default function ContactPage() {
                   <div className="grid sm:grid-cols-2 gap-5">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                        {t('contact.emailOptional')}
+                        {t('contact.email')} <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="email"
+                        required
                         className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-transparent"
                         value={form.email}
                         onChange={e => {
