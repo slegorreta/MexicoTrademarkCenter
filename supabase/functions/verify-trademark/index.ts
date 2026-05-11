@@ -596,6 +596,87 @@ Return ONLY JSON array, no markdown. Be precise — only include classes where t
   }
 }
 
+async function generateConsistentRiskSummary(
+  apiKey: string,
+  markName: string,
+  goodsServices: string,
+  finalRisk: "low" | "medium" | "high",
+  hasExactMarciaMatch: boolean,
+  marciaTotalCount: number,
+  registrabilityFlags: { category: string; severity: string; explanation: string }[],
+  dupontAgainst: number,
+  language: string,
+): Promise<{ riskSummary: string; riskSummary_en: string }> {
+  const langName = LANGUAGE_NAMES[language] ?? "English";
+  const isBilingual = language !== "en";
+
+  const riskLabel = finalRisk === "high" ? "Low Chances of registration" : finalRisk === "medium" ? "Medium Chances of registration" : "High Chances of registration";
+
+  const marciaContext = hasExactMarciaMatch
+    ? `An EXACT match was found in the IMPI MARCia registry for "${markName}". This is the single most important obstacle to registration.`
+    : marciaTotalCount > 0
+    ? `${marciaTotalCount} potentially conflicting mark(s) were found in IMPI MARCia, including marks that are phonetically or visually similar.`
+    : `No conflicting marks were found in the IMPI MARCia registry.`;
+
+  const flagContext = registrabilityFlags.length > 0
+    ? `Registrability flags raised: ${registrabilityFlags.map(f => f.category).join(", ")}.`
+    : "No absolute grounds for refusal were flagged.";
+
+  const dupontContext = dupontAgainst > 0
+    ? `${dupontAgainst} of 13 DuPont factors weigh against registration.`
+    : "No DuPont factors weigh against registration.";
+
+  const bilingualInstruction = isBilingual
+    ? `Write the summary in ${langName}. Also provide an "riskSummary_en" field with the same text translated into English.`
+    : `Write the summary in English. The "riskSummary_en" field should be identical to "riskSummary".`;
+
+  const prompt = `You are an expert Mexican trademark attorney writing a plain-language risk summary for a business owner.
+
+Trademark: "${markName}"
+Goods/Services: "${goodsServices}"
+Final registrability assessment: ${riskLabel}
+
+Key findings that MUST be accurately reflected in your summary:
+- ${marciaContext}
+- ${flagContext}
+- ${dupontContext}
+
+Write 3–4 sentences: (1) state the registrability outlook matching the assessment above, (2) identify the primary specific obstacle(s) using the findings above, (3) explain practical next steps.
+CRITICAL: Your summary MUST be consistent with the final assessment of "${riskLabel}". Do not contradict it.
+
+${bilingualInstruction}
+
+Return only JSON: {"riskSummary": "...", "riskSummary_en": "..."}`;
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: "You are a Mexican trademark attorney. Return only valid JSON, no markdown." },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.1,
+        max_tokens: isBilingual ? 800 : 400,
+        response_format: { type: "json_object" },
+      }),
+    });
+    if (!response.ok) return { riskSummary: "", riskSummary_en: "" };
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) return { riskSummary: "", riskSummary_en: "" };
+    const parsed = JSON.parse(content);
+    return {
+      riskSummary: parsed.riskSummary ?? "",
+      riskSummary_en: parsed.riskSummary_en ?? parsed.riskSummary ?? "",
+    };
+  } catch {
+    return { riskSummary: "", riskSummary_en: "" };
+  }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 200, headers: corsHeaders });
 
@@ -645,6 +726,22 @@ Deno.serve(async (req: Request) => {
     if (translationHighRisk && risk !== "high") risk = "high";
     else if (translationMedRisk && risk === "low") risk = "medium";
 
+    // Generate a risk summary that is guaranteed to match the final aggregated risk level
+    const hasExactMarciaMatch = marciaResult.findings.some(
+      f => f.name.toLowerCase().trim() === markName.toLowerCase().trim()
+    );
+    const consistentSummary = await generateConsistentRiskSummary(
+      apiKey,
+      markName.trim(),
+      goodsServices,
+      risk,
+      hasExactMarciaMatch,
+      marciaResult.totalCount,
+      registrabilityResult.flags,
+      dupontAgainst,
+      lang,
+    );
+
     return new Response(JSON.stringify({
       risk,
       webFindings: webResult.findings,
@@ -656,8 +753,8 @@ Deno.serve(async (req: Request) => {
       registrabilityRisk: registrabilityResult.risk,
       dupont: registrabilityResult.dupont,
       distinctiveness: registrabilityResult.distinctiveness,
-      riskSummary: registrabilityResult.riskSummary,
-      riskSummary_en: registrabilityResult.riskSummary_en,
+      riskSummary: consistentSummary.riskSummary,
+      riskSummary_en: consistentSummary.riskSummary_en,
       translationAnalysis,
       niceClassification,
       searchLanguage: lang,

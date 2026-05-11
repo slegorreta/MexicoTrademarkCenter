@@ -57,9 +57,9 @@ const STRIPE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string;
 const stripePromise = STRIPE_KEY ? loadStripe(STRIPE_KEY) : null;
 
 const RISK_CFG = {
-  low: { label: { en: 'Low Risk', es: 'Riesgo Bajo', zh: '低风险', de: 'Niedriges Risiko', fr: 'Risque faible', hi: 'कम जोखिम', pt: 'Baixo Risco' }, icon: CheckCircle2, bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', badge: 'bg-emerald-100 text-emerald-700', bar: 'bg-emerald-500', summaryBg: 'bg-emerald-50/60', summaryBorder: 'border-l-emerald-400' },
-  medium: { label: { en: 'Medium Risk', es: 'Riesgo Medio', zh: '中等风险', de: 'Mittleres Risiko', fr: 'Risque modéré', hi: 'मध्यम जोखिम', pt: 'Risco Médio' }, icon: AlertTriangle, bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', badge: 'bg-amber-100 text-amber-700', bar: 'bg-amber-500', summaryBg: 'bg-amber-50/60', summaryBorder: 'border-l-amber-400' },
-  high: { label: { en: 'High Risk', es: 'Riesgo Alto', zh: '高风险', de: 'Hohes Risiko', fr: 'Risque élevé', hi: 'उच्च जोखिम', pt: 'Alto Risco' }, icon: AlertCircle, bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700', badge: 'bg-red-100 text-red-700', bar: 'bg-red-500', summaryBg: 'bg-red-50/60', summaryBorder: 'border-l-red-400' },
+  low: { label: { en: 'High Chances', es: 'Altas Probabilidades', zh: '高注册概率', de: 'Hohe Chancen', fr: 'Bonnes chances', hi: 'उच्च संभावना', pt: 'Altas Chances', ja: '登録可能性：高' }, icon: CheckCircle2, bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', badge: 'bg-emerald-100 text-emerald-700', bar: 'bg-emerald-500', summaryBg: 'bg-emerald-50/60', summaryBorder: 'border-l-emerald-400' },
+  medium: { label: { en: 'Medium Chances', es: 'Probabilidades Medias', zh: '中等注册概率', de: 'Mittlere Chancen', fr: 'Chances modérées', hi: 'मध्यम संभावना', pt: 'Chances Médias', ja: '登録可能性：中' }, icon: AlertTriangle, bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', badge: 'bg-amber-100 text-amber-700', bar: 'bg-amber-500', summaryBg: 'bg-amber-50/60', summaryBorder: 'border-l-amber-400' },
+  high: { label: { en: 'Low Chances', es: 'Pocas Probabilidades', zh: '低注册概率', de: 'Geringe Chancen', fr: 'Faibles chances', hi: 'कम संभावना', pt: 'Baixas Chances', ja: '登録可能性：低' }, icon: AlertCircle, bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700', badge: 'bg-red-100 text-red-700', bar: 'bg-red-500', summaryBg: 'bg-red-50/60', summaryBorder: 'border-l-red-400' },
 };
 
 const DUPONT_LABELS: Record<string, string> = {
@@ -88,9 +88,9 @@ const TIER_INACTIVE: Record<string, string> = { generic: 'bg-red-50 text-red-300
 
 // ─── Translation helper ───────────────────────────────────────────────────────
 
-type Lang = 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt';
+type Lang = 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt' | 'ja';
 
-const UI: Record<string, Record<Lang, string>> = {
+const UI: Record<string, Record<string, string>> = {
   // Executive summary
   clearanceAnalysis: { en: 'Clearance Analysis', es: 'Análisis de Disponibilidad', zh: '检索分析', de: 'Rechercheanalyse', fr: 'Analyse de disponibilité', hi: 'क्लीयरेंस विश्लेषण', pt: 'Análise de Disponibilidade' },
   riskSummaryTitle: { en: 'Risk Summary', es: 'Resumen de Riesgo', zh: '风险摘要', de: 'Risikozusammenfassung', fr: 'Résumé des risques', hi: 'जोखिम सारांश', pt: 'Resumo de Risco' },
@@ -237,6 +237,156 @@ function InlineCheckout({ lang, finalAmount, clientSecret, paymentIntentId, repo
   );
 }
 
+// ─── Clearance loading steps ─────────────────────────────────────────────────
+
+const LOADING_STEPS: Record<Lang, { label: string; detail: string }[]> = {
+  en: [
+    { label: 'Querying IMPI MARCia database', detail: 'Scanning official registry for identical and confusingly similar marks…' },
+    { label: 'Analyzing phonetic & visual similarity', detail: 'Comparing sound, appearance and meaning with existing marks…' },
+    { label: 'Evaluating DuPont factors', detail: 'Assessing all 13 likelihood-of-confusion criteria under Mexican law…' },
+    { label: 'Assessing distinctiveness (LFPPI)', detail: 'Classifying mark tier: generic, descriptive, suggestive, arbitrary or fanciful…' },
+    { label: 'Scanning web & marketplace presence', detail: 'Checking for unregistered brands in commerce that may conflict…' },
+    { label: 'Checking domain availability', detail: 'Querying .com, .mx, .net and 10 other TLDs…' },
+    { label: 'Analyzing translations & transliterations', detail: 'Reviewing mark meaning across 8 languages for cross-border conflicts…' },
+    { label: 'Compiling clearance report', detail: 'Aggregating all signals and computing final registrability score…' },
+  ],
+  es: [
+    { label: 'Consultando base de datos IMPI MARCia', detail: 'Escaneando el registro oficial en busca de marcas idénticas o similares…' },
+    { label: 'Analizando similitud fonética y visual', detail: 'Comparando sonido, apariencia y significado con marcas existentes…' },
+    { label: 'Evaluando factores DuPont', detail: 'Analizando los 13 criterios de probabilidad de confusión bajo la ley mexicana…' },
+    { label: 'Evaluando distintividad (LFPPI)', detail: 'Clasificando el nivel de la marca: genérica, descriptiva, sugestiva, arbitraria o de fantasía…' },
+    { label: 'Rastreando presencia web y comercial', detail: 'Verificando marcas no registradas en el comercio que puedan generar conflicto…' },
+    { label: 'Verificando disponibilidad de dominios', detail: 'Consultando .com, .mx, .net y 10 TLDs más…' },
+    { label: 'Analizando traducciones y transliteraciones', detail: 'Revisando el significado de la marca en 8 idiomas para detectar conflictos internacionales…' },
+    { label: 'Compilando reporte de registrabilidad', detail: 'Integrando todas las señales y calculando la puntuación final…' },
+  ],
+  zh: [
+    { label: '查询IMPI MARCia数据库', detail: '扫描官方注册表，查找相同或近似商标…' },
+    { label: '分析语音和视觉相似性', detail: '与现有商标比较发音、外观和含义…' },
+    { label: '评估DuPont因素', detail: '根据墨西哥法律评估所有13项混淆可能性标准…' },
+    { label: '评估显著性 (LFPPI)', detail: '对商标进行分类：通用、描述性、暗示性、任意性或臆造性…' },
+    { label: '扫描网络和市场存在', detail: '检查可能产生冲突的未注册品牌…' },
+    { label: '检查域名可用性', detail: '查询 .com、.mx、.net 和其他10个顶级域名…' },
+    { label: '分析翻译和音译', detail: '检查8种语言中的商标含义以发现跨境冲突…' },
+    { label: '编制注册可行性报告', detail: '汇总所有信号并计算最终注册可行性评分…' },
+  ],
+  de: [
+    { label: 'IMPI MARCia-Datenbank abfragen', detail: 'Amtliches Register nach identischen und ähnlichen Marken durchsuchen…' },
+    { label: 'Phonetische und visuelle Ähnlichkeit analysieren', detail: 'Klang, Erscheinung und Bedeutung mit bestehenden Marken vergleichen…' },
+    { label: 'DuPont-Faktoren bewerten', detail: 'Alle 13 Verwechslungskriterien nach mexikanischem Recht prüfen…' },
+    { label: 'Unterscheidungskraft bewerten (LFPPI)', detail: 'Markenstufe klassifizieren: generisch, beschreibend, suggestiv, willkürlich oder frei erfunden…' },
+    { label: 'Web- und Marktpräsenz prüfen', detail: 'Nicht eingetragene Marken im Handel auf Konflikte untersuchen…' },
+    { label: 'Domain-Verfügbarkeit prüfen', detail: '.com, .mx, .net und 10 weitere TLDs abfragen…' },
+    { label: 'Übersetzungen und Transliterationen analysieren', detail: 'Markenbedeutung in 8 Sprachen auf grenzüberschreitende Konflikte prüfen…' },
+    { label: 'Registrierbarkeitsbericht erstellen', detail: 'Alle Signale zusammenführen und endgültige Bewertung berechnen…' },
+  ],
+  fr: [
+    { label: 'Interrogation de la base IMPI MARCia', detail: 'Analyse du registre officiel pour les marques identiques ou similaires…' },
+    { label: 'Analyse de similarité phonétique et visuelle', detail: 'Comparaison du son, de l\'apparence et du sens avec les marques existantes…' },
+    { label: 'Évaluation des facteurs DuPont', detail: 'Examen des 13 critères de risque de confusion selon le droit mexicain…' },
+    { label: 'Évaluation du caractère distinctif (LFPPI)', detail: 'Classification : générique, descriptif, suggestif, arbitraire ou de fantaisie…' },
+    { label: 'Analyse de la présence web et commerciale', detail: 'Recherche de marques non déposées susceptibles de créer un conflit…' },
+    { label: 'Vérification de la disponibilité des domaines', detail: 'Interrogation de .com, .mx, .net et 10 autres TLD…' },
+    { label: 'Analyse des traductions et translittérations', detail: 'Vérification du sens de la marque dans 8 langues pour les conflits internationaux…' },
+    { label: 'Compilation du rapport de disponibilité', detail: 'Agrégation de tous les signaux et calcul du score final…' },
+  ],
+  hi: [
+    { label: 'IMPI MARCia डेटाबेस क्वेरी', detail: 'आधिकारिक रजिस्ट्री में समान और भ्रामक रूप से समान चिह्न खोजे जा रहे हैं…' },
+    { label: 'ध्वन्यात्मक और दृश्य समानता विश्लेषण', detail: 'मौजूदा चिह्नों के साथ ध्वनि, रूप और अर्थ की तुलना…' },
+    { label: 'DuPont कारकों का मूल्यांकन', detail: 'मेक्सिकन कानून के तहत सभी 13 भ्रम-संभावना मानदंड…' },
+    { label: 'विशिष्टता मूल्यांकन (LFPPI)', detail: 'चिह्न स्तर वर्गीकरण: सामान्य, वर्णनात्मक, सुझावात्मक, मनमाना या काल्पनिक…' },
+    { label: 'वेब और बाज़ार उपस्थिति स्कैन', detail: 'संघर्ष पैदा कर सकने वाले गैर-पंजीकृत ब्रांड की जांच…' },
+    { label: 'डोमेन उपलब्धता जांच', detail: '.com, .mx, .net और 10 अन्य TLD क्वेरी…' },
+    { label: 'अनुवाद और लिप्यंतरण विश्लेषण', detail: '8 भाषाओं में चिह्न के अर्थ की समीक्षा…' },
+    { label: 'क्लीयरेंस रिपोर्ट तैयार करना', detail: 'सभी संकेतों को एकत्रित करके अंतिम स्कोर की गणना…' },
+  ],
+  pt: [
+    { label: 'Consultando base IMPI MARCia', detail: 'Verificando o registro oficial por marcas idênticas ou confusamente similares…' },
+    { label: 'Analisando similaridade fonética e visual', detail: 'Comparando som, aparência e significado com marcas existentes…' },
+    { label: 'Avaliando fatores DuPont', detail: 'Examinando todos os 13 critérios de probabilidade de confusão pela lei mexicana…' },
+    { label: 'Avaliando distintividade (LFPPI)', detail: 'Classificando a marca: genérica, descritiva, sugestiva, arbitrária ou de fantasia…' },
+    { label: 'Verificando presença web e comercial', detail: 'Checando marcas não registradas que possam gerar conflito…' },
+    { label: 'Verificando disponibilidade de domínios', detail: 'Consultando .com, .mx, .net e outros 10 TLDs…' },
+    { label: 'Analisando traduções e transliterações', detail: 'Revisando o significado da marca em 8 idiomas para conflitos internacionais…' },
+    { label: 'Compilando relatório de registrabilidade', detail: 'Agregando todos os sinais e calculando a pontuação final…' },
+  ],
+  ja: [
+    { label: 'IMPI MARCiaデータベース照会', detail: '公式登録簿で同一または混同を招く類似商標を検索中…' },
+    { label: '音声的・視覚的類似性の分析', detail: '既存商標との音、外観、意味の比較…' },
+    { label: 'DuPont要素の評価', detail: 'メキシコ法の下で13の混同可能性基準を検討中…' },
+    { label: '識別力の評価 (LFPPI)', detail: '商標の段階分類：普通名称、記述的、示唆的、任意的または造語…' },
+    { label: 'ウェブ・市場調査', detail: '未登録ブランドで競合する可能性のあるものを確認中…' },
+    { label: 'ドメイン利用可能性確認', detail: '.com、.mx、.netおよび他10のTLDを照会中…' },
+    { label: '翻訳・転記分析', detail: '8言語での商標の意味を確認し、越境衝突を調査中…' },
+    { label: 'クリアランスレポート作成', detail: 'すべての情報を集約し、最終的な登録可能性スコアを算出中…' },
+  ],
+};
+
+function ClearanceLoadingSteps({ lang }: { lang: Lang }) {
+  const steps = LOADING_STEPS[lang] ?? LOADING_STEPS.en;
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [completedCount, setCompletedCount] = useState(0);
+
+  useEffect(() => {
+    const durations = [1600, 1400, 1800, 1500, 1300, 1100, 1400, 999999];
+    let elapsed = 0;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    for (let i = 0; i < steps.length - 1; i++) {
+      elapsed += durations[i] ?? 1500;
+      const idx = i;
+      timers.push(setTimeout(() => {
+        setCompletedCount(idx + 1);
+        setActiveIndex(idx + 1);
+      }, elapsed));
+    }
+    return () => timers.forEach(clearTimeout);
+  }, [steps.length]);
+
+  return (
+    <div className="mt-3 rounded-xl border border-gray-200 bg-white overflow-hidden">
+      <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
+        <Loader2 size={14} className="text-gold-600 animate-spin flex-shrink-0" />
+        <p className="text-xs font-semibold text-gray-700">
+          {lang === 'es' ? 'Análisis en curso…' : lang === 'zh' ? '分析进行中…' : lang === 'de' ? 'Analyse läuft…' : lang === 'fr' ? 'Analyse en cours…' : lang === 'hi' ? 'विश्लेषण जारी…' : lang === 'pt' ? 'Análise em andamento…' : lang === 'ja' ? '分析中…' : 'Running full clearance analysis…'}
+        </p>
+      </div>
+      <div className="px-4 py-3 space-y-2.5">
+        {steps.map((step, i) => {
+          const done = i < completedCount;
+          const active = i === activeIndex && !done;
+          return (
+            <div key={i} className={`flex items-start gap-3 transition-opacity duration-300 ${i > activeIndex ? 'opacity-30' : 'opacity-100'}`}>
+              <div className="flex-shrink-0 mt-0.5">
+                {done ? (
+                  <div className="w-4 h-4 rounded-full bg-emerald-100 flex items-center justify-center">
+                    <CheckCircle2 size={11} className="text-emerald-600" />
+                  </div>
+                ) : active ? (
+                  <div className="w-4 h-4 rounded-full bg-gold-100 flex items-center justify-center">
+                    <Loader2 size={10} className="text-gold-600 animate-spin" />
+                  </div>
+                ) : (
+                  <div className="w-4 h-4 rounded-full bg-gray-100 flex items-center justify-center">
+                    <div className="w-1.5 h-1.5 rounded-full bg-gray-300" />
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className={`text-xs font-medium leading-tight ${done ? 'text-emerald-700' : active ? 'text-gray-800' : 'text-gray-400'}`}>
+                  {step.label}
+                </p>
+                {active && (
+                  <p className="text-[10px] text-gray-400 mt-0.5 leading-relaxed">{step.detail}</p>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── Locked teaser row ────────────────────────────────────────────────────────
 
 function LockedRow({ label, lang }: { label: string; lang: Lang }) {
@@ -364,15 +514,7 @@ export default function TrademarkClearancePanel({
     );
   }
   if (status === 'checking') {
-    return (
-      <div className="mt-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-5 flex flex-col items-center gap-3">
-        <Loader2 size={22} className="text-[#1a2e1a] animate-spin" />
-        <div className="text-center">
-          <p className="text-xs font-medium text-gray-700">Running full clearance analysis…</p>
-          <p className="text-xs text-gray-400 mt-0.5">IMPI MARCia · DuPont factors · Distinctiveness · Web · Domains</p>
-        </div>
-      </div>
-    );
+    return <ClearanceLoadingSteps lang={lang} />;
   }
   if (status === 'error') {
     return (

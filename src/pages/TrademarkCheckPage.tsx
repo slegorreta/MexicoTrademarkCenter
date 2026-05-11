@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, ArrowRight, Shield, Sparkles, CheckCircle2, FileText } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
@@ -154,6 +154,7 @@ export default function TrademarkCheckPage() {
   const [searchName, setSearchName] = useState('');
   const [searchGoods, setSearchGoods] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
+  const resultsRef = useRef<HTMLDivElement>(null);
 
   const canSearch = markInput.trim().length > 0 && goodsInput.trim().length > 0;
 
@@ -162,6 +163,9 @@ export default function TrademarkCheckPage() {
     setSearchName(markInput.trim());
     setSearchGoods(goodsInput.trim());
     setHasSearched(true);
+    setTimeout(() => {
+      resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -259,7 +263,7 @@ export default function TrademarkCheckPage() {
       </section>
 
       {/* Results */}
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <div ref={resultsRef} className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         {hasSearched && searchName ? (
           <div className="space-y-6">
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
