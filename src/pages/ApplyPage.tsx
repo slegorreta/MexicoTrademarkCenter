@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { CheckCircle2, ChevronRight, Upload, X, Plus, Trash2, Lock, CreditCard, AlertCircle, AlertTriangle, Sparkles, Tag, Loader2, Pencil, Eye, EyeOff, UserPlus, HelpCircle, Info, Save, Shield, Search } from 'lucide-react';
+import { CheckCircle2, ChevronRight, Upload, X, Plus, Trash2, Lock, CreditCard, AlertCircle, AlertTriangle, Sparkles, Tag, Loader2, Pencil, Eye, EyeOff, UserPlus, HelpCircle, Info, Save, Shield, Search, LogIn, Mail } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { useLanguage } from '../context/LanguageContext';
@@ -545,6 +545,14 @@ export default function ApplyPage() {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [agreedToDisclaimer, setAgreedToDisclaimer] = useState(false);
   const [disclaimerError, setDisclaimerError] = useState(false);
+
+  // Post-payment account prompt state
+  const [postPaymentMode, setPostPaymentMode] = useState<'prompt' | 'login' | 'reset' | 'reset_sent'>('prompt');
+  const [postPaymentLoginEmail, setPostPaymentLoginEmail] = useState('');
+  const [postPaymentLoginPassword, setPostPaymentLoginPassword] = useState('');
+  const [postPaymentLoginError, setPostPaymentLoginError] = useState('');
+  const [postPaymentLoginLoading, setPostPaymentLoginLoading] = useState(false);
+  const [postPaymentShowPassword, setPostPaymentShowPassword] = useState(false);
 
   const suggestedName = useRef<string>('');
 
@@ -2347,30 +2355,217 @@ export default function ApplyPage() {
 
           {/* STEP 8 — Confirmation */}
           {step === 8 && (
-            <div className="text-center py-4">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-5">
-                <CheckCircle2 size={36} className="text-green-600" />
-              </div>
-              <h2 className="text-2xl font-bold text-navy-900 mb-3">
-                {tri('Payment Confirmed!', '付款已确认！', '¡Pago Confirmado!', 'Zahlung bestätigt!', 'Paiement confirmé !', 'भुगतान की पुष्टि हुई!', 'Pagamento Confirmado!')}
-              </h2>
-              {caseNumber && (
-                <div className="bg-gray-100 rounded-xl px-5 py-3 inline-block mb-5">
-                  <div className="text-xs text-gray-500 mb-0.5">{tri('Your Case Number', '您的案件编号', 'Tu Número de Expediente', 'Ihre Fallnummer', 'Votre numéro de dossier', 'आपका केस नंबर', 'Seu Número de Processo')}</div>
-                  <div className="text-lg font-bold font-mono text-navy-900">{caseNumber}</div>
+            <div className="py-4">
+              {/* Success header */}
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle2 size={36} className="text-emerald-600" />
                 </div>
-              )}
-              <p className="text-gray-600 text-sm leading-relaxed max-w-lg mx-auto mb-6">
-                {tri('Thank you — your payment has been received and your trademark filing is confirmed. Our team will review your application, confirm classification, translate into Spanish, and target filing before IMPI within 24 business hours.', '感谢您——我们已收到您的付款，您的商标申请已确认。我们的团队将在24个工作小时内审查您的申请、确认分类、翻译成西班牙语并向IMPI提交。', 'Gracias — hemos recibido tu pago y tu solicitud de registro de marca está confirmada. Nuestro equipo revisará tu solicitud, confirmará la clasificación y presentará ante el IMPI en 24 horas hábiles.')}
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <button
-                  onClick={() => navigate(user ? '/dashboard' : '/login')}
-                  className="inline-flex items-center justify-center gap-2 bg-gold-500 hover:bg-gold-600 text-white font-semibold px-6 py-3 rounded-xl transition-colors"
-                >
-                  <ChevronRight size={18} />
-                  {user ? tri('Go to Dashboard', '前往仪表板', 'Ir al Panel', 'Zum Dashboard', 'Aller au tableau de bord', 'डैशबोर्ड पर जाएं', 'Ir ao Painel') : tri('Create Account to Track', '创建账户以跟踪', 'Crear Cuenta para Seguimiento', 'Konto erstellen zum Verfolgen', 'Créer un compte pour suivre', 'ट्रैक करने के लिए खाता बनाएं', 'Criar Conta para Acompanhar')}
-                </button>
+                <h2 className="text-2xl font-bold text-navy-900 mb-2">
+                  {tri('Payment Confirmed!', '付款已确认！', '¡Pago Confirmado!', 'Zahlung bestätigt!', 'Paiement confirmé !', 'भुगतान की पुष्टि हुई!', 'Pagamento Confirmado!')}
+                </h2>
+                {caseNumber && (
+                  <div className="bg-gray-100 rounded-xl px-5 py-3 inline-block mb-3">
+                    <div className="text-xs text-gray-500 mb-0.5">{tri('Your Case Number', '您的案件编号', 'Tu Número de Expediente', 'Ihre Fallnummer', 'Votre numéro de dossier', 'आपका केस नंबर', 'Seu Número de Processo')}</div>
+                    <div className="text-lg font-bold font-mono text-navy-900">{caseNumber}</div>
+                  </div>
+                )}
+                <p className="text-gray-600 text-sm leading-relaxed max-w-lg mx-auto">
+                  {tri('Your payment has been received and your trademark filing is confirmed. Our team will review, classify, and file before IMPI within 24 business hours. A confirmation has been sent to', 'We收到您的付款，您的商标申请已确认。我们的团队将在24个工作小时内审查、分类并向IMPI提交。确认已发送至', 'Hemos recibido tu pago y tu solicitud está confirmada. Nuestro equipo presentará ante el IMPI en 24 horas hábiles. Se ha enviado confirmación a', 'Ihre Zahlung wurde empfangen und Ihre Markenanmeldung ist bestätigt. Unser Team reicht innerhalb von 24 Geschäftsstunden beim IMPI ein. Bestätigung gesendet an', 'Votre paiement a été reçu et votre dépôt est confirmé. Notre équipe déposera à l\'IMPI sous 24 heures ouvrées. Confirmation envoyée à', 'आपका भुगतान प्राप्त हुआ और आपकी ट्रेडमार्क फाइलिंग की पुष्टि हुई। हमारी टीम 24 व्यावसायिक घंटों में IMPI को दाखिल करेगी। पुष्टि भेजी गई:', 'Seu pagamento foi recebido e seu pedido está confirmado. Nossa equipe protocola no IMPI em 24 horas úteis. Confirmação enviada para')}
+                  {' '}<strong>{form.email}</strong>.
+                </p>
+              </div>
+
+              {/* Account access panel */}
+              <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+                <div className="bg-gradient-to-r from-navy-900 to-navy-800 px-5 py-4 flex items-center gap-3">
+                  <div className="w-9 h-9 bg-gold-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <UserPlus size={18} className="text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-white font-bold text-sm">
+                      {tri('Track your filing from the Dashboard', '从仪表板跟踪您的申请', 'Haz seguimiento desde el Panel', 'Einreichung im Dashboard verfolgen', 'Suivez votre dépôt depuis le tableau de bord', 'डैशबोर्ड से अपनी फाइलिंग ट्रैक करें', 'Acompanhe seu pedido no Painel')}
+                    </h3>
+                    <p className="text-navy-300 text-xs mt-0.5">
+                      {tri('Sign in or set up your account to access status updates, documents and correspondence.', '登录或设置账户以访问状态更新、文件和通信。', 'Inicia sesión o configura tu cuenta para ver actualizaciones, documentos y comunicaciones.', 'Anmelden oder Konto einrichten für Statusupdates, Dokumente und Korrespondenz.', 'Connectez-vous ou configurez votre compte pour accéder aux mises à jour, documents et correspondance.', 'स्थिति अपडेट, दस्तावेज़ और पत्राचार के लिए साइन इन करें या अपना खाता सेट करें।', 'Faça login ou configure sua conta para acessar atualizações, documentos e correspondência.')}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-5">
+                  {user ? (
+                    /* Already logged in */
+                    <div className="text-center space-y-3">
+                      <p className="text-sm text-emerald-700 font-medium flex items-center justify-center gap-2">
+                        <CheckCircle2 size={15} className="text-emerald-500" />
+                        {tri('You are signed in as', 'حساب：', 'Sesión iniciada como', 'Angemeldet als', 'Connecté en tant que', 'के रूप में साइन इन है', 'Conectado como')} <strong>{user.email}</strong>
+                      </p>
+                      <button
+                        onClick={() => navigate('/dashboard')}
+                        className="w-full flex items-center justify-center gap-2 bg-gold-500 hover:bg-gold-600 text-white font-bold py-3 rounded-xl text-sm transition-colors"
+                      >
+                        <ChevronRight size={16} />
+                        {tri('Go to Dashboard', '前往仪表板', 'Ir al Panel', 'Zum Dashboard', 'Aller au tableau de bord', 'डैशबोर्ड पर जाएं', 'Ir ao Painel')}
+                      </button>
+                    </div>
+                  ) : postPaymentMode === 'prompt' ? (
+                    /* Initial prompt: two options */
+                    <div className="space-y-3">
+                      <button
+                        type="button"
+                        onClick={() => { setPostPaymentMode('login'); setPostPaymentLoginEmail(form.email); }}
+                        className="w-full flex items-center gap-4 bg-navy-900 hover:bg-navy-800 text-white font-semibold px-5 py-4 rounded-xl transition-colors text-left"
+                      >
+                        <div className="w-9 h-9 bg-white/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <LogIn size={18} className="text-gold-400" />
+                        </div>
+                        <div>
+                          <div className="text-sm font-bold">
+                            {tri('I already have an account — Sign in', '我已有账户 — 登录', 'Ya tengo cuenta — Iniciar sesión', 'Ich habe ein Konto — Anmelden', 'J\'ai déjà un compte — Connexion', 'मेरे पास पहले से खाता है — साइन इन', 'Já tenho conta — Entrar')}
+                          </div>
+                          <div className="text-xs text-white/60 mt-0.5">
+                            {tri('Access your dashboard with your existing credentials', '使用现有凭据访问仪表板', 'Accede a tu panel con tus credenciales actuales', 'Dashboard mit vorhandenen Zugangsdaten aufrufen', 'Accédez à votre tableau de bord avec vos identifiants', 'अपने मौजूदा क्रेडेंशियल से डैशबोर्ड एक्सेस करें', 'Acesse seu painel com suas credenciais existentes')}
+                          </div>
+                        </div>
+                        <ChevronRight size={16} className="ml-auto text-white/40" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setPostPaymentMode('reset_sent');
+                          await supabase.auth.resetPasswordForEmail(form.email, {
+                            redirectTo: `${window.location.origin}/dashboard`,
+                          });
+                        }}
+                        className="w-full flex items-center gap-4 bg-white hover:bg-gray-50 border-2 border-gray-200 hover:border-gold-300 text-navy-900 font-semibold px-5 py-4 rounded-xl transition-colors text-left"
+                      >
+                        <div className="w-9 h-9 bg-gold-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Mail size={18} className="text-gold-600" />
+                        </div>
+                        <div>
+                          <div className="text-sm font-bold">
+                            {tri('Set up my account — Send me a link', '设置我的账户 — 发送链接', 'Configurar mi cuenta — Enviarme un enlace', 'Konto einrichten — Link senden', 'Configurer mon compte — Envoyer un lien', 'मेरा खाता सेट करें — लिंक भेजें', 'Configurar minha conta — Enviar link')}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-0.5">
+                            {tri("We'll email a link to set your password to", 'We将密码设置链接发送至', 'Enviaremos un enlace a', 'Link zum Passwort-Setzen an', 'Nous enverrons un lien à', 'पासवर्ड सेट करने का लिंक भेजेंगे', 'Enviaremos um link para')} <strong className="text-navy-700">{form.email}</strong>
+                          </div>
+                        </div>
+                        <ChevronRight size={16} className="ml-auto text-gray-300" />
+                      </button>
+                    </div>
+                  ) : postPaymentMode === 'reset_sent' ? (
+                    /* Password reset link sent */
+                    <div className="text-center space-y-3">
+                      <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mx-auto">
+                        <Mail size={22} className="text-emerald-600" />
+                      </div>
+                      <p className="text-sm font-bold text-navy-900">
+                        {tri('Check your inbox', '请查看您的收件箱', 'Revisa tu bandeja de entrada', 'Überprüfen Sie Ihren Posteingang', 'Vérifiez votre boîte mail', 'अपना इनबॉक्स जांचें', 'Verifique sua caixa de entrada')}
+                      </p>
+                      <p className="text-xs text-gray-500 leading-relaxed">
+                        {tri("We sent a link to set your password to", '密码设置链接已发送至', 'Enviamos un enlace para establecer tu contraseña a', 'Link zum Passwort-Setzen gesendet an', 'Lien envoyé pour définir votre mot de passe à', 'पासवर्ड सेट करने का लिंक भेजा गया', 'Link enviado para definir sua senha para')} <strong>{form.email}</strong>.{' '}
+                        {tri('Click the link to access your dashboard.', '点击链接访问您的仪表板。', 'Haz clic en el enlace para acceder a tu panel.', 'Klicken Sie den Link, um auf Ihr Dashboard zuzugreifen.', 'Cliquez sur le lien pour accéder à votre tableau de bord.', 'डैशबोर्ड एक्सेस करने के लिए लिंक पर क्लिक करें।', 'Clique no link para acessar seu painel.')}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setPostPaymentMode('login')}
+                        className="text-xs text-gold-600 hover:text-gold-700 font-medium underline underline-offset-2"
+                      >
+                        {tri('Sign in instead', '改为登录', 'Iniciar sesión en su lugar', 'Stattdessen anmelden', 'Se connecter à la place', 'बजाय साइन इन करें', 'Entrar em vez disso')}
+                      </button>
+                    </div>
+                  ) : (
+                    /* Sign in form */
+                    <form
+                      onSubmit={async e => {
+                        e.preventDefault();
+                        setPostPaymentLoginError('');
+                        setPostPaymentLoginLoading(true);
+                        const { error } = await supabase.auth.signInWithPassword({
+                          email: postPaymentLoginEmail,
+                          password: postPaymentLoginPassword,
+                        });
+                        setPostPaymentLoginLoading(false);
+                        if (error) {
+                          setPostPaymentLoginError(tri('Invalid email or password.', '邮箱或密码错误。', 'Correo o contraseña incorrectos.', 'Ungültige E-Mail oder Passwort.', 'E-mail ou mot de passe invalide.', 'अमान्य ईमेल या पासवर्ड।', 'E-mail ou senha inválidos.'));
+                        } else {
+                          navigate('/dashboard');
+                        }
+                      }}
+                      className="space-y-4"
+                    >
+                      {postPaymentLoginError && (
+                        <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 rounded-lg p-3 text-sm">
+                          <AlertCircle size={14} className="flex-shrink-0" />
+                          {postPaymentLoginError}
+                        </div>
+                      )}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1.5">
+                          {tri('Email', '电子邮件', 'Correo', 'E-Mail', 'E-mail', 'ईमेल', 'E-mail')}
+                        </label>
+                        <input
+                          type="email"
+                          required
+                          className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-transparent"
+                          value={postPaymentLoginEmail}
+                          onChange={e => setPostPaymentLoginEmail(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label className="block text-xs font-medium text-gray-600">
+                            {tri('Password', '密码', 'Contraseña', 'Passwort', 'Mot de passe', 'पासवर्ड', 'Senha')}
+                          </label>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              setPostPaymentMode('reset_sent');
+                              await supabase.auth.resetPasswordForEmail(postPaymentLoginEmail || form.email, {
+                                redirectTo: `${window.location.origin}/dashboard`,
+                              });
+                            }}
+                            className="text-xs text-gold-600 hover:text-gold-700 font-medium"
+                          >
+                            {tri('Forgot password?', '忘记密码？', '¿Olvidaste tu contraseña?', 'Passwort vergessen?', 'Mot de passe oublié ?', 'पासवर्ड भूल गए?', 'Esqueceu a senha?')}
+                          </button>
+                        </div>
+                        <div className="relative">
+                          <input
+                            type={postPaymentShowPassword ? 'text' : 'password'}
+                            required
+                            className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-transparent pr-10"
+                            value={postPaymentLoginPassword}
+                            onChange={e => setPostPaymentLoginPassword(e.target.value)}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setPostPaymentShowPassword(v => !v)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          >
+                            {postPaymentShowPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                          </button>
+                        </div>
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={postPaymentLoginLoading}
+                        className="w-full flex items-center justify-center gap-2 bg-gold-500 hover:bg-gold-600 disabled:opacity-60 text-white font-bold py-3 rounded-xl text-sm transition-colors"
+                      >
+                        {postPaymentLoginLoading ? <Loader2 size={15} className="animate-spin" /> : <LogIn size={15} />}
+                        {tri('Sign In & Go to Dashboard', '登录并前往仪表板', 'Iniciar sesión e ir al Panel', 'Anmelden & zum Dashboard', 'Connexion & tableau de bord', 'साइन इन करें और डैशबोर्ड जाएं', 'Entrar e ir ao Painel')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPostPaymentMode('prompt')}
+                        className="w-full text-xs text-gray-400 hover:text-gray-600"
+                      >
+                        {tri('Back', '返回', 'Volver', 'Zurück', 'Retour', 'वापस', 'Voltar')}
+                      </button>
+                    </form>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -2379,7 +2574,7 @@ export default function ApplyPage() {
           {showAuthGate && (
             <AuthGateModal
               language={language}
-              onSuccess={() => { setShowAuthGate(false); setStep(7); }}
+              onSuccess={() => { setShowAuthGate(false); }}
               onClose={() => setShowAuthGate(false)}
             />
           )}
@@ -2461,10 +2656,6 @@ export default function ApplyPage() {
                     if (step === 6) {
                       if (!agreedToTerms || !agreedToDisclaimer) {
                         setDisclaimerError(true);
-                        return;
-                      }
-                      if (!user) {
-                        setShowAuthGate(true);
                         return;
                       }
                     }
