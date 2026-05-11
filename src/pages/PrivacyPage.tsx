@@ -20,7 +20,7 @@ const content: Record<Lang, PageContent> = {
     title: 'Privacy Notice',
     subtitle: 'www.mexicotrademarkcenter.com',
     intro:
-      'In compliance with the Federal Law on the Protection of Personal Data Held by Private Parties (Ley Federal de Protección de Datos Personales en Posesión de los Particulares, the "LFPDPPP"), published in the Official Gazette of the Federation on March 20, 2025, and its Regulations, [Legal Name of the Data Controller], with registered address at [Registered Address] (the "Controller"), as operator of the website www.mexicotrademarkcenter.com (the "Website"), issues the following Privacy Notice.',
+      'In compliance with the Federal Law on the Protection of Personal Data Held by Private Parties (Ley Federal de Protección de Datos Personales en Posesión de los Particulares, the "LFPDPPP"), published in the Official Gazette of the Federation on March 20, 2025, and its Regulations, MexicoTrademarkCenter.com, with registered address at www.mexicotrademarkcenter.com and info@mexicotrademarkcenter.com (the "Controller"), as operator of the website www.mexicotrademarkcenter.com (the "Website"), issues the following Privacy Notice.',
     lastUpdated: 'Last update: May 2025',
     sections: [
       {
@@ -66,7 +66,7 @@ const content: Record<Lang, PageContent> = {
     title: 'Aviso de Privacidad',
     subtitle: 'www.mexicotrademarkcenter.com',
     intro:
-      'En cumplimiento de lo dispuesto por la Ley Federal de Protección de Datos Personales en Posesión de los Particulares (la "LFPDPPP"), publicada en el Diario Oficial de la Federación el 20 de marzo de 2025, y su Reglamento, [Razón Social del Responsable], con domicilio en [Domicilio] (el "Responsable"), en su carácter de operador del sitio web www.mexicotrademarkcenter.com (el "Sitio"), emite el presente Aviso de Privacidad.',
+      'En cumplimiento de lo dispuesto por la Ley Federal de Protección de Datos Personales en Posesión de los Particulares (la "LFPDPPP"), publicada en el Diario Oficial de la Federación el 20 de marzo de 2025, y su Reglamento, MexicoTrademarkCenter.com, con domicilio en www.mexicotrademarkcenter.com y info@mexicotrademarkcenter.com (el "Responsable"), en su carácter de operador del sitio web www.mexicotrademarkcenter.com (el "Sitio"), emite el presente Aviso de Privacidad.',
     lastUpdated: 'Última actualización: Mayo 2025',
     sections: [
       {
@@ -112,7 +112,7 @@ const content: Record<Lang, PageContent> = {
     title: 'गोपनीयता नीति',
     subtitle: 'www.mexicotrademarkcenter.com',
     intro:
-      'निजी पक्षों द्वारा रखे गए व्यक्तिगत डेटा के संरक्षण पर संघीय कानून (LFPDPPP) और उसके विनियमों के अनुपालन में, www.mexicotrademarkcenter.com (\'वेबसाइट\') का संचालक नियंत्रक के रूप में निम्नलिखित गोपनीयता नीति जारी करता है।',
+      'निजी पक्षों द्वारा रखे गए व्यक्तिगत डेटा के संरक्षण पर संघीय कानून (LFPDPPP) और उसके विनियमों के अनुपालन में, MexicoTrademarkCenter.com, जिसका पंजीकृत पता www.mexicotrademarkcenter.com एवं info@mexicotrademarkcenter.com है (\'नियंत्रक\'), वेबसाइट www.mexicotrademarkcenter.com के संचालक के रूप में निम्नलिखित गोपनीयता नीति जारी करता है।',
     lastUpdated: 'अंतिम अद्यतन: मई 2025',
     sections: [
       {
@@ -158,7 +158,7 @@ const content: Record<Lang, PageContent> = {
     title: 'Politique de confidentialité',
     subtitle: 'www.mexicotrademarkcenter.com',
     intro:
-      'Conformément à la loi fédérale sur la protection des données personnelles détenues par des particuliers (Ley Federal de Protección de Datos Personales en Posesión de los Particulares, « LFPDPPP »), publiée au Journal officiel de la Fédération le 20 mars 2025, et à son règlement d\'application, [Dénomination sociale du responsable du traitement], dont le siège social est situé à [Adresse enregistrée] (le « Responsable »), en qualité d\'exploitant du site web www.mexicotrademarkcenter.com (le « Site »), publie la présente politique de confidentialité.',
+      'Conformément à la loi fédérale sur la protection des données personnelles détenues par des particuliers (Ley Federal de Protección de Datos Personales en Posesión de los Particulares, « LFPDPPP »), publiée au Journal officiel de la Fédération le 20 mars 2025, et à son règlement d\'application, MexicoTrademarkCenter.com, dont le siège social est situé à www.mexicotrademarkcenter.com et info@mexicotrademarkcenter.com (le « Responsable »), en qualité d\'exploitant du site web www.mexicotrademarkcenter.com (le « Site »), publie la présente politique de confidentialité.',
     lastUpdated: 'Dernière mise à jour : mai 2025',
     sections: [
       {
@@ -204,7 +204,7 @@ const content: Record<Lang, PageContent> = {
     title: 'Datenschutzerklärung',
     subtitle: 'www.mexicotrademarkcenter.com',
     intro:
-      'In Übereinstimmung mit dem Bundesgesetz zum Schutz personenbezogener Daten im Besitz privater Parteien (Ley Federal de Protección de Datos Personales en Posesión de los Particulares, „LFPDPPP"), veröffentlicht im Bundesanzeiger am 20. März 2025, und seinen Durchführungsbestimmungen gibt [Rechtsname des Verantwortlichen], mit eingetragenem Sitz unter [Eingetragene Adresse] (der „Verantwortliche"), als Betreiber der Website www.mexicotrademarkcenter.com (die „Website"), die folgende Datenschutzerklärung heraus.',
+      'In Übereinstimmung mit dem Bundesgesetz zum Schutz personenbezogener Daten im Besitz privater Parteien (Ley Federal de Protección de Datos Personales en Posesión de los Particulares, „LFPDPPP"), veröffentlicht im Bundesanzeiger am 20. März 2025, und seinen Durchführungsbestimmungen gibt MexicoTrademarkCenter.com, mit eingetragenem Sitz unter www.mexicotrademarkcenter.com und info@mexicotrademarkcenter.com (der „Verantwortliche"), als Betreiber der Website www.mexicotrademarkcenter.com (die „Website"), die folgende Datenschutzerklärung heraus.',
     lastUpdated: 'Letzte Aktualisierung: Mai 2025',
     sections: [
       {
@@ -250,7 +250,7 @@ const content: Record<Lang, PageContent> = {
     title: '隐私通知',
     subtitle: 'www.mexicotrademarkcenter.com',
     intro:
-      '根据2025年3月20日公布于联邦官方公报之《联邦私人持有个人数据保护法》（以下简称"LFPDPPP"）及其实施条例之规定，[责任方法定名称]（注册地址：[注册地址]）（以下简称"责任方"），作为www.mexicotrademarkcenter.com网站（以下简称"本网站"）之运营方，特此发布本隐私通知。',
+      '根据2025年3月20日公布于联邦官方公报之《联邦私人持有个人数据保护法》（以下简称"LFPDPPP"）及其实施条例之规定，MexicoTrademarkCenter.com（注册地址：www.mexicotrademarkcenter.com 及 info@mexicotrademarkcenter.com）（以下简称"责任方"），作为www.mexicotrademarkcenter.com网站（以下简称"本网站"）之运营方，特此发布本隐私通知。',
     lastUpdated: '最近更新日期：2025年5月',
     sections: [
       {
@@ -296,7 +296,7 @@ const content: Record<Lang, PageContent> = {
     title: 'プライバシーポリシー',
     subtitle: 'www.mexicotrademarkcenter.com',
     intro:
-      '2025年3月20日に連邦官報に公布された個人データ保護連邦法（Ley Federal de Protección de Datos Personales en Posesión de los Particulares、以下「LFPDPPP」）およびその施行規則に基づき、www.mexicotrademarkcenter.com（以下「ウェブサイト」）の運営者（以下「管理者」）は、以下のプライバシーポリシーを発行します。',
+      '2025年3月20日に連邦官報に公布された個人データ保護連邦法（Ley Federal de Protección de Datos Personales en Posesión de los Particulares、以下「LFPDPPP」）およびその施行規則に基づき、MexicoTrademarkCenter.com（所在地：www.mexicotrademarkcenter.com および info@mexicotrademarkcenter.com）（以下「管理者」）は、ウェブサイト www.mexicotrademarkcenter.com（以下「ウェブサイト」）の運営者として、以下のプライバシーポリシーを発行します。',
     lastUpdated: '最終更新：2025年5月',
     sections: [
       {
@@ -342,7 +342,7 @@ const content: Record<Lang, PageContent> = {
     title: 'Aviso de Privacidade',
     subtitle: 'www.mexicotrademarkcenter.com',
     intro:
-      'Em conformidade com a Lei Federal de Proteção de Dados Pessoais em Posse de Particulares (Ley Federal de Protección de Datos Personales en Posesión de los Particulares, a "LFPDPPP"), publicada no Diário Oficial da Federação em 20 de março de 2025, e seu Regulamento, [Razão Social do Responsável], com endereço registrado em [Endereço] (o "Responsável"), na qualidade de operador do website www.mexicotrademarkcenter.com (o "Site"), emite o presente Aviso de Privacidade.',
+      'Em conformidade com a Lei Federal de Proteção de Dados Pessoais em Posse de Particulares (Ley Federal de Protección de Datos Personales en Posesión de los Particulares, a "LFPDPPP"), publicada no Diário Oficial da Federação em 20 de março de 2025, e seu Regulamento, MexicoTrademarkCenter.com, com endereço registrado em www.mexicotrademarkcenter.com e info@mexicotrademarkcenter.com (o "Responsável"), na qualidade de operador do website www.mexicotrademarkcenter.com (o "Site"), emite o presente Aviso de Privacidade.',
     lastUpdated: 'Última atualização: Maio de 2025',
     sections: [
       {
