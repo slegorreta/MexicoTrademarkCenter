@@ -1139,6 +1139,16 @@ const translations: Record<string, Record<Language, string>> = {
     pt: 'O protocolo em 24 horas úteis está sujeito a informações completas, confirmação de pagamento, disponibilidade do sistema IMPI e operações em dias úteis.',
     ja: '24営業時間以内の出願は、完全な情報・入金確認・IMPIシステムの利用可能性・営業日の業務を条件とします。',
   },
+  'disclaimer.impi.availability': {
+    en: 'Our technology works 24/7/365 but IMPI is subject to the Mexican Government designated schedules, periodic maintenance downtimes and occasional system unavailabilities.',
+    zh: '我们的技术全年无休运行，但IMPI受墨西哥政府指定时间表、定期维护停机和偶发性系统不可用情况的限制。',
+    es: 'Nuestra tecnología opera 24/7/365, pero el IMPI está sujeto a los horarios designados por el Gobierno Mexicano, periodos de mantenimiento programado y eventuales indisponibilidades del sistema.',
+    de: 'Unsere Technologie arbeitet 24/7/365, aber IMPI unterliegt den vom mexikanischen Staat festgelegten Betriebszeiten, regelmäßigen Wartungsunterbrechungen und gelegentlichen Systemausfällen.',
+    fr: 'Notre technologie fonctionne 24h/24, 7j/7, 365 jours par an, mais l\'IMPI est soumis aux horaires désignés par le gouvernement mexicain, aux interruptions de maintenance périodiques et aux indisponibilités occasionnelles du système.',
+    hi: 'हमारी तकनीक 24/7/365 काम करती है लेकिन IMPI मैक्सिकन सरकार द्वारा निर्धारित कार्यक्रमों, आवधिक रखरखाव डाउनटाइम और कभी-कभी सिस्टम अनुपलब्धताओं के अधीन है।',
+    pt: 'Nossa tecnologia funciona 24/7/365, mas o IMPI está sujeito aos horários definidos pelo Governo Mexicano, períodos de manutenção programada e eventuais indisponibilidades do sistema.',
+    ja: '当社のテクノロジーは24時間365日稼働していますが、IMPIはメキシコ政府が定めるスケジュール、定期メンテナンスによる停止、および不定期のシステム障害の影響を受ける場合があります。',
+  },
   'disclaimer.registration': {
     en: 'This service does not guarantee trademark registration.',
     zh: '本服务不保证商标注册。',

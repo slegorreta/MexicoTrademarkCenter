@@ -442,7 +442,7 @@ export default function HomePage() {
                 </div>
                 <div className="p-5">
                   <p className="text-sm text-gray-700 leading-relaxed">
-                    Our technology works 24/7/365 but IMPI is subject to the Mexican Government designated schedules, periodic maintenance downtimes and occasional system unavailabilities.
+                    {t('disclaimer.impi.availability')}
                   </p>
                 </div>
               </div>
