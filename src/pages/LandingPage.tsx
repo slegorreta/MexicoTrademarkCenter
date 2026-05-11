@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Star, Shield, Zap, Tag, ChevronDown, ChevronUp, CheckCircle2, Sparkles, Globe } from 'lucide-react';
 import { useLanguage, type Language } from '../context/LanguageContext';
