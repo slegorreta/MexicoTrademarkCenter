@@ -38,8 +38,8 @@ const sectionsEn = [
     body: 'Information provided on this website and through our service is for informational purposes only and does not constitute legal advice. For legal advice regarding trademark strategy, we recommend consulting a qualified intellectual property attorney.',
   },
   {
-    title: '10. Governing Law',
-    body: 'These terms are governed by applicable law. Disputes shall be resolved through negotiation before any legal proceedings.',
+    title: '10. Governing Law; Binding Arbitration',
+    body: '10.1 Governing Law. These Terms are governed by the laws of the State of Florida, U.S.A.\n\n10.2 Binding Arbitration. Any dispute, claim, or controversy arising out of or relating to these Terms or the Platform (a "Dispute") shall be finally resolved by binding arbitration administered by the International Centre for Dispute Resolution (ICDR) under its International Arbitration Rules then in effect. The seat of arbitration shall be Miami, Florida, the proceedings shall be conducted in English, and the tribunal shall consist of a sole arbitrator unless the amount in controversy exceeds USD $1,000,000, in which case three arbitrators shall be appointed. The Federal Arbitration Act governs this Section.\n\n10.3 Class Action Waiver. All Disputes shall be brought solely on an individual basis. No party may bring or participate in any class, collective, consolidated, or representative proceeding.\n\n10.4 Injunctive Relief Carve-Out. Either party may seek injunctive or equitable relief from any court of competent jurisdiction to protect intellectual property rights or confidential information, without waiving its right to arbitrate other Disputes.\n\n10.5 Award; Enforcement. The award shall be final, binding, and enforceable in any court of competent jurisdiction, including under the 1958 New York Convention. Proceedings and the award shall remain confidential, except as required by law or for enforcement.',
   },
 ];
 
@@ -81,8 +81,8 @@ const sectionsZh = [
     body: '本网站和我们服务提供的信息仅供参考，不构成法律建议。如需有关商标策略的法律建议，我们建议咨询合格的知识产权律师。',
   },
   {
-    title: '10. 适用法律',
-    body: '这些条款受适用法律管辖。争议应在任何法律程序之前通过协商解决。',
+    title: '10. 适用法律；有约束力的仲裁',
+    body: '10.1 适用法律。本条款受美国佛罗里达州法律管辖。\n\n10.2 有约束力的仲裁。因本条款或本平台引起的或与之相关的任何争议、索赔或纠纷（以下称"争议"），均应根据届时有效的《国际争议解决中心（ICDR）国际仲裁规则》，通过具有约束力的仲裁最终解决。仲裁地点为佛罗里达州迈阿密，程序以英语进行，仲裁庭由一名仲裁员组成；但争议金额超过一百万美元（USD $1,000,000）时，应指定三名仲裁员。《联邦仲裁法》适用于本条款。\n\n10.3 集体诉讼弃权。所有争议均应以个人名义单独提起。任何一方不得提起或参与任何集体、联合、合并或代表性诉讼程序。\n\n10.4 禁令救济例外。任何一方均可向具有管辖权的法院申请禁令或衡平法救济，以保护知识产权或保密信息，且此举不构成对就其他争议进行仲裁之权利的放弃。\n\n10.5 裁决；执行。裁决为最终裁决，对双方具有约束力，可在任何具有管辖权的法院强制执行，包括依据1958年《纽约公约》执行。仲裁程序及裁决应保密，但法律要求或执行目的所必要者除外。',
   },
 ];
 
@@ -124,8 +124,8 @@ const sectionsDe = [
     body: 'Die auf dieser Website und über unseren Service bereitgestellten Informationen dienen ausschließlich Informationszwecken und stellen keinen Rechtsrat dar. Für rechtliche Beratung zur Markenstrategie empfehlen wir, einen qualifizierten Anwalt für gewerblichen Rechtsschutz hinzuzuziehen.',
   },
   {
-    title: '10. Anwendbares Recht',
-    body: 'Diese Bedingungen unterliegen dem anwendbaren Recht. Streitigkeiten sollen vor Einleitung rechtlicher Schritte durch Verhandlungen beigelegt werden.',
+    title: '10. Anwendbares Recht; Verbindliche Schiedsgerichtsbarkeit',
+    body: '10.1 Anwendbares Recht. Diese Bedingungen unterliegen dem Recht des Bundesstaates Florida, USA.\n\n10.2 Verbindliche Schiedsgerichtsbarkeit. Jede Streitigkeit, Forderung oder Meinungsverschiedenheit, die aus diesen Bedingungen oder der Plattform entsteht oder damit zusammenhängt (ein „Streitfall"), wird endgültig durch verbindliche Schiedsgerichtsbarkeit nach den jeweils geltenden Internationalen Schiedsregeln des International Centre for Dispute Resolution (ICDR) beigelegt. Schiedsort ist Miami, Florida; das Verfahren wird auf Englisch geführt; das Schiedsgericht besteht aus einem Einzelschiedsrichter, es sei denn, der Streitwert übersteigt USD 1.000.000, in welchem Fall drei Schiedsrichter zu bestellen sind. Der Federal Arbitration Act gilt für diesen Abschnitt.\n\n10.3 Verzicht auf Sammelklagen. Alle Streitfälle sind ausschließlich auf individueller Basis geltend zu machen. Keine Partei darf ein Sammel-, Gruppen-, konsolidiertes oder Verbandsverfahren einleiten oder daran teilnehmen.\n\n10.4 Ausnahme für einstweiligen Rechtsschutz. Jede Partei kann bei einem zuständigen Gericht einstweiligen oder billigkeitsrechtlichen Rechtsschutz beantragen, um geistige Eigentumsrechte oder vertrauliche Informationen zu schützen, ohne damit auf ihr Recht zur Schiedsgerichtsbarkeit in anderen Streitfällen zu verzichten.\n\n10.5 Schiedsspruch; Vollstreckung. Der Schiedsspruch ist endgültig, verbindlich und in jedem zuständigen Gericht vollstreckbar, einschließlich nach dem New Yorker Übereinkommen von 1958. Das Verfahren und der Schiedsspruch sind vertraulich zu behandeln, soweit nicht gesetzlich vorgeschrieben oder zur Vollstreckung erforderlich.',
   },
 ];
 
@@ -167,8 +167,8 @@ const sectionsHi = [
     body: 'इस वेबसाइट और हमारी सेवा के माध्यम से प्रदान की गई जानकारी केवल सूचनात्मक उद्देश्यों के लिए है और कानूनी सलाह नहीं है। ट्रेडमार्क रणनीति के बारे में कानूनी सलाह के लिए, हम एक योग्य बौद्धिक संपदा वकील से परामर्श करने की सिफारिश करते हैं।',
   },
   {
-    title: '10. लागू कानून',
-    body: 'ये शर्तें लागू कानून द्वारा शासित हैं। किसी भी कानूनी कार्यवाही से पहले विवादों को बातचीत के माध्यम से सुलझाया जाएगा।',
+    title: '10. लागू कानून; बाध्यकारी मध्यस्थता',
+    body: '10.1 लागू कानून। ये शर्तें संयुक्त राज्य अमेरिका के फ्लोरिडा राज्य के कानूनों द्वारा शासित हैं।\n\n10.2 बाध्यकारी मध्यस्थता। इन शर्तों या प्लेटफ़ॉर्म से उत्पन्न या संबंधित कोई भी विवाद, दावा या मतभेद ("विवाद") इंटरनेशनल सेंटर फॉर डिस्प्यूट रिज़ॉल्यूशन (ICDR) के तत्कालीन प्रभावी अंतर्राष्ट्रीय मध्यस्थता नियमों के तहत बाध्यकारी मध्यस्थता द्वारा अंतिम रूप से सुलझाया जाएगा। मध्यस्थता का स्थान मियामी, फ्लोरिडा होगा, कार्यवाही अंग्रेजी में आयोजित की जाएगी, और न्यायाधिकरण में एक एकल मध्यस्थ होगा, जब तक कि विवाद की राशि USD $1,000,000 से अधिक न हो, जिस स्थिति में तीन मध्यस्थ नियुक्त किए जाएंगे। फेडरल आर्बिट्रेशन एक्ट इस खंड पर लागू होता है।\n\n10.3 वर्ग कार्रवाई अस्वीकृति। सभी विवाद केवल व्यक्तिगत आधार पर लाए जाएंगे। कोई भी पक्ष किसी भी वर्ग, सामूहिक, समेकित या प्रतिनिधि कार्यवाही में भाग नहीं ले सकता।\n\n10.4 निषेधात्मक राहत का अपवाद। कोई भी पक्ष बौद्धिक संपदा अधिकारों या गोपनीय जानकारी की सुरक्षा के लिए किसी भी सक्षम क्षेत्राधिकार वाले न्यायालय से निषेधात्मक या न्यायसंगत राहत मांग सकता है, बिना अन्य विवादों की मध्यस्थता के अपने अधिकार को छोड़े।\n\n10.5 पुरस्कार; प्रवर्तन। पुरस्कार अंतिम, बाध्यकारी और किसी भी सक्षम क्षेत्राधिकार वाले न्यायालय में प्रवर्तनीय होगा, जिसमें 1958 न्यूयॉर्क कन्वेंशन के तहत भी शामिल है। कार्यवाही और पुरस्कार गोपनीय रहेंगे, सिवाय उन मामलों के जहां कानून द्वारा आवश्यक हो या प्रवर्तन के लिए।',
   },
 ];
 
@@ -210,8 +210,8 @@ const sectionsPt = [
     body: 'As informações fornecidas neste website e por meio de nosso serviço têm finalidade exclusivamente informativa e não constituem assessoria jurídica. Para orientação jurídica sobre estratégia de marcas, recomendamos consultar um advogado qualificado na área de propriedade intelectual.',
   },
   {
-    title: '10. Lei Aplicável',
-    body: 'Estes termos são regidos pela legislação aplicável. As controvérsias deverão ser resolvidas por negociação antes de qualquer procedimento judicial.',
+    title: '10. Lei Aplicável; Arbitragem Vinculante',
+    body: '10.1 Lei Aplicável. Estes Termos são regidos pelas leis do Estado da Flórida, E.U.A.\n\n10.2 Arbitragem Vinculante. Qualquer disputa, reivindicação ou controvérsia decorrente ou relacionada a estes Termos ou à Plataforma (uma "Disputa") será definitivamente resolvida por arbitragem vinculante administrada pelo International Centre for Dispute Resolution (ICDR), conforme suas Regras de Arbitragem Internacional então em vigor. A sede da arbitragem será Miami, Flórida, os procedimentos serão conduzidos em inglês e o tribunal será composto por um árbitro único, salvo se o valor em controvérsia exceder USD $1.000.000, hipótese em que três árbitros serão nomeados. O Federal Arbitration Act rege esta Seção.\n\n10.3 Renúncia a Ações Coletivas. Todas as Disputas serão apresentadas exclusivamente em caráter individual. Nenhuma parte poderá propor ou participar de qualquer ação coletiva, conjunta, consolidada ou representativa.\n\n10.4 Exceção para Medidas Cautelares. Qualquer das partes poderá buscar medida cautelar ou tutela de urgência em qualquer tribunal de jurisdição competente para proteger direitos de propriedade intelectual ou informações confidenciais, sem renunciar ao direito de arbitrar outras Disputas.\n\n10.5 Sentença; Execução. A sentença arbitral será definitiva, vinculante e executável em qualquer tribunal de jurisdição competente, inclusive nos termos da Convenção de Nova York de 1958. Os procedimentos e a sentença permanecerão confidenciais, salvo quando exigido por lei ou para fins de execução.',
   },
 ];
 
@@ -253,8 +253,8 @@ const sectionsFr = [
     body: 'Les informations fournies sur ce site et par notre service sont uniquement à titre informatif et ne constituent pas un conseil juridique. Pour un conseil juridique concernant la stratégie de marque, nous recommandons de consulter un avocat spécialisé en propriété intellectuelle.',
   },
   {
-    title: '10. Loi applicable',
-    body: 'Ces conditions sont régies par la loi applicable. Les litiges devront être résolus par négociation avant tout recours judiciaire.',
+    title: '10. Loi applicable ; Arbitrage contraignant',
+    body: '10.1 Loi applicable. Les présentes Conditions sont régies par les lois de l\'État de Floride, États-Unis.\n\n10.2 Arbitrage contraignant. Tout litige, réclamation ou différend découlant des présentes Conditions ou de la Plateforme ou s\'y rapportant (un « Litige ») sera définitivement tranché par arbitrage contraignant administré par l\'International Centre for Dispute Resolution (ICDR) conformément à ses Règles d\'arbitrage international alors en vigueur. Le siège de l\'arbitrage sera Miami, Floride, la procédure se déroulera en anglais, et le tribunal sera composé d\'un arbitre unique, sauf si le montant en litige dépasse 1 000 000 USD, auquel cas trois arbitres seront désignés. Le Federal Arbitration Act régit la présente section.\n\n10.3 Renonciation aux recours collectifs. Tous les Litiges devront être portés exclusivement à titre individuel. Aucune partie ne peut initier ni participer à toute action collective, groupée, consolidée ou représentative.\n\n10.4 Exception pour les mesures conservatoires. Chaque partie peut demander à tout tribunal compétent une injonction ou une mesure en équité afin de protéger des droits de propriété intellectuelle ou des informations confidentielles, sans pour autant renoncer à son droit de soumettre d\'autres Litiges à l\'arbitrage.\n\n10.5 Sentence ; Exécution. La sentence sera définitive, contraignante et exécutoire devant tout tribunal compétent, y compris en vertu de la Convention de New York de 1958. La procédure et la sentence resteront confidentielles, sauf si la loi l\'exige ou à des fins d\'exécution.',
   },
 ];
 
@@ -296,8 +296,8 @@ const sectionsEs = [
     body: 'La información proporcionada en este sitio web y a través de nuestro servicio es únicamente con fines informativos y no constituye asesoría legal. Para asesoría legal sobre estrategia de marcas, recomendamos consultar a un especialista en propiedad intelectual.',
   },
   {
-    title: '10. Ley Aplicable',
-    body: 'Estos términos se rigen por la ley aplicable. Las disputas deberán resolverse mediante negociación antes de cualquier procedimiento legal.',
+    title: '10. Ley Aplicable; Arbitraje Vinculante',
+    body: '10.1 Ley Aplicable. Estos Términos se rigen por las leyes del Estado de Florida, EE. UU.\n\n10.2 Arbitraje Vinculante. Cualquier disputa, reclamación o controversia que surja de o esté relacionada con estos Términos o la Plataforma (una "Disputa") se resolverá de manera definitiva mediante arbitraje vinculante administrado por el International Centre for Dispute Resolution (ICDR) conforme a sus Reglas de Arbitraje Internacional vigentes en ese momento. La sede del arbitraje será Miami, Florida, el procedimiento se llevará a cabo en inglés, y el tribunal estará compuesto por un árbitro único, salvo que el monto en controversia supere USD $1,000,000, en cuyo caso se designarán tres árbitros. La Ley Federal de Arbitraje (Federal Arbitration Act) rige esta Sección.\n\n10.3 Renuncia a Acciones Colectivas. Todas las Disputas se presentarán exclusivamente de forma individual. Ninguna parte podrá iniciar ni participar en ningún procedimiento colectivo, consolidado o representativo.\n\n10.4 Excepción para Medidas Cautelares. Cualquiera de las partes podrá solicitar medidas cautelares o de equidad ante cualquier tribunal de jurisdicción competente para proteger derechos de propiedad intelectual o información confidencial, sin renunciar a su derecho de someter otras Disputas a arbitraje.\n\n10.5 Laudo; Ejecución. El laudo será definitivo, vinculante y ejecutable ante cualquier tribunal de jurisdicción competente, incluso en virtud de la Convención de Nueva York de 1958. El procedimiento y el laudo serán confidenciales, salvo cuando lo exija la ley o sea necesario para su ejecución.',
   },
 ];
 
@@ -339,8 +339,8 @@ const sectionsJa = [
     body: '本ウェブサイトおよびサービスを通じて提供される情報は情報提供のみを目的としており、法的アドバイスを構成するものではありません。商標戦略に関する法的アドバイスについては、資格のある知的財産弁護士への相談をお勧めします。',
   },
   {
-    title: '10. 準拠法',
-    body: '本規約は適用法令に準拠します。紛争は法的手続きに先立ち、交渉により解決されるものとします。',
+    title: '10. 準拠法；拘束力のある仲裁',
+    body: '10.1 準拠法。本規約は米国フロリダ州の法律に準拠します。\n\n10.2 拘束力のある仲裁。本規約またはプラットフォームに起因または関連するあらゆる紛争、請求または論争（以下「紛争」）は、当時施行中の国際紛争解決センター（ICDR）の国際仲裁規則に基づく拘束力のある仲裁により最終的に解決されます。仲裁地はフロリダ州マイアミとし、手続は英語で行われ、仲裁廷は単独仲裁人で構成されます。ただし、争いの対象金額がUSD $1,000,000を超える場合は3名の仲裁人が選定されます。連邦仲裁法（Federal Arbitration Act）が本条項を規律します。\n\n10.3 集団訴訟の放棄。すべての紛争は個人として単独で提起されなければなりません。いずれの当事者も、集団、集合、統合または代表的な手続を提起または参加することはできません。\n\n10.4 差止救済の例外。いずれの当事者も、他の紛争を仲裁する権利を放棄することなく、知的財産権または機密情報を保護するために、管轄裁判所に差止命令または衡平法上の救済を求めることができます。\n\n10.5 判断；執行。仲裁判断は最終的かつ拘束力を有し、1958年ニューヨーク条約に基づくものを含む、管轄権を有するあらゆる裁判所において執行可能です。手続および仲裁判断は、法律による要求または執行のために必要な場合を除き、秘密として取り扱われます。',
   },
 ];
 
@@ -380,7 +380,11 @@ export default function TermsPage() {
           {sections.map((section, i) => (
             <div key={i} className="border-b border-gray-100 pb-6 last:border-0">
               <h2 className="text-base font-bold text-navy-900 mb-2">{section.title}</h2>
-              <p className="text-gray-600 text-sm leading-relaxed">{section.body}</p>
+              <div className="space-y-3">
+                {section.body.split('\n\n').map((para, j) => (
+                  <p key={j} className="text-gray-600 text-sm leading-relaxed">{para}</p>
+                ))}
+              </div>
             </div>
           ))}
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 text-sm text-amber-800">
