@@ -7,74 +7,85 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
-async function fetchGoogleDriveFile(fileId: string): Promise<{ buffer: ArrayBuffer; contentType: string }> {
-  // Step 1: hit the standard download URL — for large files Google returns an HTML
-  // confirmation page with a warning form. We need to extract the confirm token.
-  const initialUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+async function fetchFromUrl(url: string): Promise<{ buffer: ArrayBuffer; contentType: string }> {
+  const res = await fetch(url, {
+    headers: { "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36" },
+    redirect: "follow",
+  });
+  if (!res.ok) throw new Error(`Download failed: ${res.status} ${res.statusText}`);
+  const contentType = res.headers.get("content-type") ?? "video/mp4";
+  if (contentType.includes("text/html")) {
+    const snippet = await res.text();
+    throw new Error(`URL returned an HTML page instead of a file. Snippet: ${snippet.slice(0, 300)}`);
+  }
+  const buffer = await res.arrayBuffer();
+  return { buffer, contentType };
+}
 
-  const initialRes = await fetch(initialUrl, {
+async function fetchGoogleDriveFile(fileId: string): Promise<{ buffer: ArrayBuffer; contentType: string }> {
+  // Use drive.usercontent.google.com which handles large files more reliably
+  // Make a HEAD/GET to get the real confirm token from the warning page
+  const warningUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+
+  const warningRes = await fetch(warningUrl, {
+    headers: { "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36" },
+    redirect: "follow",
+  });
+
+  const contentType = warningRes.headers.get("content-type") ?? "";
+
+  // Small file — returned directly
+  if (!contentType.includes("text/html")) {
+    const buffer = await warningRes.arrayBuffer();
+    if (buffer.byteLength > 10_000) return { buffer, contentType };
+  }
+
+  const html = await warningRes.text();
+  const cookies = warningRes.headers.get("set-cookie") ?? "";
+
+  // Extract uuid (newer format)
+  const uuidMatch = html.match(/[?&]uuid=([^&"'\s]+)/);
+  // Extract confirm token
+  const confirmMatch = html.match(/[?&]confirm=([^&"'\s]+)/);
+  // Extract download_warning cookie value
+  const cookieMatch = cookies.match(/download_warning[^=]*=([^;]+)/);
+
+  console.log("uuid:", uuidMatch?.[1], "confirm:", confirmMatch?.[1], "cookie:", cookieMatch?.[1]);
+
+  let downloadUrl: string;
+  const cookieHeader: Record<string, string> = {};
+
+  if (uuidMatch) {
+    downloadUrl = `https://drive.usercontent.google.com/download?id=${fileId}&export=download&confirm=t&uuid=${uuidMatch[1]}`;
+  } else if (confirmMatch && confirmMatch[1] !== "t") {
+    downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}&confirm=${confirmMatch[1]}`;
+  } else {
+    // Last resort: usercontent with just confirm=t
+    downloadUrl = `https://drive.usercontent.google.com/download?id=${fileId}&export=download&confirm=t`;
+  }
+
+  if (cookieMatch) {
+    // Find the full cookie name from set-cookie
+    const fullCookieMatch = cookies.match(/(download_warning[^=]*=[^;]+)/);
+    if (fullCookieMatch) cookieHeader["Cookie"] = fullCookieMatch[1];
+  }
+
+  console.log("Downloading from:", downloadUrl);
+
+  const fileRes = await fetch(downloadUrl, {
     headers: {
       "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+      ...cookieHeader,
     },
     redirect: "follow",
   });
 
-  if (!initialRes.ok) {
-    throw new Error(`Initial request failed: ${initialRes.status} ${initialRes.statusText}`);
-  }
-
-  const contentType = initialRes.headers.get("content-type") ?? "";
-
-  // If the response is not HTML, Google gave us the file directly (small file)
-  if (!contentType.includes("text/html")) {
-    const buffer = await initialRes.arrayBuffer();
-    return { buffer, contentType };
-  }
-
-  // Large file — Google shows a virus scan warning page.
-  // Extract the confirm token and cookie from the response.
-  const html = await initialRes.text();
-
-  // Extract confirm token from the form action or hidden input
-  const confirmMatch = html.match(/confirm=([0-9A-Za-z_-]+)/);
-  const uuidMatch = html.match(/uuid=([0-9A-Za-z_-]+)/);
-
-  // Also grab the Set-Cookie header for the download_warning cookie
-  const setCookie = initialRes.headers.get("set-cookie") ?? "";
-  const cookieMatch = setCookie.match(/(download_warning_[^=]+=\S+?)(?:;|$)/);
-  const warningCookie = cookieMatch ? cookieMatch[1] : "";
-
-  let downloadUrl: string;
-
-  if (uuidMatch) {
-    // Newer Google Drive format uses uuid
-    downloadUrl = `https://drive.usercontent.google.com/download?id=${fileId}&export=download&confirm=t&uuid=${uuidMatch[1]}`;
-  } else if (confirmMatch) {
-    downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}&confirm=${confirmMatch[1]}`;
-  } else {
-    // Try the usercontent domain which sometimes bypasses the warning
-    downloadUrl = `https://drive.usercontent.google.com/download?id=${fileId}&export=download&confirm=t`;
-  }
-
-  console.log(`Large file detected — downloading with confirm URL: ${downloadUrl}`);
-
-  const headers: Record<string, string> = {
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-  };
-  if (warningCookie) headers["Cookie"] = warningCookie;
-
-  const fileRes = await fetch(downloadUrl, { headers, redirect: "follow" });
-
-  if (!fileRes.ok) {
-    throw new Error(`Download failed: ${fileRes.status} ${fileRes.statusText}`);
-  }
+  if (!fileRes.ok) throw new Error(`Download failed: ${fileRes.status} ${fileRes.statusText}`);
 
   const fileContentType = fileRes.headers.get("content-type") ?? "video/mp4";
-
-  // Sanity-check: if we still got HTML it means auth failed
   if (fileContentType.includes("text/html")) {
     const snippet = await fileRes.text();
-    throw new Error(`Google Drive returned HTML instead of a file. Make sure sharing is set to "Anyone with the link". Preview: ${snippet.slice(0, 300)}`);
+    throw new Error(`Google Drive still returned HTML. Make sure the file is shared as "Anyone with the link can view". Snippet: ${snippet.slice(0, 300)}`);
   }
 
   const buffer = await fileRes.arrayBuffer();
@@ -89,11 +100,12 @@ Deno.serve(async (req: Request) => {
   try {
     const body = await req.json().catch(() => ({}));
     const fileId: string = body.fileId ?? "";
+    const directUrl: string = body.directUrl ?? "";
     const filename: string = body.filename ?? "zh-hero.mp4";
 
-    if (!fileId) {
+    if (!fileId && !directUrl) {
       return new Response(
-        JSON.stringify({ success: false, error: "fileId is required" }),
+        JSON.stringify({ success: false, error: "fileId or directUrl is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -103,9 +115,17 @@ Deno.serve(async (req: Request) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    console.log(`Fetching file ${fileId} from Google Drive…`);
-    const { buffer, contentType } = await fetchGoogleDriveFile(fileId);
+    let result: { buffer: ArrayBuffer; contentType: string };
 
+    if (directUrl) {
+      console.log(`Fetching from direct URL: ${directUrl}`);
+      result = await fetchFromUrl(directUrl);
+    } else {
+      console.log(`Fetching from Google Drive file ID: ${fileId}`);
+      result = await fetchGoogleDriveFile(fileId);
+    }
+
+    const { buffer, contentType } = result;
     console.log(`Downloaded ${buffer.byteLength} bytes (${contentType})`);
 
     if (buffer.byteLength < 10_000) {
