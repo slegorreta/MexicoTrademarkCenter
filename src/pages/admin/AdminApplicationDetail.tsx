@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   ArrowLeft, Save, FileText, MessageSquare, Clock, CheckCircle2,
-  Upload, Download, Eye, EyeOff, Plus, Send, RefreshCw, Trash2
+  Upload, Download, Eye, EyeOff, Plus, Send, RefreshCw, Trash2, Printer
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
@@ -44,6 +44,7 @@ export default function AdminApplicationDetail() {
   const [messages, setMessages] = useState<Record<string, unknown>[]>([]);
   const [timeline, setTimeline] = useState<Record<string, unknown>[]>([]);
   const [documents, setDocuments] = useState<Record<string, unknown>[]>([]);
+  const [filingForms, setFilingForms] = useState<Record<string, unknown>[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -74,7 +75,7 @@ export default function AdminApplicationDetail() {
   const load = useCallback(async () => {
     if (!id) return;
     setLoading(true);
-    const [appRes, tmRes, classRes, gsRes, notesRes, msgsRes, tlRes, docsRes] = await Promise.all([
+    const [appRes, tmRes, classRes, gsRes, notesRes, msgsRes, tlRes, docsRes, formsRes] = await Promise.all([
       supabase.from('applications').select('*, clients(*)').eq('id', id).maybeSingle(),
       supabase.from('trademarks').select('*').eq('application_id', id).maybeSingle(),
       supabase.from('trademark_classes').select('*').eq('application_id', id).order('class_number'),
@@ -83,6 +84,7 @@ export default function AdminApplicationDetail() {
       supabase.from('client_messages').select('*, profiles(full_name)').eq('application_id', id).order('created_at', { ascending: true }),
       supabase.from('timeline_events').select('*').eq('application_id', id).order('created_at', { ascending: false }),
       supabase.from('uploaded_files').select('*').eq('application_id', id).order('created_at', { ascending: false }),
+      supabase.from('filing_instruction_forms').select('*').eq('application_id', id).order('generated_at', { ascending: false }),
     ]);
     setApp(appRes.data as Record<string, unknown> | null);
     setTrademark(tmRes.data as Record<string, unknown> | null);
@@ -92,6 +94,7 @@ export default function AdminApplicationDetail() {
     setMessages((msgsRes.data as Record<string, unknown>[]) || []);
     setTimeline((tlRes.data as Record<string, unknown>[]) || []);
     setDocuments((docsRes.data as Record<string, unknown>[]) || []);
+    setFilingForms((formsRes.data as Record<string, unknown>[]) || []);
     setLoading(false);
   }, [id]);
 
@@ -635,100 +638,240 @@ export default function AdminApplicationDetail() {
       {/* ── Filing Instructions Sheet ── */}
       {activeTab === 'instructions' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-gray-900">MX Filing Instruction Checklist</h3>
-            <button onClick={resendInstructions} disabled={resending}
-              className="flex items-center gap-2 text-sm bg-navy-900 hover:bg-navy-800 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50">
-              <RefreshCw size={13} className={resending ? 'animate-spin' : ''} />
-              {resending ? 'Sending…' : 'Re-send to tm@mexicotrademarkcenter.com'}
-            </button>
-          </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-6 font-mono text-xs leading-relaxed">
-            <h2 className="text-sm font-bold text-center mb-5 border-b pb-3 font-sans">Checklist of MEXICO Trademark Application for Registration</h2>
-            <div className="mb-4">
-              <strong>1. Our Reference:</strong> <span className="bg-yellow-50 px-2 py-0.5 rounded">{String(app.case_number)}</span>
-            </div>
-            <div className="mb-4">
-              <strong className="text-xs">2. Applicant Details</strong>
-              <table className="mt-2 w-full border-collapse border border-gray-300 text-xs">
-                <tbody>
-                  {[
-                    ['Owner Name', client?.legal_name],
-                    ['Address', client?.address],
-                    ['City', client?.city],
-                    ['Applicant Country', client?.country],
-                    ['Entity Type', client?.applicant_type === 'company' ? 'Company' : 'Individual'],
-                    ['Zip / Postal Code', client?.postal_code],
-                    ['Email', client?.email],
-                    ['Phone', client?.phone],
-                  ].map(([label, value]) => (
-                    <tr key={String(label)}>
-                      <td className="border border-gray-300 px-3 py-1.5 bg-gray-50 font-semibold w-40">{String(label)}</td>
-                      <td className="border border-gray-300 px-3 py-1.5">{value ? String(value) : '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="mb-4">
-              <strong className="text-xs">3. Trademark Information</strong>
-              <table className="mt-2 w-full border-collapse border border-gray-300 text-xs">
-                <tbody>
-                  <tr>
-                    <td className="border border-gray-300 px-3 py-1.5 bg-gray-50 font-semibold w-40">Trademark</td>
-                    <td className="border border-gray-300 px-3 py-1.5">
-                      {trademark?.logo_preview_url
-                        ? <img src={String(trademark.logo_preview_url)} alt="Mark" className="h-16 object-contain" />
-                        : String(trademark?.mark_name ?? '—')}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="border border-gray-300 px-3 py-1.5 bg-gray-50 font-semibold">Trademark Pattern Color</td>
-                    <td className="border border-gray-300 px-3 py-1.5">{trademark?.claims_color ? String(trademark.color_description ?? 'As shown') : 'Black and White'}</td>
-                  </tr>
-                  <tr>
-                    <td className="border border-gray-300 px-3 py-1.5 bg-gray-50 font-semibold">Trademark Format</td>
-                    <td className="border border-gray-300 px-3 py-1.5 capitalize">{trademark?.mark_type ? String(trademark.mark_type) : '—'}</td>
-                  </tr>
-                  <tr>
-                    <td className="border border-gray-300 px-3 py-1.5 bg-gray-50 font-semibold">Statement / Slogan</td>
-                    <td className="border border-gray-300 px-3 py-1.5">{trademark?.mark_type === 'slogan' ? String(trademark.mark_name ?? '—') : 'N/A'}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+          {/* Action bar */}
+          <div className="flex items-center gap-3 flex-wrap">
             <div>
-              <strong className="text-xs">4. (International Classification) and Goods/Services</strong>
-              <table className="mt-2 w-full border-collapse border border-gray-300 text-xs">
-                <thead>
-                  <tr className="bg-gray-50">
-                    <th className="border border-gray-300 px-3 py-1.5 text-center w-20">Class No.</th>
-                    <th className="border border-gray-300 px-3 py-1.5 text-left">Classification in Spanish / Goods & Services</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {classes.map(c => (
-                    <tr key={String(c.id)}>
-                      <td className="border border-gray-300 px-3 py-1.5 text-center font-bold">{String(c.class_number)}</td>
-                      <td className="border border-gray-300 px-3 py-1.5">{String(c.goods_services_es ?? c.goods_services_en ?? c.class_title_en ?? '')}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <h3 className="text-sm font-semibold text-gray-900">MEXICO Trademark Application for Registration</h3>
+              <p className="text-xs text-gray-500 mt-0.5">Instruction form sent to tm@mexicotrademarkcenter.com on payment confirmation</p>
             </div>
-            {app.priority_claimed && (
-              <div className="mt-4">
-                <strong className="text-xs">5. Priority Claim</strong>
-                <table className="mt-2 w-full border-collapse border border-gray-300 text-xs">
+            <div className="ml-auto flex items-center gap-2">
+              <button
+                onClick={() => {
+                  const printWin = window.open('', '_blank');
+                  if (!printWin) return;
+                  printWin.document.write(filingForms[0]
+                    ? String(filingForms[0].html_content)
+                    : '<p>No form generated yet.</p>');
+                  printWin.document.close();
+                  printWin.focus();
+                  printWin.print();
+                }}
+                className="flex items-center gap-1.5 text-sm border border-gray-200 text-gray-600 hover:bg-gray-50 px-3 py-2 rounded-lg transition-colors"
+              >
+                <Printer size={13} /> Print / Save PDF
+              </button>
+              <button
+                onClick={resendInstructions}
+                disabled={resending}
+                className="flex items-center gap-2 text-sm bg-navy-900 hover:bg-navy-800 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+              >
+                <RefreshCw size={13} className={resending ? 'animate-spin' : ''} />
+                {resending ? 'Sending…' : 'Re-send Instruction Form'}
+              </button>
+            </div>
+          </div>
+
+          {/* Status badge */}
+          {filingForms.length > 0 && (
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              <span className={`px-2 py-0.5 rounded-full font-medium ${
+                filingForms[0].status === 'sent' ? 'bg-green-100 text-green-700' :
+                filingForms[0].status === 'acknowledged' ? 'bg-blue-100 text-blue-700' :
+                'bg-amber-100 text-amber-700'
+              }`}>
+                {String(filingForms[0].status).charAt(0).toUpperCase() + String(filingForms[0].status).slice(1)}
+              </span>
+              <span>Last generated {new Date(String(filingForms[0].generated_at)).toLocaleString()}</span>
+              {filingForms[0].sent_at && (
+                <span>· Sent {new Date(String(filingForms[0].sent_at)).toLocaleString()} to {String(filingForms[0].sent_to_email)}</span>
+              )}
+            </div>
+          )}
+
+          {/* Form document */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            {/* Document header */}
+            <div className="bg-[#1a2e1a] px-6 py-3 text-center">
+              <span className="text-[11px] tracking-[3px] text-[#c9a84c] font-bold uppercase font-sans">Mexico Trademark Center</span>
+            </div>
+
+            <div className="p-8 max-w-3xl mx-auto">
+              <h2 className="text-base font-bold text-center border-b-2 border-gray-900 pb-3 mb-6 tracking-wide">
+                MEXICO Trademark Application for Registration
+              </h2>
+
+              {/* Section 1 */}
+              <div className="mb-6">
+                <p className="text-sm font-bold mb-1">
+                  1.&nbsp;&nbsp;Our Reference:&nbsp;&nbsp;
+                  <span className="font-mono bg-gray-100 border border-gray-300 px-3 py-0.5 rounded text-base tracking-wider">
+                    {String(app.case_number)}
+                  </span>
+                </p>
+              </div>
+
+              {/* Section 2 — Applicant Details */}
+              <div className="mb-6">
+                <p className="text-sm font-bold mb-2">2.&nbsp;&nbsp;Applicant Details</p>
+                <table className="w-full border-collapse text-xs">
                   <tbody>
-                    <tr><td className="border border-gray-300 px-3 py-1.5 bg-gray-50 font-semibold w-40">Priority Country</td><td className="border border-gray-300 px-3 py-1.5">{String(app.priority_country ?? '—')}</td></tr>
-                    <tr><td className="border border-gray-300 px-3 py-1.5 bg-gray-50 font-semibold">App. Number</td><td className="border border-gray-300 px-3 py-1.5">{String(app.priority_app_number ?? '—')}</td></tr>
-                    <tr><td className="border border-gray-300 px-3 py-1.5 bg-gray-50 font-semibold">Filing Date</td><td className="border border-gray-300 px-3 py-1.5">{String(app.priority_filing_date ?? '—')}</td></tr>
+                    {([
+                      ['Owner Name', client?.legal_name],
+                      ['Address', client?.address],
+                      ...(client?.state_province ? [['State / Province', client.state_province]] : []),
+                      ['City', client?.city],
+                      ['Applicant Country', client?.country],
+                      ['Entity Type', client?.applicant_type === 'company' ? 'Company' : 'Individual'],
+                      ['Zip / Postal Code', client?.postal_code],
+                    ] as [string, unknown][]).map(([label, value]) => (
+                      <tr key={label}>
+                        <td className="border border-gray-300 px-3 py-1.5 bg-gray-50 font-semibold text-right w-[38%] text-gray-700">{label}</td>
+                        <td className="border border-gray-300 px-3 py-1.5 text-gray-900">{value ? String(value) : '—'}</td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
-            )}
+
+              {/* Section 3 — Trademark Information */}
+              <div className="mb-6">
+                <p className="text-sm font-bold mb-2">3.&nbsp;&nbsp;Trademark Information</p>
+                <table className="w-full border-collapse text-xs">
+                  <tbody>
+                    <tr>
+                      <td className="border border-gray-300 px-3 py-1.5 bg-gray-50 font-semibold text-right w-[38%] text-gray-700">Trademark</td>
+                      <td className="border border-gray-300 px-3 py-2">
+                        {trademark?.logo_preview_url
+                          ? <img src={String(trademark.logo_preview_url)} alt="Mark" className="max-h-24 max-w-[200px] object-contain" />
+                          : <span className="text-gray-600 italic">WORD MARK — {String(trademark?.mark_name ?? '—')}</span>}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="border border-gray-300 px-3 py-1.5 bg-gray-50 font-semibold text-right text-gray-700">Trademark Pattern Color</td>
+                      <td className="border border-gray-300 px-3 py-1.5 text-gray-900">
+                        {trademark?.claims_color ? String(trademark.color_description ?? 'As shown in color') : 'Black and white'}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="border border-gray-300 px-3 py-1.5 bg-gray-50 font-semibold text-right text-gray-700">Trademark Format</td>
+                      <td className="border border-gray-300 px-3 py-1.5 text-gray-900 capitalize">
+                        {String(trademark?.mark_type ?? '—').replace(/_/g, ' ')}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="border border-gray-300 px-3 py-1.5 bg-gray-50 font-semibold text-right text-gray-700">Statement / Slogan</td>
+                      <td className="border border-gray-300 px-3 py-1.5 text-gray-900">
+                        {trademark?.mark_type === 'slogan' ? String(trademark.mark_name ?? '—') : 'N/A'}
+                      </td>
+                    </tr>
+                    {trademark?.meaning_spanish && (
+                      <tr>
+                        <td className="border border-gray-300 px-3 py-1.5 bg-gray-50 font-semibold text-right text-gray-700">Meaning in Spanish</td>
+                        <td className="border border-gray-300 px-3 py-1.5 text-gray-900">{String(trademark.meaning_spanish)}</td>
+                      </tr>
+                    )}
+                    {trademark?.transliteration && (
+                      <tr>
+                        <td className="border border-gray-300 px-3 py-1.5 bg-gray-50 font-semibold text-right text-gray-700">Transliteration</td>
+                        <td className="border border-gray-300 px-3 py-1.5 text-gray-900">{String(trademark.transliteration)}</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Section 4 — International Classification */}
+              <div className="mb-6">
+                <p className="text-sm font-bold mb-2">4.&nbsp;&nbsp;(International Classification) and Goods / Services</p>
+                <table className="w-full border-collapse text-xs">
+                  <tbody>
+                    {classes.map(c => (
+                      <tr key={String(c.id)}>
+                        <td colSpan={2} className="border border-gray-300">
+                          <div className="px-3 py-1.5 bg-gray-100 text-center font-bold tracking-wide text-gray-800">
+                            CLASS {String(c.class_number)} — for trademark application
+                          </div>
+                          <div className="px-3 py-2 text-gray-900 leading-relaxed">
+                            {String(c.goods_services_es ?? c.goods_services_en ?? c.class_title_en ?? '—')}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {classes.length === 0 && (
+                      <tr>
+                        <td className="border border-gray-300 px-3 py-3 text-center text-gray-400 italic">No classes assigned</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Section 5 — Original Classification */}
+              <div className="mb-6">
+                <p className="text-sm font-bold mb-2">5.&nbsp;&nbsp;Original Classification</p>
+                <div className="border border-gray-300 bg-gray-50 px-3 py-2.5 text-xs text-gray-800 leading-relaxed rounded-sm">
+                  {goodsServices?.description_original
+                    ? String(goodsServices.description_original)
+                    : <span className="text-gray-400 italic">No original description recorded</span>}
+                </div>
+              </div>
+
+              {/* Section 6 — Priority Claim (conditional) */}
+              {app.priority_claimed && (
+                <div className="mb-6">
+                  <p className="text-sm font-bold mb-2">6.&nbsp;&nbsp;Priority Claim</p>
+                  <table className="w-full border-collapse text-xs">
+                    <tbody>
+                      <tr>
+                        <td className="border border-gray-300 px-3 py-1.5 bg-gray-50 font-semibold text-right w-[38%] text-gray-700">Priority Country</td>
+                        <td className="border border-gray-300 px-3 py-1.5 text-gray-900">{String(app.priority_country ?? '—')}</td>
+                      </tr>
+                      <tr>
+                        <td className="border border-gray-300 px-3 py-1.5 bg-gray-50 font-semibold text-right text-gray-700">Priority App. Number</td>
+                        <td className="border border-gray-300 px-3 py-1.5 text-gray-900">{String(app.priority_app_number ?? '—')}</td>
+                      </tr>
+                      <tr>
+                        <td className="border border-gray-300 px-3 py-1.5 bg-gray-50 font-semibold text-right text-gray-700">Priority Filing Date</td>
+                        <td className="border border-gray-300 px-3 py-1.5 text-gray-900">{String(app.priority_filing_date ?? '—')}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              <div className="border-t border-gray-200 pt-3 mt-6 text-[11px] text-gray-400 text-center">
+                Generated by Mexico Trademark Center Portal &bull; {String(app.case_number)}
+              </div>
+            </div>
           </div>
+
+          {/* Previous versions */}
+          {filingForms.length > 1 && (
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
+              <h4 className="text-xs font-semibold text-gray-700 mb-3">Previous Versions ({filingForms.length - 1})</h4>
+              <div className="space-y-2">
+                {filingForms.slice(1).map(form => (
+                  <div key={String(form.id)} className="flex items-center justify-between text-xs text-gray-600 py-1.5 border-b border-gray-100 last:border-0">
+                    <span>{new Date(String(form.generated_at)).toLocaleString()}</span>
+                    <span className="text-gray-400">Sent to {String(form.sent_to_email)}</span>
+                    <button
+                      onClick={() => {
+                        const printWin = window.open('', '_blank');
+                        if (!printWin) return;
+                        printWin.document.write(String(form.html_content));
+                        printWin.document.close();
+                        printWin.focus();
+                        printWin.print();
+                      }}
+                      className="flex items-center gap-1 text-gray-500 hover:text-gray-800 transition-colors"
+                    >
+                      <Printer size={12} /> View
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

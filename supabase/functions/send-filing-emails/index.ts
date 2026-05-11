@@ -9,13 +9,17 @@ const corsHeaders = {
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const FROM_EMAIL = "Mexico Trademark Center <tm@mexicotrademarkcenter.com>";
-const FILING_TO_EMAIL = "sergio.legorreta@lawtaem.com";
+const FILING_TO_EMAIL = "tm@mexicotrademarkcenter.com";
 const FILING_CC_EMAIL = "sergiolegorreta@yahoo.com";
 
-async function sendEmail(to: string, subject: string, html: string, attachments?: { filename: string; content: string; type: string }[], cc?: string[]) {
+async function sendEmail(
+  to: string,
+  subject: string,
+  html: string,
+  cc?: string[]
+) {
   const body: Record<string, unknown> = { from: FROM_EMAIL, to: [to], subject, html };
   if (cc?.length) body.cc = cc;
-  if (attachments?.length) body.attachments = attachments;
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -30,15 +34,160 @@ function formatCurrency(amount: number) {
   return amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function buildClientEmail(app: Record<string, unknown>, client: Record<string, unknown>, trademark: Record<string, unknown>, classes: unknown[], totalPaid: number) {
+function labelRow(label: string, value: string) {
+  return `<tr>
+    <td style="padding:6px 12px;border:1px solid #d0d0d0;text-align:right;font-weight:600;background:#f7f7f7;width:38%;font-size:13px;color:#222;">${label}</td>
+    <td style="padding:6px 12px;border:1px solid #d0d0d0;font-size:13px;color:#111;">${value}</td>
+  </tr>`;
+}
+
+export function buildInstructionFormHtml(
+  app: Record<string, unknown>,
+  client: Record<string, unknown>,
+  trademark: Record<string, unknown>,
+  classes: Record<string, unknown>[],
+  goodsServices: Record<string, unknown> | null,
+  logoUrl: string | null
+): string {
+  const classRows = classes
+    .map(
+      (c) => `
+    <tr>
+      <td colspan="2" style="padding:7px 12px;border:1px solid #d0d0d0;text-align:center;font-weight:700;font-size:13px;background:#f0f0f0;letter-spacing:0.03em;">
+        CLASS ${c.class_number} — for trademark application
+      </td>
+    </tr>
+    <tr>
+      <td colspan="2" style="padding:7px 12px;border:1px solid #d0d0d0;font-size:13px;color:#111;">
+        ${String(c.goods_services_es ?? c.goods_services_en ?? c.class_title_en ?? "—")}
+      </td>
+    </tr>`
+    )
+    .join("");
+
+  const logoRow = logoUrl
+    ? labelRow(
+        "Trademark",
+        `<img src="${logoUrl}" style="max-width:220px;max-height:130px;object-fit:contain;" alt="Trademark mark">`
+      )
+    : labelRow("Trademark", "WORD MARK — no logo image");
+
+  const colorValue = trademark.claims_color
+    ? String(trademark.color_description ?? "As shown in color")
+    : "Black and white";
+
+  const sloganValue =
+    trademark.mark_type === "slogan"
+      ? String(trademark.mark_name ?? "—")
+      : "N/A";
+
+  const stateRow = client.state_province
+    ? labelRow("State / Province", String(client.state_province))
+    : "";
+
+  const meaningRow = trademark.meaning_spanish
+    ? labelRow("Meaning in Spanish", String(trademark.meaning_spanish))
+    : "";
+
+  const transliterationRow = trademark.transliteration
+    ? labelRow("Transliteration", String(trademark.transliteration))
+    : "";
+
+  const prioritySection = app.priority_claimed
+    ? `
+  <p style="font-size:14px;font-weight:700;margin:28px 0 8px;">6.&nbsp;&nbsp;Priority Claim</p>
+  <table style="border-collapse:collapse;width:100%;margin-bottom:20px;">
+    ${labelRow("Priority Country", String(app.priority_country ?? "—"))}
+    ${labelRow("Priority App. Number", String(app.priority_app_number ?? "—"))}
+    ${labelRow("Priority Filing Date", String(app.priority_filing_date ?? "—"))}
+  </table>`
+    : "";
+
+  const originalDescription = goodsServices?.description_original
+    ? String(goodsServices.description_original)
+    : "—";
+
+  const markTypeLabel = String(trademark.mark_type ?? "—")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (l: string) => l.toUpperCase());
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body { font-family: Arial, sans-serif; font-size: 13px; color: #111; max-width: 760px; margin: 0 auto; padding: 28px 32px; background: #fff; }
+  h1 { text-align: center; font-size: 16px; font-weight: 700; border-bottom: 2px solid #111; padding-bottom: 10px; margin-bottom: 24px; letter-spacing: 0.02em; }
+  .section-label { font-size: 14px; font-weight: 700; margin: 24px 0 8px; }
+  table.form-table { border-collapse: collapse; width: 100%; margin-bottom: 4px; }
+  .ref-box { display: inline-block; font-family: monospace; font-size: 16px; font-weight: 700; background: #f0f0f0; border: 1px solid #ccc; padding: 4px 14px; border-radius: 3px; letter-spacing: 0.05em; }
+  .footer { margin-top: 40px; padding-top: 12px; border-top: 1px solid #ccc; font-size: 11px; color: #888; text-align: center; }
+  .header-banner { background: #1a2e1a; padding: 14px 24px; text-align: center; margin-bottom: 24px; }
+  .header-banner span { font-size: 11px; letter-spacing: 3px; color: #c9a84c; font-family: Arial, sans-serif; text-transform: uppercase; font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="header-banner">
+  <span>Mexico Trademark Center</span>
+</div>
+
+<h1>MEXICO Trademark Application for Registration</h1>
+
+<p class="section-label">1.&nbsp;&nbsp;Our Reference:&nbsp;&nbsp;<span class="ref-box">${String(app.case_number)}</span></p>
+
+<p class="section-label">2.&nbsp;&nbsp;Applicant Details</p>
+<table class="form-table">
+  ${labelRow("Owner Name", String(client.legal_name ?? "—"))}
+  ${labelRow("Address", String(client.address ?? "—"))}
+  ${stateRow}
+  ${labelRow("City", String(client.city ?? "—"))}
+  ${labelRow("Applicant Country", String(client.country ?? "—"))}
+  ${labelRow("Entity Type", client.applicant_type === "company" ? "Company" : "Individual")}
+  ${labelRow("Zip / Postal Code", String(client.postal_code ?? "—"))}
+</table>
+
+<p class="section-label">3.&nbsp;&nbsp;Trademark Information</p>
+<table class="form-table">
+  ${logoRow}
+  ${labelRow("Trademark Pattern Color", colorValue)}
+  ${labelRow("Trademark Format", markTypeLabel)}
+  ${labelRow("Statement / Slogan", sloganValue)}
+  ${meaningRow}
+  ${transliterationRow}
+</table>
+
+<p class="section-label">4.&nbsp;&nbsp;(International Classification) and Goods / Services</p>
+<table class="form-table">
+  ${classRows}
+</table>
+
+<p class="section-label">5.&nbsp;&nbsp;Original Classification</p>
+<p style="font-size:13px;color:#111;line-height:1.6;margin:0 0 8px;padding:10px 12px;border:1px solid #d0d0d0;background:#fafafa;">${originalDescription}</p>
+
+${prioritySection}
+
+<div class="footer">
+  Generated by Mexico Trademark Center Portal &bull; ${new Date().toISOString()} &bull; ${String(app.case_number)}
+</div>
+</body>
+</html>`;
+}
+
+function buildClientEmail(
+  app: Record<string, unknown>,
+  client: Record<string, unknown>,
+  trademark: Record<string, unknown>,
+  classes: Record<string, unknown>[],
+  totalPaid: number
+) {
   const classCount = classes.length;
   const govFeePerClass = 170;
   const govFeeTotal = classCount * govFeePerClass;
   const serviceFee = totalPaid - govFeeTotal;
   const filingDate = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
 
-  const classList = (classes as Record<string, unknown>[])
-    .map((c) => `<li>Class ${c.class_number} — ${c.class_title_en ?? c.goods_services_en ?? ""}</li>`)
+  const classList = classes
+    .map((c) => `<li>Class ${c.class_number} — ${String(c.class_title_en ?? c.goods_services_en ?? "")}</li>`)
     .join("");
 
   return `<!DOCTYPE html>
@@ -47,8 +196,6 @@ function buildClientEmail(app: Record<string, unknown>, client: Record<string, u
 body { font-family: Georgia, serif; color: #1a1a1a; background: #f9f8f6; margin: 0; padding: 0; }
 .wrapper { max-width: 600px; margin: 32px auto; background: #fff; border: 1px solid #e0ddd8; }
 .header { background: #1a2e1a; padding: 32px 40px; }
-.header h1 { color: #fff; font-size: 20px; margin: 0; letter-spacing: 0.05em; font-weight: 400; }
-.header p { color: #a8c5a8; font-size: 13px; margin: 4px 0 0; }
 .body { padding: 40px; }
 .case-banner { background: #f0f7f0; border: 1px solid #c8e0c8; border-radius: 6px; padding: 20px 24px; margin-bottom: 32px; }
 .case-banner .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #5a7a5a; }
@@ -63,14 +210,13 @@ table.data td:last-child { font-weight: 500; }
 ul.classes { font-size: 14px; color: #3a4a3a; padding-left: 20px; line-height: 1.8; margin: 0; }
 .cta { text-align: center; margin: 36px 0; }
 .cta a { background: #1a2e1a; color: #fff !important; text-decoration: none; padding: 14px 36px; border-radius: 4px; font-size: 14px; letter-spacing: 0.05em; display: inline-block; }
-.footer { background: #f5f3f0; padding: 24px 40px; font-size: 12px; color: #8a8a8a; text-align: center; line-height: 1.6; }
 </style></head>
 <body>
 <div class="wrapper">
   <div class="header" style="text-align:center">
     <div style="margin-bottom:10px"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#c9a84c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
     <div style="font-size:10px;letter-spacing:3px;color:#c9a84c;font-family:Arial,sans-serif;text-transform:uppercase;margin-bottom:6px;font-weight:bold">Mexico Trademark Center</div>
-    <h1 style="margin:0;font-size:19px;font-weight:bold;font-family:Georgia,serif">Official Filing Confirmation</h1>
+    <h1 style="margin:0;font-size:19px;font-weight:bold;font-family:Georgia,serif;color:#fff;">Official Filing Confirmation</h1>
   </div>
   <div class="body">
     <p style="font-size:15px;">Dear ${String(client.legal_name ?? client.contact_person ?? "Valued Client")},</p>
@@ -106,82 +252,12 @@ ul.classes { font-size: 14px; color: #3a4a3a; padding-left: 20px; line-height: 1
 
     <p style="font-size:13px;color:#6a6a6a;line-height:1.7;">Questions? Contact us at <a href="mailto:tm@mexicotrademarkcenter.com" style="color:#1a2e1a;">tm@mexicotrademarkcenter.com</a></p>
   </div>
-  <div class="footer" style="background:#1a2e1a;padding:18px 40px;text-align:center">
+  <div style="background:#1a2e1a;padding:18px 40px;text-align:center">
     <p style="font-size:11px;color:#9db89d;margin:0 0 4px;font-family:Arial,sans-serif;font-weight:bold;letter-spacing:1px">MEXICO TRADEMARK CENTER</p>
     <p style="font-size:11px;color:#6a8a6a;margin:0;font-family:Arial,sans-serif">mexicotrademarkcenter.com &nbsp;·&nbsp; tm@mexicotrademarkcenter.com</p>
     <p style="font-size:11px;color:#4a6a4a;margin:6px 0 0;font-family:Arial,sans-serif">This email confirms your paid filing instruction. Please retain it for your records.</p>
   </div>
 </div>
-</body></html>`;
-}
-
-function buildStaffInstructionEmail(
-  app: Record<string, unknown>,
-  client: Record<string, unknown>,
-  trademark: Record<string, unknown>,
-  classes: unknown[],
-  logoUrl: string | null
-) {
-  const classRows = (classes as Record<string, unknown>[])
-    .map(
-      (c) =>
-        `<tr><td style="padding:6px 10px;border:1px solid #ccc;text-align:center;">${c.class_number}</td><td style="padding:6px 10px;border:1px solid #ccc;">${c.goods_services_es ?? c.goods_services_en ?? c.class_title_en ?? ""}</td></tr>`
-    )
-    .join("");
-
-  const logoSection = logoUrl
-    ? `<tr><td style="padding:6px 10px;border:1px solid #ccc;font-weight:600;background:#f5f5f5;">Trademark Image</td><td style="padding:6px 10px;border:1px solid #ccc;"><img src="${logoUrl}" style="max-width:200px;max-height:120px;" alt="Trademark logo"></td></tr>`
-    : `<tr><td style="padding:6px 10px;border:1px solid #ccc;font-weight:600;background:#f5f5f5;">Trademark Image</td><td style="padding:6px 10px;border:1px solid #ccc;">See logo file attached / word mark only</td></tr>`;
-
-  return `<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"></head>
-<body style="font-family:Arial,sans-serif;font-size:13px;color:#111;max-width:700px;margin:0 auto;padding:20px;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#1a2e1a;margin-bottom:20px"><tr><td style="padding:16px 20px;text-align:center"><span style="font-size:10px;letter-spacing:3px;color:#c9a84c;font-family:Arial,sans-serif;text-transform:uppercase;font-weight:bold">Mexico Trademark Center</span><span style="font-size:11px;color:#9db89d;font-family:Arial,sans-serif;margin-left:12px">— Internal Filing Instruction</span></td></tr></table>
-<h2 style="text-align:center;border-bottom:2px solid #111;padding-bottom:10px;">Checklist of MEXICO Trademark Application for Registration</h2>
-
-<p><strong>1. Our Reference:</strong> <span style="font-family:monospace;font-size:15px;background:#f0f0f0;padding:2px 8px;">${String(app.case_number)}</span></p>
-
-<p><strong>2. Applicant Details</strong></p>
-<table style="border-collapse:collapse;width:100%;margin-bottom:20px;">
-  <tr><td style="padding:6px 10px;border:1px solid #ccc;font-weight:600;background:#f5f5f5;width:38%;">Owner Name</td><td style="padding:6px 10px;border:1px solid #ccc;">${String(client.legal_name ?? "—")}</td></tr>
-  <tr><td style="padding:6px 10px;border:1px solid #ccc;font-weight:600;background:#f5f5f5;">Address</td><td style="padding:6px 10px;border:1px solid #ccc;">${String(client.address ?? "—")}</td></tr>
-  <tr><td style="padding:6px 10px;border:1px solid #ccc;font-weight:600;background:#f5f5f5;">City</td><td style="padding:6px 10px;border:1px solid #ccc;">${String(client.city ?? "—")}</td></tr>
-  <tr><td style="padding:6px 10px;border:1px solid #ccc;font-weight:600;background:#f5f5f5;">Applicant Country</td><td style="padding:6px 10px;border:1px solid #ccc;">${String(client.country ?? "—")}</td></tr>
-  <tr><td style="padding:6px 10px;border:1px solid #ccc;font-weight:600;background:#f5f5f5;">Entity Type</td><td style="padding:6px 10px;border:1px solid #ccc;">${String(client.applicant_type === "company" ? "Company" : "Individual")}</td></tr>
-  <tr><td style="padding:6px 10px;border:1px solid #ccc;font-weight:600;background:#f5f5f5;">Zip / Postal Code</td><td style="padding:6px 10px;border:1px solid #ccc;">${String(client.postal_code ?? "—")}</td></tr>
-  <tr><td style="padding:6px 10px;border:1px solid #ccc;font-weight:600;background:#f5f5f5;">Email</td><td style="padding:6px 10px;border:1px solid #ccc;">${String(client.email ?? "—")}</td></tr>
-  <tr><td style="padding:6px 10px;border:1px solid #ccc;font-weight:600;background:#f5f5f5;">Phone</td><td style="padding:6px 10px;border:1px solid #ccc;">${String(client.phone ?? "—")}</td></tr>
-  ${client.state_province ? `<tr><td style="padding:6px 10px;border:1px solid #ccc;font-weight:600;background:#f5f5f5;">State/Province</td><td style="padding:6px 10px;border:1px solid #ccc;">${String(client.state_province)}</td></tr>` : ""}
-</table>
-
-<p><strong>3. Trademark Information</strong></p>
-<table style="border-collapse:collapse;width:100%;margin-bottom:20px;">
-  <tr><td style="padding:6px 10px;border:1px solid #ccc;font-weight:600;background:#f5f5f5;width:38%;">Trademark Name</td><td style="padding:6px 10px;border:1px solid #ccc;">${String(trademark.mark_name ?? "—")}</td></tr>
-  ${logoSection}
-  <tr><td style="padding:6px 10px;border:1px solid #ccc;font-weight:600;background:#f5f5f5;">Trademark Format</td><td style="padding:6px 10px;border:1px solid #ccc;">${String(trademark.mark_type ?? "—")}</td></tr>
-  <tr><td style="padding:6px 10px;border:1px solid #ccc;font-weight:600;background:#f5f5f5;">Trademark Pattern Color</td><td style="padding:6px 10px;border:1px solid #ccc;">${trademark.claims_color ? String(trademark.color_description ?? "As shown") : "Black and White"}</td></tr>
-  ${trademark.mark_name ? `<tr><td style="padding:6px 10px;border:1px solid #ccc;font-weight:600;background:#f5f5f5;">Statement / Slogan</td><td style="padding:6px 10px;border:1px solid #ccc;">${trademark.mark_type === "slogan" ? String(trademark.mark_name) : "N/A"}</td></tr>` : ""}
-  ${trademark.meaning_spanish ? `<tr><td style="padding:6px 10px;border:1px solid #ccc;font-weight:600;background:#f5f5f5;">Meaning in Spanish</td><td style="padding:6px 10px;border:1px solid #ccc;">${String(trademark.meaning_spanish)}</td></tr>` : ""}
-  ${trademark.transliteration ? `<tr><td style="padding:6px 10px;border:1px solid #ccc;font-weight:600;background:#f5f5f5;">Transliteration</td><td style="padding:6px 10px;border:1px solid #ccc;">${String(trademark.transliteration)}</td></tr>` : ""}
-</table>
-
-<p><strong>4. (International Classification) and Goods/Services</strong></p>
-<table style="border-collapse:collapse;width:100%;margin-bottom:20px;">
-  <tr style="background:#f5f5f5;"><th style="padding:6px 10px;border:1px solid #ccc;text-align:center;width:15%;">Class No.</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Classification in Spanish / Goods & Services</th></tr>
-  ${classRows}
-</table>
-
-${app.priority_claimed ? `
-<p><strong>5. Priority Claim</strong></p>
-<table style="border-collapse:collapse;width:100%;margin-bottom:20px;">
-  <tr><td style="padding:6px 10px;border:1px solid #ccc;font-weight:600;background:#f5f5f5;width:38%;">Priority Country</td><td style="padding:6px 10px;border:1px solid #ccc;">${String(app.priority_country ?? "—")}</td></tr>
-  <tr><td style="padding:6px 10px;border:1px solid #ccc;font-weight:600;background:#f5f5f5;">Priority App. Number</td><td style="padding:6px 10px;border:1px solid #ccc;">${String(app.priority_app_number ?? "—")}</td></tr>
-  <tr><td style="padding:6px 10px;border:1px solid #ccc;font-weight:600;background:#f5f5f5;">Priority Filing Date</td><td style="padding:6px 10px;border:1px solid #ccc;">${String(app.priority_filing_date ?? "—")}</td></tr>
-</table>` : ""}
-
-<hr style="margin:30px 0;">
-<p style="font-size:11px;color:#888;">Generated by Mexico Trademark Center Portal &bull; ${new Date().toISOString()}</p>
 </body></html>`;
 }
 
@@ -204,7 +280,6 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Fetch full application data
     const { data: app, error: appErr } = await supabase
       .from("applications")
       .select("*")
@@ -230,6 +305,12 @@ Deno.serve(async (req: Request) => {
       .eq("application_id", application_id)
       .order("class_number");
 
+    const { data: goodsServices } = await supabase
+      .from("goods_services")
+      .select("*")
+      .eq("application_id", application_id)
+      .maybeSingle();
+
     const { data: payment } = await supabase
       .from("payments")
       .select("amount_usd")
@@ -240,24 +321,40 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
 
     const totalPaid = payment?.amount_usd ?? app.total_amount_usd ?? 0;
-    const classCount = classes?.length ?? 0;
+    const safeClasses = (classes ?? []) as Record<string, unknown>[];
+    const safeTrademark = (trademark ?? {}) as Record<string, unknown>;
+    const safeClient = (client ?? {}) as Record<string, unknown>;
 
-    // Get logo URL if exists
     let logoUrl: string | null = null;
-    if (trademark?.logo_file_path) {
+    if (safeTrademark.logo_file_path) {
       const { data: signedUrl } = await supabase.storage
         .from("trademark-assets")
-        .createSignedUrl(trademark.logo_file_path, 60 * 60 * 24 * 7);
-      logoUrl = signedUrl?.signedUrl ?? trademark.logo_preview_url ?? null;
+        .createSignedUrl(String(safeTrademark.logo_file_path), 60 * 60 * 24 * 7);
+      logoUrl = signedUrl?.signedUrl ?? (safeTrademark.logo_preview_url as string) ?? null;
     }
+
+    const formHtml = buildInstructionFormHtml(
+      app,
+      safeClient,
+      safeTrademark,
+      safeClasses,
+      goodsServices as Record<string, unknown> | null,
+      logoUrl
+    );
 
     const results: Record<string, unknown> = {};
 
-    // 1. Send client confirmation email
-    if (client?.email) {
-      const clientHtml = buildClientEmail(app, client, trademark ?? {}, classes ?? [], Number(totalPaid));
+    // 1. Client confirmation email
+    if (safeClient.email) {
+      const clientHtml = buildClientEmail(
+        app,
+        safeClient,
+        safeTrademark,
+        safeClasses,
+        Number(totalPaid)
+      );
       const clientResult = await sendEmail(
-        client.email,
+        String(safeClient.email),
         `Your Trademark Application Has Been Received — ${app.case_number}`,
         clientHtml
       );
@@ -265,7 +362,7 @@ Deno.serve(async (req: Request) => {
 
       await supabase.from("email_log").insert({
         application_id,
-        recipient_email: client.email,
+        recipient_email: safeClient.email,
         template_key: "client_confirmation",
         subject: `Your Trademark Application Has Been Received — ${app.case_number}`,
         status: clientResult.ok ? "sent" : "failed",
@@ -274,33 +371,42 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // 2. Send staff instruction email
-    const staffHtml = buildStaffInstructionEmail(app, client ?? {}, trademark ?? {}, classes ?? [], logoUrl);
+    // 2. Staff instruction form email
     const staffResult = await sendEmail(
       FILING_TO_EMAIL,
-      `NEW FILING INSTRUCTION — ${app.case_number} — ${trademark?.mark_name ?? "Trademark"}`,
-      staffHtml,
-      undefined,
+      `NEW FILING INSTRUCTION — ${app.case_number} — ${safeTrademark.mark_name ?? "Trademark"}`,
+      formHtml,
       [FILING_CC_EMAIL]
     );
     results.staff_email = staffResult;
 
+    const sentAt = new Date().toISOString();
+
     await supabase.from("email_log").insert({
       application_id,
       recipient_email: FILING_TO_EMAIL,
-      template_key: "staff_instruction",
+      template_key: "filing_instruction_form",
       subject: `NEW FILING INSTRUCTION — ${app.case_number}`,
       status: staffResult.ok ? "sent" : "failed",
       resend_message_id: staffResult.data?.id,
       error_message: staffResult.ok ? null : JSON.stringify(staffResult.data),
     });
 
-    // 3. Create timeline event
+    // 3. Persist form record for admin dashboard
+    await supabase.from("filing_instruction_forms").insert({
+      application_id,
+      html_content: formHtml,
+      sent_at: staffResult.ok ? sentAt : null,
+      sent_to_email: FILING_TO_EMAIL,
+      status: staffResult.ok ? "sent" : "generated",
+    });
+
+    // 4. Timeline event
     await supabase.from("timeline_events").insert({
       application_id,
       event_type: "payment_confirmed",
       title: "Payment confirmed — filing instructions sent",
-      description: `Payment of USD ${Number(totalPaid).toFixed(2)} confirmed. Filing instruction checklist sent to the team. Your application is now in queue for processing.`,
+      description: `Payment of USD ${Number(totalPaid).toFixed(2)} confirmed. Instruction form dispatched to ${FILING_TO_EMAIL}. Application is now in queue for processing.`,
       is_visible_to_client: true,
     });
 
