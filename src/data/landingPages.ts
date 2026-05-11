@@ -150,6 +150,7 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
     perClass: 'por clase',
     socialProofLabel: 'Empresas y emprendedores que ya confían en nosotros',
     starLabel: 'Calificación de clientes',
+    heroVideoId: 'N4wNYJO06Go',
   },
 
   en: {
