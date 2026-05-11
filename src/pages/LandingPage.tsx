@@ -124,7 +124,7 @@ export default function LandingPage({ lang }: Props) {
             <div className="w-full lg:w-[45%] flex-shrink-0">
               <div className="relative w-full rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10" style={{ paddingBottom: '56.25%' }}>
                 <iframe
-                  src={`https://www.youtube.com/embed/${data.heroVideoId}`}
+                  src={`https://www.youtube-nocookie.com/embed/${data.heroVideoId}`}
                   title="Hero video"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
