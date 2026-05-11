@@ -1,16 +1,24 @@
 import { Link } from 'react-router-dom';
 import { ArrowRight, ArrowDown, Shield, Clock, Globe as Globe2, DollarSign, FileText, Award, ChevronDown, Sparkles, Search, HelpCircle, X, Star, Scale } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
-import PriceGuaranteeBadge from '../components/PriceGuaranteeBadge';
-import { useState, type ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 
 export default function HomePage() {
   const { t } = useLanguage();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (window.location.hash === '#faq') {
+      setTimeout(() => {
+        document.getElementById('faq')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  }, []);
   const [showConstanciaModal, setShowConstanciaModal] = useState(false);
   const [showSavingsModal, setShowSavingsModal] = useState(false);
   const [showLawyersModal, setShowLawyersModal] = useState(false);
   const [showCertModal, setShowCertModal] = useState(false);
+  const [showImpiModal, setShowImpiModal] = useState(false);
 
   const trustBadges = [
     { icon: Clock, key: 'trust.filing' },
@@ -19,38 +27,63 @@ export default function HomePage() {
     { icon: Scale, key: 'trust.lawyers.label', onTooltip: () => setShowLawyersModal(true) },
   ];
 
-  const faqs: { q: string; a: string; extra?: ReactNode }[] = [
-    { q: t('faq.q1'), a: t('faq.a1') },
-    { q: t('faq.q2'), a: t('faq.a2') },
-    { q: t('faq.q3'), a: t('faq.a3') },
-    { q: t('faq.q5'), a: t('faq.a5') },
-    { q: t('faq.q7'), a: t('faq.a7') },
-    { q: t('faq.q8'), a: t('faq.a8') },
+  const faqCategories: { titleKey: string; items: { q: string; a: string; extra?: ReactNode }[] }[] = [
     {
-      q: t('faq.q12'),
-      a: t('faq.a12'),
-      extra: (
-        <button
-          onClick={() => setShowCertModal(true)}
-          className="mt-3 inline-flex items-center gap-2 text-xs font-medium text-gold-700 border border-gold-300 bg-gold-50 hover:bg-gold-100 rounded-lg px-3 py-1.5 transition-colors"
-        >
-          <FileText size={13} />
-          {t('faq.q12.viewCert') || 'View sample certificate'}
-        </button>
-      ),
+      titleKey: 'faq.cat.eligibility',
+      items: [
+        { q: t('faq.q1'), a: t('faq.a1') },
+        { q: t('faq.q2'), a: t('faq.a2') },
+        { q: t('faq.q3'), a: t('faq.a3') },
+        { q: t('faq.q4'), a: t('faq.a4') },
+      ],
     },
     {
-      q: t('faq.q13'),
-      a: t('faq.a13'),
-      extra: (
-        <Link
-          to="/trademark-check"
-          className="mt-3 inline-flex items-center gap-2 text-xs font-medium text-navy-700 border border-navy-200 bg-navy-50 hover:bg-navy-100 rounded-lg px-3 py-1.5 transition-colors"
-        >
-          <Search size={13} />
-          {t('faq.q13.checkLink') || 'Run a trademark search'}
-        </Link>
-      ),
+      titleKey: 'faq.cat.fees',
+      items: [
+        { q: t('faq.q5'), a: t('faq.a5') },
+      ],
+    },
+    {
+      titleKey: 'faq.cat.process',
+      items: [
+        { q: t('faq.q6'), a: t('faq.a6') },
+        { q: t('faq.q7'), a: t('faq.a7') },
+      ],
+    },
+    {
+      titleKey: 'faq.cat.registration',
+      items: [
+        { q: t('faq.q8'), a: t('faq.a8') },
+        { q: t('faq.q9'), a: t('faq.a9') },
+        { q: t('faq.q10'), a: t('faq.a10') },
+        { q: t('faq.q11'), a: t('faq.a11') },
+        {
+          q: t('faq.q12'),
+          a: t('faq.a12'),
+          extra: (
+            <button
+              onClick={() => setShowCertModal(true)}
+              className="mt-3 inline-flex items-center gap-2 text-xs font-medium text-gold-700 border border-gold-300 bg-gold-50 hover:bg-gold-100 rounded-lg px-3 py-1.5 transition-colors"
+            >
+              <FileText size={13} />
+              {t('faq.q12.viewCert') || 'View sample certificate'}
+            </button>
+          ),
+        },
+        {
+          q: t('faq.q13'),
+          a: t('faq.a13'),
+          extra: (
+            <Link
+              to="/trademark-check"
+              className="mt-3 inline-flex items-center gap-2 text-xs font-medium text-navy-700 border border-navy-200 bg-navy-50 hover:bg-navy-100 rounded-lg px-3 py-1.5 transition-colors"
+            >
+              <Search size={13} />
+              {t('faq.q13.checkLink') || 'Run a trademark search'}
+            </Link>
+          ),
+        },
+      ],
     },
   ];
 
@@ -286,9 +319,6 @@ export default function HomePage() {
             </div>
           </div>
           <p className="text-center text-gray-500 text-xs mb-5">{t('pricing.govFeeNote')}</p>
-          <div className="flex justify-center mb-8">
-            <PriceGuaranteeBadge variant="inline" />
-          </div>
           <div className="text-center">
             <Link
               to="/apply"
@@ -329,43 +359,106 @@ export default function HomePage() {
               </div>
             ))}
           </div>
-          <div className="mt-10 p-4 bg-amber-50 border border-amber-200 rounded-xl text-center">
-            <p className="text-amber-800 text-sm">{t('disclaimer.filing')}</p>
+          <div className="mt-10 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+            <p className="text-amber-800 text-sm flex items-start gap-2">
+              <span className="flex-1">{t('disclaimer.filing')}</span>
+              <button
+                type="button"
+                onClick={() => setShowImpiModal(true)}
+                className="flex-shrink-0 w-5 h-5 rounded-full bg-amber-200 hover:bg-amber-300 text-amber-800 flex items-center justify-center transition-colors mt-0.5"
+                aria-label="More about IMPI system availability"
+              >
+                <HelpCircle size={12} />
+              </button>
+            </p>
           </div>
+
+          {/* IMPI availability modal */}
+          {showImpiModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setShowImpiModal(false)}>
+              <div className="absolute inset-0 bg-black/50" />
+              <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden z-10" onClick={e => e.stopPropagation()}>
+                <div className="relative h-52 overflow-hidden">
+                  <img
+                    src="/V4GAB234QBHWBO2ZRAZZA2TTPA.jpg"
+                    alt="IMPI — Instituto Mexicano de la Propiedad Industrial"
+                    className="w-full h-full object-cover object-center"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+                  <div className="absolute bottom-3 left-4">
+                    <p className="text-white text-xs font-medium opacity-80">IMPI — Instituto Mexicano de la Propiedad Industrial</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowImpiModal(false)}
+                    className="absolute top-3 right-3 w-7 h-7 rounded-full bg-black/40 hover:bg-black/60 flex items-center justify-center text-white transition-colors"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+                <div className="p-5">
+                  <p className="text-sm text-gray-700 leading-relaxed">
+                    Our technology works 24/7/365 but IMPI is subject to the Mexican Government designated schedules, periodic maintenance downtimes and occasional system unavailabilities.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
-      {/* FAQ Preview */}
-      <section className="py-16 lg:py-20 bg-gray-50">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* FAQ — full section */}
+      <section id="faq" className="py-16 lg:py-20 bg-gray-50">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
+            <div className="text-gold-600 font-semibold text-sm uppercase tracking-wider mb-3">{t('faq.eyebrow')}</div>
             <h2 className="text-3xl lg:text-4xl font-bold text-navy-900 mb-4">{t('faq.title')}</h2>
+            <p className="text-gray-500 max-w-xl mx-auto text-sm">{t('faq.intro')}</p>
           </div>
-          <div className="space-y-3">
-            {faqs.map((faq, i) => (
-              <div key={i} className="border border-gray-200 rounded-xl overflow-hidden">
-                <button
-                  className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-gray-50 transition-colors"
-                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                >
-                  <span className="font-medium text-navy-900 text-sm pr-4">{faq.q}</span>
-                  <ChevronDown
-                    size={18}
-                    className={`text-gray-400 flex-shrink-0 transition-transform ${openFaq === i ? 'rotate-180' : ''}`}
-                  />
-                </button>
-                {openFaq === i && (
-                  <div className="px-5 pb-4 text-gray-600 text-sm leading-relaxed border-t border-gray-100">
-                    <div className="pt-3">{faq.a}</div>
-                    {faq.extra && <div>{faq.extra}</div>}
-                  </div>
-                )}
+          {faqCategories.map((cat, ci) => {
+            const baseIndex = faqCategories.slice(0, ci).reduce((acc, c) => acc + c.items.length, 0);
+            return (
+              <div key={ci} className="mb-10">
+                <h3 className="text-base font-bold text-navy-900 mb-4 flex items-center gap-2">
+                  <HelpCircle size={15} className="text-gold-500 flex-shrink-0" />
+                  {t(cat.titleKey)}
+                </h3>
+                <div className="space-y-3">
+                  {cat.items.map((faq, i) => {
+                    const idx = baseIndex + i;
+                    return (
+                      <div key={idx} className="border border-gray-200 rounded-xl overflow-hidden hover:border-gold-300 transition-colors">
+                        <button
+                          className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-white transition-colors"
+                          onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
+                        >
+                          <span className="font-medium text-navy-900 text-sm pr-4">{faq.q}</span>
+                          <ChevronDown
+                            size={18}
+                            className={`text-gray-400 flex-shrink-0 transition-transform ${openFaq === idx ? 'rotate-180' : ''}`}
+                          />
+                        </button>
+                        {openFaq === idx && (
+                          <div className="px-5 pb-4 text-gray-600 text-sm leading-relaxed border-t border-gray-100 bg-white">
+                            <div className="pt-3">{faq.a}</div>
+                            {faq.extra && <div>{faq.extra}</div>}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            ))}
-          </div>
-          <div className="text-center mt-8">
-            <Link to="/faq" className="text-gold-600 font-medium hover:text-gold-700 text-sm">
-              {t('faq.viewAll')}
+            );
+          })}
+          <div className="mt-10 bg-navy-50 rounded-2xl p-8 text-center border border-navy-100">
+            <h3 className="text-lg font-bold text-navy-900 mb-2">{t('faq.stillQuestions')}</h3>
+            <p className="text-gray-600 text-sm mb-6">{t('faq.stillQuestions.sub')}</p>
+            <Link
+              to="/contact"
+              className="inline-flex items-center gap-2 bg-navy-900 hover:bg-navy-800 text-white font-semibold px-6 py-3 rounded-xl transition-colors"
+            >
+              {t('contact.title')}
             </Link>
           </div>
         </div>

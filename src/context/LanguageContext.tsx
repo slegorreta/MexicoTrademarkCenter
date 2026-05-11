@@ -1047,14 +1047,14 @@ const translations: Record<string, Record<Language, string>> = {
 
   // Disclaimer
   'disclaimer.filing': {
-    en: 'Filing within 24 business hours is subject to complete information, payment confirmation, and business days.',
-    zh: '在24个工作小时内提交，以完整信息、付款确认和工作日为前提。',
-    es: 'La presentación en 24 horas hábiles está sujeta a información completa, confirmación de pago y días hábiles.',
-    de: 'Die Einreichung innerhalb von 24 Geschäftsstunden setzt vollständige Informationen, Zahlungsbestätigung und Werktage voraus.',
-    fr: 'Le dépôt dans les 24 heures ouvrées est soumis à la complétude des informations, à la confirmation du paiement et aux jours ouvrés.',
-    hi: '24 व्यावसायिक घंटों में दाखिल करना पूरी जानकारी, भुगतान पुष्टि और व्यावसायिक दिनों के अधीन है।',
-    pt: 'O protocolo em 24 horas úteis está sujeito a informações completas, confirmação de pagamento e dias úteis.',
-    ja: '24営業時間以内の出願は、完全な情報・入金確認・営業日を条件とします。',
+    en: 'Filing within 24 business hours is subject to complete information, payment confirmation, IMPI system availability and business day operations.',
+    zh: '在24个工作小时内提交，以完整信息、付款确认、IMPI系统可用性和工作日运营为前提。',
+    es: 'La presentación en 24 horas hábiles está sujeta a información completa, confirmación de pago, disponibilidad del sistema IMPI y operaciones en días hábiles.',
+    de: 'Die Einreichung innerhalb von 24 Geschäftsstunden setzt vollständige Informationen, Zahlungsbestätigung, IMPI-Systemverfügbarkeit und regulären Geschäftsbetrieb voraus.',
+    fr: 'Le dépôt dans les 24 heures ouvrées est soumis à la complétude des informations, à la confirmation du paiement, à la disponibilité du système IMPI et aux opérations en jours ouvrés.',
+    hi: '24 व्यावसायिक घंटों में दाखिल करना पूरी जानकारी, भुगतान पुष्टि, IMPI सिस्टम उपलब्धता और कार्य दिवस संचालन के अधीन है।',
+    pt: 'O protocolo em 24 horas úteis está sujeito a informações completas, confirmação de pagamento, disponibilidade do sistema IMPI e operações em dias úteis.',
+    ja: '24営業時間以内の出願は、完全な情報・入金確認・IMPIシステムの利用可能性・営業日の業務を条件とします。',
   },
   'disclaimer.registration': {
     en: 'This service does not guarantee trademark registration.',

@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom';
 import { CheckCircle2, ArrowRight, X, ShieldCheck } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
-import PriceGuaranteeBadge from '../components/PriceGuaranteeBadge';
 
 export default function PricingPage() {
   const { t } = useLanguage();
@@ -42,9 +41,6 @@ export default function PricingPage() {
           <p className="text-gray-300 text-lg max-w-2xl mx-auto mb-6">
             {t('pricing.page.subheadline')}
           </p>
-          <div className="flex justify-center">
-            <PriceGuaranteeBadge variant="inline" />
-          </div>
         </div>
       </section>
 

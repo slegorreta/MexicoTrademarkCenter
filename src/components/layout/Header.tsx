@@ -51,7 +51,7 @@ export default function Header() {
     { href: '/pricing', label: t('nav.pricing') },
     { href: '/how-it-works', label: t('nav.howItWorks') },
     { href: '/trademark-ideas', label: t('nav.ideaGenerator') },
-    { href: '/faq', label: t('nav.faq') },
+    { href: '/#faq', label: t('nav.faq') },
     { href: '/contact', label: t('nav.contact') },
   ];
 
