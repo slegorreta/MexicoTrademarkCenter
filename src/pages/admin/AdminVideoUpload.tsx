@@ -45,7 +45,7 @@ export default function AdminVideoUpload() {
         authorization: `Bearer ${ANON_KEY}`,
         'x-upsert': 'true',
       },
-      uploadDataDuringCreation: true,
+      uploadDataDuringCreation: false,
       removeFingerprintOnSuccess: true,
       metadata: {
         bucketName: BUCKET,
