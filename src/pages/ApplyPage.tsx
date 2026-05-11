@@ -534,6 +534,7 @@ export default function ApplyPage() {
 
   const [clearanceResults, setClearanceResults] = useState<Record<string, ClearanceResult>>({});
   const [showConflictModal, setShowConflictModal] = useState(false);
+  const [step3RiskAcknowledged, setStep3RiskAcknowledged] = useState(false);
 
   // Detect if user arrived from a prior clearance search
   const fromClearance = !!sessionStorage.getItem('tcpSearchName') &&
@@ -1598,7 +1599,9 @@ export default function ApplyPage() {
                       goodsServices={priorGoods}
                       classes={allSelectedClassNumbers}
                       language={panelLang}
-                      onResult={r => setClearanceResults(prev => ({ ...prev, _prior: r }))}
+                      onResult={r => { setClearanceResults(prev => ({ ...prev, _prior: r })); setStep3RiskAcknowledged(false); }}
+                      onSelectDespiteRisk={() => {}}
+                      onRiskAcknowledgedChange={ack => setStep3RiskAcknowledged(ack)}
                     />
                     <button
                       type="button"
@@ -1616,8 +1619,9 @@ export default function ApplyPage() {
                         goodsServices={form.classEntries.map(e => e.description).filter(Boolean).join('; ')}
                         classes={allSelectedClassNumbers}
                         language={panelLang}
-                        onResult={r => setClearanceResults(prev => ({ ...prev, _step3: r }))}
+                        onResult={r => { setClearanceResults(prev => ({ ...prev, _step3: r })); setStep3RiskAcknowledged(false); }}
                         onSelectDespiteRisk={() => setShowConflictModal(false)}
+                        onRiskAcknowledgedChange={ack => setStep3RiskAcknowledged(ack)}
                       />
                     )}
                   </div>
@@ -2468,7 +2472,8 @@ export default function ApplyPage() {
                   }}
                   disabled={
                     (step === 5 && (form.email !== form.emailConfirm || !form.address.trim() || !form.city.trim() || !form.postalCode.trim() || !form.country.trim())) ||
-                    (step === 2 && confirmedEntries.length === 0 && !activeEntryIsConfirmed)
+                    (step === 2 && confirmedEntries.length === 0 && !activeEntryIsConfirmed) ||
+                    (step === 3 && Object.values(clearanceResults).some(r => r.risk === 'high' || r.risk === 'medium') && !step3RiskAcknowledged)
                   }
                   className="px-5 py-2.5 rounded-xl bg-navy-900 hover:bg-navy-800 text-white text-sm font-semibold transition-colors disabled:opacity-40"
                 >

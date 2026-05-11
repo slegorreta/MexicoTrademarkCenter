@@ -46,6 +46,7 @@ interface Props {
   autoRun?: boolean;
   onResult?: (result: ClearanceResult) => void;
   onSelectDespiteRisk?: (markName: string) => void;
+  onRiskAcknowledgedChange?: (acknowledged: boolean) => void;
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -244,6 +245,37 @@ const UI: Record<string, Record<string, string>> = {
   againstReg: { en: 'Against', es: 'Desfavorable', zh: '不利', de: 'Ungünstig', fr: 'Défavorable', hi: 'प्रतिकूल', pt: 'Desfavorável' },
   back: { en: 'Back', es: 'Volver', zh: '返回', de: 'Zurück', fr: 'Retour', hi: 'वापस', pt: 'Voltar' },
   strength: { en: 'strength', es: 'fortaleza', zh: '强度', de: 'Stärke', fr: 'force', hi: 'ताकत', pt: 'força' },
+  // Risk acknowledgment
+  riskAckTitle: {
+    en: 'Proceed despite identified risks',
+    es: 'Continuar a pesar de los riesgos identificados',
+    zh: '尽管存在风险，仍继续申请',
+    de: 'Trotz identifizierter Risiken fortfahren',
+    fr: 'Continuer malgré les risques identifiés',
+    hi: 'पहचाने गए जोखिमों के बावजूद आगे बढ़ें',
+    pt: 'Prosseguir apesar dos riscos identificados',
+    ja: '特定されたリスクにもかかわらず続行する',
+  },
+  riskAckCheckbox: {
+    en: 'I understand the risks identified in this clearance report. I acknowledge that conflicts or registrability issues may affect my application and I choose to proceed with filing.',
+    es: 'Entiendo los riesgos identificados en este informe de disponibilidad. Reconozco que los conflictos o problemas de registrabilidad pueden afectar mi solicitud y elijo continuar con la presentación.',
+    zh: '我了解本检索报告中识别的风险。我确认冲突或可注册性问题可能影响我的申请，并选择继续提交申请。',
+    de: 'Ich verstehe die in diesem Recherchebericht identifizierten Risiken. Ich bestätige, dass Konflikte oder Eintragungsprobleme meine Anmeldung beeinflussen können, und entscheide mich, mit der Einreichung fortzufahren.',
+    fr: 'Je comprends les risques identifiés dans ce rapport de disponibilité. Je reconnais que des conflits ou des problèmes de registrabilité peuvent affecter ma demande et je choisis de procéder au dépôt.',
+    hi: 'मैं इस क्लीयरेंस रिपोर्ट में पहचाने गए जोखिमों को समझता/समझती हूं। मैं स्वीकार करता/करती हूं कि विरोध या पंजीकरण योग्यता संबंधी समस्याएं मेरे आवेदन को प्रभावित कर सकती हैं और मैं दाखिल करना जारी रखने का चुनाव करता/करती हूं।',
+    pt: 'Entendo os riscos identificados neste relatório de disponibilidade. Reconheço que conflitos ou problemas de registrabilidade podem afetar meu pedido e escolho prosseguir com o depósito.',
+    ja: 'この調査報告書で特定されたリスクを理解しています。競合や登録可能性の問題が私の出願に影響する可能性があることを認識した上で、出願を続行することを選択します。',
+  },
+  riskAckWarning: {
+    en: 'You must check this box to continue to the next step.',
+    es: 'Debes marcar esta casilla para continuar al siguiente paso.',
+    zh: '您必须勾选此框才能继续下一步。',
+    de: 'Sie müssen dieses Kästchen ankreuzen, um mit dem nächsten Schritt fortzufahren.',
+    fr: 'Vous devez cocher cette case pour passer à l\'étape suivante.',
+    hi: 'अगले चरण पर जाने के लिए आपको यह बॉक्स चेक करना होगा।',
+    pt: 'Você deve marcar esta caixa para continuar para a próxima etapa.',
+    ja: '次のステップに進むには、このボックスにチェックを入れる必要があります。',
+  },
 };
 
 function tr(key: string, lang: Lang): string {
@@ -526,7 +558,7 @@ function FullReportNotice({ lang }: { lang: Lang }) {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function TrademarkClearancePanel({
-  markName, goodsServices = '', classes, language, autoRun = true, onResult, onSelectDespiteRisk,
+  markName, goodsServices = '', classes, language, autoRun = true, onResult, onSelectDespiteRisk, onRiskAcknowledgedChange,
 }: Props) {
   const lang = (language in (UI.clearanceAnalysis)) ? language : 'en' as Lang;
   const { user } = useAuth();
@@ -534,6 +566,7 @@ export default function TrademarkClearancePanel({
   const [status, setStatus] = useState<'idle' | 'checking' | 'done' | 'error'>('idle');
   const [result, setResult] = useState<ClearanceResult | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
+  const [riskAcknowledged, setRiskAcknowledged] = useState(false);
   const runningRef = useRef(false);
 
   // Purchase flow state
@@ -1430,13 +1463,48 @@ export default function TrademarkClearancePanel({
         <p className="text-xs text-gray-400 leading-relaxed">{result.disclaimer}</p>
       </div>
 
-      {/* ── Use this mark anyway (when caller provides handler) ─────────────── */}
+      {/* ── Risk acknowledgment (when caller provides handler and risk is medium/high) ── */}
       {onSelectDespiteRisk && (result.risk === 'medium' || result.risk === 'high') && !paid && (
-        <div className="border-t border-gray-100 bg-white/60 px-4 py-2">
-          <button type="button" onClick={() => onSelectDespiteRisk(markName)}
-            className="text-xs text-gray-400 hover:text-gray-600 underline flex items-center gap-1">
-            <ArrowRight size={11} />Use this mark anyway despite risks →
-          </button>
+        <div className={`border-t-2 ${riskAcknowledged ? 'border-amber-300 bg-amber-50' : 'border-amber-400 bg-amber-50'} px-4 py-4`}>
+          <div className="flex items-center gap-2 mb-3">
+            <AlertTriangle size={15} className="text-amber-600 flex-shrink-0" />
+            <span className="text-sm font-bold text-amber-800">{tr('riskAckTitle', lang)}</span>
+          </div>
+          <label className="flex items-start gap-3 cursor-pointer group">
+            <div className="relative flex-shrink-0 mt-0.5">
+              <input
+                type="checkbox"
+                checked={riskAcknowledged}
+                onChange={e => {
+                  const checked = e.target.checked;
+                  setRiskAcknowledged(checked);
+                  onRiskAcknowledgedChange?.(checked);
+                  if (checked) onSelectDespiteRisk(markName);
+                }}
+                className="sr-only"
+              />
+              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                riskAcknowledged
+                  ? 'bg-amber-500 border-amber-500'
+                  : 'bg-white border-amber-400 group-hover:border-amber-500'
+              }`}>
+                {riskAcknowledged && (
+                  <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                    <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
+              </div>
+            </div>
+            <span className={`text-xs leading-relaxed transition-colors ${riskAcknowledged ? 'text-amber-800' : 'text-amber-700 group-hover:text-amber-900'}`}>
+              {tr('riskAckCheckbox', lang)}
+            </span>
+          </label>
+          {!riskAcknowledged && (
+            <p className="mt-2 text-xs font-semibold text-amber-600 flex items-center gap-1.5">
+              <AlertCircle size={12} className="flex-shrink-0" />
+              {tr('riskAckWarning', lang)}
+            </p>
+          )}
         </div>
       )}
     </div>
