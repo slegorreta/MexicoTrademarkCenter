@@ -1,10 +1,10 @@
 import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, ArrowRight, Shield, Sparkles, CheckCircle2, FileText } from 'lucide-react';
+import { Search, ArrowRight, Shield, Sparkles, CheckCircle2, FileText, HelpCircle } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import TrademarkClearancePanel from '../components/TrademarkClearancePanel';
 
-type Lang = 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt';
+type Lang = 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt' | 'ja';
 
 const copy: Record<string, Record<Lang, string>> = {
   badge: {
@@ -78,6 +78,27 @@ const copy: Record<string, Record<Lang, string>> = {
     fr: "Requis pour l'analyse DuPont de probabilité de confusion",
     hi: 'DuPont भ्रम संभावना विश्लेषण के लिए आवश्यक',
     pt: 'Necessário para a análise DuPont de probabilidade de confusão',
+    ja: 'DuPont混同可能性分析に必要',
+  },
+  trademarkNameTooltip: {
+    en: 'The word, phrase, or combination of letters you want to register as a trademark in Mexico. This is the name that will appear on your registration certificate and that you will have exclusive rights to use for your goods or services.',
+    zh: '您希望在墨西哥注册为商标的单词、短语或字母组合。这是将出现在您注册证书上的名称，您将对其在商品或服务上的使用拥有专属权利。',
+    es: 'La palabra, frase o combinación de letras que deseas registrar como marca en México. Este es el nombre que aparecerá en tu certificado de registro y sobre el cual tendrás derechos exclusivos de uso para tus productos o servicios.',
+    de: 'Das Wort, der Satz oder die Buchstabenkombination, die Sie als Marke in Mexiko registrieren möchten. Dies ist der Name, der auf Ihrer Registrierungsurkunde erscheint und den Sie exklusiv für Ihre Waren oder Dienstleistungen nutzen dürfen.',
+    fr: 'Le mot, la phrase ou la combinaison de lettres que vous souhaitez enregistrer comme marque au Mexique. C\'est le nom qui figurera sur votre certificat d\'enregistrement et sur lequel vous aurez des droits exclusifs d\'utilisation pour vos produits ou services.',
+    hi: 'वह शब्द, वाक्यांश या अक्षरों का संयोजन जिसे आप मेक्सिको में ट्रेडमार्क के रूप में पंजीकृत करना चाहते हैं। यही वह नाम है जो आपके पंजीकरण प्रमाणपत्र पर दिखेगा और जिसका उपयोग आप अपने माल या सेवाओं के लिए विशेष रूप से कर सकेंगे।',
+    pt: 'A palavra, frase ou combinação de letras que você deseja registrar como marca no México. Este é o nome que constará no seu certificado de registro e sobre o qual você terá direitos exclusivos de uso para seus produtos ou serviços.',
+    ja: 'メキシコで商標として登録したい単語、フレーズ、または文字の組み合わせです。これは登録証明書に記載され、あなたの商品やサービスに対して独占的に使用する権利を持つ名称です。',
+  },
+  goodsTooltip: {
+    en: 'A description of the products or services your trademark will be used with. In Mexico, trademarks are registered in one or more of 45 international Nice Classification classes. A clear and specific description helps the examiner assess conflicts with existing marks and determines the scope of your protection.',
+    zh: '您的商标将用于的商品或服务的描述。在墨西哥，商标在45个国际尼斯分类类别中的一个或多个中注册。清晰具体的描述有助于审查员评估与现有商标的冲突，并确定您的保护范围。',
+    es: 'Una descripción de los productos o servicios con los que se usará tu marca. En México, las marcas se registran en una o más de las 45 clases de la Clasificación Internacional de Niza. Una descripción clara y específica ayuda al examinador a evaluar conflictos con marcas existentes y determina el alcance de tu protección.',
+    de: 'Eine Beschreibung der Waren oder Dienstleistungen, mit denen Ihre Marke verwendet wird. In Mexiko werden Marken in einer oder mehreren der 45 internationalen Nizza-Klassifikationsklassen eingetragen. Eine klare und spezifische Beschreibung hilft dem Prüfer, Konflikte mit bestehenden Marken zu bewerten, und bestimmt den Umfang Ihres Schutzes.',
+    fr: 'Une description des produits ou services avec lesquels votre marque sera utilisée. Au Mexique, les marques sont enregistrées dans une ou plusieurs des 45 classes de la Classification internationale de Nice. Une description claire et précise aide l\'examinateur à évaluer les conflits avec les marques existantes et détermine l\'étendue de votre protection.',
+    hi: 'आपके ट्रेडमार्क के साथ उपयोग की जाने वाली वस्तुओं या सेवाओं का विवरण। मेक्सिको में, ट्रेडमार्क 45 अंतर्राष्ट्रीय नाइस वर्गीकरण वर्गों में से एक या अधिक में पंजीकृत होते हैं। एक स्पष्ट और विशिष्ट विवरण परीक्षक को मौजूदा चिह्नों के साथ टकराव का आकलन करने में मदद करता है और आपकी सुरक्षा के दायरे को निर्धारित करता है।',
+    pt: 'Uma descrição dos produtos ou serviços com os quais sua marca será usada. No México, as marcas são registradas em uma ou mais das 45 classes da Classificação Internacional de Nice. Uma descrição clara e específica ajuda o examinador a avaliar conflitos com marcas existentes e determina o escopo da sua proteção.',
+    ja: '商標が使用される商品またはサービスの説明です。メキシコでは、商標は45のニース国際分類クラスの1つ以上に登録されます。明確で具体的な説明は、審査官が既存の商標との競合を評価するのに役立ち、保護の範囲を決定します。',
   },
   searchBtn: {
     en: 'Run Full Clearance Analysis',
@@ -143,6 +164,29 @@ const copy: Record<string, Record<Lang, string>> = {
     pt: 'Pesquisar outra marca',
   },
 };
+
+function InfoTooltip({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="relative inline-flex items-center">
+      <button
+        type="button"
+        aria-label="More information"
+        onClick={() => setOpen(v => !v)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        className="inline-flex items-center justify-center text-gray-400 hover:text-gold-300 transition-colors focus:outline-none ml-1"
+      >
+        <HelpCircle size={14} />
+      </button>
+      {open && (
+        <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 z-50 w-72 bg-navy-900 text-gray-100 text-xs leading-relaxed rounded-xl px-3.5 py-3 shadow-xl border border-white/10 pointer-events-none">
+          {text}
+          <span className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-x-[6px] border-x-transparent border-t-[6px] border-t-navy-900" />
+        </span>
+      )}
+    </span>
+  );
+}
 
 export default function TrademarkCheckPage() {
   const { language } = useLanguage();
@@ -227,7 +271,10 @@ export default function TrademarkCheckPage() {
           <div className="space-y-3">
             <div>
               <label className="block text-xs font-medium text-gray-300 mb-1.5">
-                {tr('inputLabel')}
+                <span className="inline-flex items-center gap-0.5">
+                  {tr('inputLabel')}
+                  <InfoTooltip text={tr('trademarkNameTooltip')} />
+                </span>
               </label>
               <div className="relative">
                 <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
@@ -244,10 +291,10 @@ export default function TrademarkCheckPage() {
 
             <div>
               <label className="block text-xs font-medium text-gray-300 mb-1.5">
-                <span className="flex items-center gap-1.5">
+                <span className="inline-flex items-center gap-1.5">
                   <FileText size={13} className="text-gold-400" />
                   {tr('goodsLabel')}
-                  <span className="text-gold-400 font-semibold">*</span>
+                  <InfoTooltip text={tr('goodsTooltip')} />
                 </span>
               </label>
               <textarea
