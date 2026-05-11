@@ -1193,14 +1193,15 @@ const translations: Record<string, Record<Language, string>> = {
     ja: '分類は暫定的なものであり、専門家による審査を要します。',
   },
 
-  // Form steps — new order: Trademark → G&S → Prior Use → Owner → Review → Pay → Confirmation
+  // Form steps — 8-step order: Trademark → G&S → Clearance → Prior Use → Owner → Review → Pay → Confirmation
   'form.step1': { en: 'Trademark Details', zh: '商标详情', es: 'Datos de la Marca', de: 'Markendetails', fr: 'Détails de la marque', hi: 'ट्रेडमार्क विवरण', pt: 'Detalhes da Marca', ja: '商標詳細' },
   'form.step2': { en: 'Goods & Services', zh: '商品和服务', es: 'Bienes y Servicios', de: 'Waren & Dienstleistungen', fr: 'Produits & services', hi: 'वस्तुएं और सेवाएं', pt: 'Bens e Serviços', ja: '商品・サービス' },
-  'form.step3': { en: 'Prior Use', zh: '在先使用', es: 'Uso Previo', de: 'Vorherige Nutzung', fr: 'Usage antérieur', hi: 'पूर्व उपयोग', pt: 'Uso Anterior', ja: '先使用' },
-  'form.step4': { en: 'Owner Details', zh: '申请人信息', es: 'Datos del Titular', de: 'Inhaberdaten', fr: 'Infos du titulaire', hi: 'मालिक की जानकारी', pt: 'Dados do Titular', ja: '出願人情報' },
-  'form.step5': { en: 'Review', zh: '审查', es: 'Revisión', de: 'Überprüfung', fr: 'Révision', hi: 'समीक्षा', pt: 'Revisão', ja: '確認' },
-  'form.step6': { en: 'Payment', zh: '付款', es: 'Pago', de: 'Zahlung', fr: 'Paiement', hi: 'भुगतान', pt: 'Pagamento', ja: '支払い' },
-  'form.step7': { en: 'Confirmation', zh: '确认', es: 'Confirmación', de: 'Bestätigung', fr: 'Confirmation', hi: 'पुष्टि', pt: 'Confirmação', ja: '完了' },
+  'form.step3': { en: 'Clearance Review', zh: '商标检索', es: 'Revisión de Disponibilidad', de: 'Verfügbarkeitsprüfung', fr: 'Vérification de disponibilité', hi: 'क्लीयरेंस समीक्षा', pt: 'Revisão de Disponibilidade', ja: '商標調査' },
+  'form.step4': { en: 'Prior Use', zh: '在先使用', es: 'Uso Previo', de: 'Vorherige Nutzung', fr: 'Usage antérieur', hi: 'पूर्व उपयोग', pt: 'Uso Anterior', ja: '先使用' },
+  'form.step5': { en: 'Owner Details', zh: '申请人信息', es: 'Datos del Titular', de: 'Inhaberdaten', fr: 'Infos du titulaire', hi: 'मालिक की जानकारी', pt: 'Dados do Titular', ja: '出願人情報' },
+  'form.step6': { en: 'Review', zh: '审查', es: 'Revisión', de: 'Überprüfung', fr: 'Révision', hi: 'समीक्षा', pt: 'Revisão', ja: '確認' },
+  'form.step7': { en: 'Payment', zh: '付款', es: 'Pago', de: 'Zahlung', fr: 'Paiement', hi: 'भुगतान', pt: 'Pagamento', ja: '支払い' },
+  'form.step8': { en: 'Confirmation', zh: '确认', es: 'Confirmación', de: 'Bestätigung', fr: 'Confirmation', hi: 'पुष्टि', pt: 'Confirmação', ja: '完了' },
   'clearance.gate.question': { en: 'Would you like to check trademark availability before paying?', zh: '您是否希望在付款前检索商标可用性？', es: '¿Deseas verificar la disponibilidad de la marca antes de pagar?', de: 'Möchten Sie die Markenverfügbarkeit vor der Zahlung prüfen?', fr: 'Voulez-vous vérifier la disponibilité de la marque avant de payer ?', hi: 'क्या आप भुगतान से पहले ट्रेडमार्क उपलब्धता जांचना चाहेंगे?', pt: 'Gostaria de verificar a disponibilidade da marca antes de pagar?', ja: '支払い前に商標の利用可能性を確認しますか？' },
   'clearance.gate.yes': { en: 'Yes, run availability check', zh: '是，进行可用性检索', es: 'Sí, verificar disponibilidad', de: 'Ja, Verfügbarkeit prüfen', fr: 'Oui, vérifier la disponibilité', hi: 'हाँ, उपलब्धता जांचें', pt: 'Sim, verificar disponibilidade', ja: 'はい、利用可能性を確認する' },
   'clearance.gate.no': { en: 'No, proceed to payment', zh: '否，直接付款', es: 'No, continuar con el pago', de: 'Nein, zur Zahlung', fr: 'Non, continuer au paiement', hi: 'नहीं, भुगतान करें', pt: 'Não, prosseguir para pagamento', ja: 'いいえ、支払いへ進む' },

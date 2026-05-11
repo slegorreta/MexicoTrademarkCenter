@@ -11,7 +11,7 @@ import { getSortedCountries, getSortedDialCodes, type SupportedLang } from '../l
 import AIDescriptionAssistant, { type RelatedClass } from '../components/AIDescriptionAssistant';
 import TrademarkClearancePanel, { type ClearanceResult } from '../components/TrademarkClearancePanel';
 
-type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
 interface ClassEntry {
   id: string;
@@ -43,7 +43,7 @@ interface FormData {
   whatsapp: string;
   taxId: string;
   contactPerson: string;
-  preferredLanguage: 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt' | 'ja';
+  preferredLanguage: 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt' | 'ja'; // kept for DB compat, not shown in UI
   markName: string;
   markType: string;
   containsNonSpanish: boolean;
@@ -119,32 +119,49 @@ function InfoTooltip({ text }: { text: string }) {
 function StepIndicator({ current, total, t }: { current: Step; total: number; t: (k: string) => string }) {
   const stepLabels = [
     t('form.step1'), t('form.step2'), t('form.step3'),
-    t('form.step4'), t('form.step5'), t('form.step6'), t('form.step7')
+    t('form.step4'), t('form.step5'), t('form.step6'),
+    t('form.step7'), t('form.step8'),
   ];
   return (
-    <div className="flex items-center justify-center mb-8 overflow-x-auto pb-2">
-      {stepLabels.map((label, i) => {
-        const num = (i + 1) as Step;
-        const done = current > num;
-        const active = current === num;
-        return (
-          <div key={i} className="flex items-center flex-shrink-0">
-            <div className="flex flex-col items-center">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-                done ? 'bg-green-500 text-white' : active ? 'bg-gold-500 text-white' : 'bg-gray-200 text-gray-500'
-              }`}>
-                {done ? <CheckCircle2 size={14} /> : num}
+    <div className="mb-8 px-2">
+      {/* Number row — always fits */}
+      <div className="flex items-center justify-between">
+        {stepLabels.slice(0, total).map((_, i) => {
+          const num = (i + 1) as Step;
+          const done = current > num;
+          const active = current === num;
+          return (
+            <div key={i} className="flex items-center flex-1">
+              <div className="flex flex-col items-center flex-shrink-0">
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                  done ? 'bg-green-500 text-white' : active ? 'bg-gold-500 text-white' : 'bg-gray-200 text-gray-500'
+                }`}>
+                  {done ? <CheckCircle2 size={13} /> : num}
+                </div>
               </div>
-              <span className={`text-xs mt-1 hidden sm:block ${active ? 'text-gold-600 font-medium' : 'text-gray-400'}`}>
+              {i < total - 1 && (
+                <div className={`flex-1 h-0.5 mx-1 ${done ? 'bg-green-400' : 'bg-gray-200'}`} />
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {/* Label row — only active step label shown on mobile, all on sm+ */}
+      <div className="flex items-start justify-between mt-1.5">
+        {stepLabels.slice(0, total).map((label, i) => {
+          const num = (i + 1) as Step;
+          const active = current === num;
+          return (
+            <div key={i} className="flex-1 flex justify-center">
+              <span className={`text-center text-xs leading-tight max-w-[64px] ${
+                active ? 'text-gold-600 font-semibold' : 'text-gray-400 hidden sm:block'
+              }`}>
                 {label}
               </span>
             </div>
-            {i < total - 1 && (
-              <div className={`w-8 sm:w-12 h-0.5 mx-1 mb-4 flex-shrink-0 ${done ? 'bg-green-400' : 'bg-gray-200'}`} />
-            )}
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -518,9 +535,12 @@ export default function ApplyPage() {
   const [clearanceResults, setClearanceResults] = useState<Record<string, ClearanceResult>>({});
   const [showConflictModal, setShowConflictModal] = useState(false);
 
+  // Detect if user arrived from a prior clearance search
+  const fromClearance = !!sessionStorage.getItem('tcpSearchName') &&
+    (sessionStorage.getItem('tcpSearchName') ?? '').toLowerCase() === form.markName.trim().toLowerCase();
+  const [clearanceSkipped, setClearanceSkipped] = useState(false);
+
   // Pre-payment clearance gate state
-  const [clearanceGateChoice, setClearanceGateChoice] = useState<'pending' | 'yes' | 'no'>('pending');
-  const [clearanceGateAcknowledged, setClearanceGateAcknowledged] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [agreedToDisclaimer, setAgreedToDisclaimer] = useState(false);
   const [disclaimerError, setDisclaimerError] = useState(false);
@@ -548,6 +568,7 @@ export default function ApplyPage() {
       usedInMexico: false, firstUseDate: '', priorityClaimed: false,
       priorityCountry: '', priorityAppNumber: '', priorityFilingDate: '',
       isOwner: true, knownSimilarMarks: '',
+      // preferredLanguage auto-set from site language
     };
   });
 
@@ -809,7 +830,7 @@ export default function ApplyPage() {
 
   // Auto-save draft on form/step change (debounced 1.5s, authenticated users only, not in edit mode)
   useEffect(() => {
-    if (!user || !draftLoaded.current || step === 7 || editingAppId) return;
+    if (!user || !draftLoaded.current || step === 8 || editingAppId) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
       const payload = {
@@ -1121,7 +1142,7 @@ export default function ApplyPage() {
           </p>
         </div>
 
-        {step < 7 && <StepIndicator current={step} total={7} t={t} />}
+        {step < 8 && <StepIndicator current={step} total={8} t={t} />}
 
         {/* Edit-mode loading */}
         {editLoading && (
@@ -1132,7 +1153,7 @@ export default function ApplyPage() {
         )}
 
         {/* Edit-mode banner */}
-        {editingAppId && !editLoading && step < 7 && (
+        {editingAppId && !editLoading && step < 8 && (
           <div className="mb-4 flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 text-sm text-amber-800">
             <Pencil size={14} className="flex-shrink-0 text-amber-600" />
             <span>
@@ -1142,7 +1163,7 @@ export default function ApplyPage() {
         )}
 
         {/* Draft resumed notice */}
-        {draftId && !editingAppId && step > 1 && step < 7 && (
+        {draftId && !editingAppId && step > 1 && step < 8 && (
           <div className="mb-4 flex items-center justify-between gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-2.5 text-sm text-blue-700">
             <span>
               {tri('Draft restored — you can edit any previous step.', '草稿已恢复——您可以编辑任何之前的步骤。', 'Borrador restaurado: puede editar cualquier paso anterior.', 'Entwurf wiederhergestellt – Sie können jeden Schritt bearbeiten.', 'Brouillon restauré — vous pouvez modifier n\'importe quelle étape.', 'ड्राफ़्ट पुनर्स्थापित — आप कोई भी पिछला चरण संपादित कर सकते हैं।', 'Rascunho restaurado — você pode editar qualquer etapa anterior.', '下書きが復元されました。前のステップを編集できます。')}
@@ -1175,22 +1196,6 @@ export default function ApplyPage() {
                     </div>
                   )}
                   <input type="text" required className={inputClass} value={form.markName} onChange={e => set({ markName: e.target.value })} />
-                  {form.markName.trim().length >= 2 && (
-                    <div className="mt-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                          {tri('Trademark Availability Check', '商标可用性检索', 'Verificación de Disponibilidad de Marca', 'Markenverfügbarkeitsprüfung', 'Vérification de disponibilité', 'ट्रेडमार्क उपलब्धता जांच', 'Verificação de Disponibilidade da Marca')}
-                        </span>
-                        <InfoTooltip text={t('tooltip.clearance')} />
-                      </div>
-                      <TrademarkClearancePanel
-                        markName={form.markName}
-                        classes={[]}
-                        language={(language === 'zh' ? 'zh' : language === 'es' ? 'es' : language === 'de' ? 'de' : language === 'fr' ? 'fr' : language === 'hi' ? 'hi' : language === 'pt' ? 'pt' : 'en') as 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt'}
-                        autoRun
-                      />
-                    </div>
-                  )}
                 </div>
                 <div>
                   <label className={labelClass}>
@@ -1298,10 +1303,10 @@ export default function ApplyPage() {
             </div>
           )}
 
-          {/* STEP 4 — Owner Details (was Step 1) */}
-          {step === 4 && (
+          {/* STEP 5 — Owner Details */}
+          {step === 5 && (
             <div>
-              <h2 className="text-lg font-bold text-navy-900 mb-6">{t('form.step4')}</h2>
+              <h2 className="text-lg font-bold text-navy-900 mb-6">{t('form.step5')}</h2>
               <div className="space-y-4">
                 <div>
                   <label className={labelClass}>
@@ -1327,7 +1332,10 @@ export default function ApplyPage() {
                 </div>
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="sm:col-span-2">
-                    <label className={labelClass}>{tri('Full Legal Name *', '完整法定名称 *', 'Nombre o Razón Social *', 'Vollständiger rechtlicher Name *', 'Nom légal complet *', 'पूरा कानूनी नाम *', 'Nome Legal Completo *')}</label>
+                    <label className={labelClass}>
+                      {tri('Full Legal Name *', '完整法定名称 *', 'Nombre o Razón Social *', 'Vollständiger rechtlicher Name *', 'Nom légal complet *', 'पूरा कानूनी नाम *', 'Nome Legal Completo *', '正式法定名称 *')}
+                      <InfoTooltip text={tri('This name will appear on the official IMPI trademark certificate as the registered owner.', '该名称将作为注册所有人出现在IMPI官方商标证书上。', 'Este nombre aparecerá en el certificado oficial de marca del IMPI como titular registrado.', 'Dieser Name erscheint als eingetragener Inhaber im offiziellen IMPI-Markenzertifikat.', 'Ce nom figurera sur le certificat officiel de marque IMPI en tant que titulaire enregistré.', 'यह नाम पंजीकृत स्वामी के रूप में IMPI के आधिकारिक ट्रेडमार्क प्रमाणपत्र पर दिखाई देगा।', 'Este nome constará no certificado oficial de marca do IMPI como titular registrado.', 'この名前は、登録所有者としてIMPIの公式商標証明書に記載されます。')} />
+                    </label>
                     <input type="text" required className={inputClass} value={form.legalName} onChange={e => set({ legalName: e.target.value })} />
                   </div>
                   <div>
@@ -1340,7 +1348,7 @@ export default function ApplyPage() {
                     </select>
                   </div>
                   <div>
-                    <label className={labelClass}>{tri('Contact Person', '联系人', 'Persona de Contacto', 'Kontaktperson', 'Personne de contact', 'संपर्क व्यक्ति', 'Pessoa de Contato')}</label>
+                    <label className={labelClass}>{tri('Contact Person (if different from the Owner)', '联系人（如与所有人不同）', 'Persona de Contacto (si difiere del Titular)', 'Kontaktperson (falls abweichend vom Inhaber)', 'Personne de contact (si différente du titulaire)', 'संपर्क व्यक्ति (यदि मालिक से अलग हो)', 'Pessoa de Contato (se diferente do Titular)', '担当者（所有者と異なる場合）')}</label>
                     <input type="text" className={inputClass} value={form.contactPerson} onChange={e => set({ contactPerson: e.target.value })} />
                   </div>
                   <div className="sm:col-span-2">
@@ -1385,7 +1393,7 @@ export default function ApplyPage() {
                         value={form.phoneDialCode}
                         onChange={e => set({ phoneDialCode: e.target.value })}
                       >
-                        <option value="">{tri('Code', '区号', 'Código', 'Vorwahl', 'Indicatif', 'कोड', 'Código')}</option>
+                        <option value="">{tri('Country Code', '国家区号', 'Código de País', 'Ländervorwahl', 'Indicatif pays', 'देश कोड', 'Código do País', '国番号')}</option>
                         {sortedDialCodes.map(d => (
                           <option key={d.code} value={d.dialCode}>{d.name} ({d.dialCode})</option>
                         ))}
@@ -1402,19 +1410,6 @@ export default function ApplyPage() {
                   <div>
                     <label className={labelClass}>{tri('Tax ID / Registration No.', '税号/注册号', 'RFC / Número de Registro', 'Steuer-ID / Registrierungsnr.', 'Numéro fiscal / Enregistrement', 'टैक्स ID / पंजीकरण नं.', 'CNPJ/CPF / Nº de Registro')}</label>
                     <input type="text" className={inputClass} value={form.taxId} onChange={e => set({ taxId: e.target.value })} />
-                  </div>
-                  <div>
-                    <label className={labelClass}>{tri('Preferred Language', '首选语言', 'Idioma de Preferencia', 'Bevorzugte Sprache', 'Langue préférée', 'पसंदीदा भाषा', 'Idioma Preferido')}</label>
-                    <select className={inputClass} value={form.preferredLanguage} onChange={e => set({ preferredLanguage: e.target.value as 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt' | 'ja' })}>
-                      <option value="en">English</option>
-                      <option value="zh">中文 (Chinese)</option>
-                      <option value="ja">日本語 (Japanese)</option>
-                      <option value="es">Español (Spanish)</option>
-                      <option value="de">Deutsch (German)</option>
-                      <option value="fr">Français (French)</option>
-                      <option value="hi">हिन्दी (Hindi)</option>
-                      <option value="pt">Português (Portuguese)</option>
-                    </select>
                   </div>
                 </div>
               </div>
@@ -1596,29 +1591,130 @@ export default function ApplyPage() {
             </div>
           )}
 
-          {/* STEP 3 — Prior Use */}
-          {step === 3 && (
+          {/* STEP 3 — Clearance Review */}
+          {step === 3 && (() => {
+            const priorSearchName = sessionStorage.getItem('tcpSearchName') ?? '';
+            const priorGoods = sessionStorage.getItem('tcpSearchGoods') ?? '';
+            const hasPriorClearance = !!priorSearchName && priorSearchName.toLowerCase() === form.markName.trim().toLowerCase();
+            const panelLang = (language === 'zh' ? 'zh' : language === 'es' ? 'es' : language === 'de' ? 'de' : language === 'fr' ? 'fr' : language === 'hi' ? 'hi' : language === 'pt' ? 'pt' : 'en') as 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt';
+            return (
+              <div>
+                <h2 className="text-lg font-bold text-navy-900 mb-1 flex items-center gap-2">{t('form.step3')}</h2>
+                <p className="text-sm text-gray-500 mb-6">
+                  {tri(
+                    'Review trademark availability before proceeding. This helps you assess any conflicts with existing marks.',
+                    '在继续之前检索商标可用性，帮助您评估与现有商标的潜在冲突。',
+                    'Verifica la disponibilidad de tu marca antes de continuar. Esto te ayuda a evaluar posibles conflictos con marcas existentes.',
+                    'Überprüfen Sie die Markenverfügbarkeit vor dem Fortfahren.',
+                    'Vérifiez la disponibilité de la marque avant de continuer.',
+                    'आगे बढ़ने से पहले ट्रेडमार्क उपलब्धता की जांच करें।',
+                    'Verifique a disponibilidade da marca antes de continuar.',
+                  )}
+                </p>
+
+                {hasPriorClearance && !clearanceSkipped ? (
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-3 bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-2">
+                      <CheckCircle2 size={18} className="text-emerald-500 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-semibold text-emerald-800">
+                          {tri('Clearance results found from your earlier search', '已找到您之前搜索的检索结果', 'Resultados de búsqueda previos encontrados', 'Frühere Suchergebnisse gefunden', 'Résultats de recherche antérieure trouvés', 'आपकी पहले की खोज के परिणाम मिले', 'Resultados de pesquisa anterior encontrados')}
+                        </p>
+                        <p className="text-xs text-emerald-700 mt-0.5">
+                          {tri(`For mark: "${priorSearchName}"${priorGoods ? ` · ${priorGoods.slice(0, 60)}${priorGoods.length > 60 ? '…' : ''}` : ''}`, `商标："${priorSearchName}"`, `Marca: "${priorSearchName}"`)}
+                        </p>
+                      </div>
+                    </div>
+                    <TrademarkClearancePanel
+                      markName={priorSearchName}
+                      goodsServices={priorGoods}
+                      classes={allSelectedClassNumbers}
+                      language={panelLang}
+                      autoRun
+                      onResult={r => setClearanceResults(prev => ({ ...prev, _prior: r }))}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setClearanceSkipped(true)}
+                      className="text-xs text-gray-500 hover:text-gray-700 underline underline-offset-2"
+                    >
+                      {tri('Run a new clearance check instead', '运行新的商标检索', 'Realizar una nueva búsqueda de disponibilidad', 'Neue Recherche durchführen', 'Effectuer une nouvelle recherche', 'नई क्लीयरेंस जांच चलाएं', 'Realizar uma nova verificação de disponibilidade')}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {form.markName.trim() && (
+                      <TrademarkClearancePanel
+                        markName={form.markName}
+                        goodsServices={form.classEntries.map(e => e.description).filter(Boolean).join('; ')}
+                        classes={allSelectedClassNumbers}
+                        language={panelLang}
+                        autoRun
+                        onResult={r => setClearanceResults(prev => ({ ...prev, _step3: r }))}
+                        onSelectDespiteRisk={() => setShowConflictModal(false)}
+                      />
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* STEP 4 — Prior Use */}
+          {step === 4 && (
             <div>
-              <h2 className="text-lg font-bold text-navy-900 mb-1">{t('form.step3')}</h2>
+              <h2 className="text-lg font-bold text-navy-900 mb-1">{t('form.step4')}</h2>
               <p className="text-sm text-gray-500 mb-6">
                 {tri('Tell us about any prior use of this mark and whether you are claiming priority from a foreign application.', '请告诉我们该商标是否已在使用，以及您是否主张外国申请的优先权。', 'Indícanos si esta marca ya está siendo usada y si reclamas prioridad de una solicitud extranjera.', 'Teilen Sie uns mit, ob diese Marke bereits verwendet wird und ob Sie Priorität aus einer ausländischen Anmeldung beanspruchen.', 'Indiquez si cette marque est déjà utilisée et si vous revendiquez la priorité d\'une demande étrangère.', 'हमें बताएं कि क्या यह चिह्न पहले से उपयोग में है और क्या आप किसी विदेशी आवेदन से प्राथमिकता का दावा कर रहे हैं।', 'Informe-nos se esta marca já está em uso e se você reivindica prioridade de um pedido estrangeiro.', 'この商標がすでに使用されているか、また外国出願から優先権を主張するかをお知らせください。')}
               </p>
               <div className="space-y-5">
-                <div className="bg-white border border-gray-200 rounded-xl p-5">
-                  <div className="flex items-start gap-3 mb-3">
-                    <input type="checkbox" id="usedInMexico" checked={form.usedInMexico} onChange={e => set({ usedInMexico: e.target.checked })} className="mt-0.5 rounded border-gray-300 text-gold-500" />
-                    <label htmlFor="usedInMexico" className="text-sm font-medium text-gray-800 leading-snug">
-                      {tri('This mark is already used in Mexico', '该商标已在墨西哥使用', 'Esta marca ya se usa en México', 'Diese Marke wird bereits in Mexiko verwendet', 'Cette marque est déjà utilisée au Mexique', 'यह चिह्न पहले से मेक्सिको में उपयोग हो रहा है', 'Esta marca já é usada no México', 'この商標はすでにメキシコで使用されています')}
-                      <InfoTooltip text={t('tooltip.priorUse')} />
-                    </label>
-                  </div>
-                  {form.usedInMexico && (
-                    <div className="pl-7">
-                      <label className={labelClass}>{tri('First Use Date in Mexico', '在墨西哥首次使用日期', 'Fecha de Primer Uso en México', 'Erstes Verwendungsdatum in Mexiko', 'Date de première utilisation au Mexique', 'मेक्सिको में पहले उपयोग की तारीख', 'Data do Primeiro Uso no México', 'メキシコでの初使用日')}</label>
-                      <input type="date" className={inputClass} value={form.firstUseDate} onChange={e => set({ firstUseDate: e.target.value })} />
+                {/* Radio cards: used vs not used */}
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <button
+                    type="button"
+                    onClick={() => set({ usedInMexico: true })}
+                    className={`text-left border-2 rounded-xl p-5 transition-all ${form.usedInMexico === true ? 'border-gold-500 bg-gold-50' : 'border-gray-200 bg-white hover:border-gray-300'}`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`mt-0.5 w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${form.usedInMexico === true ? 'border-gold-500' : 'border-gray-300'}`}>
+                        {form.usedInMexico === true && <div className="w-2 h-2 rounded-full bg-gold-500" />}
+                      </div>
+                      <div>
+                        <div className={`text-sm font-semibold leading-snug ${form.usedInMexico === true ? 'text-gold-800' : 'text-gray-800'}`}>
+                          {tri('This mark is already used in Mexico', '该商标已在墨西哥使用', 'Esta marca ya se usa en México', 'Diese Marke wird bereits in Mexiko verwendet', 'Cette marque est déjà utilisée au Mexique', 'यह चिह्न पहले से मेक्सिको में उपयोग हो रहा है', 'Esta marca já é usada no México', 'この商標はすでにメキシコで使用されています')}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1 leading-relaxed">
+                          {tri('You have commercially used this mark in Mexico before filing.', '您在申请前已在墨西哥商业使用此商标。', 'Ha utilizado esta marca comercialmente en México antes de solicitar.', 'Sie haben diese Marke vor der Anmeldung kommerziell in Mexiko verwendet.', 'Vous avez utilisé cette marque commercialement au Mexique avant de déposer.', 'आपने दाखिल करने से पहले मेक्सिको में इस चिह्न का व्यावसायिक उपयोग किया है।', 'Você usou esta marca comercialmente no México antes de depositar.', '出願前にメキシコでこの商標を商業的に使用しました。')}
+                        </div>
+                      </div>
                     </div>
-                  )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => set({ usedInMexico: false })}
+                    className={`text-left border-2 rounded-xl p-5 transition-all ${form.usedInMexico === false ? 'border-navy-500 bg-navy-50' : 'border-gray-200 bg-white hover:border-gray-300'}`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`mt-0.5 w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${form.usedInMexico === false ? 'border-navy-500' : 'border-gray-300'}`}>
+                        {form.usedInMexico === false && <div className="w-2 h-2 rounded-full bg-navy-500" />}
+                      </div>
+                      <div>
+                        <div className={`text-sm font-semibold leading-snug ${form.usedInMexico === false ? 'text-navy-800' : 'text-gray-800'}`}>
+                          {tri('This mark has not yet been used in Mexico', '该商标尚未在墨西哥使用', 'Esta marca aún no ha sido usada en México', 'Diese Marke wurde noch nicht in Mexiko verwendet', 'Cette marque n\'a pas encore été utilisée au Mexique', 'यह चिह्न अभी तक मेक्सिको में उपयोग नहीं हुआ है', 'Esta marca ainda não foi usada no México', 'この商標はまだメキシコで使用されていません')}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1 leading-relaxed">
+                          {tri('You are filing on an intent-to-use basis.', '您基于使用意图提出申请。', 'Está solicitando con base en intención de uso.', 'Sie melden auf Basis der Verwendungsabsicht an.', 'Vous déposez sur la base d\'une intention d\'utilisation.', 'आप उपयोग की मंशा के आधार पर दाखिल कर रहे हैं।', 'Você está depositando com base em intenção de uso.', '使用意思に基づいて出願しています。')}
+                        </div>
+                      </div>
+                    </div>
+                  </button>
                 </div>
+                {form.usedInMexico === true && (
+                  <div className="bg-white border border-gray-200 rounded-xl p-5">
+                    <label className={labelClass}>{tri('First Use Date in Mexico', '在墨西哥首次使用日期', 'Fecha de Primer Uso en México', 'Erstes Verwendungsdatum in Mexiko', 'Date de première utilisation au Mexique', 'मेक्सिको में पहले उपयोग की तारीख', 'Data do Primeiro Uso no México', 'メキシコでの初使用日')}</label>
+                    <input type="date" className={inputClass} value={form.firstUseDate} onChange={e => set({ firstUseDate: e.target.value })} />
+                  </div>
+                )}
 
                 <div className="bg-white border border-gray-200 rounded-xl p-5">
                   <div className="flex items-start gap-3 mb-3">
@@ -1653,16 +1749,12 @@ export default function ApplyPage() {
                   </label>
                 </div>
 
-                <div>
-                  <label className={labelClass}>{tri('Any Known Similar Marks? (Optional)', '已知任何类似商标？（可选）', '¿Marcas similares conocidas? (Opcional)', 'Bekannte ähnliche Marken? (Optional)', 'Marques similaires connues ? (Optionnel)', 'कोई ज्ञात समान चिह्न? (वैकल्पिक)', 'Marcas similares conhecidas? (Opcional)', '既知の類似商標は？（任意）')}</label>
-                  <textarea rows={2} className={inputClass} value={form.knownSimilarMarks} onChange={e => set({ knownSimilarMarks: e.target.value })} />
-                </div>
               </div>
             </div>
           )}
 
-          {/* STEP 5 — Review */}
-          {step === 5 && (() => {
+          {/* STEP 6 — Review */}
+          {step === 6 && (() => {
             const EditBtn = ({ targetStep }: { targetStep: Step }) => (
               <button
                 type="button"
@@ -1691,7 +1783,7 @@ export default function ApplyPage() {
 
             return (
               <div>
-                <h2 className="text-lg font-bold text-navy-900 mb-2">{t('form.step5')}</h2>
+                <h2 className="text-lg font-bold text-navy-900 mb-2">{t('form.step6')}</h2>
                 <p className="text-sm text-gray-500 mb-6">
                   {tri('Review all details below. Click Edit on any section to make changes.', '请仔细检查以下所有信息。点击各栏的编辑按钮进行修改。', 'Revisa todos los detalles a continuación. Haz clic en Editar para modificar cualquier sección.', 'Überprüfen Sie alle Details unten. Klicken Sie auf Bearbeiten, um Änderungen vorzunehmen.', 'Vérifiez tous les détails ci-dessous. Cliquez sur Modifier pour apporter des changements.', 'नीचे सभी विवरण जांचें। किसी भी अनुभाग में परिवर्तन करने के लिए संपादित करें पर क्लिक करें।', 'Revise todos os detalhes abaixo. Clique em Editar para fazer alterações.', '以下のすべての詳細を確認してください。変更するには各セクションの編集をクリックしてください。')}
                 </p>
@@ -1709,7 +1801,7 @@ export default function ApplyPage() {
                   <div className="border border-gray-200 rounded-xl overflow-hidden">
                     <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-200 flex items-center justify-between">
                       <span className="text-sm font-semibold text-navy-900">{tri('Applicant', '申请人', 'Solicitante', 'Antragsteller', 'Déposant', 'आवेदक', 'Solicitante', '出願人')}</span>
-                      <EditBtn targetStep={4} />
+                      <EditBtn targetStep={5} />
                     </div>
                     <div className="divide-y divide-gray-100">
                       <ReviewRow label={tri('Legal Name', '法定名称', 'Nombre o Razón Social', 'Rechtlicher Name', 'Nom légal', 'कानूनी नाम', 'Nome Legal', '法人名')} val={form.legalName} />
@@ -1723,7 +1815,6 @@ export default function ApplyPage() {
                       {(form.phoneDialCode || form.phoneNumber) && <ReviewRow label={tri('Phone', '电话', 'Teléfono', 'Telefon', 'Téléphone', 'फोन', 'Telefone', '電話')} val={[form.phoneDialCode, form.phoneNumber].filter(Boolean).join(' ')} />}
                       {form.contactPerson && <ReviewRow label={tri('Contact Person', '联系人', 'Persona de Contacto', 'Kontaktperson', 'Personne de contact', 'संपर्क व्यक्ति', 'Pessoa de Contato', '担当者')} val={form.contactPerson} />}
                       {form.taxId && <ReviewRow label={tri('Tax ID', '税号', 'RFC', 'Steuer-ID', 'N° fiscal', 'टैक्स ID', 'CNPJ/CPF', '税番号')} val={form.taxId} />}
-                      <ReviewRow label={tri('Preferred Language', '首选语言', 'Idioma', 'Sprache', 'Langue', 'भाषा', 'Idioma', '言語')} val={form.preferredLanguage.toUpperCase()} />
                     </div>
                   </div>
 
@@ -1794,7 +1885,7 @@ export default function ApplyPage() {
                   <div className="border border-gray-200 rounded-xl overflow-hidden">
                     <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-200 flex items-center justify-between">
                       <span className="text-sm font-semibold text-navy-900">{tri('Prior Use & Priority', '在先使用和优先权', 'Uso Previo y Prioridad', 'Vorbenutzt & Priorität', 'Usage antérieur & Priorité', 'पूर्व उपयोग और प्राथमिकता', 'Uso Anterior e Prioridade', '先使用・優先権')}</span>
-                      <EditBtn targetStep={3} />
+                      <EditBtn targetStep={4} />
                     </div>
                     <div className="divide-y divide-gray-100">
                       <ReviewRow label={tri('Used in Mexico', '在墨西哥使用', 'Usada en México', 'In Mexiko verwendet', 'Utilisée au Mexique', 'मेक्सिको में उपयोग', 'Usada no México', 'メキシコで使用')} val={form.usedInMexico ? tri('Yes', '是', 'Sí', 'Ja', 'Oui', 'हाँ', 'Sim', 'はい') : tri('No', '否', 'No', 'Nein', 'Non', 'नहीं', 'Não', 'いいえ')} />
@@ -1804,7 +1895,6 @@ export default function ApplyPage() {
                       {form.priorityClaimed && form.priorityAppNumber && <ReviewRow label={tri('App. Number', '申请号', 'Nº Solicitud', 'Antragsnr.', 'Nº demande', 'आवेदन नं.', 'Nº Pedido', '出願番号')} val={form.priorityAppNumber} />}
                       {form.priorityClaimed && form.priorityFilingDate && <ReviewRow label={tri('Filing Date', '申请日期', 'Fecha Presentación', 'Einreichungsdatum', 'Date de dépôt', 'दाखिल तारीख', 'Data Protocolo', '出願日')} val={form.priorityFilingDate} />}
                       <ReviewRow label={tri('Owner Confirmed', '所有人确认', 'Titular Confirmado', 'Inhaber bestätigt', 'Titulaire confirmé', 'मालिक पुष्टि', 'Titular Confirmado', '所有者確認')} val={form.isOwner ? tri('Yes', '是', 'Sí', 'Ja', 'Oui', 'हाँ', 'Sim', 'はい') : tri('No', '否', 'No', 'Nein', 'Non', 'नहीं', 'Não', 'いいえ')} />
-                      {form.knownSimilarMarks && <ReviewRow label={tri('Known Similar Marks', '已知类似商标', 'Marcas Similares', 'Ähnliche Marken', 'Marques similaires', 'समान चिह्न', 'Marcas Similares', '類似商標')} val={form.knownSimilarMarks} />}
                     </div>
                   </div>
 
@@ -2011,13 +2101,13 @@ export default function ApplyPage() {
             );
           })()}
 
-          {/* STEP 6 — Payment */}
-          {step === 6 && (
+          {/* STEP 7 — Payment */}
+          {step === 7 && (
             <div>
-              <h2 className="text-lg font-bold text-navy-900 mb-6">{t('form.step6')}</h2>
+              <h2 className="text-lg font-bold text-navy-900 mb-6">{t('form.step7')}</h2>
 
-              {/* Pre-payment clearance gate */}
-              {clearanceGateChoice === 'pending' && (
+              {/* clearance gate removed — clearance is handled in Step 3 */}
+              {false && (
                 <div className="mb-6 bg-navy-50 border border-navy-200 rounded-2xl p-5">
                   <div className="flex items-start gap-3 mb-4">
                     <div className="w-9 h-9 rounded-xl bg-navy-900 flex items-center justify-center flex-shrink-0">
@@ -2048,8 +2138,8 @@ export default function ApplyPage() {
                 </div>
               )}
 
-              {/* Inline clearance panel when user chose yes */}
-              {clearanceGateChoice === 'yes' && (
+              {/* Inline clearance panel removed — clearance is in Step 3 */}
+              {false && (
                 <div className="mb-6 bg-white border border-gray-200 rounded-2xl overflow-hidden">
                   <div className="flex items-center gap-2 px-5 py-3 border-b border-gray-100 bg-navy-50">
                     <Shield size={15} className="text-navy-700" />
@@ -2228,16 +2318,10 @@ export default function ApplyPage() {
                     </div>
                   )}
 
-                  {clearanceGateChoice === 'yes' && !clearanceGateAcknowledged && (
-                    <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl p-3">
-                      <AlertCircle size={15} className="text-amber-600 flex-shrink-0 mt-0.5" />
-                      <p className="text-xs text-amber-800">{t('clearance.gate.conflicts')}</p>
-                    </div>
-                  )}
                   <button
                     type="button"
                     onClick={handleProceedToPayment}
-                    disabled={submitting || (clearanceGateChoice === 'yes' && !clearanceGateAcknowledged)}
+                    disabled={submitting}
                     className="w-full flex items-center justify-center gap-2 bg-gold-500 hover:bg-gold-600 disabled:opacity-60 text-white font-bold py-4 rounded-xl text-base transition-colors shadow-md"
                   >
                     <Lock size={16} />
@@ -2291,8 +2375,8 @@ export default function ApplyPage() {
             </div>
           )}
 
-          {/* STEP 7 — Confirmation */}
-          {step === 7 && (
+          {/* STEP 8 — Confirmation */}
+          {step === 8 && (
             <div className="text-center py-4">
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-5">
                 <CheckCircle2 size={36} className="text-green-600" />
@@ -2325,7 +2409,7 @@ export default function ApplyPage() {
           {showAuthGate && (
             <AuthGateModal
               language={language}
-              onSuccess={() => { setShowAuthGate(false); setStep(6); }}
+              onSuccess={() => { setShowAuthGate(false); setStep(7); }}
               onClose={() => setShowAuthGate(false)}
             />
           )}
@@ -2368,10 +2452,10 @@ export default function ApplyPage() {
           )}
 
           {/* Navigation */}
-          {step < 7 && (
+          {step < 8 && (
             <div className="mt-8 pt-6 border-t border-gray-100">
-              {/* Save & Continue Later — shown for steps 1–5 */}
-              {step < 6 && !editingAppId && (
+              {/* Save & Continue Later — shown for steps 1–6 */}
+              {step < 7 && !editingAppId && (
                 <div className="flex justify-center mb-4">
                   <button
                     type="button"
@@ -2387,16 +2471,16 @@ export default function ApplyPage() {
               <button
                 type="button"
                 onClick={() => setStep(s => Math.max(1, s - 1) as Step)}
-                disabled={step === 1 || (step === 6 && !!clientSecret)}
+                disabled={step === 1 || (step === 7 && !!clientSecret)}
                 className="px-5 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:border-gray-300 disabled:opacity-40 transition-colors"
               >
                 {t('form.back')}
               </button>
-              {step < 6 && (
+              {step < 7 && (
                 <button
                   type="button"
                   onClick={() => {
-                    if (step === 4 && (form.email !== form.emailConfirm || !form.address.trim() || !form.city.trim() || !form.postalCode.trim() || !form.country.trim())) return;
+                    if (step === 5 && (form.email !== form.emailConfirm || !form.address.trim() || !form.city.trim() || !form.postalCode.trim() || !form.country.trim())) return;
                     if (step === 2) {
                       const hasHighRisk = Object.values(clearanceResults).some(r => r.risk === 'high' || r.risk === 'medium');
                       if (hasHighRisk) {
@@ -2404,7 +2488,7 @@ export default function ApplyPage() {
                         return;
                       }
                     }
-                    if (step === 5) {
+                    if (step === 6) {
                       if (!agreedToTerms || !agreedToDisclaimer) {
                         setDisclaimerError(true);
                         return;
@@ -2414,10 +2498,10 @@ export default function ApplyPage() {
                         return;
                       }
                     }
-                    setStep(s => Math.min(6, s + 1) as Step);
+                    setStep(s => Math.min(7, s + 1) as Step);
                   }}
                   disabled={
-                    (step === 4 && (form.email !== form.emailConfirm || !form.address.trim() || !form.city.trim() || !form.postalCode.trim() || !form.country.trim())) ||
+                    (step === 5 && (form.email !== form.emailConfirm || !form.address.trim() || !form.city.trim() || !form.postalCode.trim() || !form.country.trim())) ||
                     (step === 2 && confirmedEntries.length === 0 && !activeEntryIsConfirmed)
                   }
                   className="px-5 py-2.5 rounded-xl bg-navy-900 hover:bg-navy-800 text-white text-sm font-semibold transition-colors disabled:opacity-40"

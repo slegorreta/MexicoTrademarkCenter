@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import {
-  Sparkles, Send, RefreshCw, CheckCircle2, ChevronDown,
-  ChevronUp, AlertTriangle, Loader2, MessageSquare, Pencil
+  Sparkles, Send, RefreshCw, CheckCircle2,
+  AlertTriangle, Loader2, MessageSquare, Pencil, X
 } from 'lucide-react';
 import { classifyGoods, type ClassSuggestion } from '../lib/classifier';
 
@@ -123,13 +123,13 @@ const ui: Record<string, Record<Lang, string>> = {
     pt: 'Reanalisar',
   },
   analyzeWithAI: {
-    en: 'Analyze with AI',
-    zh: 'AI智能分析',
-    es: 'Analizar con IA',
-    de: 'Mit KI analysieren',
-    fr: 'Analyser avec l\'IA',
-    hi: 'AI से विश्लेषण करें',
-    pt: 'Analisar com IA',
+    en: 'Let AI classify your trademark',
+    zh: '让AI为您的商标分类',
+    es: 'Dejar que la IA clasifique tu marca',
+    de: 'KI Ihre Marke klassifizieren lassen',
+    fr: 'Laisser l\'IA classer votre marque',
+    hi: 'AI को आपके ट्रेडमार्क को वर्गीकृत करने दें',
+    pt: 'Deixar a IA classificar sua marca',
   },
   classifyingTitle: {
     en: 'Classifying your goods & services...',
@@ -303,13 +303,58 @@ const ui: Record<string, Record<Lang, string>> = {
     pt: 'A classificação é preliminar e sujeita a revisão profissional.',
   },
   browseAllClasses: {
-    en: 'Browse all 45 Nice classes manually',
-    zh: '手动浏览全部45个尼斯分类类别',
-    es: 'Explorar manualmente las 45 clases de Niza',
-    de: 'Alle 45 Nizza-Klassen manuell durchsuchen',
-    fr: 'Parcourir manuellement les 45 classes de Nice',
-    hi: 'सभी 45 नाइस कक्षाएं मैन्युअल रूप से देखें',
-    pt: 'Navegar manualmente por todas as 45 classes de Nice',
+    en: 'or Select your classes manually from the 45 Nice Classification',
+    zh: '或从45个尼斯分类中手动选择类别',
+    es: 'o Selecciona tus clases manualmente de las 45 Clases de Niza',
+    de: 'oder Wählen Sie Ihre Klassen manuell aus den 45 Nizza-Klassen',
+    fr: 'ou Sélectionner vos classes manuellement parmi les 45 classes de Nice',
+    hi: 'या 45 नाइस वर्गीकरण से अपनी कक्षाएं मैन्युअल रूप से चुनें',
+    pt: 'ou Selecione suas classes manualmente das 45 classes de Nice',
+  },
+  classModalTitle: {
+    en: 'Select Nice Classification Classes',
+    zh: '选择尼斯分类类别',
+    es: 'Seleccionar Clases de la Clasificación de Niza',
+    de: 'Nizza-Klassen auswählen',
+    fr: 'Sélectionner les classes de la Classification de Nice',
+    hi: 'नाइस वर्गीकरण कक्षाएं चुनें',
+    pt: 'Selecionar Classes da Classificação de Nice',
+  },
+  classModalSubtitle: {
+    en: 'Select all classes that apply to your goods or services. Each class covers a different category.',
+    zh: '选择适用于您商品或服务的所有类别。每个类别涵盖不同的产品或服务范围。',
+    es: 'Selecciona todas las clases que apliquen a tus bienes o servicios. Cada clase cubre una categoría diferente.',
+    de: 'Wählen Sie alle Klassen aus, die für Ihre Waren oder Dienstleistungen zutreffen.',
+    fr: 'Sélectionnez toutes les classes qui s\'appliquent à vos produits ou services.',
+    hi: 'अपनी वस्तुओं या सेवाओं पर लागू सभी कक्षाएं चुनें।',
+    pt: 'Selecione todas as classes que se aplicam aos seus bens ou serviços.',
+  },
+  classModalConfirm: {
+    en: 'Confirm Selection',
+    zh: '确认选择',
+    es: 'Confirmar Selección',
+    de: 'Auswahl bestätigen',
+    fr: 'Confirmer la sélection',
+    hi: 'चयन की पुष्टि करें',
+    pt: 'Confirmar Seleção',
+  },
+  goods: {
+    en: 'Goods',
+    zh: '商品',
+    es: 'Bienes',
+    de: 'Waren',
+    fr: 'Produits',
+    hi: 'वस्तुएं',
+    pt: 'Bens',
+  },
+  services: {
+    en: 'Services',
+    zh: '服务',
+    es: 'Servicios',
+    de: 'Dienstleistungen',
+    fr: 'Services',
+    hi: 'सेवाएं',
+    pt: 'Serviços',
   },
   classesSelected: {
     en: 'class(es) selected',
@@ -369,7 +414,7 @@ export default function AIDescriptionAssistant({
   const [acceptedClasses, setAcceptedClasses] = useState<Set<number>>(new Set());
   const [classDescriptionsEn, setClassDescriptionsEn] = useState<Record<number, string>>({});
   const [classDescriptionsEs, setClassDescriptionsEs] = useState<Record<number, string>>({});
-  const [showAllClasses, setShowAllClasses] = useState(false);
+  const [showClassModal, setShowClassModal] = useState(false);
   const [round, setRound] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -842,40 +887,16 @@ export default function AIDescriptionAssistant({
         </div>
       )}
 
-      {/* Browse all classes toggle */}
+      {/* Browse all classes — opens modal */}
       {(mode === 'classified' || mode === 'fallback' || mode === 'idle') && (
         <div>
           <button
             type="button"
-            onClick={() => setShowAllClasses(v => !v)}
-            className="flex items-center gap-1.5 text-xs text-gold-600 hover:text-gold-700 font-medium"
+            onClick={() => setShowClassModal(true)}
+            className="flex items-center gap-1.5 text-xs text-gold-600 hover:text-gold-700 font-medium underline underline-offset-2"
           >
-            {showAllClasses ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
             {s('browseAllClasses')}
           </button>
-          {showAllClasses && (
-            <div className="mt-3 grid sm:grid-cols-2 gap-1.5 max-h-56 overflow-y-auto border border-gray-100 rounded-xl p-3 bg-gray-50">
-              {Array.from({ length: 45 }, (_, i) => i + 1).map(num => (
-                <div
-                  key={num}
-                  onClick={() => onToggleClass(num)}
-                  className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer text-xs transition-colors ${
-                    selectedClasses.includes(num)
-                      ? 'border-gold-400 bg-gold-50 text-gold-700'
-                      : 'border-gray-200 bg-white hover:border-gray-300 text-gray-600'
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedClasses.includes(num)}
-                    onChange={() => {}}
-                    className="rounded border-gray-300 text-gold-500 flex-shrink-0"
-                  />
-                  <span><strong>{num}</strong></span>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       )}
 
@@ -886,19 +907,182 @@ export default function AIDescriptionAssistant({
             {selectedClasses.length} {s('classesSelected')}
           </div>
           <div className="flex flex-wrap gap-1.5">
-            {selectedClasses.sort((a, b) => a - b).map(cn => (
-              <button
-                key={cn}
-                type="button"
-                onClick={() => onToggleClass(cn)}
-                className="bg-gold-100 hover:bg-red-100 text-gold-700 hover:text-red-600 text-xs px-2.5 py-0.5 rounded-full font-medium transition-colors flex items-center gap-1"
-              >
-                Class {cn} ×
-              </button>
-            ))}
+            {selectedClasses.sort((a, b) => a - b).map(cn => {
+              const nc = NICE_CLASSES_DESC.find(c => c.num === cn);
+              return (
+                <button
+                  key={cn}
+                  type="button"
+                  onClick={() => onToggleClass(cn)}
+                  className="bg-gold-100 hover:bg-red-100 text-gold-700 hover:text-red-600 text-xs px-2.5 py-0.5 rounded-full font-medium transition-colors flex items-center gap-1"
+                >
+                  Class {cn}{nc ? ` — ${nc.title}` : ''} ×
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
+
+      {/* Class selection modal */}
+      {showClassModal && (
+        <ClassSelectionModal
+          language={language}
+          selectedClasses={selectedClasses}
+          onToggle={onToggleClass}
+          onConfirm={() => setShowClassModal(false)}
+          s={s}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Nice class descriptions ──────────────────────────────────────────────────
+interface NiceClassDesc { num: number; title: string; desc: string; category: 'goods' | 'services'; }
+const NICE_CLASSES_DESC: NiceClassDesc[] = [
+  { num: 1,  category: 'goods',    title: 'Chemicals',                          desc: 'Chemical substances for industry, science, photography; unprocessed plastics and artificial resins; adhesives for industrial use; manures and fertilizers.' },
+  { num: 2,  category: 'goods',    title: 'Paints & Varnishes',                 desc: 'Paints, varnishes, lacquers; preservatives against rust and wood decay; colorants and dyes; inks for printing.' },
+  { num: 3,  category: 'goods',    title: 'Cosmetics & Cleaning Products',       desc: 'Non-medicated cosmetics and toiletry preparations; cleaning, polishing and abrasive preparations; soaps, perfumery, essential oils.' },
+  { num: 4,  category: 'goods',    title: 'Fuels & Lubricants',                 desc: 'Industrial oils and greases, wax; lubricants; fuels (including motor spirit) and illuminants; candles.' },
+  { num: 5,  category: 'goods',    title: 'Pharmaceuticals',                    desc: 'Pharmaceutical and veterinary preparations; dietary supplements and meal replacements; disinfectants; pest control products.' },
+  { num: 6,  category: 'goods',    title: 'Metal Goods',                        desc: 'Common metals and their alloys; metal building materials; metallic hardware and fittings; non-electric cables and wires of metal.' },
+  { num: 7,  category: 'goods',    title: 'Machinery & Machine Tools',          desc: 'Machines, machine tools, motors and engines (not for land vehicles); machine parts; hand tools (power-operated).' },
+  { num: 8,  category: 'goods',    title: 'Hand Tools',                         desc: 'Hand tools and implements (hand-operated); cutlery; side arms; razors.' },
+  { num: 9,  category: 'goods',    title: 'Electronics & Technology',           desc: 'Computers, smartphones, tablets and software; electrical and scientific apparatus; audio-visual equipment; measuring instruments; downloadable content.' },
+  { num: 10, category: 'goods',    title: 'Medical Devices',                    desc: 'Surgical, medical, dental and veterinary apparatus and instruments; prosthetics and implants; therapeutic devices; massage apparatus.' },
+  { num: 11, category: 'goods',    title: 'Lighting, Heating & Appliances',     desc: 'Lighting, heating, cooling, cooking and ventilating apparatus; water supply and sanitary installations; household appliances.' },
+  { num: 12, category: 'goods',    title: 'Vehicles & Transport',               desc: 'Vehicles; apparatus for locomotion by land, air or water; electric and hybrid vehicles, bicycles, aircraft, boats.' },
+  { num: 13, category: 'goods',    title: 'Firearms & Ammunition',              desc: 'Firearms; ammunition and projectiles; explosives; fireworks.' },
+  { num: 14, category: 'goods',    title: 'Jewelry & Watches',                  desc: 'Precious metals and alloys; jewelry, gemstones; horological and chronometric instruments.' },
+  { num: 15, category: 'goods',    title: 'Musical Instruments',                desc: 'Musical instruments and accessories; music stands and holders; conductors\' batons.' },
+  { num: 16, category: 'goods',    title: 'Paper & Printed Matter',             desc: 'Paper, cardboard; printed matter; bookbinding material; photographs; stationery and office requisites; instructional and educational material.' },
+  { num: 17, category: 'goods',    title: 'Rubber & Insulating Materials',      desc: 'Rubber, gutta-percha, gum, asbestos and mica; semi-finished rubber/plastic goods; packing, stopping and insulating materials; pipes (not of metal).' },
+  { num: 18, category: 'goods',    title: 'Leather & Bags',                     desc: 'Leather and imitations of leather; animal skins and hides; luggage and carrying bags; handbags, wallets, purses; umbrellas.' },
+  { num: 19, category: 'goods',    title: 'Building Materials',                 desc: 'Non-metallic building and construction materials; non-metallic rigid pipes for building; asphalt, pitch, bitumen; non-metallic transportable structures.' },
+  { num: 20, category: 'goods',    title: 'Furniture & Household Articles',     desc: 'Furniture, mirrors, picture frames; containers not of metal; unworked or semi-worked bone, horn, ivory, or shell; household decorative objects.' },
+  { num: 21, category: 'goods',    title: 'Household Utensils',                 desc: 'Household and kitchen utensils and containers; cookware, tableware; glassware, porcelain and earthenware; cleaning equipment.' },
+  { num: 22, category: 'goods',    title: 'Ropes & Cordage',                    desc: 'Ropes, string, nets, tents, awnings, tarpaulins, sails; sacks and bags for the transport/storage of bulk materials; padding and stuffing materials.' },
+  { num: 23, category: 'goods',    title: 'Yarns & Threads',                    desc: 'Yarns and threads for textile use.' },
+  { num: 24, category: 'goods',    title: 'Textiles & Fabrics',                 desc: 'Textiles and substitutes for textiles; bed covers, table covers; woven/knitted/non-woven fabrics; household linen.' },
+  { num: 25, category: 'goods',    title: 'Clothing & Footwear',                desc: 'Clothing, footwear, headwear; sportswear, uniforms, lingerie, outerwear; shoes, boots, sandals; hats, caps.' },
+  { num: 26, category: 'goods',    title: 'Lace & Trimmings',                   desc: 'Lace, braid, embroidery and other textile trimmings; buttons, hooks, pins, needles; artificial flowers, hair decorations.' },
+  { num: 27, category: 'goods',    title: 'Carpets & Floor Coverings',          desc: 'Carpets, rugs, mats and matting; linoleum and other materials for covering existing floors; wallpapers.' },
+  { num: 28, category: 'goods',    title: 'Toys & Sporting Goods',              desc: 'Games, toys and playthings; video game apparatus; gymnastic and sporting articles; Christmas tree decorations.' },
+  { num: 29, category: 'goods',    title: 'Meat, Fish & Dairy Foods',           desc: 'Meat, fish, poultry and game; meat extracts; preserved, frozen, dried and cooked fruits and vegetables; eggs; milk and dairy products.' },
+  { num: 30, category: 'goods',    title: 'Coffee, Tea, Bakery & Condiments',   desc: 'Coffee, tea, cocoa, sugar, rice, flour; bread, pastries, confectionery; pasta, cereals; sauces, condiments, spices.' },
+  { num: 31, category: 'goods',    title: 'Fresh Fruits & Vegetables',          desc: 'Raw and unprocessed agricultural, aquacultural, horticultural and forestry products; fresh fruits and vegetables; live animals; seeds.' },
+  { num: 32, category: 'goods',    title: 'Beers & Non-Alcoholic Beverages',    desc: 'Beers; non-alcoholic beverages; mineral and aerated waters; fruit and vegetable juices; energy drinks; sports drinks.' },
+  { num: 33, category: 'goods',    title: 'Wines & Spirits',                    desc: 'Alcoholic beverages (except beers); wine, spirits, liqueurs, cider.' },
+  { num: 34, category: 'goods',    title: 'Tobacco & Smoking Articles',         desc: 'Tobacco and tobacco substitutes; cigarettes; cigars; electronic cigarettes; smokers\' articles; matches.' },
+  { num: 35, category: 'services', title: 'Advertising & Business Services',    desc: 'Advertising and marketing services; business management, organization and administration; office and clerical services; retail and wholesale services; e-commerce.' },
+  { num: 36, category: 'services', title: 'Insurance & Financial Services',     desc: 'Insurance services; financial and monetary affairs; banking; real estate; cryptocurrency and digital asset services.' },
+  { num: 37, category: 'services', title: 'Construction & Repair Services',     desc: 'Construction services; installation and repair services; maintenance of buildings and machines; cleaning services.' },
+  { num: 38, category: 'services', title: 'Telecommunications',                 desc: 'Telecommunications services; broadcasting; internet and data communication; messaging and online platform services.' },
+  { num: 39, category: 'services', title: 'Transport & Logistics',              desc: 'Transport and shipping; packaging and storage of goods; travel arrangement; courier and delivery services; logistics.' },
+  { num: 40, category: 'services', title: 'Material Treatment & Manufacturing', desc: 'Treatment of materials; recycling; printing; food processing and transformation.' },
+  { num: 41, category: 'services', title: 'Education & Entertainment',          desc: 'Education and training; entertainment; sporting and cultural activities; content publishing; gaming services.' },
+  { num: 42, category: 'services', title: 'Scientific & Technology Services',   desc: 'Scientific research; software design and development; IT and cloud services; artificial intelligence; cybersecurity; SaaS.' },
+  { num: 43, category: 'services', title: 'Food & Beverage Services',           desc: 'Services for providing food and drink; restaurant, café and catering services; hotel and temporary accommodation.' },
+  { num: 44, category: 'services', title: 'Medical & Beauty Services',          desc: 'Medical, dental and veterinary services; health care; beauty and cosmetic treatment; spa and wellness services.' },
+  { num: 45, category: 'services', title: 'Legal & Security Services',          desc: 'Legal services; intellectual property services; trademark and patent services; security and investigation services; personal and social services.' },
+];
+
+interface ClassModalProps {
+  language: Lang;
+  selectedClasses: number[];
+  onToggle: (num: number) => void;
+  onConfirm: () => void;
+  s: (key: string) => string;
+}
+
+function ClassSelectionModal({ language: _lang, selectedClasses, onToggle, onConfirm, s }: ClassModalProps) {
+  const [filter, setFilter] = useState<'all' | 'goods' | 'services'>('all');
+  const visible = filter === 'all' ? NICE_CLASSES_DESC : NICE_CLASSES_DESC.filter(c => c.category === filter);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh]">
+        {/* Header */}
+        <div className="bg-navy-900 px-6 py-4 rounded-t-2xl flex items-start justify-between gap-4">
+          <div>
+            <h3 className="text-white font-bold text-base">{s('classModalTitle')}</h3>
+            <p className="text-navy-300 text-xs mt-0.5">{s('classModalSubtitle')}</p>
+          </div>
+          <button type="button" onClick={onConfirm} className="text-navy-400 hover:text-white transition-colors mt-0.5 flex-shrink-0">
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Filter tabs */}
+        <div className="flex bg-gray-50 border-b border-gray-100 px-4 pt-3 gap-2">
+          {(['all', 'goods', 'services'] as const).map(f => (
+            <button
+              key={f}
+              type="button"
+              onClick={() => setFilter(f)}
+              className={`pb-2.5 px-3 text-xs font-semibold border-b-2 transition-colors ${filter === f ? 'border-gold-500 text-gold-700' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+            >
+              {f === 'all' ? 'All 45' : f === 'goods' ? `${s('goods')} (1–34)` : `${s('services')} (35–45)`}
+            </button>
+          ))}
+          {selectedClasses.length > 0 && (
+            <span className="ml-auto pb-2.5 text-xs font-semibold text-gold-700 self-end">
+              {selectedClasses.length} {s('classesSelected')}
+            </span>
+          )}
+        </div>
+
+        {/* Class list */}
+        <div className="overflow-y-auto flex-1 p-4 space-y-2">
+          {visible.map(nc => {
+            const selected = selectedClasses.includes(nc.num);
+            return (
+              <div
+                key={nc.num}
+                onClick={() => onToggle(nc.num)}
+                className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                  selected ? 'border-gold-400 bg-gold-50' : 'border-gray-200 hover:border-gold-300 hover:bg-gold-50/30'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={selected}
+                  onChange={() => {}}
+                  className="mt-0.5 rounded border-gray-300 text-gold-500 focus:ring-gold-400 flex-shrink-0"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-bold text-navy-900 bg-navy-100 px-1.5 py-0.5 rounded">
+                      Class {nc.num}
+                    </span>
+                    <span className="text-sm font-semibold text-navy-800">{nc.title}</span>
+                    <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${nc.category === 'goods' ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-700'}`}>
+                      {nc.category === 'goods' ? s('goods') : s('services')}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1 leading-relaxed">{nc.desc}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Footer */}
+        <div className="border-t border-gray-100 px-6 py-4 flex items-center justify-between gap-3">
+          <span className="text-sm text-gray-500">
+            {selectedClasses.length} {s('classesSelected')}
+          </span>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="flex items-center gap-2 bg-gold-500 hover:bg-gold-600 text-white font-semibold px-6 py-2.5 rounded-xl transition-colors text-sm"
+          >
+            <CheckCircle2 size={15} />
+            {s('classModalConfirm')}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
