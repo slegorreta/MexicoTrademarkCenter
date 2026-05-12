@@ -124,7 +124,7 @@ Deno.serve(async (req: Request) => {
         fetch(`${supabaseUrl}/functions/v1/send-filing-emails`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${anonKey}` },
-          body: JSON.stringify({ application_id: applicationId }),
+          body: JSON.stringify({ application_id: applicationId, language: intent.metadata?.language || "en" }),
         }).catch((e) => console.error("send-filing-emails failed:", e))
       );
 

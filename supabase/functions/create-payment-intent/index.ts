@@ -30,12 +30,13 @@ Deno.serve(async (req: Request) => {
     );
 
     const body = await req.json();
-    const { applicationId, amountUsd, markName, totalClasses, couponCode } = body as {
+    const { applicationId, amountUsd, markName, totalClasses, couponCode, language } = body as {
       applicationId: string;
       amountUsd: number;
       markName: string;
       totalClasses: number;
       couponCode?: string;
+      language?: string;
     };
 
     if (!applicationId || !amountUsd) {
@@ -123,6 +124,7 @@ Deno.serve(async (req: Request) => {
         coupon_code: couponCode ? couponCode.trim().toUpperCase() : "",
         discount_percent: String(discountPercent),
         original_amount_usd: String(amountUsd),
+        language: language || "en",
       },
       description: `Mexico Trademark Filing — ${markName} (${totalClasses} class${totalClasses !== 1 ? "es" : ""}) — Case ${app.case_number}${discountPercent > 0 ? ` — ${discountPercent}% discount applied` : ""}`,
       automatic_payment_methods: { enabled: true },

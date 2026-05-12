@@ -28,9 +28,10 @@ Deno.serve(async (req: Request) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const { paymentIntentId, applicationId } = await req.json() as {
+    const { paymentIntentId, applicationId, language } = await req.json() as {
       paymentIntentId: string;
       applicationId: string;
+      language?: string;
     };
 
     if (!paymentIntentId || !applicationId) {
@@ -60,6 +61,10 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Resolve language: prefer value sent by client (live site language at payment time),
+    // fall back to what was stored in Stripe metadata, then default to 'en'
+    const resolvedLanguage = language || intent.metadata?.language || "en";
+
     // Get receipt URL from the latest charge
     let receiptUrl: string | null = null;
     const charge = intent.latest_charge as Stripe.Charge | null;
@@ -77,12 +82,13 @@ Deno.serve(async (req: Request) => {
       })
       .eq("stripe_payment_intent_id", paymentIntentId);
 
-    // Update application payment + filing status (idempotent)
+    // Update application payment + filing status (idempotent), persist language
     await supabase
       .from("applications")
       .update({
         payment_status: "paid",
         filing_status: "pending_review",
+        language: resolvedLanguage,
       })
       .eq("id", applicationId);
 
@@ -104,7 +110,7 @@ Deno.serve(async (req: Request) => {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${anonKey}`,
         },
-        body: JSON.stringify({ application_id: applicationId }),
+        body: JSON.stringify({ application_id: applicationId, language: resolvedLanguage }),
       }).catch((e) => console.error("send-filing-emails failed:", e))
     );
 

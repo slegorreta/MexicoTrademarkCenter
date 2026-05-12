@@ -43,7 +43,6 @@ interface FormData {
   whatsapp: string;
   taxId: string;
   contactPerson: string;
-  preferredLanguage: 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt' | 'ja'; // kept for DB compat, not shown in UI
   markName: string;
   markType: string;
   containsNonSpanish: boolean;
@@ -212,7 +211,7 @@ function CheckoutForm({ language, finalTotal, onSuccess, applicationId, paymentI
             'Authorization': `Bearer ${supabaseAnonKey}`,
             'Apikey': supabaseAnonKey,
           },
-          body: JSON.stringify({ paymentIntentId, applicationId }),
+          body: JSON.stringify({ paymentIntentId, applicationId, language }),
         });
       } catch (e) {
         console.error('confirm-payment-client failed:', e);
@@ -631,7 +630,7 @@ export default function ApplyPage() {
       legalName: '', country: '', address: '', city: '',
       stateProvince: '', postalCode: '', email: '', emailConfirm: '',
       phoneDialCode: '', phoneNumber: '', wechat: '', whatsapp: '', taxId: '',
-      contactPerson: '', preferredLanguage: language as 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt',
+      contactPerson: '',
       markName: suggested, markType: 'word', containsNonSpanish: false,
       markLanguage: 'en', meaningSpanish: '', transliteration: '',
       markDescription: '', claimsColor: false, colorDescription: '',
@@ -640,7 +639,6 @@ export default function ApplyPage() {
       usedInMexico: false, firstUseDate: '', priorityClaimed: false,
       priorityCountry: '', priorityAppNumber: '', priorityFilingDate: '',
       isOwner: true, knownSimilarMarks: '',
-      // preferredLanguage auto-set from site language
     };
   });
 
@@ -919,7 +917,6 @@ export default function ApplyPage() {
         whatsapp: client?.whatsapp ?? '',
         taxId: client?.tax_id ?? '',
         contactPerson: client?.contact_person ?? '',
-        preferredLanguage: (client?.preferred_language as FormData['preferredLanguage']) ?? f.preferredLanguage,
         // Step 2 — mark
         markName: tm?.mark_name ?? '',
         markType: tm?.mark_type ?? 'word',
@@ -1047,7 +1044,6 @@ export default function ApplyPage() {
           whatsapp: form.whatsapp,
           tax_id: form.taxId,
           contact_person: form.contactPerson,
-          preferred_language: form.preferredLanguage,
         }).eq('id', editingClientId);
 
         await supabase.from('applications').update({
@@ -1059,6 +1055,7 @@ export default function ApplyPage() {
           priority_country: form.priorityCountry,
           priority_app_number: form.priorityAppNumber,
           priority_filing_date: form.priorityFilingDate || null,
+          language,
         }).eq('id', editingAppId);
 
         await supabase.from('trademarks').update({
@@ -1086,7 +1083,7 @@ export default function ApplyPage() {
           await supabase.from('goods_services').insert({
             application_id: editingAppId,
             description_original: entry.description,
-            original_language: form.preferredLanguage,
+            original_language: language,
             business_industry: entry.businessIndustry,
             sales_channels: [],
             countries_sold: [],
@@ -1139,7 +1136,6 @@ export default function ApplyPage() {
           whatsapp: form.whatsapp,
           tax_id: form.taxId,
           contact_person: form.contactPerson,
-          preferred_language: form.preferredLanguage,
         }).select().maybeSingle();
 
         if (clientError || !clientData) throw new Error(`Failed to create client record: ${clientError?.message ?? 'no data returned'}`);
@@ -1159,6 +1155,7 @@ export default function ApplyPage() {
           priority_app_number: form.priorityAppNumber,
           priority_filing_date: form.priorityFilingDate || null,
           source: 'website',
+          language,
           terms_accepted: agreedToTerms,
           disclaimer_accepted: agreedToDisclaimer,
           disclaimer_accepted_at: agreedToDisclaimer ? new Date().toISOString() : null,
@@ -1190,7 +1187,7 @@ export default function ApplyPage() {
           await supabase.from('goods_services').insert({
             application_id: appData.id,
             description_original: entry.description,
-            original_language: form.preferredLanguage,
+            original_language: language,
             business_industry: entry.businessIndustry,
             sales_channels: [],
             countries_sold: [],
@@ -1228,6 +1225,7 @@ export default function ApplyPage() {
           markName: form.markName,
           totalClasses,
           couponCode: couponApplied?.code ?? undefined,
+          language,
         }),
       });
 
