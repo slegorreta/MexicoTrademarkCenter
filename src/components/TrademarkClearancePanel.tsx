@@ -768,6 +768,9 @@ export default function TrademarkClearancePanel({
   const handlePaymentSuccess = () => {
     setPurchaseStep('done');
     setPaid(true);
+    if (reportOrderId) {
+      sessionStorage.setItem('tcpOrderId', reportOrderId);
+    }
   };
 
   // ── RENDER ────────────────────────────────────────────────────────────────

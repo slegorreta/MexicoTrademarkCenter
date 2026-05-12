@@ -1056,6 +1056,7 @@ export default function ApplyPage() {
           priority_app_number: form.priorityAppNumber,
           priority_filing_date: form.priorityFilingDate || null,
           language,
+          search_language: language,
         }).eq('id', editingAppId);
 
         await supabase.from('trademarks').update({
@@ -1140,6 +1141,10 @@ export default function ApplyPage() {
 
         if (clientError || !clientData) throw new Error(`Failed to create client record: ${clientError?.message ?? 'no data returned'}`);
 
+        const priorOrderId = sessionStorage.getItem('tcpOrderId') || null;
+        const priorSearchMark = sessionStorage.getItem('tcpSearchName') ?? '';
+        const clearanceOrderId = priorSearchMark.toLowerCase() === form.markName.trim().toLowerCase() ? priorOrderId : null;
+
         const { data: appData } = await supabase.from('applications').insert({
           case_number: cn,
           client_id: clientData.id,
@@ -1156,6 +1161,8 @@ export default function ApplyPage() {
           priority_filing_date: form.priorityFilingDate || null,
           source: 'website',
           language,
+          search_language: language,
+          clearance_report_order_id: clearanceOrderId,
           terms_accepted: agreedToTerms,
           disclaimer_accepted: agreedToDisclaimer,
           disclaimer_accepted_at: agreedToDisclaimer ? new Date().toISOString() : null,

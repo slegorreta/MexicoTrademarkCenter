@@ -173,22 +173,282 @@ ${prioritySection}
 </html>`;
 }
 
+const CLIENT_EMAIL_COPY: Record<string, Record<string, string>> = {
+  subject: {
+    en: "Your Trademark Application Has Been Received",
+    es: "Tu Solicitud de Marca Ha Sido Recibida",
+    zh: "您的商标申请已收到",
+    de: "Ihre Markenanmeldung wurde erhalten",
+    fr: "Votre demande de marque a été reçue",
+    hi: "आपका ट्रेडमार्क आवेदन प्राप्त हो गया है",
+    pt: "Sua Solicitação de Marca Foi Recebida",
+    ja: "商標出願を受け付けました",
+  },
+  heading: {
+    en: "Official Filing Confirmation",
+    es: "Confirmación Oficial de Presentación",
+    zh: "官方申请确认",
+    de: "Offizielle Anmeldebestätigung",
+    fr: "Confirmation officielle de dépôt",
+    hi: "आधिकारिक दाखिल पुष्टि",
+    pt: "Confirmação Oficial de Protocolo",
+    ja: "正式な出願確認",
+  },
+  greeting: {
+    en: "Dear",
+    es: "Estimado/a",
+    zh: "尊敬的",
+    de: "Sehr geehrte/r",
+    fr: "Cher/Chère",
+    hi: "प्रिय",
+    pt: "Prezado/a",
+    ja: "様",
+  },
+  intro: {
+    en: "Thank you for your trademark filing instruction. Your payment has been confirmed and our team has received your filing details. We will begin processing your application immediately.",
+    es: "Gracias por tu instrucción de solicitud de marca. Tu pago ha sido confirmado y nuestro equipo ha recibido los detalles de tu solicitud. Comenzaremos a procesarla de inmediato.",
+    zh: "感谢您的商标申请指令。您的付款已确认，我们的团队已收到您的申请详情，将立即开始处理您的申请。",
+    de: "Vielen Dank für Ihren Markenanmeldeauftrag. Ihre Zahlung wurde bestätigt und unser Team hat Ihre Anmeldedetails erhalten. Wir werden Ihren Antrag sofort bearbeiten.",
+    fr: "Merci pour votre instruction de dépôt de marque. Votre paiement a été confirmé et notre équipe a reçu vos détails de dépôt. Nous commencerons à traiter votre demande immédiatement.",
+    hi: "आपके ट्रेडमार्क दाखिल निर्देश के लिए धन्यवाद। आपका भुगतान पुष्टि हो गया है और हमारी टीम को आपके दाखिल विवरण प्राप्त हो गए हैं। हम तुरंत आपके आवेदन को प्रोसेस करना शुरू करेंगे।",
+    pt: "Obrigado pela sua instrução de protocolo de marca. Seu pagamento foi confirmado e nossa equipe recebeu seus detalhes de protocolo. Começaremos a processar sua solicitação imediatamente.",
+    ja: "商標出願のご依頼ありがとうございます。お支払いが確認され、チームが出願詳細を受領しました。直ちに処理を開始いたします。",
+  },
+  refLabel: {
+    en: "Your Reference Number",
+    es: "Tu Número de Referencia",
+    zh: "您的参考编号",
+    de: "Ihre Referenznummer",
+    fr: "Votre numéro de référence",
+    hi: "आपका संदर्भ नंबर",
+    pt: "Seu Número de Referência",
+    ja: "参照番号",
+  },
+  sectionTrademark: {
+    en: "Trademark Details",
+    es: "Detalles de la Marca",
+    zh: "商标详情",
+    de: "Markendetails",
+    fr: "Détails de la marque",
+    hi: "ट्रेडमार्क विवरण",
+    pt: "Detalhes da Marca",
+    ja: "商標詳細",
+  },
+  labelMarkName: {
+    en: "Mark Name / Identifier",
+    es: "Nombre / Identificador de la Marca",
+    zh: "商标名称 / 标识",
+    de: "Markenname / Kennung",
+    fr: "Nom de la marque / Identifiant",
+    hi: "चिह्न नाम / पहचानकर्ता",
+    pt: "Nome da Marca / Identificador",
+    ja: "商標名 / 識別子",
+  },
+  labelMarkType: {
+    en: "Mark Type",
+    es: "Tipo de Marca",
+    zh: "商标类型",
+    de: "Markentyp",
+    fr: "Type de marque",
+    hi: "चिह्न प्रकार",
+    pt: "Tipo de Marca",
+    ja: "商標の種類",
+  },
+  labelClasses: {
+    en: "Classes Filed",
+    es: "Clases Solicitadas",
+    zh: "申请类别",
+    de: "Angemeldete Klassen",
+    fr: "Classes déposées",
+    hi: "दाखिल कक्षाएं",
+    pt: "Classes Protocoladas",
+    ja: "出願区分",
+  },
+  labelFilingDate: {
+    en: "Filing Date",
+    es: "Fecha de Presentación",
+    zh: "申请日期",
+    de: "Anmeldedatum",
+    fr: "Date de dépôt",
+    hi: "दाखिल तिथि",
+    pt: "Data de Protocolo",
+    ja: "出願日",
+  },
+  sectionClasses: {
+    en: "International Classes",
+    es: "Clases Internacionales",
+    zh: "国际分类",
+    de: "Internationale Klassen",
+    fr: "Classes internationales",
+    hi: "अंतर्राष्ट्रीय वर्ग",
+    pt: "Classes Internacionais",
+    ja: "国際分類",
+  },
+  classLabel: {
+    en: "Class",
+    es: "Clase",
+    zh: "第",
+    de: "Klasse",
+    fr: "Classe",
+    hi: "वर्ग",
+    pt: "Classe",
+    ja: "第",
+  },
+  classLabelSuffix: {
+    en: "",
+    es: "",
+    zh: "类",
+    de: "",
+    fr: "",
+    hi: "",
+    pt: "",
+    ja: "類",
+  },
+  sectionPayment: {
+    en: "Payment Summary",
+    es: "Resumen de Pago",
+    zh: "付款摘要",
+    de: "Zahlungsübersicht",
+    fr: "Récapitulatif du paiement",
+    hi: "भुगतान सारांश",
+    pt: "Resumo do Pagamento",
+    ja: "お支払い概要",
+  },
+  labelServiceFee: {
+    en: "Professional Service Fee",
+    es: "Honorarios Profesionales",
+    zh: "专业服务费",
+    de: "Professionelles Honorar",
+    fr: "Honoraires professionnels",
+    hi: "पेशेवर सेवा शुल्क",
+    pt: "Honorários Profissionais",
+    ja: "専門サービス料",
+  },
+  labelGovFee: {
+    en: "Government Filing Fee",
+    es: "Derechos de Tramitación Gubernamental",
+    zh: "政府申请费",
+    de: "Staatliche Anmeldegebühr",
+    fr: "Frais officiels de dépôt",
+    hi: "सरकारी दाखिल शुल्क",
+    pt: "Taxa Governamental de Protocolo",
+    ja: "政府出願費",
+  },
+  labelTotal: {
+    en: "Total Paid",
+    es: "Total Pagado",
+    zh: "实付总额",
+    de: "Gesamtbetrag",
+    fr: "Total payé",
+    hi: "कुल भुगतान",
+    pt: "Total Pago",
+    ja: "合計支払額",
+  },
+  sectionTrack: {
+    en: "Track Your Application",
+    es: "Seguimiento de Tu Solicitud",
+    zh: "跟踪您的申请",
+    de: "Ihre Anmeldung verfolgen",
+    fr: "Suivre votre demande",
+    hi: "अपने आवेदन को ट्रैक करें",
+    pt: "Acompanhe Sua Solicitação",
+    ja: "出願状況の確認",
+  },
+  trackBody: {
+    en: "Monitor every stage of your trademark prosecution through your secure client portal — from filing receipt to registration certificate.",
+    es: "Monitorea cada etapa del proceso de tu marca a través de tu portal seguro de cliente, desde el recibo de presentación hasta el certificado de registro.",
+    zh: "通过您的安全客户门户，从申请收据到注册证书，全程跟踪您的商标审查进度。",
+    de: "Verfolgen Sie jeden Schritt Ihres Markenverfahrens über Ihr sicheres Kundenportal — vom Einreichungsbeleg bis zur Registrierungsurkunde.",
+    fr: "Suivez chaque étape de la procédure de votre marque via votre portail client sécurisé — du récépissé de dépôt au certificat d'enregistrement.",
+    hi: "अपने सुरक्षित क्लाइंट पोर्टल के माध्यम से अपने ट्रेडमार्क अभियोजन के हर चरण की निगरानी करें — दाखिल रसीद से पंजीकरण प्रमाणपत्र तक।",
+    pt: "Acompanhe cada etapa do processo de sua marca pelo seu portal seguro do cliente — do recibo de protocolo ao certificado de registro.",
+    ja: "セキュアなクライアントポータルから出願受領書から登録証まで、商標審査のすべての段階を追跡できます。",
+  },
+  ctaBtn: {
+    en: "Access Your Client Portal",
+    es: "Acceder a Tu Portal de Cliente",
+    zh: "访问您的客户门户",
+    de: "Auf Ihr Kundenportal zugreifen",
+    fr: "Accéder à votre portail client",
+    hi: "अपने क्लाइंट पोर्टल तक पहुंचें",
+    pt: "Acessar Seu Portal do Cliente",
+    ja: "クライアントポータルへアクセス",
+  },
+  questions: {
+    en: "Questions? Contact us at",
+    es: "¿Preguntas? Contáctanos en",
+    zh: "有问题？请联系我们：",
+    de: "Fragen? Kontaktieren Sie uns unter",
+    fr: "Des questions ? Contactez-nous à",
+    hi: "प्रश्न? हमसे संपर्क करें:",
+    pt: "Dúvidas? Fale conosco em",
+    ja: "ご質問は：",
+  },
+  footer: {
+    en: "This email confirms your paid filing instruction. Please retain it for your records.",
+    es: "Este correo confirma tu instrucción de presentación pagada. Por favor, consérvalo para tus registros.",
+    zh: "此电子邮件确认您已付费的申请指令。请保留以备记录。",
+    de: "Diese E-Mail bestätigt Ihren bezahlten Anmeldeauftrag. Bitte bewahren Sie sie für Ihre Unterlagen auf.",
+    fr: "Cet e-mail confirme votre instruction de dépôt payée. Veuillez le conserver pour vos dossiers.",
+    hi: "यह ईमेल आपके भुगतान किए गए दाखिल निर्देश की पुष्टि करता है। कृपया इसे अपने रिकॉर्ड के लिए रखें।",
+    pt: "Este e-mail confirma sua instrução de protocolo paga. Por favor, guarde-o para seus registros.",
+    ja: "このメールは支払い済みの出願指示を確認するものです。記録として保管してください。",
+  },
+};
+
+function ce(key: string, lang: string): string {
+  const map = CLIENT_EMAIL_COPY[key];
+  if (!map) return "";
+  return map[lang] ?? map["en"] ?? "";
+}
+
 function buildClientEmail(
   app: Record<string, unknown>,
   client: Record<string, unknown>,
   trademark: Record<string, unknown>,
   classes: Record<string, unknown>[],
-  totalPaid: number
+  totalPaid: number,
+  language: string
 ) {
+  const lang = CLIENT_EMAIL_COPY["subject"][language] ? language : "en";
   const classCount = classes.length;
   const govFeePerClass = 170;
   const govFeeTotal = classCount * govFeePerClass;
   const serviceFee = totalPaid - govFeeTotal;
-  const filingDate = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
 
+  const dateLocale = lang === "zh" ? "zh-CN" : lang === "ja" ? "ja-JP" : lang === "de" ? "de-DE" : lang === "fr" ? "fr-FR" : lang === "es" ? "es-MX" : lang === "pt" ? "pt-BR" : lang === "hi" ? "hi-IN" : "en-US";
+  const filingDate = new Date().toLocaleDateString(dateLocale, { year: "numeric", month: "long", day: "numeric" });
+
+  const classSuffix = ce("classLabelSuffix", lang);
+  const classLabel = ce("classLabel", lang);
   const classList = classes
-    .map((c) => `<li>Class ${c.class_number} — ${String(c.class_title_en ?? c.goods_services_en ?? "")}</li>`)
+    .map((c) => {
+      const classTitle = String(c.class_title_en ?? c.goods_services_en ?? "");
+      const classNum = String(c.class_number);
+      const label = lang === "zh" || lang === "ja"
+        ? `${classLabel}${classNum}${classSuffix} — ${classTitle}`
+        : `${classLabel} ${classNum} — ${classTitle}`;
+      return `<li>${label}</li>`;
+    })
     .join("");
+
+  const clientName = String(client.legal_name ?? client.contact_person ?? (lang === "zh" ? "尊敬的客户" : lang === "ja" ? "お客様" : lang === "es" ? "Estimado/a cliente/a" : lang === "de" ? "Geehrter Kunde" : lang === "fr" ? "Client estimé" : lang === "hi" ? "प्रिय ग्राहक" : lang === "pt" ? "Prezado cliente" : "Valued Client"));
+
+  const classCountLabel = lang === "zh"
+    ? `${classCount}个类别`
+    : lang === "ja"
+    ? `${classCount}区分`
+    : lang === "es"
+    ? `${classCount} clase${classCount !== 1 ? "s" : ""}`
+    : lang === "de"
+    ? `${classCount} Klasse${classCount !== 1 ? "n" : ""}`
+    : lang === "fr"
+    ? `${classCount} classe${classCount !== 1 ? "s" : ""}`
+    : lang === "hi"
+    ? `${classCount} वर्ग`
+    : lang === "pt"
+    ? `${classCount} classe${classCount !== 1 ? "s" : ""}`
+    : `${classCount} class${classCount !== 1 ? "es" : ""}`;
 
   return `<!DOCTYPE html>
 <html>
@@ -216,46 +476,46 @@ ul.classes { font-size: 14px; color: #3a4a3a; padding-left: 20px; line-height: 1
   <div class="header" style="text-align:center">
     <div style="margin-bottom:10px"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#c9a84c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
     <div style="font-size:10px;letter-spacing:3px;color:#c9a84c;font-family:Arial,sans-serif;text-transform:uppercase;margin-bottom:6px;font-weight:bold">Mexico Trademark Center</div>
-    <h1 style="margin:0;font-size:19px;font-weight:bold;font-family:Georgia,serif;color:#fff;">Official Filing Confirmation</h1>
+    <h1 style="margin:0;font-size:19px;font-weight:bold;font-family:Georgia,serif;color:#fff;">${ce("heading", lang)}</h1>
   </div>
   <div class="body">
-    <p style="font-size:15px;">Dear ${String(client.legal_name ?? client.contact_person ?? "Valued Client")},</p>
-    <p style="font-size:14px;color:#4a4a4a;line-height:1.7;">Thank you for your trademark filing instruction. Your payment has been confirmed and our team has received your filing details. We will begin processing your application immediately.</p>
+    <p style="font-size:15px;">${ce("greeting", lang)} ${clientName},</p>
+    <p style="font-size:14px;color:#4a4a4a;line-height:1.7;">${ce("intro", lang)}</p>
 
     <div class="case-banner">
-      <div class="label">Your Reference Number</div>
+      <div class="label">${ce("refLabel", lang)}</div>
       <div class="value">${String(app.case_number)}</div>
     </div>
 
-    <div class="section-title">Trademark Details</div>
+    <div class="section-title">${ce("sectionTrademark", lang)}</div>
     <table class="data">
-      <tr><td>Mark Name / Identifier</td><td>${String(trademark.mark_name ?? "—")}</td></tr>
-      <tr><td>Mark Type</td><td>${String(trademark.mark_type ?? "—")}</td></tr>
-      <tr><td>Classes Filed</td><td>${classCount} class${classCount !== 1 ? "es" : ""}</td></tr>
-      <tr><td>Filing Date</td><td>${filingDate}</td></tr>
+      <tr><td>${ce("labelMarkName", lang)}</td><td>${String(trademark.mark_name ?? "—")}</td></tr>
+      <tr><td>${ce("labelMarkType", lang)}</td><td>${String(trademark.mark_type ?? "—")}</td></tr>
+      <tr><td>${ce("labelClasses", lang)}</td><td>${classCountLabel}</td></tr>
+      <tr><td>${ce("labelFilingDate", lang)}</td><td>${filingDate}</td></tr>
     </table>
 
-    <div class="section-title">International Classes</div>
+    <div class="section-title">${ce("sectionClasses", lang)}</div>
     <ul class="classes">${classList}</ul>
 
-    <div class="section-title">Payment Summary</div>
-    <div class="inv-row"><span>Professional Service Fee</span><span>USD ${formatCurrency(serviceFee)}</span></div>
-    <div class="inv-row"><span>Government Filing Fee (${classCount} class${classCount !== 1 ? "es" : ""} × USD ${govFeePerClass})</span><span>USD ${formatCurrency(govFeeTotal)}</span></div>
-    <div class="inv-total"><span>Total Paid</span><span>USD ${formatCurrency(totalPaid)}</span></div>
+    <div class="section-title">${ce("sectionPayment", lang)}</div>
+    <div class="inv-row"><span>${ce("labelServiceFee", lang)}</span><span>USD ${formatCurrency(serviceFee)}</span></div>
+    <div class="inv-row"><span>${ce("labelGovFee", lang)} (${classCountLabel} × USD ${govFeePerClass})</span><span>USD ${formatCurrency(govFeeTotal)}</span></div>
+    <div class="inv-total"><span>${ce("labelTotal", lang)}</span><span>USD ${formatCurrency(totalPaid)}</span></div>
 
-    <div class="section-title">Track Your Application</div>
-    <p style="font-size:14px;color:#4a4a4a;line-height:1.7;">Monitor every stage of your trademark prosecution through your secure client portal — from filing receipt to registration certificate.</p>
+    <div class="section-title">${ce("sectionTrack", lang)}</div>
+    <p style="font-size:14px;color:#4a4a4a;line-height:1.7;">${ce("trackBody", lang)}</p>
 
     <div class="cta">
-      <a href="https://mexicotrademarkcenter.com/login">Access Your Client Portal</a>
+      <a href="https://mexicotrademarkcenter.com/login">${ce("ctaBtn", lang)}</a>
     </div>
 
-    <p style="font-size:13px;color:#6a6a6a;line-height:1.7;">Questions? Contact us at <a href="mailto:tm@mexicotrademarkcenter.com" style="color:#1a2e1a;">tm@mexicotrademarkcenter.com</a></p>
+    <p style="font-size:13px;color:#6a6a6a;line-height:1.7;">${ce("questions", lang)} <a href="mailto:tm@mexicotrademarkcenter.com" style="color:#1a2e1a;">tm@mexicotrademarkcenter.com</a></p>
   </div>
   <div style="background:#1a2e1a;padding:18px 40px;text-align:center">
     <p style="font-size:11px;color:#9db89d;margin:0 0 4px;font-family:Arial,sans-serif;font-weight:bold;letter-spacing:1px">MEXICO TRADEMARK CENTER</p>
     <p style="font-size:11px;color:#6a8a6a;margin:0;font-family:Arial,sans-serif">mexicotrademarkcenter.com &nbsp;·&nbsp; tm@mexicotrademarkcenter.com</p>
-    <p style="font-size:11px;color:#4a6a4a;margin:6px 0 0;font-family:Arial,sans-serif">This email confirms your paid filing instruction. Please retain it for your records.</p>
+    <p style="font-size:11px;color:#4a6a4a;margin:6px 0 0;font-family:Arial,sans-serif">${ce("footer", lang)}</p>
   </div>
 </div>
 </body></html>`;
@@ -324,6 +584,7 @@ Deno.serve(async (req: Request) => {
     const safeClasses = (classes ?? []) as Record<string, unknown>[];
     const safeTrademark = (trademark ?? {}) as Record<string, unknown>;
     const safeClient = (client ?? {}) as Record<string, unknown>;
+    const searchLanguage = String(app.search_language ?? app.language ?? "en");
 
     let logoUrl: string | null = null;
     if (safeTrademark.logo_file_path) {
@@ -351,11 +612,13 @@ Deno.serve(async (req: Request) => {
         safeClient,
         safeTrademark,
         safeClasses,
-        Number(totalPaid)
+        Number(totalPaid),
+        searchLanguage
       );
+      const clientSubject = `${ce("subject", searchLanguage)} — ${app.case_number}`;
       const clientResult = await sendEmail(
         String(safeClient.email),
-        `Your Trademark Application Has Been Received — ${app.case_number}`,
+        clientSubject,
         clientHtml
       );
       results.client_email = clientResult;
@@ -364,7 +627,7 @@ Deno.serve(async (req: Request) => {
         application_id,
         recipient_email: safeClient.email,
         template_key: "client_confirmation",
-        subject: `Your Trademark Application Has Been Received — ${app.case_number}`,
+        subject: clientSubject,
         status: clientResult.ok ? "sent" : "failed",
         resend_message_id: clientResult.data?.id,
         error_message: clientResult.ok ? null : JSON.stringify(clientResult.data),

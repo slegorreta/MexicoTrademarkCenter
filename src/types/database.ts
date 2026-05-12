@@ -72,6 +72,8 @@ export interface Database {
           impi_renewal_deadline: string | null;
           internal_notes: string;
           admin_language: string;
+          search_language: string;
+          clearance_report_order_id: string | null;
           source: string;
           created_at: string;
           updated_at: string;
