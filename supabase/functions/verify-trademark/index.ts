@@ -41,8 +41,21 @@ const ALL_LANGUAGES = [
 
 const RELATED_CLASSES: Record<number, number[]> = {
   3: [5, 44], 5: [3, 44], 9: [42, 38], 25: [18, 24, 26], 18: [25],
-  24: [25], 35: [42, 36], 42: [9, 35, 38], 43: [30, 29, 32, 33], 41: [42, 35], 44: [3, 5],
+  24: [25], 26: [25], 35: [42, 36], 36: [35], 38: [9, 42],
+  39: [40], 40: [39], 41: [42, 35], 42: [9, 35, 38, 41],
+  43: [30, 29, 32, 33], 44: [3, 5],
 };
+
+type ClassOverlap = "same" | "related" | "unrelated";
+
+function classifyOverlap(applicantClasses: number[], conflictClassNums: string): ClassOverlap {
+  if (!conflictClassNums.trim()) return "unrelated";
+  const conflictClasses = conflictClassNums.split(",").map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
+  if (conflictClasses.some(c => applicantClasses.includes(c))) return "same";
+  const allRelated = applicantClasses.flatMap(c => RELATED_CLASSES[c] ?? []);
+  if (conflictClasses.some(c => allRelated.includes(c))) return "related";
+  return "unrelated";
+}
 
 function getRelatedClasses(classes: number[]): number[] {
   const related = new Set<number>();
@@ -108,7 +121,7 @@ async function checkDomains(markName: string): Promise<DomainResult[]> {
 }
 
 async function searchMarcia(markName: string, classes: number[]): Promise<{
-  findings: Array<{ name: string; status: string; classNum: string; holder: string }>;
+  findings: Array<{ name: string; status: string; classNum: string; holder: string; classOverlap: ClassOverlap }>;
   marciaUrl: string;
   totalCount: number;
 }> {
@@ -186,11 +199,13 @@ async function searchMarcia(markName: string, classes: number[]): Promise<{
     const items: Record<string, unknown>[] = resultData.resultPage ?? [];
     const findings = items.slice(0, 15).map((item) => {
       const classNums: number[] = Array.isArray(item.classes) ? (item.classes as number[]) : [];
+      const classNum = classNums.length > 0 ? classNums.join(", ") : "";
       return {
         name: String(item.title ?? ""),
         status: String(item.status ?? ""),
-        classNum: classNums.length > 0 ? classNums.join(", ") : "",
+        classNum,
         holder: Array.isArray(item.owners) ? (item.owners as string[]).join(", ") : String(item.owners ?? ""),
+        classOverlap: classifyOverlap(classes, classNum),
       };
     }).filter(f => f.name);
 
@@ -237,7 +252,8 @@ async function analyzeRegistrability(
   markName: string,
   classes: number[],
   goodsServices: string,
-  language: string
+  language: string,
+  conflictingClassNums: string[],
 ): Promise<{
   flags: RegistrabilityFlag[];
   risk: "low" | "medium" | "high";
@@ -256,6 +272,10 @@ async function analyzeRegistrability(
   const langName = LANGUAGE_NAMES[language] ?? "English";
   const isBilingual = language !== "en";
 
+  const conflictClassContext = conflictingClassNums.length > 0
+    ? `\n\nCONFLICTING MARKS CLASS CONTEXT: Existing marks found in the IMPI registry have the following Nice Classification classes: ${conflictingClassNums.join("; ")}. The applicant is seeking registration in class(es) ${classes.join(", ")}. CRITICAL INSTRUCTION: When evaluating the "relatedness_of_goods" DuPont factor, you MUST explicitly compare these class numbers. If the conflicting marks are in entirely different classes with no economic or commercial overlap with the applicant's class(es), you MUST rate "relatedness_of_goods" as "favors_registration" and explain the class distinction clearly. Do NOT assume relatedness merely because marks share a name — class separation is a key legal protection under LFPPI.`
+    : "";
+
   const bilingualInstruction = isBilingual
     ? `\n\nIMPORTANT BILINGUAL REQUIREMENT: For every free-text field, provide TWO versions:
 - The main field (e.g. "explanation", "reasoning", "riskSummary") MUST be written in ${langName}.
@@ -263,7 +283,7 @@ async function analyzeRegistrability(
 Both versions are required. Do not omit either.`
     : "";
 
-  const prompt = `You are an expert Mexican trademark attorney. Analyze the proposed trademark "${markName}"${classContext}${goodsContext}.${bilingualInstruction}
+  const prompt = `You are an expert Mexican trademark attorney. Analyze the proposed trademark "${markName}"${classContext}${goodsContext}.${conflictClassContext}${bilingualInstruction}
 
 Return a single JSON object with ALL of the following fields. Return ONLY JSON, no markdown.
 
@@ -600,9 +620,14 @@ async function generateConsistentRiskSummary(
   apiKey: string,
   markName: string,
   goodsServices: string,
+  applicantClasses: number[],
   finalRisk: "low" | "medium" | "high",
-  hasExactMarciaMatch: boolean,
+  exactSameClass: boolean,
+  exactRelatedClass: boolean,
+  exactUnrelatedOnly: boolean,
+  relevantFindingsCount: number,
   marciaTotalCount: number,
+  marciaFindings: Array<{ name: string; classNum: string; classOverlap: ClassOverlap }>,
   registrabilityFlags: { category: string; severity: string; explanation: string }[],
   dupontAgainst: number,
   language: string,
@@ -612,11 +637,22 @@ async function generateConsistentRiskSummary(
 
   const riskLabel = finalRisk === "high" ? "Low Chances of registration" : finalRisk === "medium" ? "Medium Chances of registration" : "High Chances of registration";
 
-  const marciaContext = hasExactMarciaMatch
-    ? `An EXACT match was found in the IMPI MARCia registry for "${markName}". This is the single most important obstacle to registration.`
-    : marciaTotalCount > 0
-    ? `${marciaTotalCount} potentially conflicting mark(s) were found in IMPI MARCia, including marks that are phonetically or visually similar.`
-    : `No conflicting marks were found in the IMPI MARCia registry.`;
+  let marciaContext: string;
+  if (exactSameClass) {
+    marciaContext = `An EXACT match was found in the IMPI MARCia registry for "${markName}" in the SAME Nice Classification class as the applicant (class(es) ${applicantClasses.join(", ")}). This is the single most important obstacle to registration.`;
+  } else if (exactRelatedClass) {
+    const unrelatedNames = marciaFindings.filter(f => f.name.toLowerCase().trim() === markName.toLowerCase().trim() && f.classOverlap === "unrelated").map(f => `"${f.name}" (class ${f.classNum})`);
+    marciaContext = `An exact name match was found in the IMPI MARCia registry, but only in a RELATED class — not the applicant's class(es) ${applicantClasses.join(", ")}. This poses a moderate risk.${unrelatedNames.length ? ` Note: there is also an identical mark in an unrelated class (${unrelatedNames.join(", ")}), which does not affect registrability in the applicant's class.` : ""}`;
+  } else if (exactUnrelatedOnly) {
+    const unrelatedFindings = marciaFindings.filter(f => f.name.toLowerCase().trim() === markName.toLowerCase().trim());
+    marciaContext = `An identical mark "${markName}" exists in the IMPI MARCia registry, but it is registered only in completely UNRELATED classes (${unrelatedFindings.map(f => `class ${f.classNum}`).join(", ")}). This does NOT obstruct registration in the applicant's class(es) ${applicantClasses.join(", ")}, since the goods/services operate in entirely different markets.`;
+  } else if (relevantFindingsCount > 0) {
+    marciaContext = `${relevantFindingsCount} potentially conflicting mark(s) were found in IMPI MARCia in the same or related classes as the applicant (class(es) ${applicantClasses.join(", ")}).`;
+  } else if (marciaTotalCount > 0) {
+    marciaContext = `${marciaTotalCount} mark(s) with a similar name were found in IMPI MARCia, but ALL are registered in classes unrelated to the applicant's class(es) ${applicantClasses.join(", ")}. Class differences significantly reduce the risk of confusion.`;
+  } else {
+    marciaContext = `No conflicting marks were found in the IMPI MARCia registry.`;
+  }
 
   const flagContext = registrabilityFlags.length > 0
     ? `Registrability flags raised: ${registrabilityFlags.map(f => f.category).join(", ")}.`
@@ -697,21 +733,42 @@ Deno.serve(async (req: Request) => {
 
     const lang = DISCLAIMERS[language] ? language : "en";
 
-    // Run all analyses in parallel — classification runs alongside the main checks
-    const [webResult, marciaResult, domainResults, registrabilityResult, translationAnalysis, niceClassification] = await Promise.all([
+    // Run MARCia first so conflicting class numbers can inform the registrability analysis
+    const [webResult, marciaResult, domainResults, translationAnalysis, niceClassification] = await Promise.all([
       searchWeb(apiKey, markName.trim(), classes, goodsServices, lang),
       searchMarcia(markName.trim(), classes),
       checkDomains(markName.trim()),
-      analyzeRegistrability(apiKey, markName.trim(), classes, goodsServices, lang),
       analyzeTranslations(apiKey, markName.trim(), classes, goodsServices, lang),
       classifyNiceClasses(apiKey, markName.trim(), goodsServices, lang),
     ]);
 
+    const conflictingClassNums = marciaResult.findings.map(f => f.classNum).filter(Boolean);
+    const registrabilityResult = await analyzeRegistrability(apiKey, markName.trim(), classes, goodsServices, lang, conflictingClassNums);
+
     let risk: "low" | "medium" | "high" = webResult.risk;
-    if (marciaResult.totalCount > 0) {
-      const hasExactMatch = marciaResult.findings.some(f => f.name.toLowerCase().trim() === markName.toLowerCase().trim());
-      if (hasExactMatch || marciaResult.totalCount >= 5) risk = "high";
-      else if (risk === "low") risk = "medium";
+
+    const exactSameClass = marciaResult.findings.some(
+      f => f.name.toLowerCase().trim() === markName.toLowerCase().trim() && f.classOverlap === "same"
+    );
+    const exactRelatedClass = marciaResult.findings.some(
+      f => f.name.toLowerCase().trim() === markName.toLowerCase().trim() && f.classOverlap === "related"
+    );
+    const exactUnrelatedOnly =
+      marciaResult.findings.some(f => f.name.toLowerCase().trim() === markName.toLowerCase().trim()) &&
+      !exactSameClass && !exactRelatedClass;
+
+    const relevantFindings = marciaResult.findings.filter(f => f.classOverlap === "same" || f.classOverlap === "related");
+
+    if (exactSameClass) {
+      risk = "high";
+    } else if (exactRelatedClass) {
+      if (risk === "low") risk = "medium";
+    } else if (exactUnrelatedOnly) {
+      // Identical name exists but only in completely unrelated classes — do not escalate
+    } else if (relevantFindings.length >= 5) {
+      risk = "high";
+    } else if (relevantFindings.length > 0 && risk === "low") {
+      risk = "medium";
     }
     if (registrabilityResult.risk === "high") risk = "high";
     else if (registrabilityResult.risk === "medium" && risk === "low") risk = "medium";
@@ -727,16 +784,18 @@ Deno.serve(async (req: Request) => {
     else if (translationMedRisk && risk === "low") risk = "medium";
 
     // Generate a risk summary that is guaranteed to match the final aggregated risk level
-    const hasExactMarciaMatch = marciaResult.findings.some(
-      f => f.name.toLowerCase().trim() === markName.toLowerCase().trim()
-    );
     const consistentSummary = await generateConsistentRiskSummary(
       apiKey,
       markName.trim(),
       goodsServices,
+      classes,
       risk,
-      hasExactMarciaMatch,
+      exactSameClass,
+      exactRelatedClass,
+      exactUnrelatedOnly,
+      relevantFindings.length,
       marciaResult.totalCount,
+      marciaResult.findings,
       registrabilityResult.flags,
       dupontAgainst,
       lang,
