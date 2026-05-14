@@ -391,9 +391,9 @@ export default function HomePage() {
           <div className="grid md:grid-cols-3 gap-8 relative">
             <div className="hidden md:block absolute top-12 left-1/3 right-1/3 h-0.5 bg-gold-200" />
             {[
-              { num: '01', title: t('process.step1.title'), desc: t('process.step1.desc'), icon: FileText },
-              { num: '02', title: t('process.step2.title'), desc: t('process.step2.desc'), icon: Shield },
-              { num: '03', title: t('process.step3.title'), desc: t('process.step3.desc'), icon: Award },
+              { num: '01', title: t('process.step1.title'), desc: t('process.step1.desc'), icon: FileText, isImpi: false },
+              { num: '02', title: t('process.step2.title'), desc: t('process.step2.desc'), icon: Shield, isImpi: false },
+              { num: '03', title: t('process.step3.title'), desc: t('process.step3.desc'), icon: Award, isImpi: true },
             ].map((step, i) => (
               <div key={i} className="relative text-center">
                 <div className="w-16 h-16 bg-navy-900 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
@@ -402,23 +402,22 @@ export default function HomePage() {
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-3 bg-gold-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
                   {i + 1}
                 </div>
-                <h3 className="text-lg font-bold text-navy-900 mb-3">{step.title}</h3>
+                <h3 className="text-lg font-bold text-navy-900 mb-3 flex items-center justify-center gap-1.5">
+                  {step.title}
+                  {step.isImpi && (
+                    <button
+                      type="button"
+                      onClick={() => setShowImpiModal(true)}
+                      className="flex-shrink-0 w-5 h-5 rounded-full bg-navy-100 hover:bg-navy-200 text-navy-600 flex items-center justify-center transition-colors"
+                      aria-label="More about IMPI system availability"
+                    >
+                      <HelpCircle size={11} />
+                    </button>
+                  )}
+                </h3>
                 <p className="text-gray-600 text-sm leading-relaxed">{step.desc}</p>
               </div>
             ))}
-          </div>
-          <div className="mt-10 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-            <p className="text-amber-800 text-sm flex items-start gap-2">
-              <span className="flex-1">{t('disclaimer.filing')}</span>
-              <button
-                type="button"
-                onClick={() => setShowImpiModal(true)}
-                className="flex-shrink-0 w-5 h-5 rounded-full bg-amber-200 hover:bg-amber-300 text-amber-800 flex items-center justify-center transition-colors mt-0.5"
-                aria-label="More about IMPI system availability"
-              >
-                <HelpCircle size={12} />
-              </button>
-            </p>
           </div>
 
           {/* IMPI availability modal */}
