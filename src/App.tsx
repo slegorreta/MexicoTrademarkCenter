@@ -7,6 +7,7 @@ import Layout from './components/layout/Layout';
 // Public pages
 import HomePage from './pages/HomePage';
 import LandingPage from './pages/LandingPage';
+import AboutPage from './pages/AboutPage';
 import PricingPage from './pages/PricingPage';
 import HowItWorksPage from './pages/HowItWorksPage';
 import FAQPage from './pages/FAQPage';
@@ -83,6 +84,7 @@ function AppRoutes() {
       <Route path="/" element={isAppSubdomain ? <Navigate to="/admin/login" replace /> : <Layout><HomePage /></Layout>} />
 
       {/* Public site */}
+      <Route path="/about" element={<Layout><AboutPage /></Layout>} />
       <Route path="/pricing" element={<Layout><PricingPage /></Layout>} />
       <Route path="/how-it-works" element={<Layout><HowItWorksPage /></Layout>} />
       <Route path="/faq" element={<Layout><FAQPage /></Layout>} />
