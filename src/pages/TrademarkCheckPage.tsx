@@ -757,50 +757,9 @@ export default function TrademarkCheckPage() {
 
       {/* ── Page header ──────────────────────────────────────────────────────── */}
       <section className="bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800 text-white print-hide">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-14">
-          <div className="flex flex-col sm:flex-row gap-6 sm:gap-10">
-            {/* Step 1 block */}
-            <div className="flex items-start gap-4 flex-1">
-              <div className="flex-shrink-0 mt-1">
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold bg-white/15 text-gold-300 border border-gold-400/30 rounded-full px-2.5 py-1 whitespace-nowrap">
-                  Step 1
-                </span>
-              </div>
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold leading-tight mb-2">{tr('pageTitle')}</h1>
-                <p className="text-sm text-gray-300 leading-relaxed max-w-sm">{tr('pageSubtitle')}</p>
-              </div>
-            </div>
-
-            {/* Divider */}
-            <div className="hidden sm:block w-px bg-white/10 self-stretch" />
-            <div className="block sm:hidden h-px bg-white/10 w-full" />
-
-            {/* Step 2 block */}
-            <div className="flex items-start gap-4 flex-1">
-              <div className="flex-shrink-0 mt-1">
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold bg-white/15 text-gold-300 border border-gold-400/30 rounded-full px-2.5 py-1 whitespace-nowrap">
-                  Step 2
-                </span>
-              </div>
-              <div>
-                <p className="text-base font-semibold text-white mb-1.5">{tr('readyToFile')}</p>
-                <div className="flex items-center gap-2 text-sm text-gray-400">
-                  <Sparkles size={13} className="text-gold-400 flex-shrink-0" />
-                  <span>{tr('noName')}</span>
-                  <Link to="/trademark-ideas" className="text-gold-300 hover:text-gold-200 font-medium underline underline-offset-2 transition-colors">
-                    {tr('tryAI')}
-                  </Link>
-                </div>
-                <Link
-                  to="/apply"
-                  className="inline-flex items-center gap-2 mt-3 bg-gold-500 hover:bg-gold-400 text-white font-semibold px-4 py-2 rounded-xl transition-colors shadow text-xs whitespace-nowrap"
-                >
-                  {tr('startFiling')} <ArrowRight size={13} />
-                </Link>
-              </div>
-            </div>
-          </div>
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-12">
+          <h1 className="text-2xl sm:text-3xl font-bold leading-tight mb-2">{tr('pageTitle')}</h1>
+          <p className="text-sm text-gray-300 leading-relaxed max-w-xl">{tr('pageSubtitle')}</p>
         </div>
       </section>
 

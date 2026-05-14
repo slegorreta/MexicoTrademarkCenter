@@ -139,6 +139,13 @@ export default function HomePage() {
 
             {/* Primary CTAs */}
             <div className="flex flex-col gap-1 mb-4 max-w-md">
+              {/* Step 1 badge */}
+              <div className="mb-1">
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold bg-white/10 text-gold-300 border border-gold-400/30 rounded-full px-2.5 py-1 whitespace-nowrap">
+                  Step 1
+                </span>
+              </div>
+
               {/* CTA 1 — Check availability */}
               <Link
                 to="/trademark-check"
@@ -154,6 +161,13 @@ export default function HomePage() {
               {/* Sequence arrow */}
               <div className="flex justify-center py-0.5">
                 <ArrowDown size={18} className="text-gold-400/60" />
+              </div>
+
+              {/* Step 2 badge */}
+              <div className="mb-1">
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold bg-white/10 text-gold-300 border border-gold-400/30 rounded-full px-2.5 py-1 whitespace-nowrap">
+                  Step 2
+                </span>
               </div>
 
               {/* CTA 2 — Register now */}

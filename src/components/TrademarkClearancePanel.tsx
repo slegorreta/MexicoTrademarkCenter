@@ -13,13 +13,14 @@ import {
 
 interface MarciaFinding { name: string; status: string; classNum: string; holder: string; }
 interface DomainResult { domain: string; available: boolean | null; status: 'available' | 'taken' | 'unknown'; }
-export interface RegistrabilityFlag { category: string; severity: 'low' | 'medium' | 'high'; explanation: string; explanation_en?: string; }
-export interface DupontFactor { factor: string; verdict: 'favors_registration' | 'neutral' | 'against_registration'; reasoning: string; reasoning_en?: string; }
-export interface DistinctivenessAssessment { tier: 'generic' | 'descriptive' | 'suggestive' | 'arbitrary' | 'fanciful'; score: number; explanation: string; explanation_en?: string; }
+export interface RegistrabilityFlag { category: string; severity: 'low' | 'medium' | 'high'; explanation: string; explanation_en?: string; explanation_user?: string; }
+export interface DupontFactor { factor: string; verdict: 'favors_registration' | 'neutral' | 'against_registration'; reasoning: string; reasoning_en?: string; reasoning_user?: string; }
+export interface DistinctivenessAssessment { tier: 'generic' | 'descriptive' | 'suggestive' | 'arbitrary' | 'fanciful'; score: number; explanation: string; explanation_en?: string; explanation_user?: string; }
 export interface TranslationFlag { languageCode: string; languageName: string; translatedForm: string; risk: 'none' | 'low' | 'medium' | 'high'; issueCategory: string | null; details: string; details_en: string; }
 
 interface ClearanceResult {
   risk: 'low' | 'medium' | 'high';
+  riskColor?: 'VERDE' | 'AMARILLO' | 'NARANJA' | 'ROJO';
   webFindings: string[];
   marciaFindings: MarciaFinding[];
   marciaTotalCount?: number;
@@ -31,6 +32,7 @@ interface ClearanceResult {
   distinctiveness?: DistinctivenessAssessment;
   riskSummary?: string;
   riskSummary_en?: string;
+  riskSummary_user?: string;
   translationAnalysis?: TranslationFlag[];
   searchLanguage?: string;
   disclaimer: string;
@@ -74,7 +76,10 @@ const DUPONT_LABELS: Record<string, string> = {
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
-  generic_descriptive: 'Generic or Descriptive', functional_shape: 'Functional Shape',
+  generic: 'Generic (Art. 173 Fr. I LFPPI)',
+  descriptive: 'Descriptive (Art. 173 Fr. II LFPPI)',
+  generic_descriptive: 'Generic or Descriptive',
+  functional_shape: 'Functional Shape',
   deceptive: 'Deceptive or Misleading', official_emblems: 'Official Emblems / Flags',
   personal_identity: 'Personal Identity Without Consent', confusingly_similar: 'Confusingly Similar to Existing Mark',
   famous_mark: 'Famous or Notorious Mark', protected_characters: 'Protected Characters / Titles',
@@ -783,7 +788,17 @@ export default function TrademarkClearancePanel({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className={`text-xs font-bold ${cfg.text}`}>{tr('clearanceAnalysis', lang)}:</span>
-            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${cfg.badge}`}>{cfg.label[lang]}</span>
+            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${cfg.badge}`}>{cfg.label[lang as keyof typeof cfg.label] ?? cfg.label['en']}</span>
+            {result.riskColor && (
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                result.riskColor === 'VERDE'    ? 'bg-emerald-100 text-emerald-700 border-emerald-300' :
+                result.riskColor === 'AMARILLO' ? 'bg-amber-100 text-amber-700 border-amber-300' :
+                result.riskColor === 'NARANJA'  ? 'bg-orange-100 text-orange-700 border-orange-300' :
+                                                  'bg-red-100 text-red-700 border-red-300'
+              }`} title="Nivel de riesgo según el Playbook de Marcas México">
+                {result.riskColor}
+              </span>
+            )}
           </div>
         </div>
         <button
@@ -821,7 +836,16 @@ export default function TrademarkClearancePanel({
             <FileSearch size={12} className={cfg.text} />
             <span className={`text-xs font-semibold ${cfg.text}`}>{tr('riskSummaryTitle', lang)}</span>
           </div>
-          <p className="text-xs text-gray-700 leading-relaxed">{result.riskSummary}</p>
+          {/* Show user-language version if available, fall back to Spanish (canonical), with English below */}
+          <p className="text-xs text-gray-700 leading-relaxed">
+            {result.riskSummary_user ?? (lang === 'en' ? result.riskSummary_en : result.riskSummary) ?? result.riskSummary}
+          </p>
+          {/* Show Spanish canonical below for non-Spanish users so legal terminology is visible */}
+          {lang !== 'es' && result.riskSummary && (
+            <p className="text-[11px] text-gray-500 leading-relaxed mt-2 pt-2 border-t border-gray-200/60 italic">
+              <span className="not-italic font-semibold text-gray-400 text-[10px]">ES: </span>{result.riskSummary}
+            </p>
+          )}
           <p className="text-[10px] text-gray-400 mt-1.5 flex items-center gap-1">
             <Info size={9} className="flex-shrink-0" />{tr('aiNote', lang)}
           </p>
@@ -1096,7 +1120,14 @@ export default function TrademarkClearancePanel({
                             <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide ${sb}`}>{f.severity}</span>
                             <span className="text-xs font-semibold">{CATEGORY_LABELS[f.category] ?? f.category}</span>
                           </div>
-                          <p className="text-xs leading-relaxed opacity-90">{f.explanation}</p>
+                          <p className="text-xs leading-relaxed opacity-90">
+                            {f.explanation_user ?? (lang === 'en' ? f.explanation_en : f.explanation) ?? f.explanation}
+                          </p>
+                          {lang !== 'es' && f.explanation && (
+                            <p className="text-[11px] text-gray-400 mt-1 italic">
+                              <span className="not-italic font-semibold text-[10px]">ES: </span>{f.explanation}
+                            </p>
+                          )}
                         </div>
                       );
                     })}
@@ -1138,7 +1169,14 @@ export default function TrademarkClearancePanel({
                             <span className="text-[11px] font-semibold text-gray-700 flex-1 min-w-0 leading-tight">{DUPONT_LABELS[f.factor] ?? f.factor}</span>
                             <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide flex-shrink-0 ${badge}`}>{label}</span>
                           </div>
-                          <p className="text-[11px] text-gray-500 leading-relaxed">{f.reasoning}</p>
+                          <p className="text-[11px] text-gray-500 leading-relaxed">
+                            {f.reasoning_user ?? (lang === 'en' ? f.reasoning_en : f.reasoning) ?? f.reasoning}
+                          </p>
+                          {lang !== 'es' && f.reasoning && (
+                            <p className="text-[10px] text-gray-400 mt-1 italic">
+                              <span className="not-italic font-semibold text-[9px]">ES: </span>{f.reasoning}
+                            </p>
+                          )}
                         </div>
                       );
                     })}
@@ -1173,7 +1211,14 @@ export default function TrademarkClearancePanel({
                   );
                 })}
               </div>
-              <p className="text-xs text-gray-600 leading-relaxed">{result.distinctiveness.explanation}</p>
+              <p className="text-xs text-gray-600 leading-relaxed">
+                {result.distinctiveness.explanation_user ?? (lang === 'en' ? result.distinctiveness.explanation_en : result.distinctiveness.explanation) ?? result.distinctiveness.explanation}
+              </p>
+              {lang !== 'es' && result.distinctiveness.explanation && (
+                <p className="text-[11px] text-gray-400 leading-relaxed mt-1.5 italic">
+                  <span className="not-italic font-semibold text-[10px]">ES: </span>{result.distinctiveness.explanation}
+                </p>
+              )}
               <div className="mt-2 flex items-center gap-2">
                 <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                   <div className={`h-full rounded-full ${TIER_COLORS[result.distinctiveness.tier] ?? 'bg-gray-400'}`}

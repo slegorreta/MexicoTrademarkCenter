@@ -221,6 +221,7 @@ interface RegistrabilityFlag {
   severity: "low" | "medium" | "high";
   explanation: string;
   explanation_en?: string;
+  explanation_user?: string;
 }
 
 interface DupontFactor {
@@ -228,6 +229,7 @@ interface DupontFactor {
   verdict: "favors_registration" | "neutral" | "against_registration";
   reasoning: string;
   reasoning_en?: string;
+  reasoning_user?: string;
 }
 
 interface DistinctivenessAssessment {
@@ -235,6 +237,7 @@ interface DistinctivenessAssessment {
   score: number;
   explanation: string;
   explanation_en?: string;
+  explanation_user?: string;
 }
 
 export interface TranslationFlag {
@@ -257,73 +260,126 @@ async function analyzeRegistrability(
 ): Promise<{
   flags: RegistrabilityFlag[];
   risk: "low" | "medium" | "high";
+  riskColor: "VERDE" | "AMARILLO" | "NARANJA" | "ROJO";
   dupont: DupontFactor[];
   distinctiveness: DistinctivenessAssessment;
   riskSummary: string;
   riskSummary_en: string;
 }> {
   const classContext = classes.length > 0
-    ? ` applied for goods/services in Nice Classification class(es) ${classes.join(", ")}`
+    ? ` solicitada para productos/servicios en la(s) clase(s) ${classes.join(", ")} de la Clasificación Niza`
     : "";
   const goodsContext = goodsServices
-    ? ` covering the following goods/services: "${goodsServices}"`
+    ? ` que comprende los siguientes productos/servicios: "${goodsServices}"`
     : "";
 
   const langName = LANGUAGE_NAMES[language] ?? "English";
-  const isBilingual = language !== "en";
+  const isUserLang = language !== "es";
+  const isEnglish = language === "en";
 
   const conflictClassContext = conflictingClassNums.length > 0
-    ? `\n\nCONFLICTING MARKS CLASS CONTEXT: Existing marks found in the IMPI registry have the following Nice Classification classes: ${conflictingClassNums.join("; ")}. The applicant is seeking registration in class(es) ${classes.join(", ")}. CRITICAL INSTRUCTION: When evaluating the "relatedness_of_goods" DuPont factor, you MUST explicitly compare these class numbers. If the conflicting marks are in entirely different classes with no economic or commercial overlap with the applicant's class(es), you MUST rate "relatedness_of_goods" as "favors_registration" and explain the class distinction clearly. Do NOT assume relatedness merely because marks share a name — class separation is a key legal protection under LFPPI.`
+    ? `\n\nCONTEXTO DE CLASES EN CONFLICTO: Se encontraron marcas existentes en el registro IMPI con las siguientes clases Niza: ${conflictingClassNums.join("; ")}. El solicitante busca registro en la(s) clase(s) ${classes.join(", ")}. INSTRUCCIÓN CRÍTICA: Al evaluar el factor DuPont "relatedness_of_goods", DEBES comparar explícitamente estos números de clase. Si las marcas en conflicto están en clases completamente diferentes sin superposición económica o comercial con la(s) clase(s) del solicitante, DEBES calificar "relatedness_of_goods" como "favors_registration" y explicar claramente la distinción de clases. NO asumas relación solo porque las marcas comparten un nombre — la separación de clases es una protección legal clave bajo la LFPPI.`
     : "";
 
-  const bilingualInstruction = isBilingual
-    ? `\n\nIMPORTANT BILINGUAL REQUIREMENT: For every free-text field, provide TWO versions:
-- The main field (e.g. "explanation", "reasoning", "riskSummary") MUST be written in ${langName}.
-- An additional "_en" field (e.g. "explanation_en", "reasoning_en", "riskSummary_en") MUST contain the same content translated into English.
-Both versions are required. Do not omit either.`
+  const userLangInstruction = isUserLang
+    ? `\n\nREQUISITO DE TRADUCCIÓN: Para cada campo de texto libre, proporciona TRES versiones:
+- El campo principal (p.ej. "explanation", "reasoning") en ESPAÑOL — idioma canónico del análisis legal mexicano.
+- Un campo "_en" (p.ej. "explanation_en", "reasoning_en") con la misma información traducida al inglés.
+- Un campo "_user" (p.ej. "explanation_user", "reasoning_user") con la misma información traducida al ${langName}. Cuando uses terminología legal española que no tenga traducción directa (p.ej. "distintividad adquirida", "signos genéricos", "LFPPI"), mantenla en español dentro del texto del idioma ${langName} seguida de una breve aclaración entre paréntesis.
+Los tres campos son obligatorios.`
+    : isEnglish
+    ? `\n\nREQUISITO DE TRADUCCIÓN: Para cada campo de texto libre, proporciona DOS versiones:
+- El campo principal (p.ej. "explanation", "reasoning") en ESPAÑOL.
+- Un campo "_en" (p.ej. "explanation_en", "reasoning_en") en inglés.`
     : "";
 
-  const prompt = `You are an expert Mexican trademark attorney. Analyze the proposed trademark "${markName}"${classContext}${goodsContext}.${conflictClassContext}${bilingualInstruction}
+  const prompt = `Eres un abogado experto en marcas mexicanas. Analiza la marca propuesta "${markName}"${classContext}${goodsContext}.${conflictClassContext}${userLangInstruction}
 
-Return a single JSON object with ALL of the following fields. Return ONLY JSON, no markdown.
+INSTRUCCIÓN FUNDAMENTAL: Todo tu razonamiento jurídico debe realizarse en español, ya que el registro se tramitará ante el IMPI bajo la Ley Federal de Protección a la Propiedad Industrial (LFPPI). Devuelve ÚNICAMENTE JSON válido, sin markdown.
 
-PART 1 — ABSOLUTE GROUNDS (LFPPI)
-Only include flags that genuinely apply from these 13 categories:
-1. "generic_descriptive", 2. "functional_shape", 3. "deceptive", 4. "official_emblems",
-5. "personal_identity", 6. "confusingly_similar", 7. "famous_mark", 8. "protected_characters",
-9. "geographic_indication", 10. "immoral_offensive", 11. "isolated_color",
-12. "non_distinctive_nontrad", 13. "bad_faith"
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PASO OBLIGATORIO PREVIO — ANÁLISIS SEMÁNTICO
+Antes de clasificar nada, responde internamente:
+1. ¿Qué significa literalmente la marca "${markName}" en español? Si está en otro idioma, ¿cuál es su traducción al español y qué connota?
+2. ¿Qué relación semántica tiene ese significado con los productos/servicios solicitados en la clase indicada?
+3. ¿Quién es el consumidor típico de esos productos/servicios? (p.ej. consumidor general, comprador industrial especializado, profesional de salud)
+Este análisis semántico informará directamente la clasificación de distintividad y los motivos absolutos.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-PART 2 — DISTINCTIVENESS
-Tier: "generic" | "descriptive" | "suggestive" | "arbitrary" | "fanciful"
-Score: 1=generic to 5=fanciful
+PARTE 1 — ÁRBOL DE DECISIÓN DE DISTINTIVIDAD (LFPPI Art. 173)
+Aplica este árbol en orden secuencial y detente en el primer nivel que aplique:
 
-PART 3 — ALL 13 DUPONT FACTORS
-Factor names (use exactly):
+NIVEL A — GENÉRICO (Art. 173 Fr. I LFPPI)
+Pregunta: ¿Constituye la marca el nombre común o usual del propio producto o servicio en la clase solicitada? ¿Lo usaría cualquier competidor para denominar su producto sin apellido adicional?
+→ Si SÍ: tier="generic", score=1, flag category="generic", severity="high", riskColor="ROJO"
+→ Si NO: continúa al Nivel B
+
+NIVEL B — DESCRIPTIVO (Art. 173 Fr. II LFPPI) — PRUEBA DE INMEDIATEZ
+Pregunta: ¿Cuando el consumidor típico de la clase encuentra la marca, le comunica DIRECTA e INMEDIATAMENTE (sin esfuerzo mental ni paso intermedio) una característica, calidad, cantidad, finalidad, valor u origen geográfico de los productos concretos de la clase?
+CRITERIO CLAVE: Si se requiere imaginación, razonamiento o percepción adicional para conectar la marca con los productos, NO es descriptiva.
+EJEMPLO CORRECTO: "CREMOSO" para quesos de la clase 29 → descriptivo (comunica inmediatamente la textura).
+EJEMPLO INCORRECTO como descriptivo: "GALLO AZUL" para productos químicos de la clase 1 → NO describe ningún atributo de los químicos; es una combinación de palabras ordinarias sin conexión semántica con la clase → es ARBITRARIA.
+→ Si SÍ (inmediato y directo): tier="descriptive", score=2, flag category="descriptive", severity="medium", riskColor="NARANJA"
+→ Si NO: continúa al Nivel C
+
+NIVEL C — SUGESTIVO
+Pregunta: ¿Requiere la marca imaginación, reflexión o percepción para evocar una cualidad de los productos, sin describirla directamente?
+→ Si SÍ: tier="suggestive", score=3, sin flag de motivo absoluto, riskColor="AMARILLO"
+→ Si NO: continúa al Nivel D
+
+NIVEL D — ARBITRARIO
+Pregunta: ¿Es la marca una palabra o combinación de palabras con significado conocido en algún idioma, aplicada a productos de la clase solicitada con los que NO guarda relación semántica alguna (como APPLE para computadoras, o GALLO AZUL para productos químicos)?
+→ Si SÍ: tier="arbitrary", score=4, sin flag de motivo absoluto, riskColor="VERDE"
+→ Si NO: continúa al Nivel E
+
+NIVEL E — FANTASÍA/FANCIFUL
+Pregunta: ¿Es la marca un término inventado sin significado en ningún idioma?
+→ Si SÍ: tier="fanciful", score=5, sin flag de motivo absoluto, riskColor="VERDE"
+
+PARTE 2 — MOTIVOS ABSOLUTOS APLICABLES (LFPPI Art. 173)
+Solo incluye flags que genuinamente apliquen. Categorías disponibles:
+"generic" (Fr. I), "descriptive" (Fr. II), "functional_shape" (Fr. IV), "deceptive" (Fr. V),
+"official_emblems" (Fr. VI), "personal_identity" (Fr. VII), "confusingly_similar" (Fr. VIII),
+"famous_mark" (Fr. IX), "protected_characters" (Fr. X), "geographic_indication" (Fr. XI),
+"immoral_offensive" (Fr. XII), "isolated_color" (Fr. XIII), "non_distinctive_nontrad" (Fr. XIV), "bad_faith" (Fr. XV)
+NOTA: "generic" y "descriptive" son categorías independientes; nunca las combines.
+
+PARTE 3 — PERFIL DEL CONSUMIDOR Y CAMPO SATURADO
+- Identifica el perfil del consumidor típico para la clase solicitada y su nivel de atención (alto=comprador industrial/profesional; medio=consumidor general; bajo=compra impulsiva).
+- Si hay múltiples marcas similares en la misma clase (campo saturado), la protección de cada marca individual es más estrecha (doctrina del campo saturado, LFPPI Art. 173 Fr. VIII interpretado sistemáticamente). Refléjalo en el factor DuPont "number_of_similar_marks".
+
+PARTE 4 — LOS 13 FACTORES DUPONT
+Nombres de factores (usar exactamente):
 "similarity_of_marks", "relatedness_of_goods", "channels_of_trade", "purchasing_conditions",
 "strength_of_cited_mark", "actual_confusion", "number_of_similar_marks", "length_of_use",
 "variety_of_goods", "market_interface", "right_to_exclude", "extent_of_confusion", "other_factors"
-Each factor verdict: "favors_registration" | "neutral" | "against_registration"
+Veredicto por factor: "favors_registration" | "neutral" | "against_registration"
+IMPORTANTE: "purchasing_conditions" debe reflejar el nivel de atención del consumidor típico identificado en la Parte 3.
 
-PART 4 — PLAIN-LANGUAGE RISK SUMMARY
-3-4 sentences: (1) registrability outlook, (2) key risks, (3) recommended next steps.
-Written for a business owner, not a lawyer.
+PARTE 5 — COLOR DE RIESGO PLAYBOOK
+Asigna riskColor según la combinación de distintividad + conflictos encontrados:
+- "VERDE": marca arbitraria o de fantasía, sin conflictos directos en la misma clase
+- "AMARILLO": marca sugestiva, o arbitraria/fantasía con conflictos en clases relacionadas
+- "NARANJA": marca descriptiva sin distintividad adquirida demostrada, o sugestiva con conflictos directos
+- "ROJO": marca genérica, o cualquier marca con conflicto exacto en la misma clase
+Si hay conflictos graves (marcas idénticas en la misma clase), escala el riskColor a "ROJO" independientemente de la distintividad.
 
-Return exactly:
+Devuelve exactamente:
 {
-  "flags": [{"category": "...", "severity": "low"|"medium"|"high", "explanation": "..."${isBilingual ? ', "explanation_en": "..."' : ""}}],
+  "flags": [{"category": "...", "severity": "low"|"medium"|"high", "explanation": "...(en español)"${isUserLang ? ', "explanation_en": "...", "explanation_user": "..."' : isEnglish ? ', "explanation_en": "..."' : ""}}],
   "risk": "low"|"medium"|"high",
-  "distinctiveness": {"tier": "...", "score": 1-5, "explanation": "..."${isBilingual ? ', "explanation_en": "..."' : ""}},
-  "dupont": [{"factor": "...", "verdict": "...", "reasoning": "..."${isBilingual ? ', "reasoning_en": "..."' : ""}}],
-  "riskSummary": "..."${isBilingual ? ',\n  "riskSummary_en": "..."' : ""}
+  "riskColor": "VERDE"|"AMARILLO"|"NARANJA"|"ROJO",
+  "distinctiveness": {"tier": "...", "score": 1-5, "explanation": "...(en español)"${isUserLang ? ', "explanation_en": "...", "explanation_user": "..."' : isEnglish ? ', "explanation_en": "..."' : ""}},
+  "dupont": [{"factor": "...", "verdict": "...", "reasoning": "...(en español)"${isUserLang ? ', "reasoning_en": "...", "reasoning_user": "..."' : isEnglish ? ', "reasoning_en": "..."' : ""}}],
+  "riskSummary": "...(en español)"${isUserLang ? ',\n  "riskSummary_en": "...",\n  "riskSummary_user": "..."' : isEnglish ? ',\n  "riskSummary_en": "..."' : ""}
 }`;
 
-  const defaultDistinctiveness: DistinctivenessAssessment = { tier: "arbitrary", score: 4, explanation: "", explanation_en: "" };
+  const defaultDistinctiveness: DistinctivenessAssessment = { tier: "arbitrary", score: 4, explanation: "", explanation_en: "", explanation_user: "" };
   const defaultDupont: DupontFactor[] = [
     "similarity_of_marks", "relatedness_of_goods", "channels_of_trade", "purchasing_conditions",
     "strength_of_cited_mark", "actual_confusion", "number_of_similar_marks", "length_of_use",
     "variety_of_goods", "market_interface", "right_to_exclude", "extent_of_confusion", "other_factors"
-  ].map(factor => ({ factor, verdict: "neutral" as const, reasoning: "", reasoning_en: "" }));
+  ].map(factor => ({ factor, verdict: "neutral" as const, reasoning: "", reasoning_en: "", reasoning_user: "" }));
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -332,28 +388,31 @@ Return exactly:
       body: JSON.stringify({
         model: "gpt-4o",
         messages: [
-          { role: "system", content: "You are a Mexican trademark law expert. Return only valid JSON with no markdown wrapping." },
+          { role: "system", content: "Eres un experto en derecho de marcas mexicano. Devuelve únicamente JSON válido sin markdown." },
           { role: "user", content: prompt },
         ],
         temperature: 0.1,
-        max_tokens: isBilingual ? 5000 : 3000,
+        max_tokens: isUserLang ? 6000 : 4000,
         response_format: { type: "json_object" },
       }),
     });
 
     if (!response.ok) {
-      return { flags: [], risk: "low", dupont: defaultDupont, distinctiveness: defaultDistinctiveness, riskSummary: "", riskSummary_en: "" };
+      return { flags: [], risk: "low", riskColor: "VERDE", dupont: defaultDupont, distinctiveness: defaultDistinctiveness, riskSummary: "", riskSummary_en: "" };
     }
 
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content;
-    if (!content) return { flags: [], risk: "low", dupont: defaultDupont, distinctiveness: defaultDistinctiveness, riskSummary: "", riskSummary_en: "" };
+    if (!content) return { flags: [], risk: "low", riskColor: "VERDE", dupont: defaultDupont, distinctiveness: defaultDistinctiveness, riskSummary: "", riskSummary_en: "" };
 
     const parsed = JSON.parse(content);
     const flags: RegistrabilityFlag[] = (parsed.flags ?? []).filter(
       (f: Record<string, unknown>) => f.category && f.severity && f.explanation
     );
     const risk: "low" | "medium" | "high" = parsed.risk ?? (flags.length > 0 ? "medium" : "low");
+    const riskColor: "VERDE" | "AMARILLO" | "NARANJA" | "ROJO" = (
+      ["VERDE", "AMARILLO", "NARANJA", "ROJO"].includes(parsed.riskColor) ? parsed.riskColor : "VERDE"
+    ) as "VERDE" | "AMARILLO" | "NARANJA" | "ROJO";
     const dupont: DupontFactor[] = (parsed.dupont ?? defaultDupont).filter(
       (f: Record<string, unknown>) => f.factor && f.verdict && f.reasoning
     );
@@ -363,10 +422,12 @@ Return exactly:
       score: typeof rawD.score === "number" ? rawD.score : 4,
       explanation: rawD.explanation ?? "",
       explanation_en: rawD.explanation_en ?? rawD.explanation ?? "",
+      explanation_user: rawD.explanation_user ?? rawD.explanation_en ?? rawD.explanation ?? "",
     };
     return {
       flags,
       risk,
+      riskColor,
       dupont,
       distinctiveness,
       riskSummary: parsed.riskSummary ?? "",
@@ -374,7 +435,7 @@ Return exactly:
     };
   } catch (err) {
     console.error("Registrability analysis error:", err);
-    return { flags: [], risk: "low", dupont: defaultDupont, distinctiveness: defaultDistinctiveness, riskSummary: "", riskSummary_en: "" };
+    return { flags: [], risk: "low", riskColor: "VERDE", dupont: defaultDupont, distinctiveness: defaultDistinctiveness, riskSummary: "", riskSummary_en: "" };
   }
 }
 
@@ -622,6 +683,7 @@ async function generateConsistentRiskSummary(
   goodsServices: string,
   applicantClasses: number[],
   finalRisk: "low" | "medium" | "high",
+  finalRiskColor: "VERDE" | "AMARILLO" | "NARANJA" | "ROJO",
   exactSameClass: boolean,
   exactRelatedClass: boolean,
   exactUnrelatedOnly: boolean,
@@ -631,58 +693,62 @@ async function generateConsistentRiskSummary(
   registrabilityFlags: { category: string; severity: string; explanation: string }[],
   dupontAgainst: number,
   language: string,
-): Promise<{ riskSummary: string; riskSummary_en: string }> {
+): Promise<{ riskSummary: string; riskSummary_en: string; riskSummary_user?: string }> {
   const langName = LANGUAGE_NAMES[language] ?? "English";
-  const isBilingual = language !== "en";
+  const isUserLang = language !== "es";
+  const isEnglish = language === "en";
 
-  const riskLabel = finalRisk === "high" ? "Low Chances of registration" : finalRisk === "medium" ? "Medium Chances of registration" : "High Chances of registration";
+  const riskLabelEs = finalRisk === "high" ? "Pocas Probabilidades de registro" : finalRisk === "medium" ? "Probabilidades Medias de registro" : "Altas Probabilidades de registro";
 
   let marciaContext: string;
   if (exactSameClass) {
-    marciaContext = `An EXACT match was found in the IMPI MARCia registry for "${markName}" in the SAME Nice Classification class as the applicant (class(es) ${applicantClasses.join(", ")}). This is the single most important obstacle to registration.`;
+    marciaContext = `Se encontró una coincidencia EXACTA en el registro IMPI MARCia para "${markName}" en la MISMA clase Niza que el solicitante (clase(s) ${applicantClasses.join(", ")}). Este es el obstáculo más importante para el registro.`;
   } else if (exactRelatedClass) {
-    const unrelatedNames = marciaFindings.filter(f => f.name.toLowerCase().trim() === markName.toLowerCase().trim() && f.classOverlap === "unrelated").map(f => `"${f.name}" (class ${f.classNum})`);
-    marciaContext = `An exact name match was found in the IMPI MARCia registry, but only in a RELATED class — not the applicant's class(es) ${applicantClasses.join(", ")}. This poses a moderate risk.${unrelatedNames.length ? ` Note: there is also an identical mark in an unrelated class (${unrelatedNames.join(", ")}), which does not affect registrability in the applicant's class.` : ""}`;
+    const unrelatedNames = marciaFindings.filter(f => f.name.toLowerCase().trim() === markName.toLowerCase().trim() && f.classOverlap === "unrelated").map(f => `"${f.name}" (clase ${f.classNum})`);
+    marciaContext = `Se encontró una coincidencia exacta de nombre en el registro IMPI MARCia, pero únicamente en una clase RELACIONADA, no en la(s) clase(s) del solicitante (${applicantClasses.join(", ")}). Esto representa un riesgo moderado.${unrelatedNames.length ? ` Nota: también existe una marca idéntica en una clase no relacionada (${unrelatedNames.join(", ")}), lo cual no afecta la registrabilidad en la clase del solicitante.` : ""}`;
   } else if (exactUnrelatedOnly) {
     const unrelatedFindings = marciaFindings.filter(f => f.name.toLowerCase().trim() === markName.toLowerCase().trim());
-    marciaContext = `An identical mark "${markName}" exists in the IMPI MARCia registry, but it is registered only in completely UNRELATED classes (${unrelatedFindings.map(f => `class ${f.classNum}`).join(", ")}). This does NOT obstruct registration in the applicant's class(es) ${applicantClasses.join(", ")}, since the goods/services operate in entirely different markets.`;
+    marciaContext = `Existe una marca idéntica "${markName}" en el registro IMPI MARCia, pero registrada únicamente en clases completamente NO RELACIONADAS (${unrelatedFindings.map(f => `clase ${f.classNum}`).join(", ")}). Esto NO obstruye el registro en la(s) clase(s) del solicitante (${applicantClasses.join(", ")}), ya que los productos/servicios operan en mercados totalmente distintos.`;
   } else if (relevantFindingsCount > 0) {
-    marciaContext = `${relevantFindingsCount} potentially conflicting mark(s) were found in IMPI MARCia in the same or related classes as the applicant (class(es) ${applicantClasses.join(", ")}).`;
+    marciaContext = `Se encontraron ${relevantFindingsCount} marca(s) potencialmente conflictivas en IMPI MARCia en la misma clase o clases relacionadas a la del solicitante (clase(s) ${applicantClasses.join(", ")}).`;
   } else if (marciaTotalCount > 0) {
-    marciaContext = `${marciaTotalCount} mark(s) with a similar name were found in IMPI MARCia, but ALL are registered in classes unrelated to the applicant's class(es) ${applicantClasses.join(", ")}. Class differences significantly reduce the risk of confusion.`;
+    marciaContext = `Se encontraron ${marciaTotalCount} marca(s) con nombre similar en IMPI MARCia, pero TODAS están registradas en clases no relacionadas con la(s) clase(s) del solicitante (${applicantClasses.join(", ")}). La diferencia de clases reduce significativamente el riesgo de confusión.`;
   } else {
-    marciaContext = `No conflicting marks were found in the IMPI MARCia registry.`;
+    marciaContext = `No se encontraron marcas conflictivas en el registro IMPI MARCia.`;
   }
 
   const flagContext = registrabilityFlags.length > 0
-    ? `Registrability flags raised: ${registrabilityFlags.map(f => f.category).join(", ")}.`
-    : "No absolute grounds for refusal were flagged.";
+    ? `Motivos absolutos identificados: ${registrabilityFlags.map(f => f.category).join(", ")}.`
+    : "No se identificaron motivos absolutos de rechazo.";
 
   const dupontContext = dupontAgainst > 0
-    ? `${dupontAgainst} of 13 DuPont factors weigh against registration.`
-    : "No DuPont factors weigh against registration.";
+    ? `${dupontAgainst} de los 13 factores DuPont pesan en contra del registro.`
+    : "Ningún factor DuPont pesa en contra del registro.";
 
-  const bilingualInstruction = isBilingual
-    ? `Write the summary in ${langName}. Also provide an "riskSummary_en" field with the same text translated into English.`
-    : `Write the summary in English. The "riskSummary_en" field should be identical to "riskSummary".`;
+  const translationInstruction = isUserLang
+    ? `Escribe el resumen principal ("riskSummary") en ESPAÑOL. Proporciona también "riskSummary_en" en inglés y "riskSummary_user" en ${langName}. En la versión ${langName}, cuando uses terminología legal española sin equivalente directo (p.ej. "marcas notorias", "LFPPI", "clases Niza"), mantenla en español entre paréntesis con una breve aclaración.`
+    : isEnglish
+    ? `Escribe el resumen principal ("riskSummary") en ESPAÑOL. Proporciona también "riskSummary_en" en inglés.`
+    : `Escribe el resumen en ESPAÑOL únicamente. El campo "riskSummary_en" debe ser idéntico a "riskSummary".`;
 
-  const prompt = `You are an expert Mexican trademark attorney writing a plain-language risk summary for a business owner.
+  const prompt = `Eres un abogado experto en marcas mexicanas redactando un resumen de riesgo en lenguaje claro para un empresario.
 
-Trademark: "${markName}"
-Goods/Services: "${goodsServices}"
-Final registrability assessment: ${riskLabel}
+Marca: "${markName}"
+Productos/Servicios: "${goodsServices}"
+Evaluación final de registrabilidad: ${riskLabelEs} (color Playbook: ${finalRiskColor})
 
-Key findings that MUST be accurately reflected in your summary:
+Hallazgos clave que DEBEN reflejarse con precisión en el resumen:
 - ${marciaContext}
 - ${flagContext}
 - ${dupontContext}
 
-Write 3–4 sentences: (1) state the registrability outlook matching the assessment above, (2) identify the primary specific obstacle(s) using the findings above, (3) explain practical next steps.
-CRITICAL: Your summary MUST be consistent with the final assessment of "${riskLabel}". Do not contradict it.
+Redacta 3–4 oraciones: (1) estado de la registrabilidad conforme a la evaluación anterior, (2) obstáculos primarios específicos basados en los hallazgos, (3) pasos prácticos recomendados.
+CRÍTICO: El resumen DEBE ser consistente con la evaluación final de "${riskLabelEs}". No la contradigas.
+CRÍTICO: Menciona explícitamente el nivel de distintividad de la marca (genérica/descriptiva/sugestiva/arbitraria/de fantasía) y lo que significa para el registro.
 
-${bilingualInstruction}
+${translationInstruction}
 
-Return only JSON: {"riskSummary": "...", "riskSummary_en": "..."}`;
+Devuelve únicamente JSON: {"riskSummary": "...", "riskSummary_en": "..."${isUserLang ? ', "riskSummary_user": "..."' : ""}}`;
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -691,11 +757,11 @@ Return only JSON: {"riskSummary": "...", "riskSummary_en": "..."}`;
       body: JSON.stringify({
         model: "gpt-4o",
         messages: [
-          { role: "system", content: "You are a Mexican trademark attorney. Return only valid JSON, no markdown." },
+          { role: "system", content: "Eres un abogado de marcas mexicano. Devuelve únicamente JSON válido, sin markdown." },
           { role: "user", content: prompt },
         ],
         temperature: 0.1,
-        max_tokens: isBilingual ? 800 : 400,
+        max_tokens: isUserLang ? 1200 : 600,
         response_format: { type: "json_object" },
       }),
     });
@@ -707,6 +773,7 @@ Return only JSON: {"riskSummary": "...", "riskSummary_en": "..."}`;
     return {
       riskSummary: parsed.riskSummary ?? "",
       riskSummary_en: parsed.riskSummary_en ?? parsed.riskSummary ?? "",
+      riskSummary_user: parsed.riskSummary_user ?? undefined,
     };
   } catch {
     return { riskSummary: "", riskSummary_en: "" };
@@ -783,6 +850,13 @@ Deno.serve(async (req: Request) => {
     if (translationHighRisk && risk !== "high") risk = "high";
     else if (translationMedRisk && risk === "low") risk = "medium";
 
+    // Derive final riskColor: escalate to ROJO if exact same-class conflict, otherwise trust AI's color
+    let riskColor: "VERDE" | "AMARILLO" | "NARANJA" | "ROJO" = registrabilityResult.riskColor;
+    if (exactSameClass) riskColor = "ROJO";
+    else if (exactRelatedClass && riskColor === "VERDE") riskColor = "AMARILLO";
+    else if (risk === "high" && riskColor !== "ROJO") riskColor = "ROJO";
+    else if (risk === "medium" && riskColor === "VERDE") riskColor = "AMARILLO";
+
     // Generate a risk summary that is guaranteed to match the final aggregated risk level
     const consistentSummary = await generateConsistentRiskSummary(
       apiKey,
@@ -790,6 +864,7 @@ Deno.serve(async (req: Request) => {
       goodsServices,
       classes,
       risk,
+      riskColor,
       exactSameClass,
       exactRelatedClass,
       exactUnrelatedOnly,
@@ -803,6 +878,7 @@ Deno.serve(async (req: Request) => {
 
     return new Response(JSON.stringify({
       risk,
+      riskColor,
       webFindings: webResult.findings,
       marciaFindings: marciaResult.findings,
       marciaTotalCount: marciaResult.totalCount,
@@ -814,6 +890,7 @@ Deno.serve(async (req: Request) => {
       distinctiveness: registrabilityResult.distinctiveness,
       riskSummary: consistentSummary.riskSummary,
       riskSummary_en: consistentSummary.riskSummary_en,
+      riskSummary_user: consistentSummary.riskSummary_user,
       translationAnalysis,
       niceClassification,
       searchLanguage: lang,
