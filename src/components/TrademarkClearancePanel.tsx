@@ -796,6 +796,24 @@ export default function TrademarkClearancePanel({
         </button>
       </div>
 
+      {/* ── Class scope banner ─────────────────────────────────────────────── */}
+      {classes.length > 0 && (
+        <div className="border-t border-gray-100 bg-white/40 px-4 py-2 flex items-center gap-2 flex-wrap">
+          <Tag size={11} className="text-gray-400 flex-shrink-0" />
+          <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">
+            {lang === 'zh' ? '检索范围：' : lang === 'es' ? 'Alcance:' : lang === 'de' ? 'Umfang:' : lang === 'fr' ? 'Périmètre :' : lang === 'hi' ? 'दायरा:' : lang === 'pt' ? 'Escopo:' : 'Scope:'}
+          </span>
+          {classes.slice(0, 8).map(num => (
+            <span key={num} className="inline-flex items-center text-[10px] font-semibold bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+              {lang === 'zh' ? `第${num}类` : lang === 'ja' ? `第${num}類` : `Cl. ${num}`}
+            </span>
+          ))}
+          {classes.length > 8 && (
+            <span className="text-[10px] text-gray-400">+{classes.length - 8}</span>
+          )}
+        </div>
+      )}
+
       {/* ── Risk Summary ───────────────────────────────────────────────────── */}
       {result.riskSummary && (
         <div className={`border-t border-gray-100 ${cfg.summaryBg} px-4 py-3 border-l-4 ${cfg.summaryBorder}`}>

@@ -1,40 +1,181 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, ArrowRight, Shield, Sparkles, CheckCircle2, FileText, HelpCircle } from 'lucide-react';
+import { Search, ArrowRight, Sparkles, CheckCircle2, FileText, HelpCircle, Loader2, Plus, X, Tag, ChevronDown, Send, CreditCard as Edit2, AlertTriangle, ChevronRight } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import TrademarkClearancePanel from '../components/TrademarkClearancePanel';
 
 type Lang = 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt' | 'ja';
 
-const copy: Record<string, Record<Lang, string>> = {
-  badge: {
-    en: 'Free Pre-Clearance Search',
+// All 45 Nice Classification classes
+const ALL_NICE_CLASSES: { num: number; title: string; titleEs: string; category: 'goods' | 'services' }[] = [
+  { num: 1,  title: 'Chemicals',                       titleEs: 'Productos Químicos',           category: 'goods' },
+  { num: 2,  title: 'Paints & Varnishes',               titleEs: 'Pinturas y Barnices',          category: 'goods' },
+  { num: 3,  title: 'Cosmetics & Cleaning',             titleEs: 'Cosméticos y Limpieza',        category: 'goods' },
+  { num: 4,  title: 'Lubricants & Fuels',               titleEs: 'Lubricantes y Combustibles',   category: 'goods' },
+  { num: 5,  title: 'Pharmaceuticals',                  titleEs: 'Productos Farmacéuticos',      category: 'goods' },
+  { num: 6,  title: 'Metals & Hardware',                titleEs: 'Metales y Ferretería',         category: 'goods' },
+  { num: 7,  title: 'Machinery',                        titleEs: 'Maquinaria',                   category: 'goods' },
+  { num: 8,  title: 'Hand Tools',                       titleEs: 'Herramientas Manuales',        category: 'goods' },
+  { num: 9,  title: 'Electronics & Technology',         titleEs: 'Electrónica y Tecnología',     category: 'goods' },
+  { num: 10, title: 'Medical Devices',                  titleEs: 'Dispositivos Médicos',         category: 'goods' },
+  { num: 11, title: 'Lighting & Appliances',            titleEs: 'Iluminación y Aparatos',       category: 'goods' },
+  { num: 12, title: 'Vehicles & Transport',             titleEs: 'Vehículos y Transporte',       category: 'goods' },
+  { num: 13, title: 'Firearms & Fireworks',             titleEs: 'Armas y Pirotecnia',           category: 'goods' },
+  { num: 14, title: 'Jewelry & Watches',                titleEs: 'Joyería y Relojes',            category: 'goods' },
+  { num: 15, title: 'Musical Instruments',              titleEs: 'Instrumentos Musicales',       category: 'goods' },
+  { num: 16, title: 'Paper & Print',                    titleEs: 'Papel e Impresos',             category: 'goods' },
+  { num: 17, title: 'Rubber & Plastics',                titleEs: 'Goma y Plásticos',             category: 'goods' },
+  { num: 18, title: 'Leather Goods & Bags',             titleEs: 'Artículos de Piel y Bolsos',   category: 'goods' },
+  { num: 19, title: 'Building Materials',               titleEs: 'Materiales de Construcción',   category: 'goods' },
+  { num: 20, title: 'Furniture',                        titleEs: 'Mobiliario',                   category: 'goods' },
+  { num: 21, title: 'Kitchenware & Household',          titleEs: 'Utensilios de Cocina y Hogar', category: 'goods' },
+  { num: 22, title: 'Ropes, Tents & Textiles',          titleEs: 'Cuerdas, Tiendas y Textiles',  category: 'goods' },
+  { num: 23, title: 'Yarn & Thread',                    titleEs: 'Hilos y Fibras',               category: 'goods' },
+  { num: 24, title: 'Fabrics & Textiles',               titleEs: 'Telas y Tejidos',              category: 'goods' },
+  { num: 25, title: 'Clothing & Footwear',              titleEs: 'Ropa y Calzado',               category: 'goods' },
+  { num: 26, title: 'Lace, Embroidery & Buttons',       titleEs: 'Encajes, Bordados y Botones',  category: 'goods' },
+  { num: 27, title: 'Carpets & Floor Coverings',        titleEs: 'Alfombras y Suelos',           category: 'goods' },
+  { num: 28, title: 'Games, Toys & Sports',             titleEs: 'Juegos, Juguetes y Deportes',  category: 'goods' },
+  { num: 29, title: 'Meat, Fish & Dairy',               titleEs: 'Carnes, Pescados y Lácteos',   category: 'goods' },
+  { num: 30, title: 'Coffee, Flour & Baked Goods',      titleEs: 'Café, Harinas y Panadería',    category: 'goods' },
+  { num: 31, title: 'Agriculture & Live Animals',       titleEs: 'Agricultura y Animales Vivos', category: 'goods' },
+  { num: 32, title: 'Beer, Soft Drinks & Juice',        titleEs: 'Cervezas y Bebidas',           category: 'goods' },
+  { num: 33, title: 'Wines & Spirits',                  titleEs: 'Vinos y Bebidas Espirituosas', category: 'goods' },
+  { num: 34, title: 'Tobacco & Smoking',                titleEs: 'Tabaco',                       category: 'goods' },
+  { num: 35, title: 'Advertising & Business',           titleEs: 'Publicidad y Negocios',        category: 'services' },
+  { num: 36, title: 'Insurance & Finance',              titleEs: 'Seguros y Finanzas',           category: 'services' },
+  { num: 37, title: 'Construction & Repair',            titleEs: 'Construcción y Reparación',    category: 'services' },
+  { num: 38, title: 'Telecommunications',               titleEs: 'Telecomunicaciones',           category: 'services' },
+  { num: 39, title: 'Transport & Travel',               titleEs: 'Transporte y Viajes',          category: 'services' },
+  { num: 40, title: 'Material Treatment',               titleEs: 'Tratamiento de Materiales',    category: 'services' },
+  { num: 41, title: 'Education & Entertainment',        titleEs: 'Educación y Entretenimiento',  category: 'services' },
+  { num: 42, title: 'Science & Technology',             titleEs: 'Ciencia y Tecnología',         category: 'services' },
+  { num: 43, title: 'Food & Drink Services',            titleEs: 'Servicios de Alimentos',       category: 'services' },
+  { num: 44, title: 'Medical & Beauty Services',        titleEs: 'Servicios Médicos y Estéticos',category: 'services' },
+  { num: 45, title: 'Legal & Security Services',        titleEs: 'Servicios Legales y Seguridad',category: 'services' },
+];
+
+interface SuggestedClass {
+  classNumber: number;
+  titleEn: string;
+  titleLocalized: string;
+  confidence: number;
+  reasoning?: string;
+  descriptionEn?: string;
+  descriptionEs?: string;
+}
+
+interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+type WizardStep = 1 | 2 | 3 | 4;
+
+// ─── Translations ─────────────────────────────────────────────────────────────
+
+const copy: Record<string, Partial<Record<Lang, string>>> = {
+  pageTitle: {
+    en: 'Free Trademark Clearance Search',
     zh: '免费商标预检索',
-    es: 'Búsqueda de Pre-Autorización Gratuita',
-    de: 'Kostenlose Vorabrecherche',
-    fr: 'Recherche préliminaire gratuite',
-    hi: 'मुफ़्त प्री-क्लीयरेंस खोज',
-    pt: 'Pesquisa Gratuita de Pré-Autorização',
+    es: 'Búsqueda de Disponibilidad de Marca Gratuita',
+    de: 'Kostenlose Markenrecherche',
+    fr: 'Recherche de disponibilité de marque gratuite',
+    hi: 'मुफ़्त ट्रेडमार्क क्लीयरेंस खोज',
+    pt: 'Pesquisa Gratuita de Disponibilidade de Marca',
+    ja: '無料商標調査',
   },
-  headline: {
-    en: 'Review Your Trademark for Free and Get Your Registrability Report',
-    zh: '免费检索您的商标并获取可注册性报告',
-    es: 'Revisa tu Marca Gratis y Obtén tu Reporte de Registrabilidad',
-    de: 'Ihre Marke kostenlos prüfen und Ihren Registrierbarkeitsbericht erhalten',
-    fr: 'Vérifiez votre marque gratuitement et obtenez votre rapport de disponibilité',
-    hi: 'अपना ट्रेडमार्क मुफ़्त जांचें और अपनी पंजीयनीयता रिपोर्ट प्राप्त करें',
-    pt: 'Verifique sua marca gratuitamente e obtenha seu Relatório de Registrabilidade',
+  pageSubtitle: {
+    en: 'Follow the four steps below to get a structured clearance analysis powered by AI and the official IMPI MARCia database.',
+    zh: '按照以下四个步骤，获取由AI和官方IMPI MARCia数据库支持的结构化检索分析。',
+    es: 'Sigue los cuatro pasos a continuación para obtener un análisis de disponibilidad estructurado, impulsado por IA y la base de datos oficial IMPI MARCia.',
+    de: 'Folgen Sie den vier Schritten unten, um eine strukturierte Rechercheanalyse zu erhalten, die von KI und der offiziellen IMPI MARCia-Datenbank unterstützt wird.',
+    fr: "Suivez les quatre étapes ci-dessous pour obtenir une analyse de disponibilité structurée, propulsée par l'IA et la base officielle IMPI MARCia.",
+    hi: 'AI और आधिकारिक IMPI MARCia डेटाबेस द्वारा समर्थित संरचित क्लीयरेंस विश्लेषण प्राप्त करने के लिए नीचे दिए गए चार चरणों का पालन करें।',
+    pt: 'Siga os quatro passos abaixo para obter uma análise de disponibilidade estruturada, desenvolvida por IA e pela base oficial IMPI MARCia.',
+    ja: 'AIとIMPI MARCia公式データベースを活用した体系的な調査分析を得るために、以下の4つのステップに従ってください。',
   },
-  sub: {
-    en: 'Get a structured clearance analysis including DuPont factor breakdown, distinctiveness assessment, and conflicting marks — powered by AI and the official IMPI MARCia database.',
-    zh: '获取结构化的商标检索分析，包括杜邦因素分解、显著性评估和冲突商标识别——由AI和官方IMPI MARCia数据库提供支持。',
-    es: 'Obtén un análisis de disponibilidad estructurado que incluye el análisis de factores DuPont, evaluación de distintividad y marcas en conflicto — impulsado por IA y la base de datos oficial IMPI MARCia.',
-    de: 'Erhalten Sie eine strukturierte Recherche-Analyse mit DuPont-Faktor-Aufschlüsselung, Unterscheidungskraft-Bewertung und konfliktierenden Marken — powered by KI und der offiziellen IMPI MARCia-Datenbank.',
-    fr: "Obtenez une analyse de disponibilité structurée incluant l'analyse des facteurs DuPont, l'évaluation de la distinctivité et les marques conflictuelles — propulsée par l'IA et la base officielle IMPI MARCia.",
-    hi: 'एक संरचित क्लीयरेंस विश्लेषण प्राप्त करें जिसमें DuPont कारक विश्लेषण, विशिष्टता मूल्यांकन और विरोधाभासी चिह्न शामिल हैं — AI और आधिकारिक IMPI MARCia डेटाबेस द्वारा संचालित।',
-    pt: 'Obtenha uma análise de disponibilidade estruturada incluindo análise dos fatores DuPont, avaliação de distintividade e marcas conflitantes — desenvolvida por IA e pela base oficial IMPI MARCia.',
+  step1Title: {
+    en: 'Trademark Name',
+    zh: '商标名称',
+    es: 'Nombre de la Marca',
+    de: 'Markenname',
+    fr: 'Nom de la marque',
+    hi: 'ट्रेडमार्क नाम',
+    pt: 'Nome da Marca',
+    ja: '商標名',
   },
-  inputLabel: {
+  step1Subtitle: {
+    en: 'What is the trademark you want to register?',
+    zh: '您想注册什么商标？',
+    es: '¿Cuál es la marca que deseas registrar?',
+    de: 'Welche Marke möchten Sie registrieren?',
+    fr: 'Quelle est la marque que vous souhaitez enregistrer ?',
+    hi: 'आप कौन सा ट्रेडमार्क पंजीकृत करना चाहते हैं?',
+    pt: 'Qual é a marca que você deseja registrar?',
+    ja: '登録したい商標は何ですか？',
+  },
+  step2Title: {
+    en: 'Goods & Services',
+    zh: '商品与服务',
+    es: 'Productos y Servicios',
+    de: 'Waren & Dienstleistungen',
+    fr: 'Produits et services',
+    hi: 'माल और सेवाएं',
+    pt: 'Produtos e Serviços',
+    ja: '商品・サービス',
+  },
+  step2Subtitle: {
+    en: 'What goods or services will this trademark cover?',
+    zh: '此商标将涵盖哪些商品或服务？',
+    es: '¿Qué productos o servicios cubrirá esta marca?',
+    de: 'Welche Waren oder Dienstleistungen soll diese Marke abdecken?',
+    fr: 'Quels produits ou services cette marque couvrira-t-elle ?',
+    hi: 'यह ट्रेडमार्क किन माल या सेवाओं को कवर करेगा?',
+    pt: 'Quais produtos ou serviços esta marca vai cobrir?',
+    ja: 'この商標はどの商品・サービスをカバーしますか？',
+  },
+  step3Title: {
+    en: 'Confirm Classification',
+    zh: '确认分类',
+    es: 'Confirmar Clasificación',
+    de: 'Klassifikation bestätigen',
+    fr: 'Confirmer la classification',
+    hi: 'वर्गीकरण की पुष्टि करें',
+    pt: 'Confirmar Classificação',
+    ja: '分類を確認',
+  },
+  step3Subtitle: {
+    en: 'Review and agree on the applicable Nice Classification classes.',
+    zh: '审阅并同意适用的尼斯分类类别。',
+    es: 'Revisa y acepta las clases de Clasificación de Niza aplicables.',
+    de: 'Überprüfen und bestätigen Sie die anwendbaren Nizza-Klassifikationsklassen.',
+    fr: "Examinez et acceptez les classes de classification de Nice applicables.",
+    hi: 'लागू नाइस वर्गीकरण कक्षाओं की समीक्षा करें और सहमति दें।',
+    pt: 'Revise e concorde com as classes da Classificação de Nice aplicáveis.',
+    ja: '適用されるニース分類クラスを確認して同意してください。',
+  },
+  step4Title: {
+    en: 'Clearance Analysis',
+    zh: '检索分析',
+    es: 'Análisis de Disponibilidad',
+    de: 'Rechercheanalyse',
+    fr: 'Analyse de disponibilité',
+    hi: 'क्लीयरेंस विश्लेषण',
+    pt: 'Análise de Disponibilidade',
+    ja: '調査分析',
+  },
+  step4Subtitle: {
+    en: 'AI-powered search against the IMPI MARCia database.',
+    zh: 'AI驱动的IMPI MARCia数据库检索。',
+    es: 'Búsqueda impulsada por IA contra la base de datos IMPI MARCia.',
+    de: 'KI-gestützte Suche in der IMPI MARCia-Datenbank.',
+    fr: "Recherche propulsée par l'IA dans la base IMPI MARCia.",
+    hi: 'IMPI MARCia डेटाबेस के विरुद्ध AI-संचालित खोज।',
+    pt: 'Busca com IA na base de dados IMPI MARCia.',
+    ja: 'IMPIMARCiaデータベースに対するAI検索。',
+  },
+  trademarkLabel: {
     en: 'Proposed trademark name',
     zh: '拟注册商标名称',
     es: 'Nombre de marca propuesto',
@@ -42,8 +183,9 @@ const copy: Record<string, Record<Lang, string>> = {
     fr: 'Nom de marque proposé',
     hi: 'प्रस्तावित ट्रेडमार्क नाम',
     pt: 'Nome de marca proposto',
+    ja: '商標名（案）',
   },
-  placeholder: {
+  trademarkPlaceholder: {
     en: 'e.g. Nexora, BluePeak, AeroFit…',
     zh: '例如：Nexora、BluePeak、AeroFit…',
     es: 'ej. Nexora, BluePeak, AeroFit…',
@@ -51,15 +193,27 @@ const copy: Record<string, Record<Lang, string>> = {
     fr: 'ex. Nexora, BluePeak, AeroFit…',
     hi: 'उदा. Nexora, BluePeak, AeroFit…',
     pt: 'ex. Nexora, BluePeak, AeroFit…',
+    ja: '例: Nexora、BluePeak、AeroFit…',
+  },
+  trademarkTooltip: {
+    en: 'The word, phrase, or combination of letters you want to register as a trademark in Mexico.',
+    zh: '您希望在墨西哥注册为商标的单词、短语或字母组合。',
+    es: 'La palabra, frase o combinación de letras que deseas registrar como marca en México.',
+    de: 'Das Wort, der Satz oder die Buchstabenkombination, die Sie als Marke in Mexiko registrieren möchten.',
+    fr: 'Le mot, la phrase ou la combinaison de lettres que vous souhaitez enregistrer comme marque au Mexique.',
+    hi: 'वह शब्द, वाक्यांश या अक्षरों का संयोजन जिसे आप मेक्सिको में ट्रेडमार्क के रूप में पंजीकृत करना चाहते हैं।',
+    pt: 'A palavra, frase ou combinação de letras que você deseja registrar como marca no México.',
+    ja: 'メキシコで商標として登録したい単語、フレーズ、または文字の組み合わせ。',
   },
   goodsLabel: {
-    en: 'Goods or services covered',
-    zh: '涵盖的商品或服务',
-    es: 'Productos o servicios cubiertos',
-    de: 'Erfasste Waren oder Dienstleistungen',
-    fr: 'Produits ou services couverts',
-    hi: 'शामिल माल या सेवाएं',
-    pt: 'Produtos ou serviços cobertos',
+    en: 'Describe your goods or services',
+    zh: '描述您的商品或服务',
+    es: 'Describe tus productos o servicios',
+    de: 'Beschreiben Sie Ihre Waren oder Dienstleistungen',
+    fr: 'Décrivez vos produits ou services',
+    hi: 'अपने माल या सेवाओं का वर्णन करें',
+    pt: 'Descreva seus produtos ou serviços',
+    ja: '商品またはサービスを説明してください',
   },
   goodsPlaceholder: {
     en: 'e.g. athletic footwear, sports apparel, and fitness accessories…',
@@ -69,45 +223,167 @@ const copy: Record<string, Record<Lang, string>> = {
     fr: 'ex. chaussures de sport, vêtements de sport et accessoires de fitness…',
     hi: 'उदा. खेल जूते, खेल परिधान और फिटनेस एक्सेसरीज़…',
     pt: 'ex. calçados esportivos, roupas esportivas e acessórios de fitness…',
-  },
-  goodsRequired: {
-    en: 'Required for DuPont likelihood-of-confusion analysis',
-    zh: '杜邦混淆可能性分析所必需',
-    es: 'Requerido para el análisis de probabilidad de confusión DuPont',
-    de: 'Erforderlich für die DuPont-Verwechslungswahrscheinlichkeits-Analyse',
-    fr: "Requis pour l'analyse DuPont de probabilité de confusion",
-    hi: 'DuPont भ्रम संभावना विश्लेषण के लिए आवश्यक',
-    pt: 'Necessário para a análise DuPont de probabilidade de confusão',
-    ja: 'DuPont混同可能性分析に必要',
-  },
-  trademarkNameTooltip: {
-    en: 'The word, phrase, or combination of letters you want to register as a trademark in Mexico. This is the name that will appear on your registration certificate and that you will have exclusive rights to use for your goods or services.',
-    zh: '您希望在墨西哥注册为商标的单词、短语或字母组合。这是将出现在您注册证书上的名称，您将对其在商品或服务上的使用拥有专属权利。',
-    es: 'La palabra, frase o combinación de letras que deseas registrar como marca en México. Este es el nombre que aparecerá en tu certificado de registro y sobre el cual tendrás derechos exclusivos de uso para tus productos o servicios.',
-    de: 'Das Wort, der Satz oder die Buchstabenkombination, die Sie als Marke in Mexiko registrieren möchten. Dies ist der Name, der auf Ihrer Registrierungsurkunde erscheint und den Sie exklusiv für Ihre Waren oder Dienstleistungen nutzen dürfen.',
-    fr: 'Le mot, la phrase ou la combinaison de lettres que vous souhaitez enregistrer comme marque au Mexique. C\'est le nom qui figurera sur votre certificat d\'enregistrement et sur lequel vous aurez des droits exclusifs d\'utilisation pour vos produits ou services.',
-    hi: 'वह शब्द, वाक्यांश या अक्षरों का संयोजन जिसे आप मेक्सिको में ट्रेडमार्क के रूप में पंजीकृत करना चाहते हैं। यही वह नाम है जो आपके पंजीकरण प्रमाणपत्र पर दिखेगा और जिसका उपयोग आप अपने माल या सेवाओं के लिए विशेष रूप से कर सकेंगे।',
-    pt: 'A palavra, frase ou combinação de letras que você deseja registrar como marca no México. Este é o nome que constará no seu certificado de registro e sobre o qual você terá direitos exclusivos de uso para seus produtos ou serviços.',
-    ja: 'メキシコで商標として登録したい単語、フレーズ、または文字の組み合わせです。これは登録証明書に記載され、あなたの商品やサービスに対して独占的に使用する権利を持つ名称です。',
+    ja: '例: スポーツシューズ、スポーツウェア、フィットネス用品…',
   },
   goodsTooltip: {
-    en: 'A description of the products or services your trademark will be used with. In Mexico, trademarks are registered in one or more of 45 international Nice Classification classes. A clear and specific description helps the examiner assess conflicts with existing marks and determines the scope of your protection.',
-    zh: '您的商标将用于的商品或服务的描述。在墨西哥，商标在45个国际尼斯分类类别中的一个或多个中注册。清晰具体的描述有助于审查员评估与现有商标的冲突，并确定您的保护范围。',
-    es: 'Una descripción de los productos o servicios con los que se usará tu marca. En México, las marcas se registran en una o más de las 45 clases de la Clasificación Internacional de Niza. Una descripción clara y específica ayuda al examinador a evaluar conflictos con marcas existentes y determina el alcance de tu protección.',
-    de: 'Eine Beschreibung der Waren oder Dienstleistungen, mit denen Ihre Marke verwendet wird. In Mexiko werden Marken in einer oder mehreren der 45 internationalen Nizza-Klassifikationsklassen eingetragen. Eine klare und spezifische Beschreibung hilft dem Prüfer, Konflikte mit bestehenden Marken zu bewerten, und bestimmt den Umfang Ihres Schutzes.',
-    fr: 'Une description des produits ou services avec lesquels votre marque sera utilisée. Au Mexique, les marques sont enregistrées dans une ou plusieurs des 45 classes de la Classification internationale de Nice. Une description claire et précise aide l\'examinateur à évaluer les conflits avec les marques existantes et détermine l\'étendue de votre protection.',
-    hi: 'आपके ट्रेडमार्क के साथ उपयोग की जाने वाली वस्तुओं या सेवाओं का विवरण। मेक्सिको में, ट्रेडमार्क 45 अंतर्राष्ट्रीय नाइस वर्गीकरण वर्गों में से एक या अधिक में पंजीकृत होते हैं। एक स्पष्ट और विशिष्ट विवरण परीक्षक को मौजूदा चिह्नों के साथ टकराव का आकलन करने में मदद करता है और आपकी सुरक्षा के दायरे को निर्धारित करता है।',
-    pt: 'Uma descrição dos produtos ou serviços com os quais sua marca será usada. No México, as marcas são registradas em uma ou mais das 45 classes da Classificação Internacional de Nice. Uma descrição clara e específica ajuda o examinador a avaliar conflitos com marcas existentes e determina o escopo da sua proteção.',
-    ja: '商標が使用される商品またはサービスの説明です。メキシコでは、商標は45のニース国際分類クラスの1つ以上に登録されます。明確で具体的な説明は、審査官が既存の商標との競合を評価するのに役立ち、保護の範囲を決定します。',
+    en: 'Describe the products or services your trademark will be used with. The AI will classify them into the applicable Nice Classification classes and may ask clarifying questions.',
+    zh: '描述您的商标将用于的商品或服务。AI将把它们分类到适用的尼斯分类类别中，并可能提出澄清问题。',
+    es: 'Describe los productos o servicios con los que se usará tu marca. La IA los clasificará en las clases de Clasificación de Niza aplicables y puede hacer preguntas aclaratorias.',
+    de: 'Beschreiben Sie die Waren oder Dienstleistungen, mit denen Ihre Marke verwendet wird. Die KI klassifiziert diese in die anwendbaren Nizza-Klassifikationsklassen und kann Klärungsfragen stellen.',
+    fr: 'Décrivez les produits ou services avec lesquels votre marque sera utilisée. L\'IA les classifiera dans les classes de classification de Nice applicables et peut poser des questions de clarification.',
+    hi: 'उन वस्तुओं या सेवाओं का वर्णन करें जिनके साथ आपका ट्रेडमार्क उपयोग किया जाएगा। AI उन्हें लागू नाइस वर्गीकरण कक्षाओं में वर्गीकृत करेगा और स्पष्टीकरण प्रश्न पूछ सकता है।',
+    pt: 'Descreva os produtos ou serviços com os quais sua marca será usada. A IA os classificará nas classes aplicáveis da Classificação de Nice e pode fazer perguntas de esclarecimento.',
+    ja: '商標が使用される商品またはサービスを説明してください。AIが適用されるニース分類クラスに分類し、確認の質問をする場合があります。',
   },
-  searchBtn: {
-    en: 'Run Full Clearance Analysis',
-    zh: '开始完整检索分析',
-    es: 'Ejecutar Análisis Completo',
-    de: 'Vollständige Analyse starten',
-    fr: 'Lancer l\'analyse complète',
-    hi: 'पूर्ण क्लीयरेंस विश्लेषण चलाएं',
-    pt: 'Executar Análise Completa',
+  classifyBtn: {
+    en: 'Classify with AI',
+    zh: '用AI分类',
+    es: 'Clasificar con IA',
+    de: 'Mit KI klassifizieren',
+    fr: "Classifier avec l'IA",
+    hi: 'AI से वर्गीकृत करें',
+    pt: 'Classificar com IA',
+    ja: 'AIで分類する',
+  },
+  classifyingLabel: {
+    en: 'Classifying…',
+    zh: '分类中…',
+    es: 'Clasificando…',
+    de: 'Klassifizierung…',
+    fr: 'Classification…',
+    hi: 'वर्गीकृत हो रहा है…',
+    pt: 'Classificando…',
+    ja: '分類中…',
+  },
+  aiQuestionsLabel: {
+    en: 'We have some questions to better pinpoint the applicable classes:',
+    zh: '我们有一些问题以更精确地确定适用类别：',
+    es: 'Tenemos algunas preguntas para precisar mejor las clases aplicables:',
+    de: 'Wir haben einige Fragen, um die anwendbaren Klassen besser zu bestimmen:',
+    fr: 'Nous avons quelques questions pour mieux cibler les classes applicables :',
+    hi: 'हमारे पास लागू कक्षाओं को बेहतर ढंग से निर्धारित करने के लिए कुछ प्रश्न हैं:',
+    pt: 'Temos algumas perguntas para identificar melhor as classes aplicáveis:',
+    ja: '適用されるクラスをより正確に特定するためにいくつか質問があります:',
+  },
+  replyPlaceholder: {
+    en: 'Your answer…',
+    zh: '您的回答…',
+    es: 'Tu respuesta…',
+    de: 'Ihre Antwort…',
+    fr: 'Votre réponse…',
+    hi: 'आपका उत्तर…',
+    pt: 'Sua resposta…',
+    ja: '回答…',
+  },
+  sendReply: {
+    en: 'Send',
+    zh: '发送',
+    es: 'Enviar',
+    de: 'Senden',
+    fr: 'Envoyer',
+    hi: 'भेजें',
+    pt: 'Enviar',
+    ja: '送信',
+  },
+  skipManual: {
+    en: 'Skip — select classes manually',
+    zh: '跳过 — 手动选择类别',
+    es: 'Omitir — seleccionar clases manualmente',
+    de: 'Überspringen — Klassen manuell auswählen',
+    fr: 'Ignorer — sélectionner les classes manuellement',
+    hi: 'छोड़ें — कक्षाएं मैन्युअल रूप से चुनें',
+    pt: 'Pular — selecionar classes manualmente',
+    ja: 'スキップ — クラスを手動で選択',
+  },
+  aiConcludes: {
+    en: 'AI recommends the following Nice Classification classes for',
+    zh: 'AI为以下商标推荐以下尼斯分类类别：',
+    es: 'La IA recomienda las siguientes clases de Clasificación de Niza para',
+    de: 'Die KI empfiehlt die folgenden Nizza-Klassifikationsklassen für',
+    fr: 'L\'IA recommande les classes de classification de Nice suivantes pour',
+    hi: 'AI निम्नलिखित ट्रेडमार्क के लिए निम्नलिखित नाइस वर्गीकरण कक्षाएं सुझाता है:',
+    pt: 'A IA recomenda as seguintes classes da Classificação de Nice para',
+    ja: 'AIが推奨するニース分類クラス:',
+  },
+  impiDescription: {
+    en: 'IMPI Description (Spanish)',
+    zh: 'IMPI说明（西班牙语）',
+    es: 'Descripción IMPI (Español)',
+    de: 'IMPI-Beschreibung (Spanisch)',
+    fr: 'Description IMPI (Espagnol)',
+    hi: 'IMPI विवरण (स्पेनिश)',
+    pt: 'Descrição IMPI (Espanhol)',
+    ja: 'IMPI説明（スペイン語）',
+  },
+  agreeAndRun: {
+    en: 'Agree & Run Clearance Analysis',
+    zh: '同意并开始检索分析',
+    es: 'Aceptar y Ejecutar Análisis de Disponibilidad',
+    de: 'Zustimmen & Rechercheanalyse starten',
+    fr: "Accepter et lancer l'analyse de disponibilité",
+    hi: 'सहमत हों और क्लीयरेंस विश्लेषण चलाएं',
+    pt: 'Concordar e Executar Análise de Disponibilidade',
+    ja: '同意して調査分析を実行',
+  },
+  addClass: {
+    en: 'Add a class',
+    zh: '添加类别',
+    es: 'Agregar una clase',
+    de: 'Klasse hinzufügen',
+    fr: 'Ajouter une classe',
+    hi: 'एक कक्षा जोड़ें',
+    pt: 'Adicionar uma classe',
+    ja: 'クラスを追加',
+  },
+  editLabel: {
+    en: 'Edit',
+    zh: '编辑',
+    es: 'Editar',
+    de: 'Bearbeiten',
+    fr: 'Modifier',
+    hi: 'संपादित करें',
+    pt: 'Editar',
+    ja: '編集',
+  },
+  editConfirmMsg: {
+    en: 'Editing this step will clear your progress below. Continue?',
+    zh: '编辑此步骤将清除下方的进度。是否继续？',
+    es: '¿Editar este paso borrará el progreso a continuación. ¿Continuar?',
+    de: 'Das Bearbeiten dieses Schritts löscht Ihren Fortschritt unten. Fortfahren?',
+    fr: 'Modifier cette étape effacera votre progression ci-dessous. Continuer ?',
+    hi: 'इस चरण को संपादित करने से नीचे की प्रगति हट जाएगी। जारी रखें?',
+    pt: 'Editar este passo irá apagar seu progresso abaixo. Continuar?',
+    ja: 'このステップを編集すると、以下の進捗がリセットされます。続けますか？',
+  },
+  confirmYes: {
+    en: 'Yes, edit',
+    zh: '是，编辑',
+    es: 'Sí, editar',
+    de: 'Ja, bearbeiten',
+    fr: 'Oui, modifier',
+    hi: 'हाँ, संपादित करें',
+    pt: 'Sim, editar',
+    ja: 'はい、編集する',
+  },
+  confirmNo: {
+    en: 'Cancel',
+    zh: '取消',
+    es: 'Cancelar',
+    de: 'Abbrechen',
+    fr: 'Annuler',
+    hi: 'रद्द करें',
+    pt: 'Cancelar',
+    ja: 'キャンセル',
+  },
+  startOver: {
+    en: 'Start over',
+    zh: '重新开始',
+    es: 'Comenzar de nuevo',
+    de: 'Neu starten',
+    fr: 'Recommencer',
+    hi: 'फिर से शुरू करें',
+    pt: 'Recomeçar',
+    ja: '最初からやり直す',
   },
   readyToFile: {
     en: 'Ready to protect your mark?',
@@ -117,6 +393,7 @@ const copy: Record<string, Record<Lang, string>> = {
     fr: 'Prêt à protéger votre marque ?',
     hi: 'अपनी मार्क सुरक्षित करने के लिए तैयार हैं?',
     pt: 'Pronto para proteger sua marca?',
+    ja: '商標を保護する準備ができましたか？',
   },
   startFiling: {
     en: 'Start Trademark Filing — $270/class',
@@ -126,6 +403,7 @@ const copy: Record<string, Record<Lang, string>> = {
     fr: 'Déposer ma marque — $270/classe',
     hi: 'ट्रेडमार्क दाखिल करना शुरू करें — $270/वर्ग',
     pt: 'Iniciar Registro — $270/classe',
+    ja: '商標出願を開始 — $270/区分',
   },
   noName: {
     en: "Don't have a name yet?",
@@ -135,6 +413,7 @@ const copy: Record<string, Record<Lang, string>> = {
     fr: "Vous n'avez pas encore de nom ?",
     hi: 'अभी तक नाम नहीं है?',
     pt: 'Ainda não tem um nome?',
+    ja: 'まだ名前が決まっていませんか？',
   },
   tryAI: {
     en: 'Generate ideas with AI',
@@ -144,26 +423,14 @@ const copy: Record<string, Record<Lang, string>> = {
     fr: "Générer des idées avec l'IA",
     hi: 'AI से विचार उत्पन्न करें',
     pt: 'Gerar ideias com IA',
-  },
-  features: {
-    en: 'IMPI MARCia Database · DuPont Analysis · Distinctiveness Score · Domain Availability',
-    zh: 'IMPI MARCia数据库 · 杜邦因素分析 · 显著性评分 · 域名可用性',
-    es: 'Base IMPI MARCia · Análisis DuPont · Puntuación de Distintividad · Disponibilidad de Dominio',
-    de: 'IMPI MARCia-Datenbank · DuPont-Analyse · Unterscheidungskraft · Domainverfügbarkeit',
-    fr: 'Base IMPI MARCia · Analyse DuPont · Score de distinctivité · Disponibilité des domaines',
-    hi: 'IMPI MARCia डेटाबेस · DuPont विश्लेषण · विशिष्टता स्कोर · डोमेन उपलब्धता',
-    pt: 'Base IMPI MARCia · Análise DuPont · Pontuação de Distintividade · Disponibilidade de Domínio',
-  },
-  searchAgain: {
-    en: 'Search another mark',
-    zh: '搜索另一个商标',
-    es: 'Buscar otra marca',
-    de: 'Weitere Marke suchen',
-    fr: 'Rechercher une autre marque',
-    hi: 'एक और ट्रेडमार्क खोजें',
-    pt: 'Pesquisar outra marca',
+    ja: 'AIでアイデアを生成',
   },
 };
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
 function InfoTooltip({ text }: { text: string }) {
   const [open, setOpen] = useState(false);
@@ -174,7 +441,7 @@ function InfoTooltip({ text }: { text: string }) {
         aria-label="More information"
         onClick={() => setOpen(v => !v)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
-        className="inline-flex items-center justify-center text-gray-400 hover:text-gold-300 transition-colors focus:outline-none ml-1"
+        className="inline-flex items-center justify-center text-gray-400 hover:text-navy-600 transition-colors focus:outline-none ml-1"
       >
         <HelpCircle size={14} />
       </button>
@@ -188,231 +455,891 @@ function InfoTooltip({ text }: { text: string }) {
   );
 }
 
+// ─── Stepper component ────────────────────────────────────────────────────────
+
+function StepperBar({
+  current, maxReached, labels,
+}: {
+  current: WizardStep;
+  maxReached: WizardStep;
+  labels: string[];
+}) {
+  return (
+    <div className="flex items-start gap-0 w-full">
+      {labels.map((label, i) => {
+        const step = (i + 1) as WizardStep;
+        const done = step < current;
+        const active = step === current;
+        const reachable = step <= maxReached;
+        return (
+          <div key={step} className="flex-1 flex flex-col items-center relative">
+            {/* connector line left */}
+            {i > 0 && (
+              <div className={`absolute left-0 top-5 w-1/2 h-0.5 -translate-y-1/2 ${reachable ? 'bg-navy-700' : 'bg-gray-200'}`} />
+            )}
+            {/* connector line right */}
+            {i < labels.length - 1 && (
+              <div className={`absolute right-0 top-5 w-1/2 h-0.5 -translate-y-1/2 ${step < maxReached ? 'bg-navy-700' : 'bg-gray-200'}`} />
+            )}
+            {/* circle */}
+            <div className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all ${
+              done    ? 'bg-navy-800 border-navy-800 text-white'
+              : active ? 'bg-white border-navy-800 text-navy-800 shadow-md'
+              : 'bg-white border-gray-200 text-gray-400'
+            }`}>
+              {done ? <CheckCircle2 size={16} className="text-white" /> : step}
+            </div>
+            {/* label */}
+            <p className={`mt-2 text-[10px] sm:text-xs font-medium text-center leading-tight px-1 ${
+              active ? 'text-navy-800' : done ? 'text-navy-600' : 'text-gray-400'
+            }`}>{label}</p>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+
 export default function TrademarkCheckPage() {
   const { language } = useLanguage();
-  const lang = (language as Lang) in copy.headline ? (language as Lang) : 'en';
+  const lang = (language as Lang) in copy.pageTitle ? (language as Lang) : 'en';
   const tr = (key: string) => copy[key]?.[lang] ?? copy[key]?.['en'] ?? '';
 
-  const [markInput, setMarkInput] = useState('');
-  const [goodsInput, setGoodsInput] = useState('');
-  const [searchName, setSearchName] = useState(() => sessionStorage.getItem('tcpSearchName') ?? '');
-  const [searchGoods, setSearchGoods] = useState(() => sessionStorage.getItem('tcpSearchGoods') ?? '');
-  const [hasSearched, setHasSearched] = useState(() => !!sessionStorage.getItem('tcpSearchName'));
-  const [showClearConfirm, setShowClearConfirm] = useState(false);
-  const resultsRef = useRef<HTMLDivElement>(null);
-  const heroRef = useRef<HTMLElement>(null);
+  // ── persisted state ────────────────────────────────────────────────────────
+  const [markName, setMarkName]           = useState(() => sessionStorage.getItem('tcpMark') ?? '');
+  const [goodsInput, setGoodsInput]       = useState(() => sessionStorage.getItem('tcpGoods') ?? '');
+  const [chatHistory, setChatHistory]     = useState<ChatMessage[]>(() => {
+    try { return JSON.parse(sessionStorage.getItem('tcpChat') ?? '[]'); } catch { return []; }
+  });
+  const [suggestedClasses, setSuggestedClasses] = useState<SuggestedClass[]>(() => {
+    try { return JSON.parse(sessionStorage.getItem('tcpSuggested') ?? '[]'); } catch { return []; }
+  });
+  const [selectedNums, setSelectedNums]   = useState<number[]>(() => {
+    try { return JSON.parse(sessionStorage.getItem('tcpSelected') ?? '[]'); } catch { return []; }
+  });
+  const [currentStep, setCurrentStep]     = useState<WizardStep>(() => {
+    const s = Number(sessionStorage.getItem('tcpStep'));
+    return (s >= 1 && s <= 4 ? s : 1) as WizardStep;
+  });
+  const [maxReached, setMaxReached]       = useState<WizardStep>(() => {
+    const s = Number(sessionStorage.getItem('tcpMaxStep'));
+    return (s >= 1 && s <= 4 ? s : 1) as WizardStep;
+  });
 
-  const canSearch = markInput.trim().length > 0 && goodsInput.trim().length > 0;
+  // ── ephemeral UI state ─────────────────────────────────────────────────────
+  const [markInputLocal, setMarkInputLocal] = useState(markName);
+  const [goodsInputLocal, setGoodsInputLocal] = useState(goodsInput);
+  const [replyInput, setReplyInput]   = useState('');
+  const [classifying, setClassifying] = useState(false);
+  const [classifyError, setClassifyError] = useState<string | null>(null);
+  const [pendingQuestions, setPendingQuestions] = useState<string[]>(() => {
+    try { return JSON.parse(sessionStorage.getItem('tcpQuestions') ?? '[]'); } catch { return []; }
+  });
+  const [showAddPicker, setShowAddPicker] = useState(false);
+  const [pickerSearch, setPickerSearch]   = useState('');
+  const [editConfirmStep, setEditConfirmStep] = useState<WizardStep | null>(null);
+  const [startOverConfirm, setStartOverConfirm] = useState(false);
 
-  const runSearch = () => {
-    if (!canSearch) return;
-    const name = markInput.trim();
-    const goods = goodsInput.trim();
-    setSearchName(name);
-    setSearchGoods(goods);
-    setHasSearched(true);
-    sessionStorage.setItem('tcpSearchName', name);
-    sessionStorage.setItem('tcpSearchGoods', goods);
+  const pageTopRef = useRef<HTMLDivElement>(null);
+  const step2Ref   = useRef<HTMLDivElement>(null);
+  const step3Ref   = useRef<HTMLDivElement>(null);
+  const step4Ref   = useRef<HTMLDivElement>(null);
+  const chatBottomRef = useRef<HTMLDivElement>(null);
+
+  // ── scroll chat to bottom when questions arrive ────────────────────────────
+  useEffect(() => {
+    chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [pendingQuestions]);
+
+  // ── persist helpers ────────────────────────────────────────────────────────
+  const persist = (updates: Record<string, string>) => {
+    Object.entries(updates).forEach(([k, v]) => sessionStorage.setItem(k, v));
+  };
+  const advanceTo = (step: WizardStep) => {
+    const next = Math.max(step, maxReached) as WizardStep;
+    setCurrentStep(step);
+    setMaxReached(next);
+    persist({ tcpStep: String(step), tcpMaxStep: String(next) });
     setTimeout(() => {
-      resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const refs: Record<number, React.RefObject<HTMLDivElement | null>> = {
+        2: step2Ref, 3: step3Ref, 4: step4Ref,
+      };
+      refs[step]?.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 80);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && canSearch) runSearch();
+  // ── Step 1: confirm mark name ──────────────────────────────────────────────
+  const submitStep1 = () => {
+    const name = markInputLocal.trim();
+    if (!name) return;
+    setMarkName(name);
+    persist({ tcpMark: name });
+    advanceTo(2);
   };
 
-  const handleSearchAnother = () => setShowClearConfirm(true);
-  const confirmClear = () => {
-    sessionStorage.removeItem('tcpSearchName');
-    sessionStorage.removeItem('tcpSearchGoods');
-    setSearchName('');
-    setSearchGoods('');
-    setMarkInput('');
-    setGoodsInput('');
-    setHasSearched(false);
-    setShowClearConfirm(false);
+  // ── Step 2: call classify-goods ────────────────────────────────────────────
+  const runClassify = async (messages: ChatMessage[]) => {
+    setClassifying(true);
+    setClassifyError(null);
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/classify-goods`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ messages, language: lang }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Classification failed');
+
+      if (data.status === 'needs_clarification' && Array.isArray(data.questions) && data.questions.length > 0) {
+        setPendingQuestions(data.questions);
+        sessionStorage.setItem('tcpQuestions', JSON.stringify(data.questions));
+      } else if (data.status === 'classified' && Array.isArray(data.classes) && data.classes.length > 0) {
+        const classes: SuggestedClass[] = data.classes;
+        const nums = classes.map(c => c.classNumber).sort((a, b) => a - b);
+        setSuggestedClasses(classes);
+        setSelectedNums(nums);
+        setPendingQuestions([]);
+        sessionStorage.setItem('tcpSuggested', JSON.stringify(classes));
+        sessionStorage.setItem('tcpSelected', JSON.stringify(nums));
+        sessionStorage.setItem('tcpQuestions', '[]');
+        advanceTo(3);
+        setTimeout(() => step3Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+      } else {
+        // fallback — go to step 3 with no suggestions
+        setPendingQuestions([]);
+        advanceTo(3);
+      }
+    } catch {
+      setClassifyError(
+        lang === 'zh' ? '分类失败，请重试。'
+        : lang === 'es' ? 'La clasificación falló. Por favor, inténtalo de nuevo.'
+        : lang === 'de' ? 'Klassifizierung fehlgeschlagen. Bitte erneut versuchen.'
+        : lang === 'fr' ? 'La classification a échoué. Veuillez réessayer.'
+        : lang === 'hi' ? 'वर्गीकरण विफल हुआ। कृपया पुनः प्रयास करें।'
+        : lang === 'pt' ? 'A classificação falhou. Por favor, tente novamente.'
+        : 'Classification failed. Please try again.'
+      );
+    } finally {
+      setClassifying(false);
+    }
+  };
+
+  const submitStep2 = () => {
+    const goods = goodsInputLocal.trim();
+    if (!goods) return;
+    setGoodsInput(goods);
+    persist({ tcpGoods: goods });
+    const firstMessage: ChatMessage = { role: 'user', content: goods };
+    const newHistory = [firstMessage];
+    setChatHistory(newHistory);
+    sessionStorage.setItem('tcpChat', JSON.stringify(newHistory));
+    setPendingQuestions([]);
+    runClassify(newHistory);
+  };
+
+  const submitReply = () => {
+    const reply = replyInput.trim();
+    if (!reply || pendingQuestions.length === 0) return;
+
+    // Build assistant message from the questions, then append user reply
+    const aiContent = pendingQuestions.join('\n');
+    const newHistory: ChatMessage[] = [
+      ...chatHistory,
+      { role: 'assistant', content: aiContent },
+      { role: 'user', content: reply },
+    ];
+    setChatHistory(newHistory);
+    sessionStorage.setItem('tcpChat', JSON.stringify(newHistory));
+    setPendingQuestions([]);
+    setReplyInput('');
+    runClassify(newHistory);
+  };
+
+  const skipToManual = () => {
+    setSuggestedClasses([]);
+    setSelectedNums([]);
+    sessionStorage.setItem('tcpSuggested', '[]');
+    sessionStorage.setItem('tcpSelected', '[]');
+    advanceTo(3);
+  };
+
+  // ── Step 3: toggle / add classes ───────────────────────────────────────────
+  const toggleClass = (num: number) => {
+    setSelectedNums(prev => {
+      const next = prev.includes(num) ? prev.filter(n => n !== num) : [...prev, num].sort((a, b) => a - b);
+      sessionStorage.setItem('tcpSelected', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const submitStep3 = () => {
+    if (selectedNums.length === 0) return;
+    advanceTo(4);
+    setTimeout(() => step4Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+  };
+
+  // ── Edit step (with confirmation) ──────────────────────────────────────────
+  const requestEdit = (step: WizardStep) => {
+    if (step >= currentStep) return;
+    setEditConfirmStep(step);
+  };
+
+  const confirmEdit = () => {
+    if (!editConfirmStep) return;
+    const step = editConfirmStep;
+    setEditConfirmStep(null);
+
+    // Reset everything downstream of the edited step
+    if (step <= 1) {
+      setMarkInputLocal(markName);
+    }
+    if (step <= 2) {
+      setGoodsInputLocal(goodsInput);
+      setChatHistory([]);
+      setPendingQuestions([]);
+      sessionStorage.setItem('tcpChat', '[]');
+      sessionStorage.setItem('tcpQuestions', '[]');
+    }
+    if (step <= 3) {
+      setSuggestedClasses([]);
+      setSelectedNums([]);
+      sessionStorage.setItem('tcpSuggested', '[]');
+      sessionStorage.setItem('tcpSelected', '[]');
+    }
+
+    const newMax = (step - 1) as WizardStep;
+    const safeMax = Math.max(1, newMax) as WizardStep;
+    setCurrentStep(step);
+    setMaxReached(step);
+    persist({ tcpStep: String(step), tcpMaxStep: String(step) });
+    void safeMax; // used only for clarity
     setTimeout(() => {
-      heroRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 50);
+      const refs: Record<number, React.RefObject<HTMLDivElement | null>> = {
+        2: step2Ref, 3: step3Ref, 4: step4Ref,
+      };
+      refs[step]?.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
   };
 
+  // ── Start over ─────────────────────────────────────────────────────────────
+  const doStartOver = () => {
+    ['tcpMark','tcpGoods','tcpChat','tcpSuggested','tcpSelected','tcpQuestions','tcpStep','tcpMaxStep'].forEach(k => sessionStorage.removeItem(k));
+    setMarkName(''); setMarkInputLocal('');
+    setGoodsInput(''); setGoodsInputLocal('');
+    setChatHistory([]); setPendingQuestions([]);
+    setSuggestedClasses([]); setSelectedNums([]);
+    setCurrentStep(1); setMaxReached(1);
+    setStartOverConfirm(false);
+    setTimeout(() => pageTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+  };
+
+  // ── Derived ────────────────────────────────────────────────────────────────
+  const stepLabels = [tr('step1Title'), tr('step2Title'), tr('step3Title'), tr('step4Title')];
+
+  // Classes shown in Step 3: all selected (includes manually added)
+  const confirmClasses = ALL_NICE_CLASSES.filter(c => selectedNums.includes(c.num));
+  const availableToAdd = ALL_NICE_CLASSES.filter(
+    c => !selectedNums.includes(c.num) &&
+      (pickerSearch === '' || `${c.num} ${c.title} ${c.titleEs}`.toLowerCase().includes(pickerSearch.toLowerCase()))
+  );
+
+  const classLabel = (n: number) =>
+    lang === 'zh' ? `第${n}类` : lang === 'ja' ? `第${n}類` : `Class ${n}`;
+
+  // ── RENDER ─────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Hero */}
-      <section ref={heroRef} className="bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800 text-white print-hide">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-14 lg:py-20">
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight mb-4">
-            {tr('headline')}
-          </h1>
-          <p className="text-lg text-gray-300 leading-relaxed mb-8 max-w-2xl">
-            {tr('sub')}
-          </p>
+    <div className="min-h-screen bg-gray-50" ref={pageTopRef}>
 
-          {/* Feature pills */}
-          <div className="flex flex-wrap gap-2 mb-8">
-            {tr('features').split(' · ').map((f, i) => (
-              <span key={i} className="inline-flex items-center gap-1.5 bg-white/10 border border-white/15 rounded-full px-3 py-1 text-xs text-gray-200 font-medium">
-                <CheckCircle2 size={11} className="text-gold-400" />
-                {f}
-              </span>
-            ))}
-          </div>
-
-          {/* Two-field search form */}
-          <div className="space-y-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-300 mb-1.5">
-                <span className="inline-flex items-center gap-0.5">
-                  {tr('inputLabel')}
-                  <InfoTooltip text={tr('trademarkNameTooltip')} />
+      {/* ── Page header ──────────────────────────────────────────────────────── */}
+      <section className="bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800 text-white print-hide">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-14">
+          <div className="flex flex-col sm:flex-row gap-6 sm:gap-10">
+            {/* Step 1 block */}
+            <div className="flex items-start gap-4 flex-1">
+              <div className="flex-shrink-0 mt-1">
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold bg-white/15 text-gold-300 border border-gold-400/30 rounded-full px-2.5 py-1 whitespace-nowrap">
+                  Step 1
                 </span>
-              </label>
-              <div className="relative">
-                <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                <input
-                  type="text"
-                  value={markInput}
-                  onChange={e => setMarkInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder={tr('placeholder')}
-                  className="w-full bg-white/10 border border-white/20 text-white placeholder-gray-400 rounded-xl pl-11 pr-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-transparent transition-all"
-                />
+              </div>
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold leading-tight mb-2">{tr('pageTitle')}</h1>
+                <p className="text-sm text-gray-300 leading-relaxed max-w-sm">{tr('pageSubtitle')}</p>
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-medium text-gray-300 mb-1.5">
-                <span className="inline-flex items-center gap-1.5">
-                  <FileText size={13} className="text-gold-400" />
-                  {tr('goodsLabel')}
-                  <InfoTooltip text={tr('goodsTooltip')} />
+            {/* Divider */}
+            <div className="hidden sm:block w-px bg-white/10 self-stretch" />
+            <div className="block sm:hidden h-px bg-white/10 w-full" />
+
+            {/* Step 2 block */}
+            <div className="flex items-start gap-4 flex-1">
+              <div className="flex-shrink-0 mt-1">
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold bg-white/15 text-gold-300 border border-gold-400/30 rounded-full px-2.5 py-1 whitespace-nowrap">
+                  Step 2
                 </span>
-              </label>
-              <textarea
-                value={goodsInput}
-                onChange={e => setGoodsInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={tr('goodsPlaceholder')}
-                rows={2}
-                className="w-full bg-white/10 border border-white/20 text-white placeholder-gray-400 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-transparent transition-all resize-none"
-              />
+              </div>
+              <div>
+                <p className="text-base font-semibold text-white mb-1.5">{tr('readyToFile')}</p>
+                <div className="flex items-center gap-2 text-sm text-gray-400">
+                  <Sparkles size={13} className="text-gold-400 flex-shrink-0" />
+                  <span>{tr('noName')}</span>
+                  <Link to="/trademark-ideas" className="text-gold-300 hover:text-gold-200 font-medium underline underline-offset-2 transition-colors">
+                    {tr('tryAI')}
+                  </Link>
+                </div>
+                <Link
+                  to="/apply"
+                  className="inline-flex items-center gap-2 mt-3 bg-gold-500 hover:bg-gold-400 text-white font-semibold px-4 py-2 rounded-xl transition-colors shadow text-xs whitespace-nowrap"
+                >
+                  {tr('startFiling')} <ArrowRight size={13} />
+                </Link>
+              </div>
             </div>
-
-            <button
-              type="button"
-              onClick={runSearch}
-              disabled={!canSearch}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-gold-500 hover:bg-gold-400 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold px-6 py-3.5 rounded-xl transition-colors shadow-lg"
-            >
-              {tr('searchBtn')}
-              <ArrowRight size={16} />
-            </button>
-          </div>
-
-          {/* AI idea nudge */}
-          <div className="mt-5 flex items-center gap-2 text-sm text-gray-400">
-            <Sparkles size={14} className="text-gold-400 flex-shrink-0" />
-            <span>{tr('noName')}</span>
-            <Link to="/trademark-ideas" className="text-gold-300 hover:text-gold-200 font-medium underline underline-offset-2 transition-colors">
-              {tr('tryAI')}
-            </Link>
           </div>
         </div>
       </section>
 
-      {/* Results */}
-      <div ref={resultsRef} className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        {hasSearched && searchName ? (
-          <div className="space-y-6">
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-              <div className="flex items-start gap-3 mb-1 flex-wrap">
-                <h2 className="text-lg font-bold text-navy-900">{searchName}</h2>
-                <span className="text-xs bg-navy-100 text-navy-600 font-medium px-2.5 py-0.5 rounded-full self-center">
-                  {lang === 'zh' ? '检索中' : lang === 'es' ? 'Revisando' : lang === 'de' ? 'Wird geprüft' : lang === 'fr' ? 'En cours' : lang === 'hi' ? 'जांच हो रही है' : lang === 'pt' ? 'Verificando' : 'Checking'}
+      {/* ── Stepper bar ───────────────────────────────────────────────────────── */}
+      <div className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-30 print-hide">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <StepperBar current={currentStep} maxReached={maxReached} labels={stepLabels} />
+        </div>
+      </div>
+
+      {/* ── Steps body ───────────────────────────────────────────────────────── */}
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-5">
+
+        {/* ════════════════════════════════════════════════════════════════════ */}
+        {/* STEP 1 — Trademark Name                                             */}
+        {/* ════════════════════════════════════════════════════════════════════ */}
+        <StepCard
+          step={1}
+          title={tr('step1Title')}
+          subtitle={tr('step1Subtitle')}
+          current={currentStep}
+          maxReached={maxReached}
+          completedSummary={markName}
+          onEditRequest={() => requestEdit(1)}
+          editLabel={tr('editLabel')}
+        >
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                <span className="inline-flex items-center gap-0.5">
+                  {tr('trademarkLabel')}
+                  <InfoTooltip text={tr('trademarkTooltip')} />
                 </span>
+              </label>
+              <div className="relative">
+                <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                <input
+                  type="text"
+                  value={markInputLocal}
+                  onChange={e => setMarkInputLocal(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter' && markInputLocal.trim()) submitStep1(); }}
+                  placeholder={tr('trademarkPlaceholder')}
+                  className="w-full border border-gray-300 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500 focus:border-transparent transition-all"
+                />
               </div>
-              {searchGoods && (
-                <p className="text-xs text-gray-400 mb-3 flex items-center gap-1.5">
-                  <FileText size={11} className="text-gray-300 flex-shrink-0" />
-                  {searchGoods}
-                </p>
-              )}
-              <TrademarkClearancePanel
-                markName={searchName}
-                goodsServices={searchGoods}
-                classes={[]}
-                language={lang}
-                autoRun={true}
-              />
             </div>
+            <button
+              type="button"
+              onClick={submitStep1}
+              disabled={!markInputLocal.trim()}
+              className="inline-flex items-center gap-2 bg-navy-900 hover:bg-navy-800 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold px-5 py-2.5 rounded-xl transition-colors shadow-sm text-sm"
+            >
+              {tr('step2Title')} <ChevronRight size={15} />
+            </button>
+          </div>
+        </StepCard>
 
-            {/* CTA to file */}
-            <div className="bg-gradient-to-r from-navy-900 to-navy-800 rounded-2xl p-6 flex flex-col sm:flex-row items-center gap-4 print-hide">
-              <div className="flex-1 text-center sm:text-left">
-                <p className="text-white font-semibold text-base">{tr('readyToFile')}</p>
+        {/* ════════════════════════════════════════════════════════════════════ */}
+        {/* STEP 2 — Goods & Services                                           */}
+        {/* ════════════════════════════════════════════════════════════════════ */}
+        <div ref={step2Ref}>
+          <StepCard
+            step={2}
+            title={tr('step2Title')}
+            subtitle={tr('step2Subtitle')}
+            current={currentStep}
+            maxReached={maxReached}
+            completedSummary={goodsInput}
+            onEditRequest={() => requestEdit(2)}
+            editLabel={tr('editLabel')}
+          >
+            <div className="space-y-4">
+              {/* Goods input */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  <span className="inline-flex items-center gap-1.5">
+                    <FileText size={13} className="text-navy-500" />
+                    {tr('goodsLabel')}
+                    <InfoTooltip text={tr('goodsTooltip')} />
+                  </span>
+                </label>
+                <textarea
+                  value={goodsInputLocal}
+                  onChange={e => setGoodsInputLocal(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && goodsInputLocal.trim()) { e.preventDefault(); submitStep2(); } }}
+                  placeholder={tr('goodsPlaceholder')}
+                  rows={3}
+                  disabled={classifying || pendingQuestions.length > 0}
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500 focus:border-transparent transition-all resize-none disabled:bg-gray-50 disabled:text-gray-400"
+                />
               </div>
-              <Link
-                to={`/apply?mark=${encodeURIComponent(searchName)}`}
-                className="inline-flex items-center gap-2 bg-gold-500 hover:bg-gold-400 text-white font-semibold px-5 py-2.5 rounded-xl transition-colors shadow-md whitespace-nowrap text-sm"
-              >
-                {tr('startFiling')}
-                <ArrowRight size={15} />
-              </Link>
-            </div>
 
-            {/* Search another mark */}
-            <div className="text-center print-hide">
-              {!showClearConfirm ? (
+              {/* Classify button */}
+              {pendingQuestions.length === 0 && !classifying && (
                 <button
                   type="button"
-                  onClick={handleSearchAnother}
-                  className="text-sm text-gray-500 hover:text-navy-800 underline underline-offset-2 transition-colors"
+                  onClick={submitStep2}
+                  disabled={!goodsInputLocal.trim()}
+                  className="inline-flex items-center gap-2 bg-navy-900 hover:bg-navy-800 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold px-5 py-2.5 rounded-xl transition-colors shadow-sm text-sm"
                 >
-                  {tr('searchAgain')}
+                  {tr('classifyBtn')} <ArrowRight size={15} />
                 </button>
-              ) : (
-                <div className="inline-flex flex-col items-center gap-3 bg-white border border-amber-200 rounded-2xl px-5 py-4 shadow-sm">
-                  <p className="text-sm text-gray-700 font-medium">
-                    {lang === 'es' ? 'Esto eliminará el reporte actual. ¿Continuar?' : lang === 'zh' ? '这将清除当前搜索报告。是否继续？' : lang === 'de' ? 'Aktueller Bericht wird gelöscht. Fortfahren?' : lang === 'fr' ? 'Cela effacera le rapport actuel. Continuer ?' : lang === 'hi' ? 'यह वर्तमान खोज रिपोर्ट हटा देगा। जारी रखें?' : lang === 'pt' ? 'Isso excluirá o relatório atual. Continuar?' : 'This will clear the current search report. Continue?'}
-                  </p>
-                  <div className="flex items-center gap-2">
+              )}
+
+              {/* Classifying spinner */}
+              {classifying && (
+                <div className="flex items-center gap-3 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
+                  <Loader2 size={16} className="animate-spin text-amber-500 flex-shrink-0" />
+                  <p className="text-sm text-amber-800 font-medium">{tr('classifyingLabel')}</p>
+                </div>
+              )}
+
+              {/* Error */}
+              {classifyError && (
+                <div className="flex items-start gap-2 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
+                  <AlertTriangle size={15} className="text-red-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-red-700">{classifyError}</p>
+                </div>
+              )}
+
+              {/* AI question bubble */}
+              {pendingQuestions.length > 0 && (
+                <div className="space-y-3">
+                  {/* Conversation so far (user turns) */}
+                  {chatHistory.filter(m => m.role === 'user').length > 1 && (
+                    <div className="space-y-2">
+                      {chatHistory.map((msg, i) => (
+                        msg.role === 'user' && i > 0 ? (
+                          <div key={i} className="flex justify-end">
+                            <div className="max-w-[85%] bg-navy-800 text-white text-sm rounded-2xl rounded-br-sm px-4 py-2.5">
+                              {msg.content}
+                            </div>
+                          </div>
+                        ) : null
+                      ))}
+                    </div>
+                  )}
+
+                  {/* AI bubble */}
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-navy-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Sparkles size={14} className="text-navy-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs font-semibold text-navy-700 mb-2">{tr('aiQuestionsLabel')}</p>
+                      <div className="space-y-2">
+                        {pendingQuestions.map((q, i) => (
+                          <div key={i} className="flex items-start gap-3 bg-navy-50 border border-navy-100 rounded-xl px-4 py-3">
+                            <span className="flex-shrink-0 w-5 h-5 rounded-full bg-navy-200 text-navy-700 text-[10px] font-bold flex items-center justify-center mt-0.5">
+                              {i + 1}
+                            </span>
+                            <p className="text-sm text-navy-900 leading-relaxed">{q}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Reply input */}
+                  <div className="flex items-end gap-2 pl-11">
+                    <textarea
+                      value={replyInput}
+                      onChange={e => setReplyInput(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && replyInput.trim()) { e.preventDefault(); submitReply(); } }}
+                      placeholder={tr('replyPlaceholder')}
+                      rows={2}
+                      className="flex-1 border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500 focus:border-transparent resize-none transition-all"
+                    />
                     <button
                       type="button"
-                      onClick={confirmClear}
-                      className="text-sm font-semibold bg-navy-900 hover:bg-navy-800 text-white px-4 py-1.5 rounded-xl transition-colors"
+                      onClick={submitReply}
+                      disabled={!replyInput.trim()}
+                      className="flex-shrink-0 w-10 h-10 bg-navy-900 hover:bg-navy-800 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl flex items-center justify-center transition-colors"
                     >
-                      {lang === 'es' ? 'Confirmar' : lang === 'zh' ? '确认' : lang === 'de' ? 'Bestätigen' : lang === 'fr' ? 'Confirmer' : lang === 'hi' ? 'पुष्टि करें' : lang === 'pt' ? 'Confirmar' : 'Confirm'}
+                      <Send size={15} />
                     </button>
+                  </div>
+                  <div ref={chatBottomRef} />
+
+                  {/* Skip */}
+                  <div className="pl-11">
                     <button
                       type="button"
-                      onClick={() => setShowClearConfirm(false)}
-                      className="text-sm text-gray-500 hover:text-gray-700 px-4 py-1.5 rounded-xl border border-gray-200 hover:border-gray-300 transition-colors"
+                      onClick={skipToManual}
+                      className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2 transition-colors"
                     >
-                      {lang === 'es' ? 'Cancelar' : lang === 'zh' ? '取消' : lang === 'de' ? 'Abbrechen' : lang === 'fr' ? 'Annuler' : lang === 'hi' ? 'रद्द करें' : lang === 'pt' ? 'Cancelar' : 'Cancel'}
+                      {tr('skipManual')}
                     </button>
                   </div>
                 </div>
               )}
             </div>
-          </div>
-        ) : (
-          <div className="text-center py-16">
-            <div className="w-16 h-16 bg-navy-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <Search size={28} className="text-navy-400" />
+          </StepCard>
+        </div>
+
+        {/* ════════════════════════════════════════════════════════════════════ */}
+        {/* STEP 3 — Confirm Classification                                     */}
+        {/* ════════════════════════════════════════════════════════════════════ */}
+        <div ref={step3Ref}>
+          <StepCard
+            step={3}
+            title={tr('step3Title')}
+            subtitle={tr('step3Subtitle')}
+            current={currentStep}
+            maxReached={maxReached}
+            completedSummary={selectedNums.length > 0
+              ? selectedNums.map(n => classLabel(n)).join(' · ')
+              : ''}
+            onEditRequest={() => requestEdit(3)}
+            editLabel={tr('editLabel')}
+          >
+            <div className="space-y-4">
+              {/* AI concludes heading */}
+              {suggestedClasses.length > 0 && (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 flex items-start gap-2.5">
+                  <CheckCircle2 size={16} className="text-emerald-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-emerald-800 font-medium leading-relaxed">
+                    {tr('aiConcludes')} <span className="font-bold">«{markName}»</span>:&nbsp;
+                    {suggestedClasses.map((c, i) => (
+                      <span key={c.classNumber}>
+                        {i > 0 && ', '}
+                        <span className="font-bold">{classLabel(c.classNumber)}</span> ({c.titleLocalized || c.titleEn})
+                      </span>
+                    ))}
+                  </p>
+                </div>
+              )}
+
+              {/* Class list */}
+              <div className="space-y-2">
+                {confirmClasses.length > 0 ? (
+                  confirmClasses.map(cls => {
+                    const suggested = suggestedClasses.find(s => s.classNumber === cls.num);
+                    return (
+                      <div
+                        key={cls.num}
+                        className="border border-gray-200 rounded-xl overflow-hidden"
+                      >
+                        {/* Class header row */}
+                        <div className="flex items-start gap-3 px-4 py-3 bg-white">
+                          <button
+                            type="button"
+                            onClick={() => toggleClass(cls.num)}
+                            className={`flex-shrink-0 w-5 h-5 mt-0.5 rounded border-2 flex items-center justify-center transition-colors ${
+                              selectedNums.includes(cls.num)
+                                ? 'bg-navy-800 border-navy-800'
+                                : 'border-gray-300 bg-white'
+                            }`}
+                          >
+                            {selectedNums.includes(cls.num) && (
+                              <CheckCircle2 size={11} className="text-white" strokeWidth={3} />
+                            )}
+                          </button>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-[11px] font-bold bg-navy-100 text-navy-700 px-2 py-0.5 rounded-full">
+                                {classLabel(cls.num)}
+                              </span>
+                              <span className="text-sm font-semibold text-gray-900">
+                                {suggested?.titleLocalized || suggested?.titleEn || cls.title}
+                              </span>
+                              <span className="text-xs text-gray-400">({cls.titleEs})</span>
+                            </div>
+                            {suggested?.reasoning && (
+                              <p className="text-xs text-gray-500 mt-1 italic leading-relaxed">{suggested.reasoning}</p>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => toggleClass(cls.num)}
+                            className="flex-shrink-0 text-gray-300 hover:text-red-400 transition-colors mt-0.5"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                        {/* IMPI description */}
+                        {suggested?.descriptionEs && (
+                          <div className="border-t border-gray-100 bg-gray-50 px-4 py-2.5">
+                            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                              {tr('impiDescription')}
+                            </p>
+                            <p className="text-xs text-gray-700 font-mono leading-relaxed">{suggested.descriptionEs}</p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p className="text-sm text-gray-400 text-center py-6">
+                    {lang === 'zh' ? '尚未选择任何类别' : lang === 'es' ? 'No hay clases seleccionadas aún' : lang === 'de' ? 'Noch keine Klassen ausgewählt' : lang === 'fr' ? 'Aucune classe sélectionnée' : lang === 'hi' ? 'अभी तक कोई कक्षा नहीं चुनी गई' : lang === 'pt' ? 'Nenhuma classe selecionada' : 'No classes selected yet'}
+                  </p>
+                )}
+              </div>
+
+              {/* Add a class */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => { setShowAddPicker(v => !v); setPickerSearch(''); }}
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-navy-700 hover:text-navy-900 border border-dashed border-navy-300 hover:border-navy-500 rounded-xl px-3 py-2 transition-colors"
+                >
+                  <Plus size={13} />
+                  {tr('addClass')}
+                  <ChevronDown size={12} className={`transition-transform ${showAddPicker ? 'rotate-180' : ''}`} />
+                </button>
+
+                {showAddPicker && (
+                  <div className="absolute left-0 top-full mt-1 z-20 w-80 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+                    <div className="p-2 border-b border-gray-100">
+                      <input
+                        type="text"
+                        value={pickerSearch}
+                        onChange={e => setPickerSearch(e.target.value)}
+                        placeholder={lang === 'zh' ? '搜索类别…' : lang === 'es' ? 'Buscar clase…' : lang === 'de' ? 'Klasse suchen…' : lang === 'fr' ? 'Rechercher une classe…' : lang === 'hi' ? 'कक्षा खोजें…' : lang === 'pt' ? 'Pesquisar classe…' : 'Search classes…'}
+                        className="w-full text-xs border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-navy-400"
+                        autoFocus
+                      />
+                    </div>
+                    <div className="max-h-56 overflow-y-auto">
+                      {availableToAdd.length === 0 ? (
+                        <p className="text-xs text-gray-400 text-center py-4">
+                          {lang === 'zh' ? '未找到结果' : lang === 'es' ? 'Sin resultados' : lang === 'de' ? 'Keine Ergebnisse' : lang === 'fr' ? 'Aucun résultat' : lang === 'hi' ? 'कोई परिणाम नहीं' : lang === 'pt' ? 'Sem resultados' : 'No results'}
+                        </p>
+                      ) : (
+                        availableToAdd.map(cls => (
+                          <button
+                            key={cls.num}
+                            type="button"
+                            onClick={() => { toggleClass(cls.num); setShowAddPicker(false); setPickerSearch(''); }}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 text-left transition-colors border-b border-gray-50 last:border-0"
+                          >
+                            <span className="text-[10px] font-bold bg-navy-100 text-navy-700 px-2 py-0.5 rounded-full flex-shrink-0">
+                              {lang === 'zh' ? `第${cls.num}类` : lang === 'ja' ? `第${cls.num}類` : `Cl. ${cls.num}`}
+                            </span>
+                            <div className="min-w-0">
+                              <p className="text-xs font-medium text-gray-800 truncate">{cls.title}</p>
+                              <p className="text-[10px] text-gray-400 truncate">{cls.titleEs}</p>
+                            </div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Agree & run */}
+              <button
+                type="button"
+                onClick={submitStep3}
+                disabled={selectedNums.length === 0}
+                className="w-full flex items-center justify-center gap-2 bg-gold-500 hover:bg-gold-400 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-xl transition-colors shadow-md text-sm"
+              >
+                <CheckCircle2 size={16} />
+                {tr('agreeAndRun')}
+                {selectedNums.length > 0 && (
+                  <span className="text-xs bg-white/25 px-2 py-0.5 rounded-full">
+                    {selectedNums.length} {selectedNums.length === 1
+                      ? (lang === 'zh' ? '类' : lang === 'es' ? 'clase' : lang === 'de' ? 'Klasse' : lang === 'fr' ? 'classe' : lang === 'hi' ? 'वर्ग' : lang === 'pt' ? 'classe' : lang === 'ja' ? '区分' : 'class')
+                      : (lang === 'zh' ? '类' : lang === 'es' ? 'clases' : lang === 'de' ? 'Klassen' : lang === 'fr' ? 'classes' : lang === 'hi' ? 'वर्ग' : lang === 'pt' ? 'classes' : lang === 'ja' ? '区分' : 'classes')}
+                  </span>
+                )}
+              </button>
             </div>
-            <p className="text-gray-500 text-sm max-w-xs mx-auto leading-relaxed">
-              {lang === 'zh' ? '在上方输入商标名称和商品/服务说明，开始完整检索分析。'
-                : lang === 'es' ? 'Ingresa el nombre de tu marca y la descripción de productos/servicios para comenzar el análisis completo.'
-                : lang === 'de' ? 'Geben Sie Ihren Markennamen und die Waren-/Dienstleistungsbeschreibung ein, um die vollständige Analyse zu starten.'
-                : lang === 'fr' ? "Entrez le nom de votre marque et la description des produits/services pour lancer l'analyse complète."
-                : lang === 'hi' ? 'पूर्ण विश्लेषण शुरू करने के लिए ऊपर ट्रेडमार्क नाम और माल/सेवाओं का विवरण दर्ज करें।'
-                : lang === 'pt' ? 'Digite o nome da marca e a descrição de produtos/serviços acima para iniciar a análise completa.'
-                : 'Enter your trademark name and goods/services description above to run the full clearance analysis.'}
-            </p>
+          </StepCard>
+        </div>
+
+        {/* ════════════════════════════════════════════════════════════════════ */}
+        {/* STEP 4 — Clearance Analysis                                         */}
+        {/* ════════════════════════════════════════════════════════════════════ */}
+        <div ref={step4Ref}>
+          <StepCard
+            step={4}
+            title={tr('step4Title')}
+            subtitle={tr('step4Subtitle')}
+            current={currentStep}
+            maxReached={maxReached}
+            completedSummary=""
+            onEditRequest={() => {}} // step 4 is terminal
+            editLabel={tr('editLabel')}
+          >
+            <TrademarkClearancePanel
+              markName={markName}
+              goodsServices={goodsInput}
+              classes={selectedNums}
+              language={lang as 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt'}
+              autoRun={true}
+            />
+          </StepCard>
+        </div>
+
+        {/* ── CTA to file ─────────────────────────────────────────────────── */}
+        {currentStep === 4 && (
+          <div className="bg-gradient-to-r from-navy-900 to-navy-800 rounded-2xl p-6 flex flex-col sm:flex-row items-center gap-4 print-hide">
+            <div className="flex-1 text-center sm:text-left">
+              <p className="text-white font-semibold text-base">{tr('readyToFile')}</p>
+            </div>
+            <Link
+              to={`/apply?mark=${encodeURIComponent(markName)}`}
+              className="inline-flex items-center gap-2 bg-gold-500 hover:bg-gold-400 text-white font-semibold px-5 py-2.5 rounded-xl transition-colors shadow-md whitespace-nowrap text-sm"
+            >
+              {tr('startFiling')}
+              <ArrowRight size={15} />
+            </Link>
+          </div>
+        )}
+
+        {/* ── Start over ──────────────────────────────────────────────────── */}
+        {currentStep > 1 && (
+          <div className="text-center print-hide pb-4">
+            {!startOverConfirm ? (
+              <button
+                type="button"
+                onClick={() => setStartOverConfirm(true)}
+                className="text-sm text-gray-400 hover:text-gray-600 underline underline-offset-2 transition-colors"
+              >
+                {tr('startOver')}
+              </button>
+            ) : (
+              <div className="inline-flex flex-col items-center gap-3 bg-white border border-amber-200 rounded-2xl px-5 py-4 shadow-sm">
+                <p className="text-sm text-gray-700 font-medium">
+                  {lang === 'zh' ? '这将清除所有进度。是否继续？'
+                    : lang === 'es' ? '¿Seguro que quieres comenzar de nuevo? Se borrará todo el progreso.'
+                    : lang === 'de' ? 'Alle Fortschritte werden gelöscht. Fortfahren?'
+                    : lang === 'fr' ? 'Toute la progression sera effacée. Continuer ?'
+                    : lang === 'hi' ? 'यह सभी प्रगति मिटा देगा। क्या आप निश्चित हैं?'
+                    : lang === 'pt' ? 'Todo o progresso será apagado. Tem certeza?'
+                    : 'All progress will be cleared. Are you sure?'}
+                </p>
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={doStartOver} className="text-sm font-semibold bg-navy-900 hover:bg-navy-800 text-white px-4 py-1.5 rounded-xl transition-colors">
+                    {lang === 'zh' ? '确认' : lang === 'es' ? 'Sí, comenzar de nuevo' : lang === 'de' ? 'Bestätigen' : lang === 'fr' ? 'Confirmer' : lang === 'hi' ? 'पुष्टि करें' : lang === 'pt' ? 'Confirmar' : 'Confirm'}
+                  </button>
+                  <button type="button" onClick={() => setStartOverConfirm(false)} className="text-sm text-gray-500 hover:text-gray-700 px-4 py-1.5 rounded-xl border border-gray-200 transition-colors">
+                    {tr('confirmNo')}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
+
+      {/* ── Edit confirmation modal ──────────────────────────────────────────── */}
+      {editConfirmStep !== null && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setEditConfirmStep(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Edit2 size={18} className="text-amber-600" />
+              </div>
+              <div>
+                <p className="font-semibold text-gray-900 text-sm">{tr('editLabel')} {tr(`step${editConfirmStep}Title`)}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{tr('editConfirmMsg')}</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button type="button" onClick={confirmEdit} className="flex-1 bg-navy-900 hover:bg-navy-800 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors">
+                {tr('confirmYes')}
+              </button>
+              <button type="button" onClick={() => setEditConfirmStep(null)} className="flex-1 border border-gray-200 hover:border-gray-300 text-gray-600 text-sm font-medium py-2.5 rounded-xl transition-colors">
+                {tr('confirmNo')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── StepCard sub-component ───────────────────────────────────────────────────
+
+interface StepCardProps {
+  step: WizardStep;
+  title: string;
+  subtitle: string;
+  current: WizardStep;
+  maxReached: WizardStep;
+  completedSummary: string;
+  onEditRequest: () => void;
+  editLabel: string;
+  children?: React.ReactNode;
+}
+
+function StepCard({
+  step, title, subtitle, current, completedSummary,
+  onEditRequest, editLabel, children,
+}: StepCardProps) {
+  const isActive    = step === current;
+  const isCompleted = step < current;
+  const isLocked    = step > current;
+
+  return (
+    <div className={`rounded-2xl border transition-all ${
+      isActive    ? 'border-navy-200 bg-white shadow-md'
+      : isCompleted ? 'border-gray-200 bg-white shadow-sm'
+      : 'border-gray-100 bg-gray-50 opacity-60'
+    }`}>
+      {/* Card header */}
+      <div className={`flex items-center gap-3 px-5 py-4 ${isActive ? 'border-b border-navy-100' : isCompleted ? 'border-b border-gray-100' : ''}`}>
+        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
+          isCompleted ? 'bg-navy-800 text-white'
+          : isActive   ? 'bg-navy-900 text-white ring-4 ring-navy-100'
+          : 'bg-gray-200 text-gray-400'
+        }`}>
+          {isCompleted ? <CheckCircle2 size={15} className="text-white" /> : step}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className={`text-sm font-bold truncate ${isActive ? 'text-navy-900' : isCompleted ? 'text-gray-700' : 'text-gray-400'}`}>{title}</p>
+          {isCompleted && completedSummary ? (
+            <p className="text-xs text-gray-500 truncate mt-0.5">{completedSummary}</p>
+          ) : !isCompleted && (
+            <p className={`text-xs mt-0.5 truncate ${isActive ? 'text-gray-500' : 'text-gray-400'}`}>{subtitle}</p>
+          )}
+        </div>
+        {isCompleted && step > 1 && (
+          <button
+            type="button"
+            onClick={onEditRequest}
+            className="flex-shrink-0 inline-flex items-center gap-1 text-xs text-gray-400 hover:text-navy-700 transition-colors border border-gray-200 hover:border-navy-300 rounded-lg px-2.5 py-1"
+          >
+            <Edit2 size={11} />
+            {editLabel}
+          </button>
+        )}
+        {isLocked && (
+          <div className="flex-shrink-0 text-gray-300">
+            <ChevronRight size={16} />
+          </div>
+        )}
+      </div>
+
+      {/* Card body (active only) */}
+      {isActive && (
+        <div className="px-5 py-5">
+          {children}
+        </div>
+      )}
     </div>
   );
 }
