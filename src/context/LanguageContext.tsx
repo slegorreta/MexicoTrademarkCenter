@@ -81,6 +81,9 @@ const translations: Record<string, Record<Language, string>> = {
   'hero.ai.cta': { en: 'Try our idea generator', zh: '试试我们的创意生成器', es: 'Prueba nuestro generador de ideas', de: 'Probiere unseren Ideengenerator', fr: 'Essayez notre générateur d\'idées', hi: 'हमारा आइडिया जनरेटर आज़माएं', pt: 'Experimente nosso gerador de ideias', ja: 'アイデアジェネレーターを試す' },
 
   // Hero free clearance CTA
+  'hero.step1': { en: 'Step 1', zh: '第一步', es: 'Paso 1', de: 'Schritt 1', fr: 'Étape 1', hi: 'चरण 1', pt: 'Etapa 1', ja: 'ステップ 1' },
+  'hero.step2': { en: 'Step 2', zh: '第二步', es: 'Paso 2', de: 'Schritt 2', fr: 'Étape 2', hi: 'चरण 2', pt: 'Etapa 2', ja: 'ステップ 2' },
+
   'hero.clearance.cta': {
     en: 'Review if your trademark is available',
     zh: '检索您的商标是否可注册',

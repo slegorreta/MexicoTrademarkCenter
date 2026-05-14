@@ -166,8 +166,7 @@ export default function LandingPage({ lang }: Props) {
 
             {/* Primary CTAs */}
             <div className="flex flex-col gap-1 mb-4 max-w-md">
-              {/* Step 1 label */}
-              <p className="text-sm font-bold text-white mb-1">Step 1</p>
+              <p className="text-sm font-bold text-white mb-1">{t('hero.step1')}</p>
 
               {/* CTA 1 — Check availability */}
               <Link
@@ -186,8 +185,7 @@ export default function LandingPage({ lang }: Props) {
                 <ArrowDown size={18} className="text-gold-400/60" />
               </div>
 
-              {/* Step 2 label */}
-              <p className="text-sm font-bold text-white mb-1">Step 2</p>
+              <p className="text-sm font-bold text-white mb-1">{t('hero.step2')}</p>
 
               {/* CTA 2 — Start filing */}
               <Link
