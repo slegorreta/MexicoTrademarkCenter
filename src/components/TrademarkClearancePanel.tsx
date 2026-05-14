@@ -46,6 +46,7 @@ interface Props {
   classes: number[];
   language: 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt';
   autoRun?: boolean;
+  showFilingCta?: boolean;
   onResult?: (result: ClearanceResult) => void;
   onSelectDespiteRisk?: (markName: string) => void;
   onRiskAcknowledgedChange?: (acknowledged: boolean) => void;
@@ -563,7 +564,7 @@ function FullReportNotice({ lang }: { lang: Lang }) {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function TrademarkClearancePanel({
-  markName, goodsServices = '', classes, language, autoRun = true, onResult, onSelectDespiteRisk, onRiskAcknowledgedChange,
+  markName, goodsServices = '', classes, language, autoRun = true, showFilingCta = false, onResult, onSelectDespiteRisk, onRiskAcknowledgedChange,
 }: Props) {
   const lang = (language in (UI.clearanceAnalysis)) ? language : 'en' as Lang;
   const { user } = useAuth();
@@ -788,16 +789,20 @@ export default function TrademarkClearancePanel({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className={`text-xs font-bold ${cfg.text}`}>{tr('clearanceAnalysis', lang)}:</span>
-            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${cfg.badge}`}>{cfg.label[lang as keyof typeof cfg.label] ?? cfg.label['en']}</span>
-            {result.riskColor && (
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+            {result.riskColor ? (
+              <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full border ${
                 result.riskColor === 'VERDE'    ? 'bg-emerald-100 text-emerald-700 border-emerald-300' :
                 result.riskColor === 'AMARILLO' ? 'bg-amber-100 text-amber-700 border-amber-300' :
                 result.riskColor === 'NARANJA'  ? 'bg-orange-100 text-orange-700 border-orange-300' :
                                                   'bg-red-100 text-red-700 border-red-300'
-              }`} title="Nivel de riesgo según el Playbook de Marcas México">
-                {result.riskColor}
+              }`}>
+                {result.riskColor === 'VERDE'    ? 'High Chances' :
+                 result.riskColor === 'AMARILLO' ? 'Some obstacles found' :
+                 result.riskColor === 'NARANJA'  ? 'Important obstacles found' :
+                                                   'Extremely low chances'}
               </span>
+            ) : (
+              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${cfg.badge}`}>{cfg.label[lang as keyof typeof cfg.label] ?? cfg.label['en']}</span>
             )}
           </div>
         </div>
@@ -1522,6 +1527,51 @@ export default function TrademarkClearancePanel({
           </div>
         )}
       </div>
+
+      {/* ── Step 5 — File Your Trademark (shown in TrademarkCheckPage only) ── */}
+      {showFilingCta && (
+        <div className="border-t-2 border-emerald-200 bg-emerald-50 px-4 py-4 print:hidden">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0 text-white font-bold text-sm shadow-sm flex-none">
+              5
+            </div>
+            <div>
+              <p className="text-sm font-bold text-emerald-900 leading-tight">
+                {lang === 'es' ? 'Registra tu Marca' :
+                 lang === 'zh' ? '提交商标申请' :
+                 lang === 'de' ? 'Marke Anmelden' :
+                 lang === 'fr' ? 'Déposer la Marque' :
+                 lang === 'hi' ? 'ट्रेडमार्क दर्ज करें' :
+                 lang === 'pt' ? 'Registrar a Marca' :
+                 'File Your Trademark'}
+              </p>
+              <p className="text-xs text-emerald-700 mt-0.5">
+                {lang === 'es' ? '100% en línea · USD$270 por clase · Revisado por expertos' :
+                 lang === 'zh' ? '100%在线 · 每类USD$270 · 专家审核' :
+                 lang === 'de' ? '100% online · USD$270 pro Klasse · Expertengeprüft' :
+                 lang === 'fr' ? '100% en ligne · USD$270 par classe · Révisé par des experts' :
+                 lang === 'hi' ? '100% ऑनलाइन · प्रति वर्ग USD$270 · विशेषज्ञ समीक्षित' :
+                 lang === 'pt' ? '100% online · USD$270 por classe · Revisado por especialistas' :
+                 '100% online · USD$270 per class · Expert-reviewed'}
+              </p>
+            </div>
+          </div>
+          <a
+            href={`/apply?mark=${encodeURIComponent(markName)}`}
+            className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-5 py-2.5 rounded-xl transition-colors shadow-md text-sm"
+          >
+            <FileText size={14} />
+            {lang === 'es' ? 'Iniciar Registro de Marca' :
+             lang === 'zh' ? '开始商标注册' :
+             lang === 'de' ? 'Markenanmeldung starten' :
+             lang === 'fr' ? 'Déposer ma marque' :
+             lang === 'hi' ? 'अभी आवेदन करें' :
+             lang === 'pt' ? 'Iniciar Registro de Marca' :
+             'Start Trademark Filing'}
+            <ArrowRight size={14} />
+          </a>
+        </div>
+      )}
 
       {/* ── Disclaimer ─────────────────────────────────────────────────────── */}
       <div className="border-t border-gray-100 bg-white/40 px-4 py-2 flex items-start gap-1.5">

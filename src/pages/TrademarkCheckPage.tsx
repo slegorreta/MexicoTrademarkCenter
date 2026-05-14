@@ -70,7 +70,7 @@ interface ChatMessage {
   content: string;
 }
 
-type WizardStep = 1 | 2 | 3 | 4;
+type WizardStep = 1 | 2 | 3 | 4 | 5;
 
 // ─── Translations ─────────────────────────────────────────────────────────────
 
@@ -174,6 +174,16 @@ const copy: Record<string, Partial<Record<Lang, string>>> = {
     hi: 'IMPI MARCia डेटाबेस के विरुद्ध AI-संचालित खोज।',
     pt: 'Busca com IA na base de dados IMPI MARCia.',
     ja: 'IMPIMARCiaデータベースに対するAI検索。',
+  },
+  step5Title: {
+    en: 'File Your Trademark',
+    zh: '提交商标申请',
+    es: 'Registra tu Marca',
+    de: 'Marke Anmelden',
+    fr: 'Déposer la Marque',
+    hi: 'ट्रेडमार्क दर्ज करें',
+    pt: 'Registrar a Marca',
+    ja: '商標を出願する',
   },
   trademarkLabel: {
     en: 'Proposed trademark name',
@@ -468,31 +478,42 @@ function StepperBar({
     <div className="flex items-start gap-0 w-full">
       {labels.map((label, i) => {
         const step = (i + 1) as WizardStep;
+        const isFilingStep = step === 5;
         const done = step < current;
         const active = step === current;
         const reachable = step <= maxReached;
+
+        const circleCls = isFilingStep
+          ? done
+            ? 'bg-emerald-600 border-emerald-600 text-white'
+            : active
+            ? 'bg-white border-emerald-500 text-emerald-600 shadow-md'
+            : 'bg-emerald-50 border-emerald-300 text-emerald-500'
+          : done
+          ? 'bg-navy-800 border-navy-800 text-white'
+          : active
+          ? 'bg-white border-navy-800 text-navy-800 shadow-md'
+          : 'bg-white border-gray-200 text-gray-400';
+
+        const labelCls = isFilingStep
+          ? done || active ? 'text-emerald-700 font-semibold' : 'text-emerald-500'
+          : active ? 'text-navy-800' : done ? 'text-navy-600' : 'text-gray-400';
+
+        const connectorLeft = reachable ? (isFilingStep ? 'bg-emerald-300' : 'bg-navy-700') : 'bg-gray-200';
+        const connectorRight = step < maxReached ? (step >= 4 ? 'bg-emerald-300' : 'bg-navy-700') : 'bg-gray-200';
+
         return (
           <div key={step} className="flex-1 flex flex-col items-center relative">
-            {/* connector line left */}
             {i > 0 && (
-              <div className={`absolute left-0 top-5 w-1/2 h-0.5 -translate-y-1/2 ${reachable ? 'bg-navy-700' : 'bg-gray-200'}`} />
+              <div className={`absolute left-0 top-5 w-1/2 h-0.5 -translate-y-1/2 ${connectorLeft}`} />
             )}
-            {/* connector line right */}
             {i < labels.length - 1 && (
-              <div className={`absolute right-0 top-5 w-1/2 h-0.5 -translate-y-1/2 ${step < maxReached ? 'bg-navy-700' : 'bg-gray-200'}`} />
+              <div className={`absolute right-0 top-5 w-1/2 h-0.5 -translate-y-1/2 ${connectorRight}`} />
             )}
-            {/* circle */}
-            <div className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all ${
-              done    ? 'bg-navy-800 border-navy-800 text-white'
-              : active ? 'bg-white border-navy-800 text-navy-800 shadow-md'
-              : 'bg-white border-gray-200 text-gray-400'
-            }`}>
-              {done ? <CheckCircle2 size={16} className="text-white" /> : step}
+            <div className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all ${circleCls}`}>
+              {done ? <CheckCircle2 size={16} className="text-white" /> : isFilingStep && !active ? <FileText size={15} /> : step}
             </div>
-            {/* label */}
-            <p className={`mt-2 text-[10px] sm:text-xs font-medium text-center leading-tight px-1 ${
-              active ? 'text-navy-800' : done ? 'text-navy-600' : 'text-gray-400'
-            }`}>{label}</p>
+            <p className={`mt-2 text-[10px] sm:text-xs font-medium text-center leading-tight px-1 ${labelCls}`}>{label}</p>
           </div>
         );
       })}
@@ -746,7 +767,7 @@ export default function TrademarkCheckPage() {
   };
 
   // ── Derived ────────────────────────────────────────────────────────────────
-  const stepLabels = [tr('step1Title'), tr('step2Title'), tr('step3Title'), tr('step4Title')];
+  const stepLabels = [tr('step1Title'), tr('step2Title'), tr('step3Title'), tr('step4Title'), tr('step5Title')];
 
   // Classes shown in Step 3: all selected (includes manually added)
   const confirmClasses = ALL_NICE_CLASSES.filter(c => selectedNums.includes(c.num));
@@ -1154,25 +1175,10 @@ export default function TrademarkCheckPage() {
               classes={selectedNums}
               language={lang as 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt'}
               autoRun={true}
+              showFilingCta={true}
             />
           </StepCard>
         </div>
-
-        {/* ── CTA to file ─────────────────────────────────────────────────── */}
-        {currentStep === 4 && (
-          <div className="bg-gradient-to-r from-navy-900 to-navy-800 rounded-2xl p-6 flex flex-col sm:flex-row items-center gap-4 print-hide">
-            <div className="flex-1 text-center sm:text-left">
-              <p className="text-white font-semibold text-base">{tr('readyToFile')}</p>
-            </div>
-            <Link
-              to={`/apply?mark=${encodeURIComponent(markName)}`}
-              className="inline-flex items-center gap-2 bg-gold-500 hover:bg-gold-400 text-white font-semibold px-5 py-2.5 rounded-xl transition-colors shadow-md whitespace-nowrap text-sm"
-            >
-              {tr('startFiling')}
-              <ArrowRight size={15} />
-            </Link>
-          </div>
-        )}
 
         {/* ── Start over ──────────────────────────────────────────────────── */}
         {currentStep > 1 && (
