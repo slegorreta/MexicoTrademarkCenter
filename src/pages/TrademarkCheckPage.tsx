@@ -548,6 +548,13 @@ export default function TrademarkCheckPage() {
   const step4Ref   = useRef<HTMLDivElement>(null);
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
+  // ── clear session on unmount so next visit starts fresh ──────────────────
+  useEffect(() => {
+    return () => {
+      ['tcpMark','tcpGoods','tcpChat','tcpSuggested','tcpSelected','tcpQuestions','tcpStep','tcpMaxStep','tcpOrderId'].forEach(k => sessionStorage.removeItem(k));
+    };
+  }, []);
+
   // ── scroll chat to bottom when questions arrive ────────────────────────────
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });

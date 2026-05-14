@@ -597,9 +597,6 @@ export default function ApplyPage() {
   const [showConflictModal, setShowConflictModal] = useState(false);
   const [step3RiskAcknowledged, setStep3RiskAcknowledged] = useState(false);
 
-  // Detect if user arrived from a prior clearance search
-  const fromClearance = !!sessionStorage.getItem('tcpSearchName') &&
-    (sessionStorage.getItem('tcpSearchName') ?? '').toLowerCase() === form.markName.trim().toLowerCase();
   const [clearanceSkipped, setClearanceSkipped] = useState(false);
 
   // Pre-payment clearance gate state
@@ -641,6 +638,10 @@ export default function ApplyPage() {
       isOwner: true, knownSimilarMarks: '',
     };
   });
+
+  // Detect if user arrived from a prior clearance search (declared after form is initialized)
+  const fromClearance = !!sessionStorage.getItem('tcpSearchName') &&
+    (sessionStorage.getItem('tcpSearchName') ?? '').toLowerCase() === form.markName.trim().toLowerCase();
 
   const set = (updates: Partial<FormData>) => setForm(f => ({ ...f, ...updates }));
 
