@@ -842,16 +842,11 @@ export default function TrademarkClearancePanel({
             <FileSearch size={12} className={cfg.text} />
             <span className={`text-xs font-semibold ${cfg.text}`}>{tr('riskSummaryTitle', lang)}</span>
           </div>
-          {/* Show user-language version if available, fall back to Spanish (canonical), with English below */}
           <p className="text-xs text-gray-700 leading-relaxed">
-            {result.riskSummary_user ?? (lang === 'en' ? result.riskSummary_en : result.riskSummary) ?? result.riskSummary}
+            {lang === 'es'
+              ? (result.riskSummary_user ?? result.riskSummary)
+              : (result.riskSummary_user ?? result.riskSummary_en ?? result.riskSummary)}
           </p>
-          {/* Show Spanish canonical below for non-Spanish users so legal terminology is visible */}
-          {lang !== 'es' && result.riskSummary && (
-            <p className="text-[11px] text-gray-500 leading-relaxed mt-2 pt-2 border-t border-gray-200/60 italic">
-              <span className="not-italic font-semibold text-gray-400 text-[10px]">ES: </span>{result.riskSummary}
-            </p>
-          )}
           <p className="text-[10px] text-gray-400 mt-1.5 flex items-center gap-1">
             <Info size={9} className="flex-shrink-0" />{tr('aiNote', lang)}
           </p>

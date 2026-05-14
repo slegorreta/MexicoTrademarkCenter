@@ -1072,7 +1072,55 @@ export default function ApplyPage() {
     setSubmitting(true);
     setPaymentError(null);
     try {
-      // Validate: every class entry must have at least one class number selected
+      // ── Required field validation ──────────────────────────────────────────
+      const missing: string[] = [];
+
+      // Step 1 — Trademark Details
+      if (!form.markName.trim()) missing.push(tri('Trademark name', '商标名称', 'Nombre de marca', 'Markenname', 'Nom de marque', 'ट्रेडमार्क नाम', 'Nome de marca'));
+      if (form.markType === 'logo' || form.markType === 'combined') {
+        if (!form.logoFile) missing.push(tri('Logo file', 'Logo文件', 'Archivo de logo', 'Logo-Datei', 'Fichier logo', 'लोगो फ़ाइल', 'Arquivo de logo'));
+      }
+
+      // Step 2 — Classes (skip when fromClearance, already pre-filled)
+      if (!fromClearance) {
+        const unclassified = form.classEntries.filter(e => {
+          const hasConfirmed = e.isConfirmed && e.classNumber !== null;
+          const hasFallback = e.fallbackClasses.length > 0;
+          return !hasConfirmed && !hasFallback;
+        });
+        if (unclassified.length > 0) {
+          missing.push(tri('Goods & Services classification', '商品和服务分类', 'Clasificación de productos y servicios', 'Waren- und Dienstleistungsklassifikation', 'Classification des produits et services', 'वस्तुओं और सेवाओं का वर्गीकरण', 'Classificação de produtos e serviços'));
+        }
+      } else {
+        const unclassified = form.classEntries.filter(e => {
+          const hasConfirmed = e.isConfirmed && e.classNumber !== null;
+          const hasFallback = e.fallbackClasses.length > 0;
+          return !hasConfirmed && !hasFallback;
+        });
+        if (unclassified.length > 0) {
+          missing.push(tri('Goods & Services classification', '商品和服务分类', 'Clasificación de productos y servicios', 'Waren- und Dienstleistungsklassifikation', 'Classification des produits et services', 'वस्तुओं और सेवाओं का वर्गीकरण', 'Classificação de produtos e serviços'));
+        }
+      }
+
+      // Step 5 — Owner / Contact Details
+      if (!form.legalName.trim()) missing.push(tri('Legal name', '法定名称', 'Nombre legal', 'Rechtlicher Name', 'Nom légal', 'कानूनी नाम', 'Nome legal'));
+      if (!form.email.trim()) missing.push(tri('Email address', '电子邮件', 'Correo electrónico', 'E-Mail-Adresse', 'Adresse e-mail', 'ईमेल पता', 'Endereço de e-mail'));
+      if (form.email.trim() && form.email !== form.emailConfirm) missing.push(tri('Email addresses must match', '两次邮件地址必须相同', 'Los correos deben coincidir', 'E-Mail-Adressen müssen übereinstimmen', 'Les adresses e-mail doivent correspondre', 'ईमेल पते मेल खाने चाहिए', 'Os e-mails devem coincidir'));
+      if (!form.address.trim()) missing.push(tri('Address', '地址', 'Dirección', 'Adresse', 'Adresse', 'पता', 'Endereço'));
+      if (!form.city.trim()) missing.push(tri('City', '城市', 'Ciudad', 'Stadt', 'Ville', 'शहर', 'Cidade'));
+      if (!form.postalCode.trim()) missing.push(tri('Postal code', '邮政编码', 'Código postal', 'Postleitzahl', 'Code postal', 'पिन कोड', 'CEP'));
+      if (!form.country.trim()) missing.push(tri('Country', '国家', 'País', 'Land', 'Pays', 'देश', 'País'));
+
+      if (missing.length > 0) {
+        setPaymentError(
+          tri('Please complete the following required fields before payment:', '请在付款前填写以下必填字段：', 'Por favor completa los siguientes campos obligatorios antes de pagar:', 'Bitte füllen Sie folgende Pflichtfelder aus:', 'Veuillez remplir les champs obligatoires suivants avant de payer :', 'भुगतान से पहले कृपया निम्नलिखित आवश्यक फ़ील्ड पूरी करें:', 'Por favor preencha os seguintes campos obrigatórios antes de pagar:') +
+          ' ' + missing.join(', ') + '.'
+        );
+        setSubmitting(false);
+        return;
+      }
+
+      // Legacy unclassified check (covers fromClearance edge-case already handled above)
       const unclassified = form.classEntries.filter(e => {
         const hasConfirmed = e.isConfirmed && e.classNumber !== null;
         const hasFallback = e.fallbackClasses.length > 0;
@@ -1619,7 +1667,7 @@ export default function ApplyPage() {
                     )}
                   </div>
                   <div className="sm:col-span-2">
-                    <label className={labelClass}>{tri('Phone / WeChat', '电话 / 微信', 'Teléfono / WeChat', 'Telefon / WeChat', 'Téléphone / WeChat', 'फोन / WeChat', 'Telefone / WeChat')}</label>
+                    <label className={labelClass}>{tri('Contact Telephone', '联系电话', 'Teléfono de Contacto', 'Kontakttelefon', 'Téléphone de contact', 'संपर्क टेलीफोन', 'Telefone de Contato', '連絡先電話番号')}</label>
                     <div className="flex gap-2">
                       <select
                         className="border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-transparent w-48 flex-shrink-0"
@@ -2923,7 +2971,6 @@ export default function ApplyPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    if (step === 5 && (form.email !== form.emailConfirm || !form.address.trim() || !form.city.trim() || !form.postalCode.trim() || !form.country.trim())) return;
                     if (step === 2) {
                       const hasHighRisk = Object.values(clearanceResults).some(r => r.risk === 'high' || r.risk === 'medium');
                       if (hasHighRisk) {
@@ -2942,7 +2989,6 @@ export default function ApplyPage() {
                     setStep(s => Math.min(7, s + 1) as Step);
                   }}
                   disabled={
-                    (step === 5 && (form.email !== form.emailConfirm || !form.address.trim() || !form.city.trim() || !form.postalCode.trim() || !form.country.trim())) ||
                     (!fromClearance && step === 2 && confirmedEntries.length === 0 && !activeEntryIsConfirmed) ||
                     (!fromClearance && step === 3 && Object.values(clearanceResults).some(r => r.risk === 'high' || r.risk === 'medium') && !step3RiskAcknowledged)
                   }

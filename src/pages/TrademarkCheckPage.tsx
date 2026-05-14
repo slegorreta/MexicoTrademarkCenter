@@ -553,7 +553,7 @@ export default function TrademarkCheckPage() {
   // ── ephemeral UI state ─────────────────────────────────────────────────────
   const [markInputLocal, setMarkInputLocal] = useState(markName);
   const [goodsInputLocal, setGoodsInputLocal] = useState(goodsInput);
-  const [replyInput, setReplyInput]   = useState('');
+  const [replyInputs, setReplyInputs] = useState<Record<number, string>>({});
   const [classifying, setClassifying] = useState(false);
   const [classifyError, setClassifyError] = useState<string | null>(null);
   const [pendingQuestions, setPendingQuestions] = useState<string[]>(() => {
@@ -672,20 +672,25 @@ export default function TrademarkCheckPage() {
   };
 
   const submitReply = () => {
-    const reply = replyInput.trim();
-    if (!reply || pendingQuestions.length === 0) return;
+    if (pendingQuestions.length === 0) return;
+    const allFilled = pendingQuestions.every((_, i) => (replyInputs[i] ?? '').trim());
+    if (!allFilled) return;
 
-    // Build assistant message from the questions, then append user reply
+    // Combine Q&A pairs into a single user message
+    const combinedReply = pendingQuestions
+      .map((q, i) => `Q: ${q}\nA: ${(replyInputs[i] ?? '').trim()}`)
+      .join('\n\n');
+
     const aiContent = pendingQuestions.join('\n');
     const newHistory: ChatMessage[] = [
       ...chatHistory,
       { role: 'assistant', content: aiContent },
-      { role: 'user', content: reply },
+      { role: 'user', content: combinedReply },
     ];
     setChatHistory(newHistory);
     sessionStorage.setItem('tcpChat', JSON.stringify(newHistory));
     setPendingQuestions([]);
-    setReplyInput('');
+    setReplyInputs({});
     runClassify(newHistory);
   };
 
@@ -937,57 +942,56 @@ export default function TrademarkCheckPage() {
                     </div>
                   )}
 
-                  {/* AI bubble */}
+                  {/* AI bubble with per-question answer boxes */}
                   <div className="flex items-start gap-3">
                     <div className="w-8 h-8 rounded-full bg-navy-100 flex items-center justify-center flex-shrink-0 mt-0.5">
                       <Sparkles size={14} className="text-navy-600" />
                     </div>
                     <div className="flex-1">
-                      <p className="text-xs font-semibold text-navy-700 mb-2">{tr('aiQuestionsLabel')}</p>
-                      <div className="space-y-2">
+                      <p className="text-xs font-semibold text-navy-700 mb-3">{tr('aiQuestionsLabel')}</p>
+                      <div className="space-y-4">
                         {pendingQuestions.map((q, i) => (
-                          <div key={i} className="flex items-start gap-3 bg-navy-50 border border-navy-100 rounded-xl px-4 py-3">
-                            <span className="flex-shrink-0 w-5 h-5 rounded-full bg-navy-200 text-navy-700 text-[10px] font-bold flex items-center justify-center mt-0.5">
-                              {i + 1}
-                            </span>
-                            <p className="text-sm text-navy-900 leading-relaxed">{q}</p>
+                          <div key={i} className="bg-navy-50 border border-navy-100 rounded-xl overflow-hidden">
+                            <div className="flex items-start gap-3 px-4 py-3">
+                              <span className="flex-shrink-0 w-5 h-5 rounded-full bg-navy-200 text-navy-700 text-[10px] font-bold flex items-center justify-center mt-0.5">
+                                {i + 1}
+                              </span>
+                              <p className="text-sm text-navy-900 leading-relaxed">{q}</p>
+                            </div>
+                            <div className="border-t border-navy-100 bg-white px-4 py-2.5">
+                              <textarea
+                                value={replyInputs[i] ?? ''}
+                                onChange={e => setReplyInputs(prev => ({ ...prev, [i]: e.target.value }))}
+                                placeholder={tr('replyPlaceholder')}
+                                rows={2}
+                                className="w-full text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none resize-none bg-transparent"
+                              />
+                            </div>
                           </div>
                         ))}
                       </div>
+
+                      <div className="mt-3 flex items-center justify-between">
+                        <button
+                          type="button"
+                          onClick={skipToManual}
+                          className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2 transition-colors"
+                        >
+                          {tr('skipManual')}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={submitReply}
+                          disabled={!pendingQuestions.every((_, i) => (replyInputs[i] ?? '').trim())}
+                          className="flex items-center gap-2 bg-navy-900 hover:bg-navy-800 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors"
+                        >
+                          <Send size={13} />
+                          {tr('replyPlaceholder') ? (lang === 'es' ? 'Enviar respuestas' : lang === 'zh' ? '提交回答' : lang === 'de' ? 'Antworten senden' : lang === 'fr' ? 'Envoyer les réponses' : lang === 'hi' ? 'उत्तर भेजें' : lang === 'pt' ? 'Enviar respostas' : 'Submit answers') : 'Submit answers'}
+                        </button>
+                      </div>
                     </div>
                   </div>
-
-                  {/* Reply input */}
-                  <div className="flex items-end gap-2 pl-11">
-                    <textarea
-                      value={replyInput}
-                      onChange={e => setReplyInput(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && replyInput.trim()) { e.preventDefault(); submitReply(); } }}
-                      placeholder={tr('replyPlaceholder')}
-                      rows={2}
-                      className="flex-1 border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500 focus:border-transparent resize-none transition-all"
-                    />
-                    <button
-                      type="button"
-                      onClick={submitReply}
-                      disabled={!replyInput.trim()}
-                      className="flex-shrink-0 w-10 h-10 bg-navy-900 hover:bg-navy-800 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl flex items-center justify-center transition-colors"
-                    >
-                      <Send size={15} />
-                    </button>
-                  </div>
                   <div ref={chatBottomRef} />
-
-                  {/* Skip */}
-                  <div className="pl-11">
-                    <button
-                      type="button"
-                      onClick={skipToManual}
-                      className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2 transition-colors"
-                    >
-                      {tr('skipManual')}
-                    </button>
-                  </div>
                 </div>
               )}
             </div>
