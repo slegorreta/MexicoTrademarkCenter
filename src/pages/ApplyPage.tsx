@@ -559,7 +559,9 @@ export default function ApplyPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [step, setStep] = useState<Step>(1);
+  const [step, setStep] = useState<Step>(() =>
+    new URLSearchParams(window.location.search).get('fromClearance') === '1' ? 4 : 1
+  );
   const [showAuthGate, setShowAuthGate] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [caseNumber, setCaseNumber] = useState('');
@@ -615,8 +617,69 @@ export default function ApplyPage() {
 
   const suggestedName = useRef<string>('');
 
+  // Detect clearance origin from URL param (set before TCP keys are cleared on unmount)
+  const fromClearance = new URLSearchParams(window.location.search).get('fromClearance') === '1';
+
   const [form, setForm] = useState<FormData>(() => {
-    const fromUrl = new URLSearchParams(window.location.search).get('mark') ?? '';
+    const urlParams = new URLSearchParams(window.location.search);
+    const fromUrl = urlParams.get('mark') ?? '';
+    const isClearanceFlow = urlParams.get('fromClearance') === '1';
+
+    // Pre-populate from clearance transfer keys when arriving from the search flow
+    if (isClearanceFlow) {
+      const clrMark = sessionStorage.getItem('clrMark') || fromUrl;
+      const clrGoods = sessionStorage.getItem('clrGoods') || '';
+      const clrSelected: number[] = (() => {
+        try { return JSON.parse(sessionStorage.getItem('clrSelected') ?? '[]'); } catch { return []; }
+      })();
+      interface ClrClass { classNumber: number; titleEn: string; descriptionEn?: string; descriptionEs?: string; confidence: number; }
+      const clrSuggested: ClrClass[] = (() => {
+        try { return JSON.parse(sessionStorage.getItem('clrSuggested') ?? '[]'); } catch { return []; }
+      })();
+
+      // Clear transfer keys
+      ['clrMark','clrGoods','clrSuggested','clrSelected'].forEach(k => sessionStorage.removeItem(k));
+
+      if (clrMark) suggestedName.current = clrMark;
+
+      const classEntries: ClassEntry[] = clrSelected.length > 0
+        ? clrSelected.map(num => {
+            const sc = clrSuggested.find(c => c.classNumber === num);
+            const nc = ALL_CLASSES.find(c => c.classNumber === num);
+            return {
+              id: `entry-${num}-${Date.now()}-${Math.random()}`,
+              description: clrGoods,
+              businessIndustry: '',
+              classNumber: num,
+              classTitleEn: sc?.titleEn ?? nc?.titleEn ?? `Class ${num}`,
+              descriptionEn: sc?.descriptionEn ?? '',
+              descriptionEs: sc?.descriptionEs ?? '',
+              confidence: sc?.confidence ?? 1,
+              isConfirmed: true,
+              fallbackClasses: [],
+              fallbackSuggestions: [],
+            };
+          })
+        : [newEntry()];
+
+      return {
+        applicantType: 'company',
+        legalName: '', country: '', address: '', city: '',
+        stateProvince: '', postalCode: '', email: '', emailConfirm: '',
+        phoneDialCode: '', phoneNumber: '', wechat: '', whatsapp: '', taxId: '',
+        contactPerson: '',
+        markName: clrMark, markType: 'word', containsNonSpanish: false,
+        markLanguage: 'en', meaningSpanish: '', transliteration: '',
+        markDescription: '', claimsColor: false, colorDescription: '',
+        logoFile: null,
+        classEntries,
+        usedInMexico: false, firstUseDate: '', priorityClaimed: false,
+        priorityCountry: '', priorityAppNumber: '', priorityFilingDate: '',
+        isOwner: true, knownSimilarMarks: '',
+      };
+    }
+
+    // Normal flow
     const suggested = fromUrl || sessionStorage.getItem('suggestedMarkName') || '';
     if (!fromUrl && suggested) {
       sessionStorage.removeItem('suggestedMarkName');
@@ -638,10 +701,6 @@ export default function ApplyPage() {
       isOwner: true, knownSimilarMarks: '',
     };
   });
-
-  // Detect if user arrived from a prior clearance search (declared after form is initialized)
-  const fromClearance = !!sessionStorage.getItem('tcpSearchName') &&
-    (sessionStorage.getItem('tcpSearchName') ?? '').toLowerCase() === form.markName.trim().toLowerCase();
 
   const set = (updates: Partial<FormData>) => setForm(f => ({ ...f, ...updates }));
 
@@ -1276,7 +1335,15 @@ export default function ApplyPage() {
       </section>
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-10">
-        {step < 8 && <StepIndicator current={step} total={8} t={t} />}
+        {step < 8 && (
+          <StepIndicator
+            current={fromClearance
+              ? (step === 1 ? 1 : step === 4 ? 2 : step === 5 ? 3 : step === 6 ? 4 : step === 7 ? 5 : 6) as Step
+              : step}
+            total={fromClearance ? 6 : 8}
+            t={t}
+          />
+        )}
 
         {/* Edit-mode loading */}
         {editLoading && (
@@ -1309,7 +1376,39 @@ export default function ApplyPage() {
           {/* STEP 1 — Trademark Details (was Step 2) */}
           {step === 1 && (
             <div>
-              <h2 className="text-lg font-bold text-navy-900 mb-6">{t('form.step1')}</h2>
+              <h2 className="text-lg font-bold text-navy-900 mb-4">{t('form.step1')}</h2>
+
+              {/* Clearance pre-fill notice */}
+              {fromClearance && form.classEntries.some(e => e.isConfirmed) && (
+                <div className="flex items-start gap-3 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 mb-5">
+                  <CheckCircle2 size={16} className="text-emerald-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold text-emerald-800">
+                      {tri(
+                        'Trademark and classes pre-filled from your clearance search',
+                        '商标和类别已从您的检索搜索中预填充',
+                        'Marca y clases pre-rellenadas desde tu búsqueda de disponibilidad',
+                        'Marke und Klassen aus Ihrer Recherche vorausgefüllt',
+                        'Marque et classes pré-remplies depuis votre recherche de disponibilité',
+                        'आपकी क्लीयरेंस खोज से ट्रेडमार्क और क्लास पहले से भरे गए',
+                        'Marca e classes pré-preenchidas da sua pesquisa de disponibilidade'
+                      )}
+                    </p>
+                    <p className="text-xs text-emerald-700 mt-1">
+                      {tri(
+                        `Classes pre-selected: ${form.classEntries.filter(e => e.isConfirmed).map(e => `Class ${e.classNumber}`).join(', ')}. Complete the trademark details below and proceed directly to Prior Use.`,
+                        `预选类别：${form.classEntries.filter(e => e.isConfirmed).map(e => `第${e.classNumber}类`).join('、')}。填写商标详情后直接前往使用情况步骤。`,
+                        `Clases preseleccionadas: ${form.classEntries.filter(e => e.isConfirmed).map(e => `Clase ${e.classNumber}`).join(', ')}. Completa los detalles de la marca y continúa directamente al Uso Previo.`,
+                        `Vorausgewählte Klassen: ${form.classEntries.filter(e => e.isConfirmed).map(e => `Klasse ${e.classNumber}`).join(', ')}. Füllen Sie die Markendetails aus und fahren Sie direkt mit Vorherige Nutzung fort.`,
+                        `Classes présélectionnées : ${form.classEntries.filter(e => e.isConfirmed).map(e => `Classe ${e.classNumber}`).join(', ')}. Complétez les détails et passez directement à l'Utilisation Antérieure.`,
+                        `प्री-सेलेक्टेड क्लास: ${form.classEntries.filter(e => e.isConfirmed).map(e => `क्लास ${e.classNumber}`).join(', ')}। ट्रेडमार्क विवरण भरें और सीधे पूर्व उपयोग पर जाएं।`,
+                        `Classes pré-selecionadas: ${form.classEntries.filter(e => e.isConfirmed).map(e => `Classe ${e.classNumber}`).join(', ')}. Complete os detalhes da marca e avance diretamente para Uso Anterior.`
+                      )}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-4">
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
@@ -2810,7 +2909,11 @@ export default function ApplyPage() {
               <div className="flex justify-between">
               <button
                 type="button"
-                onClick={() => setStep(s => Math.max(1, s - 1) as Step)}
+                onClick={() => {
+                  // When from clearance, Back at step 4 returns to step 1 (skipping 2 & 3)
+                  if (fromClearance && step === 4) { setStep(1); return; }
+                  setStep(s => Math.max(1, s - 1) as Step);
+                }}
                 disabled={step === 1 || (step === 7 && !!clientSecret)}
                 className="px-5 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:border-gray-300 disabled:opacity-40 transition-colors"
               >
@@ -2834,12 +2937,14 @@ export default function ApplyPage() {
                         return;
                       }
                     }
+                    // When from clearance, Next at step 1 jumps directly to step 4 (skip 2 & 3)
+                    if (fromClearance && step === 1) { setStep(4); return; }
                     setStep(s => Math.min(7, s + 1) as Step);
                   }}
                   disabled={
                     (step === 5 && (form.email !== form.emailConfirm || !form.address.trim() || !form.city.trim() || !form.postalCode.trim() || !form.country.trim())) ||
-                    (step === 2 && confirmedEntries.length === 0 && !activeEntryIsConfirmed) ||
-                    (step === 3 && Object.values(clearanceResults).some(r => r.risk === 'high' || r.risk === 'medium') && !step3RiskAcknowledged)
+                    (!fromClearance && step === 2 && confirmedEntries.length === 0 && !activeEntryIsConfirmed) ||
+                    (!fromClearance && step === 3 && Object.values(clearanceResults).some(r => r.risk === 'high' || r.risk === 'medium') && !step3RiskAcknowledged)
                   }
                   className="px-5 py-2.5 rounded-xl bg-gold-500 hover:bg-gold-400 text-white text-sm font-semibold transition-colors disabled:opacity-40 shadow-md"
                 >

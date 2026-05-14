@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Search, ArrowRight, Sparkles, CheckCircle2, FileText, HelpCircle, Loader2, Plus, X, Tag, ChevronDown, Send, CreditCard as Edit2, AlertTriangle, ChevronRight } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import TrademarkClearancePanel from '../components/TrademarkClearancePanel';
@@ -527,6 +527,7 @@ export default function TrademarkCheckPage() {
   const { language } = useLanguage();
   const lang = (language as Lang) in copy.pageTitle ? (language as Lang) : 'en';
   const tr = (key: string) => copy[key]?.[lang] ?? copy[key]?.['en'] ?? '';
+  const navigate = useNavigate();
 
   // ── persisted state ────────────────────────────────────────────────────────
   const [markName, setMarkName]           = useState(() => sessionStorage.getItem('tcpMark') ?? '');
@@ -752,6 +753,16 @@ export default function TrademarkCheckPage() {
       };
       refs[step]?.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 80);
+  };
+
+  // ── Navigate to filing flow, passing clearance data via transfer keys ─────
+  const handleStartFiling = () => {
+    // Write data under transfer keys (not cleaned up by TCP unmount handler)
+    sessionStorage.setItem('clrMark', markName);
+    sessionStorage.setItem('clrGoods', goodsInput);
+    sessionStorage.setItem('clrSuggested', sessionStorage.getItem('tcpSuggested') ?? '[]');
+    sessionStorage.setItem('clrSelected', sessionStorage.getItem('tcpSelected') ?? '[]');
+    navigate(`/apply?mark=${encodeURIComponent(markName)}&fromClearance=1`);
   };
 
   // ── Start over ─────────────────────────────────────────────────────────────
@@ -1176,6 +1187,7 @@ export default function TrademarkCheckPage() {
               language={lang as 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt'}
               autoRun={true}
               showFilingCta={true}
+              onStartFiling={handleStartFiling}
             />
           </StepCard>
         </div>

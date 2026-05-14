@@ -47,6 +47,7 @@ interface Props {
   language: 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt';
   autoRun?: boolean;
   showFilingCta?: boolean;
+  onStartFiling?: () => void;
   onResult?: (result: ClearanceResult) => void;
   onSelectDespiteRisk?: (markName: string) => void;
   onRiskAcknowledgedChange?: (acknowledged: boolean) => void;
@@ -564,7 +565,7 @@ function FullReportNotice({ lang }: { lang: Lang }) {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function TrademarkClearancePanel({
-  markName, goodsServices = '', classes, language, autoRun = true, showFilingCta = false, onResult, onSelectDespiteRisk, onRiskAcknowledgedChange,
+  markName, goodsServices = '', classes, language, autoRun = true, showFilingCta = false, onStartFiling, onResult, onSelectDespiteRisk, onRiskAcknowledgedChange,
 }: Props) {
   const lang = (language in (UI.clearanceAnalysis)) ? language : 'en' as Lang;
   const { user } = useAuth();
@@ -1556,20 +1557,38 @@ export default function TrademarkClearancePanel({
               </p>
             </div>
           </div>
-          <a
-            href={`/apply?mark=${encodeURIComponent(markName)}`}
-            className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-5 py-2.5 rounded-xl transition-colors shadow-md text-sm"
-          >
-            <FileText size={14} />
-            {lang === 'es' ? 'Iniciar Registro de Marca' :
-             lang === 'zh' ? '开始商标注册' :
-             lang === 'de' ? 'Markenanmeldung starten' :
-             lang === 'fr' ? 'Déposer ma marque' :
-             lang === 'hi' ? 'अभी आवेदन करें' :
-             lang === 'pt' ? 'Iniciar Registro de Marca' :
-             'Start Trademark Filing'}
-            <ArrowRight size={14} />
-          </a>
+          {onStartFiling ? (
+            <button
+              type="button"
+              onClick={onStartFiling}
+              className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-5 py-2.5 rounded-xl transition-colors shadow-md text-sm"
+            >
+              <FileText size={14} />
+              {lang === 'es' ? 'Iniciar Registro de Marca' :
+               lang === 'zh' ? '开始商标注册' :
+               lang === 'de' ? 'Markenanmeldung starten' :
+               lang === 'fr' ? 'Déposer ma marque' :
+               lang === 'hi' ? 'अभी आवेदन करें' :
+               lang === 'pt' ? 'Iniciar Registro de Marca' :
+               'Start Trademark Filing'}
+              <ArrowRight size={14} />
+            </button>
+          ) : (
+            <a
+              href={`/apply?mark=${encodeURIComponent(markName)}`}
+              className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-5 py-2.5 rounded-xl transition-colors shadow-md text-sm"
+            >
+              <FileText size={14} />
+              {lang === 'es' ? 'Iniciar Registro de Marca' :
+               lang === 'zh' ? '开始商标注册' :
+               lang === 'de' ? 'Markenanmeldung starten' :
+               lang === 'fr' ? 'Déposer ma marque' :
+               lang === 'hi' ? 'अभी आवेदन करें' :
+               lang === 'pt' ? 'Iniciar Registro de Marca' :
+               'Start Trademark Filing'}
+              <ArrowRight size={14} />
+            </a>
+          )}
         </div>
       )}
 
