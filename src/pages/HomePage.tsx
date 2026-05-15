@@ -5,6 +5,11 @@ import { useState, useEffect, type ReactNode } from 'react';
 import AboutSection, { SOFIA_VIDEO_IDS } from '../components/AboutSection';
 
 const HERO_WATCH_LABEL: Record<string, string> = {
+  en: 'Watch my welcome video',
+  es: 'Ver mi video de bienvenida',
+  zh: '观看欢迎视频',
+  de: 'Willkommensvideo ansehen',
+  fr: 'Regarder ma vidéo de bienvenue',
   hi: 'मेरा स्वागत वीडियो देखें',
   pt: 'Assistir ao vídeo de boas-vindas',
   ja: 'ウェルカムビデオを見る',

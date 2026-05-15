@@ -7,6 +7,11 @@ import sofiaImg from '../assets/Captura_de_pantalla_2026-05-14_a_la(s)_5.12.23_p
 // ── Per-language YouTube video IDs for SofIA's welcome video ──────────────────
 // Replace each value with the actual YouTube video ID for that language version.
 const SOFIA_VIDEO_IDS: Record<string, string> = {
+  en: 'vIK7hikaVp0',
+  es: 'N4wNYJO06Go',
+  zh: 'UOtEg9rUrlA',
+  de: 'pl_AUmsc_gU',
+  fr: 'Du3E8fxOU18',
   hi: 'KfCpbk9FOzc',
   pt: 'TZVJ_whPSck',
   ja: '-fsnNbCjk7c',
