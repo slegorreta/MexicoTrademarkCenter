@@ -24,6 +24,7 @@ interface ClearanceResult {
   webFindings: string[];
   marciaFindings: MarciaFinding[];
   marciaTotalCount?: number;
+  marciaFilteredCount?: number;
   marciaUrl: string;
   domainResults: DomainResult[];
   registrabilityFlags?: RegistrabilityFlag[];
@@ -706,7 +707,11 @@ export default function TrademarkClearancePanel({
       return (a.name.toLowerCase() === markName.toLowerCase() ? 0 : 1) - (b.name.toLowerCase() === markName.toLowerCase() ? 0 : 1);
     })
     .slice(0, 2);
-  const totalMarcia = result.marciaTotalCount ?? result.marciaFindings.length;
+  // filteredCount = class-filtered matches (meaningful for risk); totalCount = raw DB count (footnote only)
+  const filteredMarcia = result.marciaFilteredCount ?? result.marciaFindings.filter(
+    f => f.classOverlap === 'same' || (f.classOverlap as string) === 'possible_same' || f.classOverlap === 'related'
+  ).length;
+  const totalMarcia = filteredMarcia;  // UI now shows filtered count, not the raw 33k DB total
   const comDomain = domainResults.find(d => d.domain.endsWith('.com'));
   const comMxDomain = domainResults.find(d => d.domain.endsWith('.com.mx'));
 
@@ -1044,7 +1049,7 @@ export default function TrademarkClearancePanel({
               <span className="flex flex-col items-start text-left gap-0.5">
                 <span className="flex items-center gap-1.5">
                   <FileSearch size={12} className="text-[#1a2e1a]" />
-                  {tr('marciaTitle', lang)} ({totalMarcia} {tr('matches', lang)})
+                  {tr('marciaTitle', lang)} ({filteredMarcia} {tr('matches', lang)}{result.marciaTotalCount && result.marciaTotalCount > filteredMarcia ? ` · ${result.marciaTotalCount.toLocaleString()} ${lang === 'es' ? 'en base de datos' : lang === 'zh' ? '数据库总计' : 'total in DB'}` : ''})
                 </span>
                 <span className="text-[9px] text-gray-400 font-normal pl-5">
                   {lang === 'es' ? 'Búsqueda en la base de datos oficial de marcas del IMPI para detectar marcas conflictivas.' : lang === 'zh' ? '在IMPI官方商标数据库中搜索冲突商标。' : lang === 'de' ? 'Suche in der offiziellen IMPI-Markendatenbank nach kollidierenden Marken.' : lang === 'fr' ? 'Recherche dans la base officielle de marques IMPI pour détecter les marques conflictuelles.' : lang === 'hi' ? 'IMPI की आधिकारिक ट्रेडमार्क डेटाबेस में विरोधाभासी चिह्नों की खोज।' : lang === 'pt' ? 'Busca na base oficial de marcas do IMPI para detectar marcas conflitantes.' : 'Search of the official IMPI trademark registry to detect conflicting marks.'}
@@ -1062,18 +1067,39 @@ export default function TrademarkClearancePanel({
                       <thead><tr className="text-gray-400 border-b border-gray-100">
                         <th className="text-left pb-1 font-medium pr-3">Name</th>
                         <th className="text-left pb-1 font-medium pr-3">Class</th>
+                        <th className="text-left pb-1 font-medium pr-3">Conflict Level</th>
                         <th className="text-left pb-1 font-medium pr-3">Status</th>
                         <th className="text-left pb-1 font-medium">Holder</th>
                       </tr></thead>
                       <tbody>
-                        {result.marciaFindings.map((f, i) => (
-                          <tr key={i} className="border-b border-gray-50 last:border-0">
-                            <td className="py-1 pr-3 font-medium text-gray-700">{f.name}</td>
-                            <td className="py-1 pr-3 text-gray-500">{f.classNum}</td>
-                            <td className="py-1 pr-3 text-gray-500">{f.status}</td>
-                            <td className="py-1 text-gray-500 truncate max-w-24">{f.holder}</td>
-                          </tr>
-                        ))}
+                        {result.marciaFindings.map((f, i) => {
+                          const overlapColors: Record<string, string> = {
+                            same: 'bg-red-100 text-red-700',
+                            possible_same: 'bg-orange-100 text-orange-700',
+                            related: 'bg-amber-100 text-amber-700',
+                            unrelated: 'bg-gray-100 text-gray-500',
+                          };
+                          const overlapLabels: Record<string, string> = {
+                            same: lang === 'es' ? 'MISMA CLASE' : 'SAME CLASS',
+                            possible_same: lang === 'es' ? 'CLASE NO CONFIRMADA' : 'CLASS UNCONFIRMED',
+                            related: lang === 'es' ? 'CLASE RELACIONADA' : 'RELATED CLASS',
+                            unrelated: lang === 'es' ? 'CLASE DISTINTA' : 'DIFFERENT CLASS',
+                          };
+                          const overlap = (f.classOverlap as string) || 'unrelated';
+                          return (
+                            <tr key={i} className={`border-b border-gray-50 last:border-0 ${overlap === 'same' || overlap === 'possible_same' ? 'bg-red-50/40' : ''}`}>
+                              <td className="py-1 pr-3 font-medium text-gray-700">{f.name}</td>
+                              <td className="py-1 pr-3 text-gray-500">{f.classNum || '—'}</td>
+                              <td className="py-1 pr-3">
+                                <span className={`inline-flex text-[9px] font-bold px-1.5 py-0.5 rounded-full ${overlapColors[overlap] ?? 'bg-gray-100 text-gray-500'}`}>
+                                  {overlapLabels[overlap] ?? overlap.toUpperCase()}
+                                </span>
+                              </td>
+                              <td className="py-1 pr-3 text-gray-500">{f.status}</td>
+                              <td className="py-1 text-gray-500 truncate max-w-24">{f.holder}</td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
