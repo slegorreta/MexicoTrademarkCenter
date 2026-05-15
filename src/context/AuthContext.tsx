@@ -112,6 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signOut() {
+    localStorage.removeItem('mtc_filing_draft');
     await supabase.auth.signOut();
     setProfile(null);
   }

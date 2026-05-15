@@ -28,10 +28,12 @@ Deno.serve(async (req: Request) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const { paymentIntentId, applicationId, language } = await req.json() as {
+    const { paymentIntentId, applicationId, language, geo_lat, geo_lng } = await req.json() as {
       paymentIntentId: string;
       applicationId: string;
       language?: string;
+      geo_lat?: number;
+      geo_lng?: number;
     };
 
     if (!paymentIntentId || !applicationId) {
@@ -82,15 +84,25 @@ Deno.serve(async (req: Request) => {
       })
       .eq("stripe_payment_intent_id", paymentIntentId);
 
-    // Update application payment + filing status (idempotent), persist language
+    // Update application payment + filing status (idempotent), persist language and geo coords
     await supabase
       .from("applications")
       .update({
         payment_status: "paid",
         filing_status: "pending_review",
         language: resolvedLanguage,
+        ...(geo_lat != null && geo_lng != null ? { payment_geo_lat: geo_lat, payment_geo_lng: geo_lng } : {}),
       })
       .eq("id", applicationId);
+
+    // Log filing event with geo coords if provided
+    await supabase.from("filing_events").insert({
+      application_id: applicationId,
+      event_type: "payment_confirmed",
+      language: resolvedLanguage,
+      amount_usd: intent.amount / 100,
+      ...(geo_lat != null && geo_lng != null ? { geo_lat, geo_lng } : {}),
+    });
 
     // Fetch application to check if we need to auto-create client account
     const { data: app } = await supabase

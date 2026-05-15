@@ -1,7 +1,8 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { LanguageProvider, type Language } from './context/LanguageContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { detectLanguageFromIp } from './lib/ipLanguage';
 import Layout from './components/layout/Layout';
 
 // Public pages
@@ -75,10 +76,39 @@ function detectInitialLang(): Language | undefined {
   return LANG_ROUTES[path] ?? LANG_ROUTES[path.endsWith('/') ? path : `${path}/`];
 }
 
+const LANG_PREFIXES = Object.keys(LANG_ROUTES).map(k => k.replace(/\//g, ''));
+
+function IpLanguageRedirect() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const path = window.location.pathname;
+    // If already on a language landing page, save that explicit choice and skip
+    const onLangPage = LANG_PREFIXES.some(p => path === `/${p}` || path === `/${p}/`);
+    if (onLangPage) {
+      const lang = detectInitialLang();
+      if (lang) localStorage.setItem('mtc_lang', lang);
+      return;
+    }
+    // Only redirect root '/' visits with no stored preference
+    if (path !== '/') return;
+    if (localStorage.getItem('mtc_lang')) return;
+    detectLanguageFromIp().then(lang => {
+      if (lang !== 'en') {
+        localStorage.setItem('mtc_lang', lang);
+        navigate(`/${lang}/`, { replace: true });
+      }
+    });
+  }, [navigate]);
+
+  return null;
+}
+
 function AppRoutes() {
   return (
     <>
     <ScrollToTop />
+    <IpLanguageRedirect />
     <Routes>
       {/* Root: on app subdomain go straight to admin login, otherwise public home */}
       <Route path="/" element={isAppSubdomain ? <Navigate to="/admin/login" replace /> : <Layout><HomePage /></Layout>} />

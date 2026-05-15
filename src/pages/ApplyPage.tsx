@@ -182,19 +182,30 @@ function CheckoutForm({ language, finalTotal, onSuccess, applicationId, paymentI
   const tri = (en: string, zh: string, es: string, de?: string, fr?: string, hi?: string, pt?: string, ja?: string): string =>
     language === 'zh' ? zh : language === 'es' ? es : language === 'de' ? (de ?? en) : language === 'fr' ? (fr ?? en) : language === 'hi' ? (hi ?? en) : language === 'pt' ? (pt ?? en) : language === 'ja' ? (ja ?? en) : en;
 
+  const requestGeoCoords = (): Promise<{ geo_lat: number; geo_lng: number } | null> =>
+    new Promise(resolve => {
+      if (!navigator.geolocation) { resolve(null); return; }
+      navigator.geolocation.getCurrentPosition(
+        pos => resolve({ geo_lat: pos.coords.latitude, geo_lng: pos.coords.longitude }),
+        () => resolve(null),
+        { timeout: 10000, maximumAge: 60000 }
+      );
+    });
+
   const handlePay = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!stripe || !elements) return;
     setPaying(true);
     setError(null);
 
-    const { error: confirmError } = await stripe.confirmPayment({
-      elements,
-      redirect: 'if_required',
-    });
+    // Request location permission while Stripe is processing — non-blocking
+    const [confirmResult, geoCoords] = await Promise.all([
+      stripe.confirmPayment({ elements, redirect: 'if_required' }),
+      requestGeoCoords(),
+    ]);
 
-    if (confirmError) {
-      setError(confirmError.message ?? 'Payment failed. Please try again.');
+    if (confirmResult.error) {
+      setError(confirmResult.error.message ?? 'Payment failed. Please try again.');
       setPaying(false);
       return;
     }
@@ -211,7 +222,7 @@ function CheckoutForm({ language, finalTotal, onSuccess, applicationId, paymentI
             'Authorization': `Bearer ${supabaseAnonKey}`,
             'Apikey': supabaseAnonKey,
           },
-          body: JSON.stringify({ paymentIntentId, applicationId, language }),
+          body: JSON.stringify({ paymentIntentId, applicationId, language, ...geoCoords }),
         });
       } catch (e) {
         console.error('confirm-payment-client failed:', e);
@@ -827,7 +838,20 @@ export default function ApplyPage() {
     return rest;
   }, []);
 
-  const LS_DRAFT_KEY = 'mtc_filing_draft';
+  // Session-scoped draft key: a new browser session generates a fresh UUID so
+  // one device visitor never sees a previous anonymous visitor's personal data.
+  // Authenticated users always use Supabase drafts, so this only matters for
+  // unauthenticated flows.
+  const LS_DRAFT_KEY = (() => {
+    const SESSION_KEY = 'mtc_anon_session_id';
+    let sid = sessionStorage.getItem(SESSION_KEY);
+    if (!sid) {
+      sid = crypto.randomUUID();
+      sessionStorage.setItem(SESSION_KEY, sid);
+    }
+    return `mtc_filing_draft_${sid}`;
+  })();
+  const DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
   // Load existing draft on mount
   useEffect(() => {
@@ -867,18 +891,23 @@ export default function ApplyPage() {
           if (lsRaw && searchParams.get('fresh') !== '1') {
             try {
               const lsDraft = JSON.parse(lsRaw);
-              const savedForm = lsDraft.form_data as Partial<FormData> | null;
-              const savedEntries = lsDraft.class_entries as ClassEntry[] | null;
-              if (savedForm) {
-                setForm(f => ({
-                  ...f,
-                  ...savedForm,
-                  logoFile: null,
-                  classEntries: savedEntries && savedEntries.length > 0 ? savedEntries : f.classEntries,
-                }));
+              const age = lsDraft.updated_at ? Date.now() - new Date(lsDraft.updated_at).getTime() : Infinity;
+              if (age > DRAFT_TTL_MS) {
+                localStorage.removeItem(LS_DRAFT_KEY);
+              } else {
+                const savedForm = lsDraft.form_data as Partial<FormData> | null;
+                const savedEntries = lsDraft.class_entries as ClassEntry[] | null;
+                if (savedForm) {
+                  setForm(f => ({
+                    ...f,
+                    ...savedForm,
+                    logoFile: null,
+                    classEntries: savedEntries && savedEntries.length > 0 ? savedEntries : f.classEntries,
+                  }));
+                }
+                if (lsDraft.logo_preview_data) setLogoPreview(lsDraft.logo_preview_data);
+                if (searchParams.get('resume') === '1' && lsDraft.current_step) setStep(lsDraft.current_step as Step);
               }
-              if (lsDraft.logo_preview_data) setLogoPreview(lsDraft.logo_preview_data);
-              if (searchParams.get('resume') === '1' && lsDraft.current_step) setStep(lsDraft.current_step as Step);
             } catch {
               localStorage.removeItem(LS_DRAFT_KEY);
             }
@@ -897,18 +926,24 @@ export default function ApplyPage() {
       if (lsRaw) {
         try {
           const lsDraft = JSON.parse(lsRaw);
-          const savedForm = lsDraft.form_data as Partial<FormData> | null;
-          const savedEntries = lsDraft.class_entries as ClassEntry[] | null;
-          if (savedForm) {
-            setForm(f => ({
-              ...f,
-              ...savedForm,
-              logoFile: null,
-              classEntries: savedEntries && savedEntries.length > 0 ? savedEntries : f.classEntries,
-            }));
+          // Discard stale drafts silently
+          const age = lsDraft.updated_at ? Date.now() - new Date(lsDraft.updated_at).getTime() : Infinity;
+          if (age > DRAFT_TTL_MS) {
+            localStorage.removeItem(LS_DRAFT_KEY);
+          } else {
+            const savedForm = lsDraft.form_data as Partial<FormData> | null;
+            const savedEntries = lsDraft.class_entries as ClassEntry[] | null;
+            if (savedForm) {
+              setForm(f => ({
+                ...f,
+                ...savedForm,
+                logoFile: null,
+                classEntries: savedEntries && savedEntries.length > 0 ? savedEntries : f.classEntries,
+              }));
+            }
+            if (lsDraft.logo_preview_data) setLogoPreview(lsDraft.logo_preview_data);
+            if (searchParams.get('resume') === '1' && lsDraft.current_step) setStep(lsDraft.current_step as Step);
           }
-          if (lsDraft.logo_preview_data) setLogoPreview(lsDraft.logo_preview_data);
-          if (searchParams.get('resume') === '1' && lsDraft.current_step) setStep(lsDraft.current_step as Step);
         } catch {
           localStorage.removeItem(LS_DRAFT_KEY);
         }

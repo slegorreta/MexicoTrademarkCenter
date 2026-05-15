@@ -439,6 +439,30 @@ export default function AdminApplicationDetail() {
               </div>
             ) : <p className="text-xs text-gray-400">No goods/services record.</p>}
           </div>
+          {app.payment_geo_lat != null && app.payment_geo_lng != null && (
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <h3 className="font-semibold text-navy-900 mb-4 text-sm">Payment Location</h3>
+              <div className="space-y-2">
+                <div className="flex gap-3">
+                  <span className="text-xs text-gray-400 w-24 flex-shrink-0">Coordinates</span>
+                  <span className="text-xs text-gray-800 font-mono">
+                    {Number(app.payment_geo_lat).toFixed(5)}, {Number(app.payment_geo_lng).toFixed(5)}
+                  </span>
+                </div>
+                <div className="flex gap-3">
+                  <span className="text-xs text-gray-400 w-24 flex-shrink-0">Map</span>
+                  <a
+                    href={`https://maps.google.com/?q=${app.payment_geo_lat},${app.payment_geo_lng}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-blue-600 hover:text-blue-800 underline"
+                  >
+                    View on Google Maps
+                  </a>
+                </div>
+              </div>
+            </div>
+          )}
           <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-5">
             <h3 className="font-semibold text-navy-900 mb-4 text-sm">Quick Actions</h3>
             <div className="flex flex-wrap gap-2">
