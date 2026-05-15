@@ -5,6 +5,7 @@ import { useLanguage, type Language } from '../context/LanguageContext';
 import SEOHead from '../components/SEOHead';
 import CurrencyDisplay from '../components/CurrencyDisplay';
 import { LANDING_PAGES, HREFLANG_ALTERNATES, type LandingPageData } from '../data/landingPages';
+import AboutSection from '../components/AboutSection';
 
 const PRICE_PER_CLASS = 270;
 
@@ -397,72 +398,8 @@ export default function LandingPage({ lang }: Props) {
         </div>
       </section>
 
-      {/* ── About Us preview ──────────────────────────────────────────────── */}
-      <section className="py-20 bg-gray-50 border-t border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-14 items-center">
-
-            {/* Image mosaic */}
-            <div className="grid grid-cols-2 gap-3">
-              <div
-                className="col-span-2 rounded-2xl overflow-hidden shadow-lg relative"
-                style={{ aspectRatio: '16/7', filter: 'saturate(0.75) contrast(1.08) brightness(0.96)' }}
-              >
-                <img src="/pexels-kampus-8190827.jpg" alt="Our team" className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-navy-800/25 mix-blend-multiply rounded-2xl" />
-              </div>
-              <div
-                className="rounded-xl overflow-hidden shadow-md"
-                style={{ aspectRatio: '1', filter: 'saturate(0.75) contrast(1.08) brightness(0.96)' }}
-              >
-                <img src="/pexels-pavel-danilyuk-7658400.jpg" alt="IP professionals" className="w-full h-full object-cover" />
-              </div>
-              <div
-                className="rounded-xl overflow-hidden shadow-md"
-                style={{ aspectRatio: '1', filter: 'saturate(0.75) contrast(1.08) brightness(0.96)' }}
-              >
-                <img src="/pexels-pavel-danilyuk-7658388.jpg" alt="Legal technology" className="w-full h-full object-cover" />
-              </div>
-            </div>
-
-            {/* Copy + SofIA teaser */}
-            <div className="space-y-5">
-              <div className="text-gold-600 font-semibold text-sm uppercase tracking-wider">
-                {t('about.eyebrow')}
-              </div>
-              <h2 className="text-3xl lg:text-4xl font-bold text-navy-900 leading-tight">
-                {t('about.homepageHeading')}
-              </h2>
-              <p className="text-gray-600 text-lg leading-relaxed">{t('about.p1')}</p>
-              <p className="text-gray-600 leading-relaxed">{t('about.p2')}</p>
-              <p className="font-semibold text-navy-900">{t('about.p3')}</p>
-
-              {/* SofIA card */}
-              <div className="flex items-center gap-4 bg-white border border-navy-100 rounded-xl p-4 shadow-sm">
-                <div
-                  className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0 border-2 border-gold-300 shadow-md"
-                  style={{ filter: 'saturate(0.85) contrast(1.05)' }}
-                >
-                  <img src="/image.png" alt="SofIA" className="w-full h-full object-cover object-top" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs font-bold text-gold-600 uppercase tracking-wide">AgenticEO</p>
-                  <p className="text-sm font-bold text-navy-900">SofIA</p>
-                  <p className="text-xs text-gray-500 leading-snug mt-0.5 line-clamp-2">{t('about.sofia.desc')}</p>
-                </div>
-              </div>
-
-              <Link
-                to="/about"
-                className="inline-flex items-center gap-2 text-navy-900 font-semibold hover:text-gold-600 transition-colors group"
-              >
-                {t('about.learnMore')}
-                <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* ── About Us ──────────────────────────────────────────────────────── */}
+      <AboutSection />
 
       {/* Final CTA */}
       <section className="py-16 bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800">
