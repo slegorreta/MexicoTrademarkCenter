@@ -6,6 +6,7 @@ import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
+import { logFilingEvent } from '../lib/analytics';
 import { calculatePrice, getAllClasses, type ClassSuggestion } from '../lib/classifier';
 import { getSortedCountries, getSortedDialCodes, type SupportedLang } from '../lib/countries';
 import AIDescriptionAssistant, { type RelatedClass } from '../components/AIDescriptionAssistant';
@@ -1388,6 +1389,7 @@ export default function ApplyPage() {
         if (!appData) throw new Error('Failed to create application record');
         resolvedAppId = appData.id;
         setApplicationId(appData.id);
+        logFilingEvent({ event_type: 'process_started', language, application_id: appData.id });
 
         await supabase.from('trademarks').insert({
           application_id: appData.id,
@@ -1473,6 +1475,12 @@ export default function ApplyPage() {
 
   const handlePaymentSuccess = () => {
     deleteDraft();
+    logFilingEvent({
+      event_type: 'payment_completed',
+      language,
+      application_id: applicationId,
+      amount_usd: finalTotal ?? discountedTotal,
+    });
     setStep(7);
   };
 

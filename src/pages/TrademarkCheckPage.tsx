@@ -2,7 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, ArrowRight, Sparkles, CheckCircle2, FileText, HelpCircle, Loader2, Plus, X, Tag, ChevronDown, Send, CreditCard as Edit2, AlertTriangle, ChevronRight } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
-import TrademarkClearancePanel from '../components/TrademarkClearancePanel';
+import TrademarkClearancePanel, { type ClearanceResult } from '../components/TrademarkClearancePanel';
+import { logClearanceSearch } from '../lib/analytics';
 
 type Lang = 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt' | 'ja';
 
@@ -1192,6 +1193,14 @@ export default function TrademarkCheckPage() {
               autoRun={true}
               showFilingCta={true}
               onStartFiling={handleStartFiling}
+              onResult={(r: ClearanceResult) => {
+                logClearanceSearch({
+                  language: lang,
+                  markSearched: markName,
+                  classesSearched: selectedNums,
+                  resultRisk: r.risk,
+                });
+              }}
             />
           </StepCard>
         </div>

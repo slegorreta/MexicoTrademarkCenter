@@ -1,7 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
-import { LanguageProvider, type Language } from './context/LanguageContext';
+import { LanguageProvider, useLanguage, type Language } from './context/LanguageContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { useSessionTracker } from './hooks/useSessionTracker';
 import Layout from './components/layout/Layout';
 
 // Public pages
@@ -39,6 +40,7 @@ import AdminSettings from './pages/admin/AdminSettings';
 import AdminStaffManagement from './pages/admin/AdminStaffManagement';
 import AdminClearanceReports from './pages/admin/AdminClearanceReports';
 import AdminVideoUpload from './pages/admin/AdminVideoUpload';
+import AdminAnalytics from './pages/admin/AdminAnalytics';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -75,10 +77,17 @@ function detectInitialLang(): Language | undefined {
   return LANG_ROUTES[path] ?? LANG_ROUTES[path.endsWith('/') ? path : `${path}/`];
 }
 
+function SessionTrackerWatcher() {
+  const { language } = useLanguage();
+  useSessionTracker(language);
+  return null;
+}
+
 function AppRoutes() {
   return (
     <>
     <ScrollToTop />
+    <SessionTrackerWatcher />
     <Routes>
       {/* Root: on app subdomain go straight to admin login, otherwise public home */}
       <Route path="/" element={isAppSubdomain ? <Navigate to="/admin/login" replace /> : <Layout><HomePage /></Layout>} />
@@ -186,6 +195,11 @@ function AppRoutes() {
       <Route
         path="/admin/settings"
         element={<ProtectedRoute requireStaff><AdminLayout><AdminSettings /></AdminLayout></ProtectedRoute>}
+      />
+
+      <Route
+        path="/admin/analytics"
+        element={<ProtectedRoute requireStaff><AdminLayout><AdminAnalytics /></AdminLayout></ProtectedRoute>}
       />
 
       {/* Video upload utility */}

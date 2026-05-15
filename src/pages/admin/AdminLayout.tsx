@@ -2,7 +2,7 @@ import { ReactNode, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, FileText, Calendar, CreditCard, Users,
-  Mail, Settings, LogOut, Menu, X, Shield, Clock, UserCog, Search
+  Mail, Settings, LogOut, Menu, X, Shield, Clock, UserCog, Search, BarChart2
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -14,6 +14,7 @@ const navItems = [
   { href: '/admin/payments', icon: CreditCard, label: 'Payments' },
   { href: '/admin/search-reports', icon: Search, label: 'Search Reports' },
   { href: '/admin/clients', icon: Users, label: 'Clients' },
+  { href: '/admin/analytics', icon: BarChart2, label: 'Analytics' },
   { href: '/admin/email-templates', icon: Mail, label: 'Email Templates' },
   { href: '/admin/settings', icon: Settings, label: 'Settings' },
 ];
