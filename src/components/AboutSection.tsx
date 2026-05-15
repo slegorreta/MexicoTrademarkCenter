@@ -195,7 +195,7 @@ export default function AboutSection() {
         <p className="text-gold-400 text-sm font-semibold uppercase tracking-[0.22em] mb-4">
           {t('about.title')}
         </p>
-        <h2 className="text-4xl lg:text-6xl font-bold text-white leading-tight tracking-tight max-w-3xl mx-auto">
+        <h2 className="text-3xl sm:text-4xl lg:text-6xl font-bold text-white leading-tight tracking-tight max-w-3xl mx-auto break-words hyphens-auto">
           {t('about.eyebrow')}
         </h2>
       </section>

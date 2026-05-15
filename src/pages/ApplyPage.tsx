@@ -743,12 +743,9 @@ export default function ApplyPage() {
       };
     }
 
-    // Normal flow
-    const suggested = fromUrl || sessionStorage.getItem('suggestedMarkName') || '';
-    if (!fromUrl && suggested) {
-      sessionStorage.removeItem('suggestedMarkName');
-    }
-    if (suggested) suggestedName.current = suggested;
+    // Normal flow — no pre-fill; draft recovery (for logged-in users) happens in a separate useEffect
+    // Clear any stale suggestion keys to avoid leaking data from other flows
+    sessionStorage.removeItem('suggestedMarkName');
     return {
       applicantType: 'company',
       legalName: '', country: '', address: '', city: '',
@@ -760,7 +757,7 @@ export default function ApplyPage() {
       useNotificationAddress: false,
       notificationAddress: '', notificationCity: '', notificationStateProvince: '',
       notificationPostalCode: '', notificationCountry: '',
-      markName: suggested, markType: 'word',
+      markName: '', markType: 'word',
       impiFigureType: 'marca',
       containsNonSpanish: false,
       markLanguage: 'en', meaningSpanish: '', transliteration: '',
