@@ -4,21 +4,6 @@ import { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import sofiaImg from '../assets/Captura_de_pantalla_2026-05-14_a_la(s)_5.12.23_p.m..png';
 
-// ── Per-language YouTube video IDs for SofIA's welcome video ──────────────────
-// Replace each value with the actual YouTube video ID for that language version.
-const SOFIA_VIDEO_IDS: Record<string, string> = {
-  en: 'vIK7hikaVp0',
-  es: 'N4wNYJO06Go',
-  zh: 'UOtEg9rUrlA',
-  de: 'pl_AUmsc_gU',
-  fr: 'Du3E8fxOU18',
-  hi: 'KfCpbk9FOzc',
-  pt: 'TZVJ_whPSck',
-  ja: '-fsnNbCjk7c',
-};
-
-export { SOFIA_VIDEO_IDS };
-
 // ── Per-language "We are…" stanza ─────────────────────────────────────────────
 const WE_ARE: Record<string, string[]> = {
   en: ['We are lawyers.', 'We are engineers.', 'We are strategists.', 'We are builders.', 'We are machines.', 'We are code.', 'We are agents.', 'We are human.', 'We are futurists.'],
@@ -210,7 +195,7 @@ export default function AboutSection() {
         <p className="text-gold-400 text-sm font-semibold uppercase tracking-[0.22em] mb-4">
           {t('about.title')}
         </p>
-        <h2 className="text-3xl sm:text-4xl lg:text-6xl font-bold text-white leading-tight tracking-tight max-w-3xl mx-auto break-words hyphens-auto">
+        <h2 className="text-4xl lg:text-6xl font-bold text-white leading-tight tracking-tight max-w-3xl mx-auto">
           {t('about.eyebrow')}
         </h2>
       </section>
@@ -295,7 +280,6 @@ export default function AboutSection() {
           </div>
         </div>
       </section>
-
 
       {/* ── CTA ── */}
       <section className="bg-navy-900 border-t border-navy-800 py-12">

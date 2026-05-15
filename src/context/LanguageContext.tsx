@@ -1262,11 +1262,11 @@ const translations: Record<string, Record<Language, string>> = {
   'tooltip.priorityClaim': {
     en: 'Under the Paris Convention, if you have filed a trademark application in another member country within the last 6 months, you can claim that earlier filing date in Mexico. This is called a "priority claim." It means your Mexico application will be treated as if it was filed on the same date as your foreign application, giving you priority over others who filed in between.',
     zh: '根据《巴黎公约》，如果您在过去6个月内在另一成员国提交了商标申请，您可以在墨西哥主张该较早的申请日期。这称为"优先权主张"。这意味着您的墨西哥申请将被视为与您的外国申请在同一日期提交，使您对在此期间提交申请的其他人享有优先权。',
-    es: 'Conforme al Convenio de París, si presentaste una solicitud de marca en otro país miembro en los últimos 6 meses, puedes solicitar que esa fecha anterior se reconozca en México. Esto se denomina "solicitud de prioridad". Significa que tu solicitud en México se tratará como si hubiera sido presentada en la misma fecha que tu solicitud extranjera.',
-    de: 'Gemäß der Pariser Verbandsübereinkunft können Sie, wenn Sie in einem anderen Mitgliedsstaat innerhalb der letzten 6 Monate eine Markenanmeldung eingereicht haben, dieses frühere Anmeldedatum in Mexiko beantragen. Dies nennt sich "Prioritätsantrag".',
-    fr: 'En vertu de la Convention de Paris, si vous avez déposé une demande de marque dans un autre pays membre au cours des 6 derniers mois, vous pouvez demander que cette date antérieure soit reconnue au Mexique. On appelle cela une "demande de priorité".',
-    hi: 'पेरिस कन्वेंशन के तहत, यदि आपने पिछले 6 महीनों में किसी अन्य सदस्य देश में ट्रेडमार्क आवेदन दायर किया है, तो आप मेक्सिको में उस पहले की तारीख को मान्यता देने के लिए आवेदन कर सकते हैं। इसे "प्राथमिकता आवेदन" कहते हैं।',
-    pt: 'Sob a Convenção de Paris, se você depositou um pedido de marca em outro país membro nos últimos 6 meses, pode solicitar o reconhecimento dessa data anterior no México. Isso é chamado de "solicitação de prioridade".',
+    es: 'Conforme al Convenio de París, si presentaste una solicitud de marca en otro país miembro en los últimos 6 meses, puedes reclamar esa fecha de presentación anterior en México. Esto se denomina "reclamo de prioridad". Significa que tu solicitud en México se tratará como si hubiera sido presentada en la misma fecha que tu solicitud extranjera.',
+    de: 'Gemäß der Pariser Verbandsübereinkunft können Sie, wenn Sie in einem anderen Mitgliedsstaat innerhalb der letzten 6 Monate eine Markenanmeldung eingereicht haben, dieses frühere Anmeldedatum in Mexiko beanspruchen. Dies nennt sich "Prioritätsbeanspruchung".',
+    fr: 'En vertu de la Convention de Paris, si vous avez déposé une demande de marque dans un autre pays membre au cours des 6 derniers mois, vous pouvez revendiquer cette date de dépôt antérieure au Mexique. On appelle cela une "revendication de priorité".',
+    hi: 'पेरिस कन्वेंशन के तहत, यदि आपने पिछले 6 महीनों में किसी अन्य सदस्य देश में ट्रेडमार्क आवेदन दायर किया है, तो आप मेक्सिको में उस पहले की तारीख का दावा कर सकते हैं। इसे "प्राथमिकता दावा" कहते हैं।',
+    pt: 'Sob a Convenção de Paris, se você depositou um pedido de marca em outro país membro nos últimos 6 meses, pode reivindicar essa data anterior no México. Isso é chamado de "reivindicação de prioridade".',
     ja: 'パリ条約に基づき、過去6ヶ月以内に他の加盟国で商標出願をした場合、メキシコでその早い出願日を主張できます。これを「優先権の主張」といいます。',
   },
   'tooltip.ownerType': {

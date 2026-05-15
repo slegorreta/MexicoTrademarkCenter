@@ -34,75 +34,11 @@ function formatCurrency(amount: number) {
   return amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-// ─── Shared helpers ──────────────────────────────────────────────────────────
-
-/** A bordered copy-paste value box — monospace, light background */
-function copyBox(value: string): string {
-  if (!value || value === "—") {
-    return `<span style="color:#999;font-style:italic;font-size:13px;">— not provided —</span>`;
-  }
-  return `<span style="display:inline-block;font-family:'Courier New',Courier,monospace;font-size:13px;font-weight:600;background:#f4f4f4;border:1px solid #ccc;border-radius:3px;padding:3px 10px;letter-spacing:0.02em;color:#111;">${value}</span>`;
-}
-
-/** Section header with a dark-green left accent */
-function sectionHeader(step: string, impiLabel: string, subtitle?: string): string {
-  return `
-  <table width="100%" cellpadding="0" cellspacing="0" style="margin:28px 0 10px;">
-    <tr>
-      <td style="border-left:4px solid #1a2e1a;padding:6px 14px;background:#f0f4f0;">
-        <div style="font-size:11px;font-weight:700;color:#1a2e1a;letter-spacing:0.12em;text-transform:uppercase;">${step}</div>
-        <div style="font-size:14px;font-weight:700;color:#111;margin-top:2px;">${impiLabel}</div>
-        ${subtitle ? `<div style="font-size:11px;color:#666;margin-top:2px;">${subtitle}</div>` : ""}
-      </td>
-    </tr>
-  </table>`;
-}
-
-/** A standard two-column field row: IMPI label | value */
-function fieldRow(impiLabel: string, value: string, note?: string): string {
-  return `
-  <tr>
-    <td style="padding:7px 12px;border:1px solid #ddd;background:#fafafa;width:38%;font-size:12px;font-weight:700;color:#444;vertical-align:top;">${impiLabel}</td>
-    <td style="padding:7px 12px;border:1px solid #ddd;font-size:13px;color:#111;vertical-align:top;">
-      ${copyBox(value)}
-      ${note ? `<div style="font-size:11px;color:#888;margin-top:4px;">${note}</div>` : ""}
-    </td>
+function labelRow(label: string, value: string) {
+  return `<tr>
+    <td style="padding:6px 12px;border:1px solid #d0d0d0;text-align:right;font-weight:600;background:#f7f7f7;width:38%;font-size:13px;color:#222;">${label}</td>
+    <td style="padding:6px 12px;border:1px solid #d0d0d0;font-size:13px;color:#111;">${value}</td>
   </tr>`;
-}
-
-/** Warning banner (amber) */
-function warningBox(msg: string): string {
-  return `<table width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0;">
-    <tr>
-      <td style="background:#fff8e1;border:1px solid #f5c842;border-radius:4px;padding:10px 14px;font-size:12px;color:#7a5500;">
-        &#9888;&nbsp; ${msg}
-      </td>
-    </tr>
-  </table>`;
-}
-
-/** Per-class goods/services block */
-function classBlock(c: Record<string, unknown>, idx: number): string {
-  const classNum = String(c.class_number ?? "?");
-  const titleEn = String(c.class_title_en ?? "");
-  const gsEs = String(c.goods_services_es ?? c.goods_services_en ?? "");
-  return `
-  <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:14px;border:1px solid #ccc;border-radius:4px;overflow:hidden;">
-    <tr>
-      <td style="background:#1a2e1a;padding:7px 14px;">
-        <span style="font-size:13px;font-weight:700;color:#c9a84c;font-family:'Courier New',Courier,monospace;">
-          CLASE ${classNum}${titleEn ? ` — ${titleEn}` : ""}
-        </span>
-        <span style="font-size:11px;color:#9db89d;margin-left:10px;">(Solicitud #${idx + 1} ante el IMPI)</span>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding:10px 14px;background:#fff;">
-        <div style="font-size:11px;font-weight:700;color:#666;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.08em;">Descripción de productos o servicios (Spanish — paste verbatim into IMPI)</div>
-        <div style="font-family:'Courier New',Courier,monospace;font-size:13px;background:#f4f4f4;border:1px solid #ccc;border-radius:3px;padding:10px 12px;line-height:1.7;color:#111;word-break:break-word;">${gsEs || "<em style='color:#999;'>— No Spanish description available — translate before filing —</em>"}</div>
-      </td>
-    </tr>
-  </table>`;
 }
 
 export function buildInstructionFormHtml(
@@ -110,410 +46,129 @@ export function buildInstructionFormHtml(
   client: Record<string, unknown>,
   trademark: Record<string, unknown>,
   classes: Record<string, unknown>[],
-  _goodsServices: Record<string, unknown> | null,
+  goodsServices: Record<string, unknown> | null,
   logoUrl: string | null
 ): string {
+  const classRows = classes
+    .map(
+      (c) => `
+    <tr>
+      <td colspan="2" style="padding:7px 12px;border:1px solid #d0d0d0;text-align:center;font-weight:700;font-size:13px;background:#f0f0f0;letter-spacing:0.03em;">
+        CLASS ${c.class_number} — for trademark application
+      </td>
+    </tr>
+    <tr>
+      <td colspan="2" style="padding:7px 12px;border:1px solid #d0d0d0;font-size:13px;color:#111;">
+        ${String(c.goods_services_es ?? c.goods_services_en ?? c.class_title_en ?? "—")}
+      </td>
+    </tr>`
+    )
+    .join("");
 
-  // ── Derived values ──────────────────────────────────────────────────────────
-
-  const markType = String(trademark.mark_type ?? "word");
-  const impiFigureType = String(trademark.impi_figure_type ?? "marca");
-
-  const figureTypeLabel: Record<string, string> = {
-    marca: "Marca",
-    marca_colectiva: "Marca Colectiva",
-    aviso_comercial: "Aviso Comercial",
-    nombre_comercial: "Nombre Comercial",
-    imagen_comercial: "Imagen Comercial",
-  };
-
-  const markTypeLabel: Record<string, string> = {
-    word: "Denominativa (solo palabras)",
-    design: "Figurativa (solo diseño / logotipo)",
-    combined: "Mixta (palabras + diseño)",
-    three_dimensional: "Tridimensional",
-    trade_name: "Nombre Comercial",
-    slogan: "Aviso Comercial (eslogan)",
-  };
-
-  const isDesignMark = markType === "design" || markType === "combined";
-  const isCollective = impiFigureType === "marca_colectiva";
-  const hasLogo = !!logoUrl;
-
-  // Priority claims — prefer new array, fall back to legacy single fields
-  type PriorityClaim = { country: string; app_number?: string; appNumber?: string; filing_date?: string; filingDate?: string };
-  let priorityClaims: PriorityClaim[] = [];
-  if (Array.isArray(app.priority_claims) && (app.priority_claims as PriorityClaim[]).length > 0) {
-    priorityClaims = app.priority_claims as PriorityClaim[];
-  } else if (app.priority_claimed && app.priority_country) {
-    priorityClaims = [{
-      country: String(app.priority_country ?? ""),
-      app_number: String(app.priority_app_number ?? ""),
-      filing_date: String(app.priority_filing_date ?? ""),
-    }];
-  }
-
-  // Co-owners
-  type CoOwner = { legalName?: string; legal_name?: string; country?: string; address?: string; city?: string };
-  const coOwners: CoOwner[] = Array.isArray(client.co_owners) ? (client.co_owners as CoOwner[]) : [];
-
-  // Establishment address
-  type AddressObj = { address?: string; city?: string; stateProvince?: string; state_province?: string; postalCode?: string; postal_code?: string; country?: string };
-  const estAddr = app.establishment_address as AddressObj | null;
-  const notifAddr = app.notification_address as AddressObj | null;
+  const logoRow = logoUrl
+    ? labelRow(
+        "Trademark",
+        `<img src="${logoUrl}" style="max-width:220px;max-height:130px;object-fit:contain;" alt="Trademark mark">`
+      )
+    : labelRow("Trademark", "WORD MARK — no logo image");
 
   const colorValue = trademark.claims_color
-    ? String(trademark.color_description ?? "Como se muestra en color")
-    : "Blanco y negro / sin reivindicación de color";
+    ? String(trademark.color_description ?? "As shown in color")
+    : "Black and white";
 
-  const unprotectedElements = String(trademark.unprotected_elements ?? "").trim();
-  const meaningSpanish = String(trademark.meaning_spanish ?? "").trim();
-  const transliteration = String(trademark.transliteration ?? "").trim();
-  const rfc = String(client.rfc ?? "").trim();
-  const curp = String(client.curp ?? "").trim();
-  const authorizedRep = String(client.authorized_representative ?? "").trim();
+  const sloganValue =
+    trademark.mark_type === "slogan"
+      ? String(trademark.mark_name ?? "—")
+      : "N/A";
 
-  // ── Section: Logo ──────────────────────────────────────────────────────────
-  const logoSection = isDesignMark
-    ? `
-    ${sectionHeader("PASO 2b · IMPI CAMPO", "Logotipo de la Marca", "Cargar archivo GIF (máx. 1 MB) en el portal IMPI")}
-    ${!hasLogo ? warningBox("No se cargó ningún logotipo. Para marcas de diseño o mixtas, el IMPI requiere un archivo GIF del logotipo (máx. 1 MB). Solicitar el archivo al cliente antes de presentar.") : ""}
-    <table width="100%" cellpadding="0" cellspacing="0">
-      <tbody>
-        ${fieldRow("Archivo del logotipo", hasLogo ? "Ver imagen abajo — convertir a GIF si es necesario" : "— FALTA —", "El IMPI solo acepta formato GIF, máximo 1 MB. El nombre del archivo debe ser corto, sin acentos.")}
-        ${fieldRow("Color", colorValue)}
-      </tbody>
-    </table>
-    ${hasLogo ? `<div style="text-align:center;margin:12px 0;padding:12px;background:#f9f9f9;border:1px solid #ddd;border-radius:4px;"><img src="${logoUrl}" style="max-width:240px;max-height:150px;object-fit:contain;" alt="Logotipo de la marca"></div>` : ""}
-    ${warningBox("Verificar que el archivo sea GIF y no supere 1 MB antes de cargar en IMPI.")}
-    `
-    : `
-    ${sectionHeader("PASO 2b · IMPI CAMPO", "Logotipo de la Marca")}
-    <table width="100%" cellpadding="0" cellspacing="0"><tbody>
-      ${fieldRow("Tipo de marca", "MARCA DENOMINATIVA — no se requiere logotipo")}
-    </tbody></table>
-    `;
+  const stateRow = client.state_province
+    ? labelRow("State / Province", String(client.state_province))
+    : "";
 
-  // ── Section: Priority claims ───────────────────────────────────────────────
+  const meaningRow = trademark.meaning_spanish
+    ? labelRow("Meaning in Spanish", String(trademark.meaning_spanish))
+    : "";
+
+  const transliterationRow = trademark.transliteration
+    ? labelRow("Transliteration", String(trademark.transliteration))
+    : "";
+
   const prioritySection = app.priority_claimed
     ? `
-    ${sectionHeader("PASO 6 · IMPI CAMPO", "¿Has presentado tu marca en otro país? (Derecho de Prioridad)", `${priorityClaims.length} prioridad(es) — IMPI permite hasta 3`)}
-    ${warningBox("Adjuntar copia certificada del documento de prioridad en la sección Anexos del portal. Si el documento no está en español, adjuntar también la traducción.")}
-    <table width="100%" cellpadding="0" cellspacing="0"><tbody>
-      ${fieldRow("¿Reclama prioridad?", "SÍ")}
-    </tbody></table>
-    ${priorityClaims.map((p, i) => `
-    <div style="margin-top:10px;padding:10px 14px;border:1px solid #c8e0c8;border-radius:4px;background:#f0f7f0;">
-      <div style="font-size:11px;font-weight:700;color:#1a2e1a;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Prioridad ${i + 1} de ${priorityClaims.length}</div>
-      <table width="100%" cellpadding="0" cellspacing="0"><tbody>
-        ${fieldRow("País de prioridad", String(p.country ?? "—"))}
-        ${fieldRow("Número de solicitud", String(p.app_number ?? p.appNumber ?? "—"))}
-        ${fieldRow("Fecha de presentación", String(p.filing_date ?? p.filingDate ?? "—"))}
-      </tbody></table>
-    </div>`).join("")}
-    `
-    : `
-    ${sectionHeader("PASO 6 · IMPI CAMPO", "¿Has presentado tu marca en otro país?")}
-    <table width="100%" cellpadding="0" cellspacing="0"><tbody>
-      ${fieldRow("¿Reclama prioridad?", "NO")}
-    </tbody></table>
-    `;
-
-  // ── Section: Co-owners ─────────────────────────────────────────────────────
-  const coOwnersSection = coOwners.length > 0
-    ? `
-    ${sectionHeader("PASO 4b · IMPI CAMPO", "Co-Titulares de la Marca", "IMPI permite múltiples titulares. Solo el domicilio del primer titular aparece en el formulario; los demás van en un anexo PDF.")}
-    ${warningBox("Adjuntar documento con datos de los co-titulares en la sección Anexos. Indicar en el formulario cuántos titulares hay.")}
-    ${coOwners.map((co, i) => `
-    <div style="margin-top:10px;padding:10px 14px;border:1px solid #ddd;border-radius:4px;background:#fafafa;">
-      <div style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Co-Titular ${i + 1}</div>
-      <table width="100%" cellpadding="0" cellspacing="0"><tbody>
-        ${fieldRow("Nombre o Razón Social", String(co.legalName ?? co.legal_name ?? "—"))}
-        ${fieldRow("País", String(co.country ?? "—"))}
-        ${fieldRow("Ciudad", String(co.city ?? "—"))}
-        ${fieldRow("Domicilio", String(co.address ?? "—"))}
-      </tbody></table>
-    </div>`).join("")}
-    `
+  <p style="font-size:14px;font-weight:700;margin:28px 0 8px;">6.&nbsp;&nbsp;Priority Claim</p>
+  <table style="border-collapse:collapse;width:100%;margin-bottom:20px;">
+    ${labelRow("Priority Country", String(app.priority_country ?? "—"))}
+    ${labelRow("Priority App. Number", String(app.priority_app_number ?? "—"))}
+    ${labelRow("Priority Filing Date", String(app.priority_filing_date ?? "—"))}
+  </table>`
     : "";
 
-  // ── Section: Establishment address ────────────────────────────────────────
-  const establishmentSection = app.prior_use || app.usedInMexico || estAddr
-    ? `
-    ${sectionHeader("PASO 5b · IMPI CAMPO", "Datos del Establecimiento", "Requerido cuando se indica fecha de primer uso en México")}
-    <table width="100%" cellpadding="0" cellspacing="0"><tbody>
-      ${fieldRow("Calle y Número", String(estAddr?.address ?? client.address ?? "—"))}
-      ${fieldRow("Ciudad", String(estAddr?.city ?? client.city ?? "—"))}
-      ${fieldRow("Estado / Provincia", String(estAddr?.stateProvince ?? estAddr?.state_province ?? client.state_province ?? "—"))}
-      ${fieldRow("Código Postal", String(estAddr?.postalCode ?? estAddr?.postal_code ?? client.postal_code ?? "—"))}
-      ${fieldRow("País", String(estAddr?.country ?? client.country ?? "—"))}
-    </tbody></table>
-    `
-    : "";
+  const originalDescription = goodsServices?.description_original
+    ? String(goodsServices.description_original)
+    : "—";
 
-  // ── Section: Notification address ─────────────────────────────────────────
-  const notificationSection = notifAddr
-    ? `
-    ${sectionHeader("PASO 4c · IMPI CAMPO", "Domicilio para Oír y Recibir Notificaciones", "Domicilio designado separado del comercial del titular (normalmente el despacho legal)")}
-    <table width="100%" cellpadding="0" cellspacing="0"><tbody>
-      ${fieldRow("Calle y Número", String(notifAddr.address ?? "—"))}
-      ${fieldRow("Ciudad", String(notifAddr.city ?? "—"))}
-      ${fieldRow("Estado", String(notifAddr.stateProvince ?? notifAddr.state_province ?? "—"))}
-      ${fieldRow("Código Postal", String(notifAddr.postalCode ?? notifAddr.postal_code ?? "—"))}
-      ${fieldRow("País", String(notifAddr.country ?? "—"))}
-    </tbody></table>
-    `
-    : "";
+  const markTypeLabel = String(trademark.mark_type ?? "—")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (l: string) => l.toUpperCase());
 
-  // ── Section: Annexes checklist ─────────────────────────────────────────────
-  const hasRulesOfUse = !!trademark.rules_of_use_file_path;
-  const hasPriorityDocs = priorityClaims.length > 0;
-
-  function annexRow(doc: string, required: boolean, present: boolean, note: string): string {
-    const status = present
-      ? `<span style="color:#1a7a1a;font-weight:700;">&#10003; Adjuntar</span>`
-      : required
-      ? `<span style="color:#c0392b;font-weight:700;">&#9888; REQUERIDO — pendiente</span>`
-      : `<span style="color:#aaa;">No aplica</span>`;
-    return `<tr>
-      <td style="padding:7px 12px;border:1px solid #ddd;font-size:13px;color:#111;">${doc}</td>
-      <td style="padding:7px 12px;border:1px solid #ddd;font-size:12px;text-align:center;">${status}</td>
-      <td style="padding:7px 12px;border:1px solid #ddd;font-size:11px;color:#666;">${note}</td>
-    </tr>`;
-  }
-
-  const annexesSection = `
-    ${sectionHeader("PASO 7 · IMPI CAMPO", "Anexos (Documentos a adjuntar en el portal IMPI)", "Verificar que cada documento requerido esté listo ANTES de iniciar la captura en IMPI")}
-    <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
-      <thead>
-        <tr style="background:#1a2e1a;">
-          <th style="padding:8px 12px;font-size:12px;font-weight:700;color:#c9a84c;text-align:left;border:1px solid #0d1f0d;">Documento</th>
-          <th style="padding:8px 12px;font-size:12px;font-weight:700;color:#c9a84c;text-align:center;border:1px solid #0d1f0d;width:160px;">Estado</th>
-          <th style="padding:8px 12px;font-size:12px;font-weight:700;color:#c9a84c;text-align:left;border:1px solid #0d1f0d;">Nota</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${annexRow(
-          "Logotipo (GIF, máx. 1 MB)",
-          isDesignMark,
-          hasLogo,
-          isDesignMark ? "Convertir a GIF si es necesario. Nombre de archivo corto, sin acentos." : "No requerido para marca denominativa."
-        )}
-        ${annexRow(
-          "Documento de prioridad (copia certificada)",
-          hasPriorityDocs,
-          false,
-          hasPriorityDocs ? "Obtener copia certificada del documento de prioridad de la oficina de origen." : "No aplica."
-        )}
-        ${annexRow(
-          "Traducción al español del documento de prioridad",
-          hasPriorityDocs,
-          false,
-          hasPriorityDocs ? "Requerida si el documento de prioridad no está en español." : "No aplica."
-        )}
-        ${annexRow(
-          "Reglamento de Uso (PDF)",
-          isCollective,
-          hasRulesOfUse,
-          isCollective ? "Obligatorio para marcas colectivas. Adjuntar en formato PDF." : "No aplica."
-        )}
-        ${annexRow(
-          "Autorización / Poder Notarial",
-          client.country !== "MX",
-          !!authorizedRep,
-          "Para solicitantes extranjeros se requiere autorización escrita. Una autorización por correo es suficiente según el IMPI."
-        )}
-        ${annexRow(
-          "Datos de co-titulares (documento anexo)",
-          coOwners.length > 1,
-          coOwners.length > 1,
-          coOwners.length > 1 ? `Hay ${coOwners.length} co-titulares. Solo el domicilio del primer titular va en el formulario.` : "No aplica."
-        )}
-      </tbody>
-    </table>
-  `;
-
-  // ── Section: Per-class submission reminder ────────────────────────────────
-  const multiClassReminder = classes.length > 1
-    ? `
-    ${sectionHeader("AVISO IMPORTANTE", "México es país de una sola clase — presentar solicitudes separadas", `${classes.length} solicitudes IMPI independientes — ${classes.length} pagos de derechos`)}
-    ${warningBox(`Esta instrucción incluye ${classes.length} clases de Niza. En México se debe presentar una solicitud por separado ante el IMPI para cada clase. Cada una generará su propio número de expediente y requerirá su propio pago de derechos gubernamentales.`)}
-    <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-top:8px;">
-      <thead>
-        <tr style="background:#f0f0f0;">
-          <th style="padding:7px 12px;font-size:12px;font-weight:700;color:#333;text-align:center;border:1px solid #ddd;width:80px;">Clase</th>
-          <th style="padding:7px 12px;font-size:12px;font-weight:700;color:#333;text-align:left;border:1px solid #ddd;">Título (EN)</th>
-          <th style="padding:7px 12px;font-size:12px;font-weight:700;color:#333;text-align:center;border:1px solid #ddd;width:120px;">Solicitud #</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${classes.map((c, i) => `<tr>
-          <td style="padding:7px 12px;border:1px solid #ddd;font-size:13px;font-weight:700;text-align:center;background:#fafafa;">${c.class_number}</td>
-          <td style="padding:7px 12px;border:1px solid #ddd;font-size:13px;color:#333;">${String(c.class_title_en ?? "")}</td>
-          <td style="padding:7px 12px;border:1px solid #ddd;font-size:12px;color:#888;text-align:center;">Solicitud ${i + 1} de ${classes.length}</td>
-        </tr>`).join("")}
-      </tbody>
-    </table>
-    `
-    : "";
-
-  // ── Assemble full HTML ─────────────────────────────────────────────────────
   return `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
+<style>
+  body { font-family: Arial, sans-serif; font-size: 13px; color: #111; max-width: 760px; margin: 0 auto; padding: 28px 32px; background: #fff; }
+  h1 { text-align: center; font-size: 16px; font-weight: 700; border-bottom: 2px solid #111; padding-bottom: 10px; margin-bottom: 24px; letter-spacing: 0.02em; }
+  .section-label { font-size: 14px; font-weight: 700; margin: 24px 0 8px; }
+  table.form-table { border-collapse: collapse; width: 100%; margin-bottom: 4px; }
+  .ref-box { display: inline-block; font-family: monospace; font-size: 16px; font-weight: 700; background: #f0f0f0; border: 1px solid #ccc; padding: 4px 14px; border-radius: 3px; letter-spacing: 0.05em; }
+  .footer { margin-top: 40px; padding-top: 12px; border-top: 1px solid #ccc; font-size: 11px; color: #888; text-align: center; }
+  .header-banner { background: #1a2e1a; padding: 14px 24px; text-align: center; margin-bottom: 24px; }
+  .header-banner span { font-size: 11px; letter-spacing: 3px; color: #c9a84c; font-family: Arial, sans-serif; text-transform: uppercase; font-weight: 700; }
+</style>
 </head>
-<body style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#111;max-width:820px;margin:0 auto;padding:0;background:#f5f5f5;">
-
-<!-- HEADER -->
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#1a2e1a;">
-  <tr>
-    <td style="padding:16px 28px;">
-      <div style="font-size:10px;letter-spacing:3px;color:#c9a84c;font-weight:700;text-transform:uppercase;">Mexico Trademark Center</div>
-      <div style="font-size:16px;font-weight:700;color:#fff;margin-top:4px;">HOJA DE INSTRUCCIÓN PARA TRÁMITE ANTE EL IMPI</div>
-      <div style="font-size:11px;color:#9db89d;margin-top:3px;">IMPI Marca en Línea — Guía de captura en orden de portal</div>
-    </td>
-    <td style="padding:16px 28px;text-align:right;vertical-align:middle;">
-      <div style="font-size:10px;color:#9db89d;margin-bottom:3px;">Referencia MTC</div>
-      <div style="font-family:'Courier New',Courier,monospace;font-size:18px;font-weight:700;color:#c9a84c;letter-spacing:0.06em;">${String(app.case_number)}</div>
-      <div style="font-size:10px;color:#9db89d;margin-top:3px;">${new Date().toLocaleDateString("es-MX", { year: "numeric", month: "long", day: "numeric" })}</div>
-    </td>
-  </tr>
-</table>
-
-<!-- COPY-PASTE TIP BANNER -->
-<table width="100%" cellpadding="0" cellspacing="0" style="margin:0;">
-  <tr>
-    <td style="background:#fff8e1;border-bottom:2px solid #f5c842;padding:10px 28px;">
-      <span style="font-size:12px;color:#7a5500;font-weight:700;">&#128203; INSTRUCCIONES PARA EL TRAMITADOR:</span>
-      <span style="font-size:12px;color:#7a5500;margin-left:6px;">Cada sección de este documento corresponde exactamente a un paso del portal <strong>Marca en Línea del IMPI</strong>, en el mismo orden de captura. Los valores en cajas grises deben copiarse y pegarse tal cual en el portal. Verificar todos los anexos antes de iniciar.</span>
-    </td>
-  </tr>
-</table>
-
-<!-- CONTENT WRAPPER -->
-<div style="background:#fff;padding:0 28px 28px;">
-
-  <!-- ═══════════════════════════════════════════════════════════════════════
-       PASO 1 · ¿QUÉ QUIERES REGISTRAR?
-       ═══════════════════════════════════════════════════════════════════════ -->
-  ${sectionHeader("PASO 1 · IMPI CAMPO", "¿Qué quieres registrar?", "Seleccionar la figura legal y el tipo de signo en el portal")}
-  <table width="100%" cellpadding="0" cellspacing="0"><tbody>
-    ${fieldRow("Figura legal (Tipo de solicitud)", figureTypeLabel[impiFigureType] ?? impiFigureType)}
-    ${fieldRow("Tipo de signo (composición)", markTypeLabel[markType] ?? markType)}
-  </tbody></table>
-  ${isCollective ? warningBox("MARCA COLECTIVA: El IMPI requiere adjuntar el Reglamento de Uso en PDF en la sección Anexos. Verificar que esté disponible antes de continuar.") : ""}
-
-  <!-- ═══════════════════════════════════════════════════════════════════════
-       PASO 2a · NOMBRE DE LA MARCA
-       ═══════════════════════════════════════════════════════════════════════ -->
-  ${sectionHeader("PASO 2a · IMPI CAMPO", "Nombre de la Marca", "Escribir exactamente el nombre tal como aparecerá en el registro")}
-  <table width="100%" cellpadding="0" cellspacing="0"><tbody>
-    ${fieldRow("Nombre de la marca", String(trademark.mark_name ?? "—"))}
-    ${fieldRow("Idioma de la marca", String(trademark.mark_language ?? "—"))}
-    ${trademark.contains_non_spanish
-      ? fieldRow("Significado en español", meaningSpanish || "— pendiente —", "El IMPI requiere el significado en español de palabras extranjeras")
-      : ""}
-    ${transliteration
-      ? fieldRow("Transliteración", transliteration, "Para marcas con caracteres no latinos")
-      : ""}
-  </tbody></table>
-
-  <!-- ═══════════════════════════════════════════════════════════════════════
-       PASO 2b / 2c · LOGOTIPO + COLOR
-       ═══════════════════════════════════════════════════════════════════════ -->
-  ${logoSection}
-
-  <!-- ═══════════════════════════════════════════════════════════════════════
-       PASO 2d · ELEMENTOS SIN PROTECCIÓN
-       ═══════════════════════════════════════════════════════════════════════ -->
-  ${sectionHeader("PASO 2d · IMPI CAMPO", "Elementos sobre los cuales NO se solicita protección", "Solo aplica a marcas con diseño — dejar vacío en marcas denominativas")}
-  <table width="100%" cellpadding="0" cellspacing="0"><tbody>
-    ${fieldRow(
-      "Elementos sin protección",
-      isDesignMark && unprotectedElements ? unprotectedElements : isDesignMark ? "— no proporcionado — verificar con cliente —" : "N/A — Marca denominativa",
-      isDesignMark ? "Incluir letras, palabras, números o frases que aparecen en el diseño pero NO se reivindican (ej. Hecho en México, Cont. Neto 750 ml, talla M)" : ""
-    )}
-  </tbody></table>
-
-  <!-- ═══════════════════════════════════════════════════════════════════════
-       PASO 3 · DESCRIPCIÓN DE PRODUCTOS O SERVICIOS (POR CLASE)
-       ═══════════════════════════════════════════════════════════════════════ -->
-  ${sectionHeader("PASO 3 · IMPI CAMPO", "Descripción de Productos o Servicios", "Una entrada por clase — separar los conceptos con punto y coma")}
-  <div style="font-size:11px;color:#666;margin-bottom:10px;padding:8px 12px;background:#f9f9f9;border:1px solid #e0e0e0;border-radius:3px;">
-    <strong>Formato IMPI:</strong> Indicar los productos o servicios separados por punto y coma. Ejemplo: <em>Bujías de encendido para motores; máquinas industriales; herramientas manuales.</em>
-    Si se registran varias clases, el sistema IMPI creará solicitudes separadas para cada una al finalizar la captura.
-  </div>
-  ${classes.map((c, i) => classBlock(c, i)).join("")}
-
-  <!-- ═══════════════════════════════════════════════════════════════════════
-       PASO 4 · DATOS DEL DUEÑO DE LA MARCA
-       ═══════════════════════════════════════════════════════════════════════ -->
-  ${sectionHeader("PASO 4 · IMPI CAMPO", "Datos del Dueño de la Marca", "Persona física o empresa — ingresar exactamente como aparece en documentos oficiales")}
-  <table width="100%" cellpadding="0" cellspacing="0"><tbody>
-    ${fieldRow("Nombre o Razón Social del titular", String(client.legal_name ?? "—"))}
-    ${fieldRow("Tipo de persona", client.applicant_type === "company" ? "Persona Moral (empresa)" : "Persona Física (individual)")}
-    ${rfc ? fieldRow("RFC", rfc, "Registro Federal de Contribuyentes — para titulares mexicanos") : ""}
-    ${curp ? fieldRow("CURP", curp, "Para personas físicas mexicanas — se usa para firmar con CURP en el portal IMPI") : ""}
-    ${fieldRow("Calle y Número", String(client.address ?? "—"))}
-    ${client.state_province ? fieldRow("Estado / Provincia", String(client.state_province)) : ""}
-    ${fieldRow("Ciudad", String(client.city ?? "—"))}
-    ${fieldRow("Código Postal", String(client.postal_code ?? "—"))}
-    ${fieldRow("País", String(client.country ?? "—"))}
-    ${authorizedRep ? fieldRow("Representante autorizado / Apoderado", authorizedRep, "Nombre de quien firma la solicitud ante el IMPI") : ""}
-  </tbody></table>
-
-  <!-- Co-titulares (si aplica) -->
-  ${coOwnersSection}
-
-  <!-- Domicilio para notificaciones (si aplica) -->
-  ${notificationSection}
-
-  <!-- ═══════════════════════════════════════════════════════════════════════
-       PASO 5 · ¿HAS USADO TU MARCA?
-       ═══════════════════════════════════════════════════════════════════════ -->
-  ${sectionHeader("PASO 5 · IMPI CAMPO", "¿Has usado tu marca en México?", "Indicar fecha de primer uso continuo e ininterrumpido, si aplica")}
-  <table width="100%" cellpadding="0" cellspacing="0"><tbody>
-    ${fieldRow("¿Ha usado la marca en México?", app.used_in_mexico || app.usedInMexico ? "SÍ" : "NO")}
-    ${(app.used_in_mexico || app.usedInMexico) && app.first_use_date
-      ? fieldRow("Fecha de primer uso (ininterrumpido)", String(app.first_use_date), "Formato: DD/MM/AAAA en el portal IMPI")
-      : ""}
-    ${(app.used_in_mexico || app.usedInMexico) && app.firstUseDate
-      ? fieldRow("Fecha de primer uso (ininterrumpido)", String(app.firstUseDate), "Formato: DD/MM/AAAA en el portal IMPI")
-      : ""}
-  </tbody></table>
-
-  <!-- Datos del establecimiento (si aplica) -->
-  ${establishmentSection}
-
-  <!-- ═══════════════════════════════════════════════════════════════════════
-       PASO 6 · PRIORIDAD
-       ═══════════════════════════════════════════════════════════════════════ -->
-  ${prioritySection}
-
-  <!-- ═══════════════════════════════════════════════════════════════════════
-       PASO 7 · ANEXOS
-       ═══════════════════════════════════════════════════════════════════════ -->
-  ${annexesSection}
-
-  <!-- ═══════════════════════════════════════════════════════════════════════
-       AVISO POR CLASE (si hay más de 1)
-       ═══════════════════════════════════════════════════════════════════════ -->
-  ${multiClassReminder}
-
+<body>
+<div class="header-banner">
+  <span>Mexico Trademark Center</span>
 </div>
 
-<!-- FOOTER -->
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#1a2e1a;margin-top:0;">
-  <tr>
-    <td style="padding:14px 28px;text-align:center;">
-      <div style="font-size:11px;color:#9db89d;font-family:Arial,sans-serif;font-weight:700;letter-spacing:1px;">MEXICO TRADEMARK CENTER</div>
-      <div style="font-size:11px;color:#6a8a6a;margin-top:3px;">mexicotrademarkcenter.com &nbsp;·&nbsp; tm@mexicotrademarkcenter.com</div>
-      <div style="font-size:10px;color:#4a6a4a;margin-top:5px;">Generado: ${new Date().toISOString()} &nbsp;·&nbsp; Referencia: ${String(app.case_number)}</div>
-    </td>
-  </tr>
+<h1>MEXICO Trademark Application for Registration</h1>
+
+<p class="section-label">1.&nbsp;&nbsp;Our Reference:&nbsp;&nbsp;<span class="ref-box">${String(app.case_number)}</span></p>
+
+<p class="section-label">2.&nbsp;&nbsp;Applicant Details</p>
+<table class="form-table">
+  ${labelRow("Owner Name", String(client.legal_name ?? "—"))}
+  ${labelRow("Address", String(client.address ?? "—"))}
+  ${stateRow}
+  ${labelRow("City", String(client.city ?? "—"))}
+  ${labelRow("Applicant Country", String(client.country ?? "—"))}
+  ${labelRow("Entity Type", client.applicant_type === "company" ? "Company" : "Individual")}
+  ${labelRow("Zip / Postal Code", String(client.postal_code ?? "—"))}
 </table>
 
+<p class="section-label">3.&nbsp;&nbsp;Trademark Information</p>
+<table class="form-table">
+  ${logoRow}
+  ${labelRow("Trademark Pattern Color", colorValue)}
+  ${labelRow("Trademark Format", markTypeLabel)}
+  ${labelRow("Statement / Slogan", sloganValue)}
+  ${meaningRow}
+  ${transliterationRow}
+</table>
+
+<p class="section-label">4.&nbsp;&nbsp;(International Classification) and Goods / Services</p>
+<table class="form-table">
+  ${classRows}
+</table>
+
+<p class="section-label">5.&nbsp;&nbsp;Original Classification</p>
+<p style="font-size:13px;color:#111;line-height:1.6;margin:0 0 8px;padding:10px 12px;border:1px solid #d0d0d0;background:#fafafa;">${originalDescription}</p>
+
+${prioritySection}
+
+<div class="footer">
+  Generated by Mexico Trademark Center Portal &bull; ${new Date().toISOString()} &bull; ${String(app.case_number)}
+</div>
 </body>
 </html>`;
 }

@@ -1,25 +1,12 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, ArrowDown, Shield, Clock, Globe as Globe2, DollarSign, FileText, Award, ChevronDown, Sparkles, Search, HelpCircle, X, Star, Scale, Youtube } from 'lucide-react';
+import { ArrowRight, ArrowDown, Shield, Clock, Globe as Globe2, DollarSign, FileText, Award, ChevronDown, Sparkles, Search, HelpCircle, X, Star, Scale } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { useState, useEffect, type ReactNode } from 'react';
-import AboutSection, { SOFIA_VIDEO_IDS } from '../components/AboutSection';
-
-const HERO_WATCH_LABEL: Record<string, string> = {
-  en: 'Watch my welcome video',
-  es: 'Ver mi video de bienvenida',
-  zh: '观看欢迎视频',
-  de: 'Willkommensvideo ansehen',
-  fr: 'Regarder ma vidéo de bienvenue',
-  hi: 'मेरा स्वागत वीडियो देखें',
-  pt: 'Assistir ao vídeo de boas-vindas',
-  ja: 'ウェルカムビデオを見る',
-};
+import AboutSection from '../components/AboutSection';
 
 export default function HomePage() {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
-  const [heroVideoOpen, setHeroVideoOpen] = useState(false);
-  const heroVideoId = SOFIA_VIDEO_IDS[language] ?? null;
 
   useEffect(() => {
     if (window.location.hash === '#faq') {
@@ -143,220 +130,82 @@ export default function HomePage() {
           <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-500 rounded-full blur-3xl" />
         </div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28">
-          {heroVideoId ? (
-            /* ── Two-column layout when a video is available ── */
-            <div className="flex flex-col lg:grid lg:grid-cols-[1fr_420px] lg:gap-14">
+          <div className="max-w-3xl">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight mb-6">
+              {t('hero.headline')}
+            </h1>
+            <p className="text-lg text-gray-300 leading-relaxed mb-8 max-w-2xl">
+              {t('hero.subheading')}
+            </p>
 
-              {/* Row 1 left: headline + subheading */}
-              <div>
-                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight mb-6">
-                  {t('hero.headline')}
-                </h1>
-                <p className="text-lg text-gray-300 leading-relaxed mb-8 max-w-2xl">
-                  {t('hero.subheading')}
-                </p>
+            {/* Primary CTAs */}
+            <div className="flex flex-col gap-1 mb-4 max-w-md">
+              <p className="text-sm font-bold text-white mb-1">{t('hero.step1')}</p>
+
+              {/* CTA 1 — Check availability */}
+              <Link
+                to="/trademark-check"
+                className="group flex items-center gap-3 bg-white text-navy-900 font-bold px-6 py-4 rounded-2xl transition-all duration-200 shadow-xl hover:shadow-2xl hover:-translate-y-0.5"
+              >
+                <div className="w-9 h-9 rounded-xl bg-gold-500 flex items-center justify-center flex-shrink-0 group-hover:bg-gold-400 transition-colors">
+                  <Search size={18} className="text-white" />
+                </div>
+                <span className="text-base font-bold text-navy-900 leading-tight">{t('hero.clearance.cta')}</span>
+                <ArrowRight size={18} className="ml-auto text-gold-500 group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
+              </Link>
+
+              {/* Sequence arrow */}
+              <div className="flex justify-center py-0.5">
+                <ArrowDown size={18} className="text-gold-400/60" />
               </div>
 
-              {/* Row 1 right: empty spacer on desktop, nothing on mobile */}
-              <div className="hidden lg:block" />
+              <p className="text-sm font-bold text-white mb-1">{t('hero.step2')}</p>
 
-              {/* Row 2 left: CTAs + secondary nudge + trust row */}
-              <div>
-                {/* Primary CTAs */}
-                <div className="flex flex-col gap-1 mb-4 max-w-md">
-                  <p className="text-sm font-bold text-white mb-1">{t('hero.step1')}</p>
-
-                  <Link
-                    to="/trademark-check"
-                    className="group flex items-center gap-3 bg-white text-navy-900 font-bold px-6 py-4 rounded-2xl transition-all duration-200 shadow-xl hover:shadow-2xl hover:-translate-y-0.5"
-                  >
-                    <div className="w-9 h-9 rounded-xl bg-gold-500 flex items-center justify-center flex-shrink-0 group-hover:bg-gold-400 transition-colors">
-                      <Search size={18} className="text-white" />
-                    </div>
-                    <span className="text-base font-bold text-navy-900 leading-tight">{t('hero.clearance.cta')}</span>
-                    <ArrowRight size={18} className="ml-auto text-gold-500 group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
-                  </Link>
-
-                  <div className="flex justify-center py-0.5">
-                    <ArrowDown size={18} className="text-gold-400/60" />
-                  </div>
-
-                  <p className="text-sm font-bold text-white mb-1">{t('hero.step2')}</p>
-
-                  <Link
-                    to="/apply"
-                    className="group flex items-center gap-3 bg-gold-500 hover:bg-gold-400 text-white font-bold px-6 py-4 rounded-2xl transition-all duration-200 shadow-lg hover:shadow-gold-500/25 hover:-translate-y-0.5"
-                  >
-                    <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 group-hover:bg-white/30 transition-colors">
-                      <FileText size={18} className="text-white" />
-                    </div>
-                    <span className="text-base font-bold leading-tight">{t('hero.cta.start')}</span>
-                    <ArrowRight size={18} className="ml-auto group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
-                  </Link>
+              {/* CTA 2 — Register now */}
+              <Link
+                to="/apply"
+                className="group flex items-center gap-3 bg-gold-500 hover:bg-gold-400 text-white font-bold px-6 py-4 rounded-2xl transition-all duration-200 shadow-lg hover:shadow-gold-500/25 hover:-translate-y-0.5"
+              >
+                <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 group-hover:bg-white/30 transition-colors">
+                  <FileText size={18} className="text-white" />
                 </div>
-
-                {/* AI Idea Generator */}
-                <div className="inline-flex items-center gap-2.5 bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5">
-                  <Sparkles size={14} className="text-gold-400 flex-shrink-0" />
-                  <span className="text-gray-400 text-xs">{t('hero.ai.question')}</span>
-                  <Link
-                    to="/trademark-ideas"
-                    className="flex-shrink-0 text-gold-300 hover:text-gold-200 text-xs font-semibold underline underline-offset-2 transition-colors"
-                  >
-                    {t('hero.ai.cta')}
-                  </Link>
-                </div>
-
-                {/* Trust row */}
-                <div className="flex flex-wrap gap-4 mt-8">
-                  {trustBadges.map((badge, i) => (
-                    <div key={i} className="flex items-center gap-2 text-gray-300">
-                      <badge.icon size={16} className="text-gold-400 flex-shrink-0" />
-                      <span className="text-sm">{t(badge.key)}</span>
-                      {badge.onTooltip && (
-                        <button
-                          onClick={badge.onTooltip}
-                          className="text-gold-400/70 hover:text-gold-300 transition-colors flex-shrink-0"
-                        >
-                          <HelpCircle size={13} />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Row 2 right: embedded video aligned with CTAs */}
-              <div className="mt-8 lg:mt-0">
-                {/* Desktop: inline iframe embed */}
-                <div className="hidden lg:block rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10">
-                  <div className="aspect-video">
-                    <iframe
-                      src={`https://www.youtube.com/embed/${heroVideoId}?rel=0&modestbranding=1`}
-                      title={HERO_WATCH_LABEL[language] ?? HERO_WATCH_LABEL.en}
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                      className="w-full h-full"
-                    />
-                  </div>
-                </div>
-
-                {/* Mobile: compact button that opens modal */}
-                <div className="lg:hidden">
-                  <button
-                    onClick={() => setHeroVideoOpen(true)}
-                    className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white font-semibold text-sm px-5 py-2.5 rounded-full transition-all duration-200 shadow-lg hover:scale-105 active:scale-100"
-                  >
-                    <Youtube size={17} />
-                    {HERO_WATCH_LABEL[language] ?? HERO_WATCH_LABEL.en}
-                  </button>
-                </div>
-              </div>
-
+                <span className="text-base font-bold leading-tight">{t('hero.cta.start')}</span>
+                <ArrowRight size={18} className="ml-auto group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
+              </Link>
             </div>
-          ) : (
-            /* ── Single-column layout (no video for this language) ── */
-            <div className="max-w-3xl">
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight mb-6">
-                {t('hero.headline')}
-              </h1>
-              <p className="text-lg text-gray-300 leading-relaxed mb-8 max-w-2xl">
-                {t('hero.subheading')}
-              </p>
 
-              <div className="flex flex-col gap-1 mb-4 max-w-md">
-                <p className="text-sm font-bold text-white mb-1">{t('hero.step1')}</p>
-
-                <Link
-                  to="/trademark-check"
-                  className="group flex items-center gap-3 bg-white text-navy-900 font-bold px-6 py-4 rounded-2xl transition-all duration-200 shadow-xl hover:shadow-2xl hover:-translate-y-0.5"
-                >
-                  <div className="w-9 h-9 rounded-xl bg-gold-500 flex items-center justify-center flex-shrink-0 group-hover:bg-gold-400 transition-colors">
-                    <Search size={18} className="text-white" />
-                  </div>
-                  <span className="text-base font-bold text-navy-900 leading-tight">{t('hero.clearance.cta')}</span>
-                  <ArrowRight size={18} className="ml-auto text-gold-500 group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
-                </Link>
-
-                <div className="flex justify-center py-0.5">
-                  <ArrowDown size={18} className="text-gold-400/60" />
-                </div>
-
-                <p className="text-sm font-bold text-white mb-1">{t('hero.step2')}</p>
-
-                <Link
-                  to="/apply"
-                  className="group flex items-center gap-3 bg-gold-500 hover:bg-gold-400 text-white font-bold px-6 py-4 rounded-2xl transition-all duration-200 shadow-lg hover:shadow-gold-500/25 hover:-translate-y-0.5"
-                >
-                  <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 group-hover:bg-white/30 transition-colors">
-                    <FileText size={18} className="text-white" />
-                  </div>
-                  <span className="text-base font-bold leading-tight">{t('hero.cta.start')}</span>
-                  <ArrowRight size={18} className="ml-auto group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
-                </Link>
-              </div>
-
-              <div className="inline-flex items-center gap-2.5 bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5">
-                <Sparkles size={14} className="text-gold-400 flex-shrink-0" />
-                <span className="text-gray-400 text-xs">{t('hero.ai.question')}</span>
-                <Link
-                  to="/trademark-ideas"
-                  className="flex-shrink-0 text-gold-300 hover:text-gold-200 text-xs font-semibold underline underline-offset-2 transition-colors"
-                >
-                  {t('hero.ai.cta')}
-                </Link>
-              </div>
-
-              <div className="flex flex-wrap gap-4 mt-8">
-                {trustBadges.map((badge, i) => (
-                  <div key={i} className="flex items-center gap-2 text-gray-300">
-                    <badge.icon size={16} className="text-gold-400 flex-shrink-0" />
-                    <span className="text-sm">{t(badge.key)}</span>
-                    {badge.onTooltip && (
-                      <button
-                        onClick={badge.onTooltip}
-                        className="text-gold-400/70 hover:text-gold-300 transition-colors flex-shrink-0"
-                      >
-                        <HelpCircle size={13} />
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
+            {/* AI Idea Generator — secondary nudge */}
+            <div className="inline-flex items-center gap-2.5 bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5">
+              <Sparkles size={14} className="text-gold-400 flex-shrink-0" />
+              <span className="text-gray-400 text-xs">{t('hero.ai.question')}</span>
+              <Link
+                to="/trademark-ideas"
+                className="flex-shrink-0 text-gold-300 hover:text-gold-200 text-xs font-semibold underline underline-offset-2 transition-colors"
+              >
+                {t('hero.ai.cta')}
+              </Link>
             </div>
-          )}
-        </div>
-      </section>
 
-      {/* Mobile hero video modal */}
-      {heroVideoOpen && heroVideoId && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
-          onClick={() => setHeroVideoOpen(false)}
-        >
-          <div
-            className="relative w-full max-w-3xl bg-black rounded-2xl overflow-hidden shadow-2xl"
-            onClick={e => e.stopPropagation()}
-          >
-            <button
-              onClick={() => setHeroVideoOpen(false)}
-              className="absolute top-3 right-3 z-10 flex items-center justify-center w-9 h-9 rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors"
-              aria-label="Close video"
-            >
-              <X size={18} />
-            </button>
-            <div className="aspect-video">
-              <iframe
-                src={`https://www.youtube.com/embed/${heroVideoId}?autoplay=1&rel=0`}
-                title="Welcome Video"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                className="w-full h-full"
-              />
+            {/* Trust row */}
+            <div className="flex flex-wrap gap-4 mt-8">
+              {trustBadges.map((badge, i) => (
+                <div key={i} className="flex items-center gap-2 text-gray-300">
+                  <badge.icon size={16} className="text-gold-400 flex-shrink-0" />
+                  <span className="text-sm">{t(badge.key)}</span>
+                  {badge.onTooltip && (
+                    <button
+                      onClick={badge.onTooltip}
+                      className="text-gold-400/70 hover:text-gold-300 transition-colors flex-shrink-0"
+                    >
+                      <HelpCircle size={13} />
+                    </button>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         </div>
-      )}
+      </section>
 
       {/* Constancia de Presentación modal */}
       {showConstanciaModal && (

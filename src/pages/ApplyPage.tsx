@@ -6,7 +6,6 @@ import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { logFilingEvent } from '../lib/analytics';
 import { calculatePrice, getAllClasses, type ClassSuggestion } from '../lib/classifier';
 import { getSortedCountries, getSortedDialCodes, type SupportedLang } from '../lib/countries';
 import AIDescriptionAssistant, { type RelatedClass } from '../components/AIDescriptionAssistant';
@@ -28,31 +27,7 @@ interface ClassEntry {
   fallbackSuggestions: ClassSuggestion[];
 }
 
-interface PriorityClaim {
-  country: string;
-  appNumber: string;
-  filingDate: string;
-}
-
-interface CoOwner {
-  legalName: string;
-  country: string;
-  address: string;
-  city: string;
-  stateProvince: string;
-  postalCode: string;
-}
-
-interface EstablishmentAddress {
-  address: string;
-  city: string;
-  stateProvince: string;
-  postalCode: string;
-  country: string;
-}
-
 interface FormData {
-  // ── Applicant / Owner ──────────────────────────────────────────────────────
   applicantType: 'individual' | 'company';
   legalName: string;
   country: string;
@@ -68,51 +43,23 @@ interface FormData {
   whatsapp: string;
   taxId: string;
   contactPerson: string;
-  // NEW — IMPI-specific identifiers
-  rfc: string;
-  curp: string;
-  authorizedRepresentative: string;
-  // NEW — co-owners (IMPI supports multiple owners per application)
-  coOwners: CoOwner[];
-  // NEW — notification address (separate from commercial address)
-  useNotificationAddress: boolean;
-  notificationAddress: string;
-  notificationCity: string;
-  notificationStateProvince: string;
-  notificationPostalCode: string;
-  notificationCountry: string;
-  // ── Trademark Details ──────────────────────────────────────────────────────
   markName: string;
   markType: string;
-  // NEW — IMPI figure type (distinct from mark type composition)
-  impiFigureType: 'marca' | 'marca_colectiva' | 'aviso_comercial' | 'nombre_comercial' | 'imagen_comercial';
   containsNonSpanish: boolean;
   markLanguage: string;
   meaningSpanish: string;
   transliteration: string;
   markDescription: string;
-  // NEW — elements excluded from protection
-  unprotectedElements: string;
   claimsColor: boolean;
   colorDescription: string;
   logoFile: File | null;
-  // NEW — Rules of Use document (required for collective marks)
-  rulesOfUseFile: File | null;
-  // ── G&S ────────────────────────────────────────────────────────────────────
   classEntries: ClassEntry[];
-  // ── Prior Use & Priority ───────────────────────────────────────────────────
   usedInMexico: boolean;
   firstUseDate: string;
-  // NEW — establishment address (required when prior use is claimed)
-  establishmentSameAsOwner: boolean;
-  establishmentAddress: EstablishmentAddress;
-  // OLD single priority kept for backwards compat; NEW array supports up to 3
   priorityClaimed: boolean;
   priorityCountry: string;
   priorityAppNumber: string;
   priorityFilingDate: string;
-  // NEW — up to 3 priority claims
-  priorityClaims: PriorityClaim[];
   isOwner: boolean;
   knownSimilarMarks: string;
 }
@@ -721,57 +668,36 @@ export default function ApplyPage() {
         stateProvince: '', postalCode: '', email: '', emailConfirm: '',
         phoneDialCode: '', phoneNumber: '', wechat: '', whatsapp: '', taxId: '',
         contactPerson: '',
-        rfc: '', curp: '', authorizedRepresentative: '',
-        coOwners: [],
-        useNotificationAddress: false,
-        notificationAddress: '', notificationCity: '', notificationStateProvince: '',
-        notificationPostalCode: '', notificationCountry: '',
-        markName: clrMark, markType: 'word',
-        impiFigureType: 'marca',
-        containsNonSpanish: false,
+        markName: clrMark, markType: 'word', containsNonSpanish: false,
         markLanguage: 'en', meaningSpanish: '', transliteration: '',
-        markDescription: '', unprotectedElements: '',
-        claimsColor: false, colorDescription: '',
-        logoFile: null, rulesOfUseFile: null,
+        markDescription: '', claimsColor: false, colorDescription: '',
+        logoFile: null,
         classEntries,
-        usedInMexico: false, firstUseDate: '',
-        establishmentSameAsOwner: true,
-        establishmentAddress: { address: '', city: '', stateProvince: '', postalCode: '', country: '' },
-        priorityClaimed: false,
+        usedInMexico: false, firstUseDate: '', priorityClaimed: false,
         priorityCountry: '', priorityAppNumber: '', priorityFilingDate: '',
-        priorityClaims: [],
         isOwner: true, knownSimilarMarks: '',
       };
     }
 
-    // Normal flow — no pre-fill; draft recovery (for logged-in users) happens in a separate useEffect
-    // Clear any stale suggestion keys to avoid leaking data from other flows
-    sessionStorage.removeItem('suggestedMarkName');
+    // Normal flow
+    const suggested = fromUrl || sessionStorage.getItem('suggestedMarkName') || '';
+    if (!fromUrl && suggested) {
+      sessionStorage.removeItem('suggestedMarkName');
+    }
+    if (suggested) suggestedName.current = suggested;
     return {
       applicantType: 'company',
       legalName: '', country: '', address: '', city: '',
       stateProvince: '', postalCode: '', email: '', emailConfirm: '',
       phoneDialCode: '', phoneNumber: '', wechat: '', whatsapp: '', taxId: '',
       contactPerson: '',
-      rfc: '', curp: '', authorizedRepresentative: '',
-      coOwners: [],
-      useNotificationAddress: false,
-      notificationAddress: '', notificationCity: '', notificationStateProvince: '',
-      notificationPostalCode: '', notificationCountry: '',
-      markName: '', markType: 'word',
-      impiFigureType: 'marca',
-      containsNonSpanish: false,
+      markName: suggested, markType: 'word', containsNonSpanish: false,
       markLanguage: 'en', meaningSpanish: '', transliteration: '',
-      markDescription: '', unprotectedElements: '',
-      claimsColor: false, colorDescription: '',
-      logoFile: null, rulesOfUseFile: null,
+      markDescription: '', claimsColor: false, colorDescription: '',
+      logoFile: null,
       classEntries: [newEntry()],
-      usedInMexico: false, firstUseDate: '',
-      establishmentSameAsOwner: true,
-      establishmentAddress: { address: '', city: '', stateProvince: '', postalCode: '', country: '' },
-      priorityClaimed: false,
+      usedInMexico: false, firstUseDate: '', priorityClaimed: false,
       priorityCountry: '', priorityAppNumber: '', priorityFilingDate: '',
-      priorityClaims: [],
       isOwner: true, knownSimilarMarks: '',
     };
   });
@@ -897,7 +823,7 @@ export default function ApplyPage() {
 
   const serializeForm = useCallback((f: FormData) => {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { logoFile, rulesOfUseFile, ...rest } = f;
+    const { logoFile, ...rest } = f;
     return rest;
   }, []);
 
@@ -1221,26 +1147,12 @@ export default function ApplyPage() {
           state_province: form.stateProvince,
           postal_code: form.postalCode,
           email: form.email,
-          phone: form.phoneDialCode ? `${form.phoneDialCode} ${form.phoneNumber}` : form.phoneNumber,
+          phone: form.phoneNumber,
           wechat: form.wechat,
           whatsapp: form.whatsapp,
           tax_id: form.taxId,
           contact_person: form.contactPerson,
-          rfc: form.rfc,
-          curp: form.curp,
-          authorized_representative: form.authorizedRepresentative,
-          co_owners: form.coOwners,
         }).eq('id', editingClientId);
-
-        const editEstablishment = form.usedInMexico
-          ? (form.establishmentSameAsOwner
-              ? { address: form.address, city: form.city, stateProvince: form.stateProvince, postalCode: form.postalCode, country: form.country }
-              : form.establishmentAddress)
-          : null;
-
-        const editNotification = form.useNotificationAddress
-          ? { address: form.notificationAddress, city: form.notificationCity, stateProvince: form.notificationStateProvince, postalCode: form.notificationPostalCode, country: form.notificationCountry }
-          : null;
 
         await supabase.from('applications').update({
           total_classes: totalClasses,
@@ -1248,12 +1160,9 @@ export default function ApplyPage() {
           government_fee_usd: govFee,
           total_amount_usd: grandTotal,
           priority_claimed: form.priorityClaimed,
-          priority_country: form.priorityClaims[0]?.country ?? form.priorityCountry,
-          priority_app_number: form.priorityClaims[0]?.appNumber ?? form.priorityAppNumber,
-          priority_filing_date: (form.priorityClaims[0]?.filingDate ?? form.priorityFilingDate) || null,
-          priority_claims: form.priorityClaims,
-          establishment_address: editEstablishment,
-          notification_address: editNotification,
+          priority_country: form.priorityCountry,
+          priority_app_number: form.priorityAppNumber,
+          priority_filing_date: form.priorityFilingDate || null,
           language,
           search_language: language,
         }).eq('id', editingAppId);
@@ -1261,13 +1170,11 @@ export default function ApplyPage() {
         await supabase.from('trademarks').update({
           mark_name: form.markName,
           mark_type: form.markType as 'word',
-          impi_figure_type: form.impiFigureType,
           contains_non_spanish: form.containsNonSpanish,
           mark_language: form.markLanguage,
           meaning_spanish: form.meaningSpanish,
           transliteration: form.transliteration,
           mark_description: form.markDescription,
-          unprotected_elements: form.unprotectedElements,
           claims_color: form.claimsColor,
           color_description: form.colorDescription,
         }).eq('application_id', editingAppId);
@@ -1338,10 +1245,6 @@ export default function ApplyPage() {
           whatsapp: form.whatsapp,
           tax_id: form.taxId,
           contact_person: form.contactPerson,
-          rfc: form.rfc,
-          curp: form.curp,
-          authorized_representative: form.authorizedRepresentative,
-          co_owners: form.coOwners,
         }).select().maybeSingle();
 
         if (clientError || !clientData) throw new Error(`Failed to create client record: ${clientError?.message ?? 'no data returned'}`);
@@ -1349,16 +1252,6 @@ export default function ApplyPage() {
         const priorOrderId = sessionStorage.getItem('tcpOrderId') || null;
         const priorSearchMark = sessionStorage.getItem('tcpSearchName') ?? '';
         const clearanceOrderId = priorSearchMark.toLowerCase() === form.markName.trim().toLowerCase() ? priorOrderId : null;
-
-        const resolvedEstablishment = form.usedInMexico
-          ? (form.establishmentSameAsOwner
-              ? { address: form.address, city: form.city, stateProvince: form.stateProvince, postalCode: form.postalCode, country: form.country }
-              : form.establishmentAddress)
-          : null;
-
-        const resolvedNotificationAddress = form.useNotificationAddress
-          ? { address: form.notificationAddress, city: form.notificationCity, stateProvince: form.notificationStateProvince, postalCode: form.notificationPostalCode, country: form.notificationCountry }
-          : null;
 
         const { data: appData } = await supabase.from('applications').insert({
           case_number: cn,
@@ -1371,12 +1264,9 @@ export default function ApplyPage() {
           government_fee_usd: govFee,
           total_amount_usd: grandTotal,
           priority_claimed: form.priorityClaimed,
-          priority_country: form.priorityClaims[0]?.country ?? form.priorityCountry,
-          priority_app_number: form.priorityClaims[0]?.appNumber ?? form.priorityAppNumber,
-          priority_filing_date: (form.priorityClaims[0]?.filingDate ?? form.priorityFilingDate) || null,
-          priority_claims: form.priorityClaims,
-          establishment_address: resolvedEstablishment,
-          notification_address: resolvedNotificationAddress,
+          priority_country: form.priorityCountry,
+          priority_app_number: form.priorityAppNumber,
+          priority_filing_date: form.priorityFilingDate || null,
           source: 'website',
           language,
           search_language: language,
@@ -1389,19 +1279,16 @@ export default function ApplyPage() {
         if (!appData) throw new Error('Failed to create application record');
         resolvedAppId = appData.id;
         setApplicationId(appData.id);
-        logFilingEvent({ event_type: 'process_started', language, application_id: appData.id });
 
         await supabase.from('trademarks').insert({
           application_id: appData.id,
           mark_name: form.markName,
           mark_type: form.markType as 'word',
-          impi_figure_type: form.impiFigureType,
           contains_non_spanish: form.containsNonSpanish,
           mark_language: form.markLanguage,
           meaning_spanish: form.meaningSpanish,
           transliteration: form.transliteration,
           mark_description: form.markDescription,
-          unprotected_elements: form.unprotectedElements,
           claims_color: form.claimsColor,
           color_description: form.colorDescription,
         });
@@ -1475,12 +1362,6 @@ export default function ApplyPage() {
 
   const handlePaymentSuccess = () => {
     deleteDraft();
-    logFilingEvent({
-      event_type: 'payment_completed',
-      language,
-      application_id: applicationId,
-      amount_usd: finalTotal ?? discountedTotal,
-    });
     setStep(7);
   };
 
@@ -1597,50 +1478,19 @@ export default function ApplyPage() {
                   )}
                   <input type="text" required className={inputClass} value={form.markName} onChange={e => set({ markName: e.target.value })} />
                 </div>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className={labelClass}>
-                      {tri('IMPI Filing Category *', 'IMPI申请类别 *', 'Figura IMPI *', 'IMPI-Anmeldetyp *', 'Catégorie IMPI *', 'IMPI श्रेणी *', 'Categoria IMPI *')}
-                      <InfoTooltip text={tri(
-                        'Select the legal figure you are filing. "Marca" is the standard trademark. "Aviso Comercial" is a commercial slogan. "Nombre Comercial" is a trade name. "Imagen Comercial" is trade dress. "Marca Colectiva" requires Rules of Use.',
-                        '选择您要申请的法律形式。"Marca"为标准商标，"Aviso Comercial"为商业广告语，"Nombre Comercial"为商号，"Imagen Comercial"为商业外观，"Marca Colectiva"需要使用规则。',
-                        'Seleccione la figura legal a registrar. "Marca" es la marca estándar. "Aviso Comercial" es un eslogan comercial. "Nombre Comercial" es un nombre de empresa. "Imagen Comercial" es el trade dress. "Marca Colectiva" requiere Reglas de Uso.'
-                      )} />
-                    </label>
-                    <select className={inputClass} value={form.impiFigureType} onChange={e => set({ impiFigureType: e.target.value as FormData['impiFigureType'] })}>
-                      <option value="marca">{tri('Marca (Standard Trademark)', '商标 (标准)', 'Marca (Estándar)')}</option>
-                      <option value="marca_colectiva">{tri('Marca Colectiva (Collective Mark)', '集体商标', 'Marca Colectiva')}</option>
-                      <option value="aviso_comercial">{tri('Aviso Comercial (Commercial Slogan)', '商业广告语', 'Aviso Comercial (Eslogan)')}</option>
-                      <option value="nombre_comercial">{tri('Nombre Comercial (Trade Name)', '商号', 'Nombre Comercial')}</option>
-                      <option value="imagen_comercial">{tri('Imagen Comercial (Trade Dress)', '商业外观', 'Imagen Comercial (Trade Dress)')}</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className={labelClass}>
-                      {tri('Type of Mark', '商标类型', 'Tipo de Marca', 'Art der Marke', 'Type de marque', 'चिह्न का प्रकार', 'Tipo de Marca')}
-                      <InfoTooltip text={t('tooltip.markType')} />
-                    </label>
-                    <select className={inputClass} value={form.markType} onChange={e => set({ markType: e.target.value })}>
-                      <option value="word">{tri('Word Mark', '文字商标', 'Marca Denominativa', 'Wortmarke', 'Marque verbale', 'शब्द चिह्न', 'Marca Denominativa')}</option>
-                      <option value="design">{tri('Design / Logo Mark', '图形/标志商标', 'Diseño / Logo', 'Design / Logomarke', 'Marque figurative / Logo', 'डिज़ाइन / लोगो चिह्न', 'Marca Figurativa / Logo')}</option>
-                      <option value="combined">{tri('Combined Word + Design', '文字+图形组合', 'Denominativa + Diseño', 'Kombinierte Wort + Design', 'Marque mixte', 'संयुक्त शब्द + डिज़ाइन', 'Denominativa + Figurativa')}</option>
-                      <option value="trade_name">{tri('Trade Name', '商号', 'Nombre Comercial', 'Handelsname', 'Nom commercial', 'व्यापार नाम', 'Nome Comercial')}</option>
-                      <option value="slogan">{tri('Slogan / Commercial Notice', '口号/商业通告', 'Eslogan / Aviso Comercial', 'Slogan / Handelsaufschrift', 'Slogan / Enseigne commerciale', 'नारा / वाणिज्यिक सूचना', 'Slogan / Aviso Comercial')}</option>
-                    </select>
-                  </div>
+                <div>
+                  <label className={labelClass}>
+                    {tri('Type of Mark', '商标类型', 'Tipo de Marca', 'Art der Marke', 'Type de marque', 'चिह्न का प्रकार', 'Tipo de Marca')}
+                    <InfoTooltip text={t('tooltip.markType')} />
+                  </label>
+                  <select className={inputClass} value={form.markType} onChange={e => set({ markType: e.target.value })}>
+                    <option value="word">{tri('Word Mark', '文字商标', 'Marca Denominativa', 'Wortmarke', 'Marque verbale', 'शब्द चिह्न', 'Marca Denominativa')}</option>
+                    <option value="design">{tri('Design / Logo Mark', '图形/标志商标', 'Diseño / Logo', 'Design / Logomarke', 'Marque figurative / Logo', 'डिज़ाइन / लोगो चिह्न', 'Marca Figurativa / Logo')}</option>
+                    <option value="combined">{tri('Combined Word + Design', '文字+图形组合', 'Denominativa + Diseño', 'Kombinierte Wort + Design', 'Marque mixte', 'संयुक्त शब्द + डिज़ाइन', 'Denominativa + Figurativa')}</option>
+                    <option value="trade_name">{tri('Trade Name', '商号', 'Nombre Comercial', 'Handelsname', 'Nom commercial', 'व्यापार नाम', 'Nome Comercial')}</option>
+                    <option value="slogan">{tri('Slogan / Commercial Notice', '口号/商业通告', 'Eslogan / Aviso Comercial', 'Slogan / Handelsaufschrift', 'Slogan / Enseigne commerciale', 'नारा / वाणिज्यिक सूचना', 'Slogan / Aviso Comercial')}</option>
+                  </select>
                 </div>
-                {form.impiFigureType === 'marca_colectiva' && (
-                  <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
-                    <AlertTriangle size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-amber-800">
-                      {tri(
-                        'Collective marks require a Rules of Use document (PDF). Please upload it below.',
-                        '集体商标需要使用规则文件（PDF），请在下方上传。',
-                        'Las marcas colectivas requieren un documento de Reglas de Uso (PDF). Por favor súbelo abajo.'
-                      )}
-                    </p>
-                  </div>
-                )}
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
                     <label className={labelClass}>{tri('Language of the Mark', '商标语言', 'Idioma de la Marca', 'Sprache der Marke', 'Langue de la marque', 'चिह्न की भाषा', 'Idioma da Marca')}</label>
@@ -1689,7 +1539,7 @@ export default function ApplyPage() {
                     className="rounded border-gray-300 text-gold-500 focus:ring-gold-400"
                   />
                   <label htmlFor="claimsColor" className="text-sm text-gray-700">
-                    {tri('Claiming specific colors', '声明特定颜色', 'Solicita protección de colores específicos', 'Beansprucht spezifische Farben', 'Demande protection de couleurs spécifiques', 'विशिष्ट रंगों का दावा', 'Solicita proteção de cores específicas')}
+                    {tri('Claiming specific colors', '声明特定颜色', 'Reivindica colores específicos', 'Beansprucht spezifische Farben', 'Revendique des couleurs spécifiques', 'विशिष्ट रंगों का दावा', 'Reivindica cores específicas')}
                   </label>
                 </div>
                 {form.claimsColor && (
@@ -1730,57 +1580,6 @@ export default function ApplyPage() {
                     )}
                   </div>
                 </div>
-
-                {/* Unprotected elements — required for design/combined marks */}
-                {(form.markType === 'design' || form.markType === 'combined') && (
-                  <div>
-                    <label className={labelClass}>
-                      {tri('Elements NOT Claimed for Protection', '不寻求保护的元素', 'Elementos NO solicitados para protección', 'Nicht beanspruchte Elemente', 'Éléments exclus de la protection', 'सुरक्षा के लिए दावा न किए गए तत्व', 'Elementos NÃO solicitados para proteção')}
-                      <InfoTooltip text={tri(
-                        'List any letters, words, numbers or phrases shown in your design that you are NOT claiming exclusive rights to (e.g. "Hecho en México", sizes, net content labels).',
-                        '列出您设计中显示但不主张专有权利的字母、单词、数字或短语（如"Hecho en México"、尺寸、净含量标签等）。',
-                        'Indique las letras, palabras, números o frases que aparecen en su diseño pero sobre los cuales NO solicita protección exclusiva (ej. "Hecho en México", tallas, contenido neto).'
-                      )} />
-                    </label>
-                    <input
-                      type="text"
-                      className={inputClass}
-                      value={form.unprotectedElements}
-                      onChange={e => set({ unprotectedElements: e.target.value })}
-                      placeholder={tri('e.g. Hecho en México, Cont. Neto 750 ml', '例如：Hecho en México, Cont. Neto 750 ml', 'ej. Hecho en México, Cont. Neto 750 ml')}
-                    />
-                  </div>
-                )}
-
-                {/* Rules of Use document — required for collective marks */}
-                {form.impiFigureType === 'marca_colectiva' && (
-                  <div>
-                    <label className={labelClass}>
-                      {tri('Rules of Use (PDF) *', '使用规则 (PDF) *', 'Reglamento de Uso (PDF) *')}
-                      <InfoTooltip text={tri(
-                        'IMPI requires a Rules of Use document for all collective mark applications. Upload as PDF (max 10MB).',
-                        'IMPI要求所有集体商标申请必须附上使用规则文件，请上传PDF格式（最大10MB）。',
-                        'El IMPI exige un Reglamento de Uso para todas las solicitudes de marcas colectivas. Sube en formato PDF (máx. 10MB).'
-                      )} />
-                    </label>
-                    <div className="border-2 border-dashed border-amber-300 rounded-xl p-4 text-center hover:border-amber-400 transition-colors">
-                      {form.rulesOfUseFile ? (
-                        <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
-                          <span>{form.rulesOfUseFile.name}</span>
-                          <button type="button" onClick={() => set({ rulesOfUseFile: null })} className="text-red-500 hover:text-red-600">
-                            <X size={14} />
-                          </button>
-                        </div>
-                      ) : (
-                        <label className="cursor-pointer">
-                          <Upload size={20} className="mx-auto mb-2 text-amber-500" />
-                          <span className="text-sm text-gray-500">PDF {tri('(max 10MB)', '（最大10MB）', '(máx. 10MB)')}</span>
-                          <input type="file" className="hidden" accept=".pdf" onChange={e => { const f = e.target.files?.[0]; if (f) set({ rulesOfUseFile: f }); }} />
-                        </label>
-                      )}
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           )}
@@ -1893,167 +1692,6 @@ export default function ApplyPage() {
                     <label className={labelClass}>{tri('Tax ID / Registration No.', '税号/注册号', 'RFC / Número de Registro', 'Steuer-ID / Registrierungsnr.', 'Numéro fiscal / Enregistrement', 'टैक्स ID / पंजीकरण नं.', 'CNPJ/CPF / Nº de Registro')}</label>
                     <input type="text" className={inputClass} value={form.taxId} onChange={e => set({ taxId: e.target.value })} />
                   </div>
-
-                  {/* RFC / CURP — shown for Mexican applicants */}
-                  {form.country === 'MX' && (
-                    <>
-                      <div>
-                        <label className={labelClass}>
-                          RFC
-                          <InfoTooltip text={tri(
-                            'Registro Federal de Contribuyentes — required for Mexican applicants filing via IMPI\'s online portal.',
-                            'Registro Federal de Contribuyentes — 墨西哥申请人通过IMPI在线门户申请时必须提供。',
-                            'Registro Federal de Contribuyentes — requerido para solicitantes mexicanos que tramitan en línea ante el IMPI.'
-                          )} />
-                        </label>
-                        <input type="text" className={inputClass} value={form.rfc} onChange={e => set({ rfc: e.target.value.toUpperCase() })} placeholder="ABC123456XYZ" maxLength={13} />
-                      </div>
-                      {form.applicantType === 'individual' && (
-                        <div>
-                          <label className={labelClass}>
-                            CURP
-                            <InfoTooltip text={tri(
-                              'Clave Única de Registro de Población — used to e-sign your application on IMPI\'s PASE portal (Mexican individuals only).',
-                              'CURP用于在IMPI的PASE门户上电子签名申请（仅限墨西哥个人）。',
-                              'Clave Única de Registro de Población — se utiliza para firmar electrónicamente la solicitud en el portal PASE del IMPI (solo personas físicas mexicanas).'
-                            )} />
-                          </label>
-                          <input type="text" className={inputClass} value={form.curp} onChange={e => set({ curp: e.target.value.toUpperCase() })} placeholder="XXXX000000XXXXXXXX00" maxLength={18} />
-                        </div>
-                      )}
-                    </>
-                  )}
-
-                  {/* Authorized representative */}
-                  <div className="sm:col-span-2">
-                    <label className={labelClass}>
-                      {tri('Authorized Representative / Attorney', '授权代理人/律师', 'Representante Autorizado / Abogado', 'Bevollmächtigter Vertreter', 'Représentant autorisé / Avocat', 'अधिकृत प्रतिनिधि / वकील', 'Representante Autorizado / Advogado')}
-                      <InfoTooltip text={tri(
-                        'Name of the attorney or agent authorized to file on your behalf. Required when the applicant is a foreign entity.',
-                        '被授权代表您提交申请的律师或代理人姓名，外国申请人必须填写。',
-                        'Nombre del abogado o agente autorizado para tramitar en su nombre. Obligatorio cuando el solicitante es una entidad extranjera.'
-                      )} />
-                    </label>
-                    <input type="text" className={inputClass} value={form.authorizedRepresentative} onChange={e => set({ authorizedRepresentative: e.target.value })} />
-                  </div>
-                </div>
-
-                {/* Co-owners */}
-                <div className="border border-gray-200 rounded-xl p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <p className="text-sm font-semibold text-gray-800">
-                        {tri('Co-Owners', '共同所有人', 'Co-Titulares', 'Mitinhaber', 'Co-titulaires', 'सह-स्वामी', 'Co-Titulares')}
-                        <InfoTooltip text={tri(
-                          'IMPI allows multiple owners on a single application. Only the primary owner\'s address appears on the form; co-owner data goes in an annex.',
-                          'IMPI允许一个申请有多个所有人。主要所有人的地址填入表格，共同所有人信息附在附件中。',
-                          'El IMPI permite varios titulares en una sola solicitud. Solo el domicilio del primer titular aparece en el formulario; los demás van en un anexo.'
-                        )} />
-                      </p>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        {tri('Leave empty if there is only one owner.', '如果只有一个所有人，则留空。', 'Dejar vacío si hay un solo titular.')}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => set({ coOwners: [...form.coOwners, { legalName: '', country: '', address: '', city: '', stateProvince: '', postalCode: '' }] })}
-                      className="flex items-center gap-1.5 text-xs font-medium text-gold-600 hover:text-gold-700 border border-gold-300 rounded-lg px-3 py-1.5 hover:bg-gold-50 transition-colors"
-                    >
-                      <Plus size={12} />
-                      {tri('Add Co-Owner', '添加共同所有人', 'Agregar Co-Titular')}
-                    </button>
-                  </div>
-                  {form.coOwners.length === 0 && (
-                    <p className="text-sm text-gray-400 text-center py-3">
-                      {tri('No co-owners added.', '尚未添加共同所有人。', 'Sin co-titulares.')}
-                    </p>
-                  )}
-                  {form.coOwners.map((co, idx) => (
-                    <div key={idx} className="border border-gray-100 rounded-xl p-4 mb-3 relative">
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                          {tri('Co-Owner', '共同所有人', 'Co-Titular')} {idx + 1}
-                        </span>
-                        <button type="button" onClick={() => set({ coOwners: form.coOwners.filter((_, i) => i !== idx) })} className="text-gray-400 hover:text-red-500 transition-colors">
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                      <div className="grid sm:grid-cols-2 gap-3">
-                        <div className="sm:col-span-2">
-                          <label className={labelClass}>{tri('Full Legal Name', '完整法定名称', 'Nombre o Razón Social')}</label>
-                          <input type="text" className={inputClass} value={co.legalName} onChange={e => { const u = [...form.coOwners]; u[idx] = { ...u[idx], legalName: e.target.value }; set({ coOwners: u }); }} />
-                        </div>
-                        <div>
-                          <label className={labelClass}>{tri('Country', '国家', 'País')}</label>
-                          <select className={inputClass} value={co.country} onChange={e => { const u = [...form.coOwners]; u[idx] = { ...u[idx], country: e.target.value }; set({ coOwners: u }); }}>
-                            <option value="">{tri('— Select —', '— 选择 —', '— Seleccionar —')}</option>
-                            {sortedCountries.map(c => <option key={c.code} value={c.code}>{c[language as SupportedLang] || c.en}</option>)}
-                          </select>
-                        </div>
-                        <div>
-                          <label className={labelClass}>{tri('City', '城市', 'Ciudad')}</label>
-                          <input type="text" className={inputClass} value={co.city} onChange={e => { const u = [...form.coOwners]; u[idx] = { ...u[idx], city: e.target.value }; set({ coOwners: u }); }} />
-                        </div>
-                        <div className="sm:col-span-2">
-                          <label className={labelClass}>{tri('Address', '地址', 'Domicilio')}</label>
-                          <input type="text" className={inputClass} value={co.address} onChange={e => { const u = [...form.coOwners]; u[idx] = { ...u[idx], address: e.target.value }; set({ coOwners: u }); }} />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Notification address */}
-                <div className="border border-gray-200 rounded-xl p-5">
-                  <div className="flex items-start gap-3 mb-3">
-                    <input
-                      type="checkbox"
-                      id="useNotifAddr"
-                      checked={form.useNotificationAddress}
-                      onChange={e => set({ useNotificationAddress: e.target.checked })}
-                      className="mt-0.5 rounded border-gray-300 text-gold-500 focus:ring-gold-400"
-                    />
-                    <div>
-                      <label htmlFor="useNotifAddr" className="text-sm font-medium text-gray-800 cursor-pointer">
-                        {tri('Use a separate address for IMPI notifications', '使用单独地址接收IMPI通知', 'Usar domicilio distinto para notificaciones del IMPI', 'Getrennte Adresse für IMPI-Mitteilungen', 'Utiliser une adresse distincte pour les notifications IMPI', 'IMPI सूचनाओं के लिए अलग पता उपयोग करें', 'Usar endereço distinto para notificações do IMPI')}
-                        <InfoTooltip text={tri(
-                          'IMPI can send official notices to a designated address that differs from the owner\'s commercial address — typically an attorney\'s office.',
-                          'IMPI可将官方通知发送至指定地址，该地址可与所有人的营业地址不同，通常为代理律师事务所地址。',
-                          'El IMPI puede enviar notificaciones oficiales a un domicilio designado distinto del comercial del titular, generalmente el de un despacho legal.'
-                        )} />
-                      </label>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        {tri('Typically your attorney\'s office address.', '通常为您的律师事务所地址。', 'Normalmente el domicilio de su despacho legal.')}
-                      </p>
-                    </div>
-                  </div>
-                  {form.useNotificationAddress && (
-                    <div className="grid sm:grid-cols-2 gap-3 pl-7">
-                      <div className="sm:col-span-2">
-                        <label className={labelClass}>{tri('Street & Number', '街道和门牌号', 'Calle y Número')}</label>
-                        <input type="text" className={inputClass} value={form.notificationAddress} onChange={e => set({ notificationAddress: e.target.value })} />
-                      </div>
-                      <div>
-                        <label className={labelClass}>{tri('City', '城市', 'Ciudad')}</label>
-                        <input type="text" className={inputClass} value={form.notificationCity} onChange={e => set({ notificationCity: e.target.value })} />
-                      </div>
-                      <div>
-                        <label className={labelClass}>{tri('State / Province', '州/省', 'Estado')}</label>
-                        <input type="text" className={inputClass} value={form.notificationStateProvince} onChange={e => set({ notificationStateProvince: e.target.value })} />
-                      </div>
-                      <div>
-                        <label className={labelClass}>{tri('Postal Code', '邮政编码', 'Código Postal')}</label>
-                        <input type="text" className={inputClass} value={form.notificationPostalCode} onChange={e => set({ notificationPostalCode: e.target.value })} />
-                      </div>
-                      <div>
-                        <label className={labelClass}>{tri('Country', '国家', 'País')}</label>
-                        <select className={inputClass} value={form.notificationCountry} onChange={e => set({ notificationCountry: e.target.value })}>
-                          <option value="">{tri('— Select —', '— 选择 —', '— Seleccionar —')}</option>
-                          {sortedCountries.map(c => <option key={c.code} value={c.code}>{c[language as SupportedLang] || c.en}</option>)}
-                        </select>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
@@ -2322,137 +1960,34 @@ export default function ApplyPage() {
                   </button>
                 </div>
                 {form.usedInMexico === true && (
-                  <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
-                    <div>
-                      <label className={labelClass}>{tri('First Use Date in Mexico', '在墨西哥首次使用日期', 'Fecha de Primer Uso en México', 'Erstes Verwendungsdatum in Mexiko', 'Date de première utilisation au Mexique', 'मेक्सिको में पहले उपयोग की तारीख', 'Data do Primeiro Uso no México', 'メキシコでの初使用日')}</label>
-                      <input type="date" className={inputClass} value={form.firstUseDate} onChange={e => set({ firstUseDate: e.target.value })} />
-                    </div>
-                    {/* Establishment address */}
-                    <div>
-                      <p className="text-sm font-semibold text-gray-700 mb-3">
-                        {tri('Establishment Address', '营业地址', 'Domicilio del Establecimiento', 'Betriebsstättenadresse', 'Adresse de l\'établissement', 'प्रतिष्ठान पता', 'Endereço do Estabelecimento')}
-                        <InfoTooltip text={tri(
-                          'IMPI requires the address of the establishment where the mark is used when prior use is claimed.',
-                          '主张在先使用时，IMPI要求提供使用该商标的营业场所地址。',
-                          'El IMPI requiere el domicilio del establecimiento donde se usa la marca cuando se alega uso previo.'
-                        )} />
-                      </p>
-                      <div className="flex items-center gap-3 mb-3">
-                        <input
-                          type="checkbox"
-                          id="estSameAsOwner"
-                          checked={form.establishmentSameAsOwner}
-                          onChange={e => set({ establishmentSameAsOwner: e.target.checked })}
-                          className="rounded border-gray-300 text-gold-500 focus:ring-gold-400"
-                        />
-                        <label htmlFor="estSameAsOwner" className="text-sm text-gray-600">
-                          {tri('Same as owner address', '与所有人地址相同', 'Mismo que el domicilio del titular', 'Gleich wie Inhaberadresse', 'Identique à l\'adresse du titulaire', 'मालिक के पते के समान', 'Mesmo que o endereço do titular')}
-                        </label>
-                      </div>
-                      {!form.establishmentSameAsOwner && (
-                        <div className="grid sm:grid-cols-2 gap-3">
-                          <div className="sm:col-span-2">
-                            <label className={labelClass}>{tri('Street & Number', '街道和门牌号', 'Calle y Número')}</label>
-                            <input type="text" className={inputClass} value={form.establishmentAddress.address} onChange={e => set({ establishmentAddress: { ...form.establishmentAddress, address: e.target.value } })} />
-                          </div>
-                          <div>
-                            <label className={labelClass}>{tri('City', '城市', 'Ciudad')}</label>
-                            <input type="text" className={inputClass} value={form.establishmentAddress.city} onChange={e => set({ establishmentAddress: { ...form.establishmentAddress, city: e.target.value } })} />
-                          </div>
-                          <div>
-                            <label className={labelClass}>{tri('State / Province', '州/省', 'Estado / Provincia')}</label>
-                            <input type="text" className={inputClass} value={form.establishmentAddress.stateProvince} onChange={e => set({ establishmentAddress: { ...form.establishmentAddress, stateProvince: e.target.value } })} />
-                          </div>
-                          <div>
-                            <label className={labelClass}>{tri('Postal Code', '邮政编码', 'Código Postal')}</label>
-                            <input type="text" className={inputClass} value={form.establishmentAddress.postalCode} onChange={e => set({ establishmentAddress: { ...form.establishmentAddress, postalCode: e.target.value } })} />
-                          </div>
-                          <div>
-                            <label className={labelClass}>{tri('Country', '国家', 'País')}</label>
-                            <select className={inputClass} value={form.establishmentAddress.country} onChange={e => set({ establishmentAddress: { ...form.establishmentAddress, country: e.target.value } })}>
-                              <option value="">{tri('— Select —', '— 选择 —', '— Seleccionar —')}</option>
-                              {sortedCountries.map(c => <option key={c.code} value={c.code}>{c[language as SupportedLang] || c.en}</option>)}
-                            </select>
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                  <div className="bg-white border border-gray-200 rounded-xl p-5">
+                    <label className={labelClass}>{tri('First Use Date in Mexico', '在墨西哥首次使用日期', 'Fecha de Primer Uso en México', 'Erstes Verwendungsdatum in Mexiko', 'Date de première utilisation au Mexique', 'मेक्सिको में पहले उपयोग की तारीख', 'Data do Primeiro Uso no México', 'メキシコでの初使用日')}</label>
+                    <input type="date" className={inputClass} value={form.firstUseDate} onChange={e => set({ firstUseDate: e.target.value })} />
                   </div>
                 )}
 
-                {/* Priority claims — up to 3 */}
                 <div className="bg-white border border-gray-200 rounded-xl p-5">
                   <div className="flex items-start gap-3 mb-3">
-                    <input type="checkbox" id="priorityClaimed" checked={form.priorityClaimed} onChange={e => {
-                      const checked = e.target.checked;
-                      set({
-                        priorityClaimed: checked,
-                        priorityClaims: checked && form.priorityClaims.length === 0
-                          ? [{ country: '', appNumber: '', filingDate: '' }]
-                          : form.priorityClaims,
-                      });
-                    }} className="mt-0.5 rounded border-gray-300 text-gold-500" />
+                    <input type="checkbox" id="priorityClaimed" checked={form.priorityClaimed} onChange={e => set({ priorityClaimed: e.target.checked })} className="mt-0.5 rounded border-gray-300 text-gold-500" />
                     <label htmlFor="priorityClaimed" className="text-sm font-medium text-gray-800 leading-snug">
-                      {tri('Claiming priority from a foreign application', '声明来自外国申请的优先权', 'Solicitar prioridad de una solicitud extranjera', 'Priorität aus einer ausländischen Anmeldung beanspruchen', 'Demander la priorité d\'une demande étrangère', 'विदेशी आवेदन से प्राथमिकता का दावा', 'Solicitar prioridade de um pedido estrangeiro', '外国出願から優先権を主張する')}
+                      {tri('Claiming priority from a foreign application', '声明来自外国申请的优先权', 'Reclama prioridad de una solicitud extranjera', 'Priorität aus einer ausländischen Anmeldung beanspruchen', 'Revendiquer la priorité d\'une demande étrangère', 'विदेशी आवेदन से प्राथमिकता का दावा', 'Reivindicando prioridade de um pedido estrangeiro', '外国出願から優先権を主張する')}
                       <InfoTooltip text={t('tooltip.priorityClaim')} />
                     </label>
                   </div>
                   {form.priorityClaimed && (
-                    <div className="space-y-4 pl-7">
-                      {form.priorityClaims.map((claim, idx) => (
-                        <div key={idx} className="border border-gray-100 rounded-xl p-4 relative">
-                          <div className="flex items-center justify-between mb-3">
-                            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                              {tri('Priority', '优先权', 'Prioridad')} {idx + 1}
-                            </span>
-                            {form.priorityClaims.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => set({ priorityClaims: form.priorityClaims.filter((_, i) => i !== idx) })}
-                                className="text-gray-400 hover:text-red-500 transition-colors"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            )}
-                          </div>
-                          <div className="grid sm:grid-cols-2 gap-3">
-                            <div>
-                              <label className={labelClass}>{tri('Priority Country', '优先权国家', 'País de Prioridad', 'Prioritätsland', 'Pays de priorité', 'प्राथमिकता देश', 'País de Prioridade', '優先権国')}</label>
-                              <input type="text" className={inputClass} value={claim.country} onChange={e => {
-                                const updated = [...form.priorityClaims];
-                                updated[idx] = { ...updated[idx], country: e.target.value };
-                                set({ priorityClaims: updated, priorityCountry: idx === 0 ? e.target.value : form.priorityCountry });
-                              }} />
-                            </div>
-                            <div>
-                              <label className={labelClass}>{tri('Application Number', '申请号', 'Número de Solicitud', 'Antragsnummer', 'Numéro de demande', 'आवेदन नंबर', 'Número do Pedido', '出願番号')}</label>
-                              <input type="text" className={inputClass} value={claim.appNumber} onChange={e => {
-                                const updated = [...form.priorityClaims];
-                                updated[idx] = { ...updated[idx], appNumber: e.target.value };
-                                set({ priorityClaims: updated, priorityAppNumber: idx === 0 ? e.target.value : form.priorityAppNumber });
-                              }} />
-                            </div>
-                            <div>
-                              <label className={labelClass}>{tri('Filing Date', '申请日期', 'Fecha de Presentación', 'Einreichungsdatum', 'Date de dépôt', 'दाखिल तारीख', 'Data de Protocolo', '出願日')}</label>
-                              <input type="date" className={inputClass} value={claim.filingDate} onChange={e => {
-                                const updated = [...form.priorityClaims];
-                                updated[idx] = { ...updated[idx], filingDate: e.target.value };
-                                set({ priorityClaims: updated, priorityFilingDate: idx === 0 ? e.target.value : form.priorityFilingDate });
-                              }} />
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                      {form.priorityClaims.length < 3 && (
-                        <button
-                          type="button"
-                          onClick={() => set({ priorityClaims: [...form.priorityClaims, { country: '', appNumber: '', filingDate: '' }] })}
-                          className="flex items-center gap-2 text-sm text-gold-600 hover:text-gold-700 font-medium"
-                        >
-                          <Plus size={14} />
-                          {tri('Add another priority claim', '添加另一优先权', 'Agregar otra prioridad')} ({tri('max 3', '最多3个', 'máx. 3')})
-                        </button>
-                      )}
+                    <div className="grid sm:grid-cols-2 gap-4 pl-7">
+                      <div>
+                        <label className={labelClass}>{tri('Priority Country', '优先权国家', 'País de Prioridad', 'Prioritätsland', 'Pays de priorité', 'प्राथमिकता देश', 'País de Prioridade', '優先権国')}</label>
+                        <input type="text" className={inputClass} value={form.priorityCountry} onChange={e => set({ priorityCountry: e.target.value })} />
+                      </div>
+                      <div>
+                        <label className={labelClass}>{tri('Application Number', '申请号', 'Número de Solicitud', 'Antragsnummer', 'Numéro de demande', 'आवेदन नंबर', 'Número do Pedido', '出願番号')}</label>
+                        <input type="text" className={inputClass} value={form.priorityAppNumber} onChange={e => set({ priorityAppNumber: e.target.value })} />
+                      </div>
+                      <div>
+                        <label className={labelClass}>{tri('Filing Date', '申请日期', 'Fecha de Presentación', 'Einreichungsdatum', 'Date de dépôt', 'दाखिल तारीख', 'Data de Protocolo', '出願日')}</label>
+                        <input type="date" className={inputClass} value={form.priorityFilingDate} onChange={e => set({ priorityFilingDate: e.target.value })} />
+                      </div>
                     </div>
                   )}
                 </div>
@@ -2546,7 +2081,7 @@ export default function ApplyPage() {
                       {form.containsNonSpanish && <ReviewRow label={tri('Non-Spanish', '非西班牙语', 'No español', 'Nicht-Spanisch', 'Non espagnol', 'गैर-स्पेनिश', 'Não espanhol', '非スペイン語')} val={tri('Yes', '是', 'Sí', 'Ja', 'Oui', 'हाँ', 'Sim', 'はい')} />}
                       {form.meaningSpanish && <ReviewRow label={tri('Meaning (ES)', '西班牙语含义', 'Significado', 'Bedeutung', 'Signification', 'अर्थ', 'Significado', '意味')} val={form.meaningSpanish} />}
                       {form.transliteration && <ReviewRow label={tri('Transliteration', '音译', 'Transliteración', 'Transliteration', 'Translittération', 'लिप्यंतरण', 'Transliteração', '翻字')} val={form.transliteration} />}
-                      {form.claimsColor && <ReviewRow label={tri('Color Claim', '颜色声明', 'Solicitud de Color', 'Farbanspruch', 'Demande de couleur', 'रंग दावा', 'Solicitação de Cor', '色彩主張')} val={form.colorDescription || tri('Yes', '是', 'Sí', 'Ja', 'Oui', 'हाँ', 'Sim', 'はい')} />}
+                      {form.claimsColor && <ReviewRow label={tri('Color Claim', '颜色声明', 'Reclamo de Color', 'Farbanspruch', 'Revendication couleur', 'रंग दावा', 'Reivindicação de Cor', '色彩主張')} val={form.colorDescription || tri('Yes', '是', 'Sí', 'Ja', 'Oui', 'हाँ', 'Sim', 'はい')} />}
                       {form.markDescription && <ReviewRow label={tri('Description', '描述', 'Descripción', 'Beschreibung', 'Description', 'विवरण', 'Descrição', '説明')} val={form.markDescription} />}
                       {form.logoFile && <ReviewRow label={tri('Logo File', '标志文件', 'Archivo de Logo', 'Logo-Datei', 'Fichier logo', 'लोगो फ़ाइल', 'Arquivo de Logo', 'ロゴファイル')} val={form.logoFile.name} />}
                     </div>
@@ -2605,7 +2140,7 @@ export default function ApplyPage() {
                     <div className="divide-y divide-gray-100">
                       <ReviewRow label={tri('Used in Mexico', '在墨西哥使用', 'Usada en México', 'In Mexiko verwendet', 'Utilisée au Mexique', 'मेक्सिको में उपयोग', 'Usada no México', 'メキシコで使用')} val={form.usedInMexico ? tri('Yes', '是', 'Sí', 'Ja', 'Oui', 'हाँ', 'Sim', 'はい') : tri('No', '否', 'No', 'Nein', 'Non', 'नहीं', 'Não', 'いいえ')} />
                       {form.usedInMexico && form.firstUseDate && <ReviewRow label={tri('First Use Date', '首次使用日期', 'Fecha Primer Uso', 'Erstbenutzungsdatum', 'Date 1er usage', 'पहले उपयोग की तारीख', 'Data 1º Uso', '初使用日')} val={form.firstUseDate} />}
-                      <ReviewRow label={tri('Priority Claimed', '声明优先权', 'Prioridad Solicitada', 'Priorität beansprucht', 'Priorité demandée', 'प्राथमिकता का दावा', 'Prioridade Solicitada', '優先権主張')} val={form.priorityClaimed ? tri('Yes', '是', 'Sí', 'Ja', 'Oui', 'हाँ', 'Sim', 'はい') : tri('No', '否', 'No', 'Nein', 'Non', 'नहीं', 'Não', 'いいえ')} />
+                      <ReviewRow label={tri('Priority Claimed', '声明优先权', 'Prioridad Reclamada', 'Priorität beansprucht', 'Priorité revendiquée', 'प्राथमिकता का दावा', 'Prioridade Reivindicada', '優先権主張')} val={form.priorityClaimed ? tri('Yes', '是', 'Sí', 'Ja', 'Oui', 'हाँ', 'Sim', 'はい') : tri('No', '否', 'No', 'Nein', 'Non', 'नहीं', 'Não', 'いいえ')} />
                       {form.priorityClaimed && form.priorityCountry && <ReviewRow label={tri('Priority Country', '优先权国家', 'País de Prioridad', 'Prioritätsland', 'Pays de priorité', 'प्राथमिकता देश', 'País de Prioridade', '優先権国')} val={form.priorityCountry} />}
                       {form.priorityClaimed && form.priorityAppNumber && <ReviewRow label={tri('App. Number', '申请号', 'Nº Solicitud', 'Antragsnr.', 'Nº demande', 'आवेदन नं.', 'Nº Pedido', '出願番号')} val={form.priorityAppNumber} />}
                       {form.priorityClaimed && form.priorityFilingDate && <ReviewRow label={tri('Filing Date', '申请日期', 'Fecha Presentación', 'Einreichungsdatum', 'Date de dépôt', 'दाखिल तारीख', 'Data Protocolo', '出願日')} val={form.priorityFilingDate} />}
