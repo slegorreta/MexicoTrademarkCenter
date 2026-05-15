@@ -1681,7 +1681,7 @@ export default function ApplyPage() {
                     className="rounded border-gray-300 text-gold-500 focus:ring-gold-400"
                   />
                   <label htmlFor="claimsColor" className="text-sm text-gray-700">
-                    {tri('Claiming specific colors', '声明特定颜色', 'Reivindica colores específicos', 'Beansprucht spezifische Farben', 'Revendique des couleurs spécifiques', 'विशिष्ट रंगों का दावा', 'Reivindica cores específicas')}
+                    {tri('Claiming specific colors', '声明特定颜色', 'Solicita protección de colores específicos', 'Beansprucht spezifische Farben', 'Demande protection de couleurs spécifiques', 'विशिष्ट रंगों का दावा', 'Solicita proteção de cores específicas')}
                   </label>
                 </div>
                 {form.claimsColor && (
@@ -1727,7 +1727,7 @@ export default function ApplyPage() {
                 {(form.markType === 'design' || form.markType === 'combined') && (
                   <div>
                     <label className={labelClass}>
-                      {tri('Elements NOT Claimed for Protection', '不寻求保护的元素', 'Elementos NO Reivindicados', 'Nicht beanspruchte Elemente', 'Éléments non revendiqués', 'सुरक्षा के लिए दावा न किए गए तत्व', 'Elementos NÃO Reivindicados')}
+                      {tri('Elements NOT Claimed for Protection', '不寻求保护的元素', 'Elementos NO solicitados para protección', 'Nicht beanspruchte Elemente', 'Éléments exclus de la protection', 'सुरक्षा के लिए दावा न किए गए तत्व', 'Elementos NÃO solicitados para proteção')}
                       <InfoTooltip text={tri(
                         'List any letters, words, numbers or phrases shown in your design that you are NOT claiming exclusive rights to (e.g. "Hecho en México", sizes, net content labels).',
                         '列出您设计中显示但不主张专有权利的字母、单词、数字或短语（如"Hecho en México"、尺寸、净含量标签等）。',
@@ -2385,7 +2385,7 @@ export default function ApplyPage() {
                       });
                     }} className="mt-0.5 rounded border-gray-300 text-gold-500" />
                     <label htmlFor="priorityClaimed" className="text-sm font-medium text-gray-800 leading-snug">
-                      {tri('Claiming priority from a foreign application', '声明来自外国申请的优先权', 'Reclama prioridad de una solicitud extranjera', 'Priorität aus einer ausländischen Anmeldung beanspruchen', 'Revendiquer la priorité d\'une demande étrangère', 'विदेशी आवेदन से प्राथमिकता का दावा', 'Reivindicando prioridade de um pedido estrangeiro', '外国出願から優先権を主張する')}
+                      {tri('Claiming priority from a foreign application', '声明来自外国申请的优先权', 'Solicitar prioridad de una solicitud extranjera', 'Priorität aus einer ausländischen Anmeldung beanspruchen', 'Demander la priorité d\'une demande étrangère', 'विदेशी आवेदन से प्राथमिकता का दावा', 'Solicitar prioridade de um pedido estrangeiro', '外国出願から優先権を主張する')}
                       <InfoTooltip text={t('tooltip.priorityClaim')} />
                     </label>
                   </div>
@@ -2538,7 +2538,7 @@ export default function ApplyPage() {
                       {form.containsNonSpanish && <ReviewRow label={tri('Non-Spanish', '非西班牙语', 'No español', 'Nicht-Spanisch', 'Non espagnol', 'गैर-स्पेनिश', 'Não espanhol', '非スペイン語')} val={tri('Yes', '是', 'Sí', 'Ja', 'Oui', 'हाँ', 'Sim', 'はい')} />}
                       {form.meaningSpanish && <ReviewRow label={tri('Meaning (ES)', '西班牙语含义', 'Significado', 'Bedeutung', 'Signification', 'अर्थ', 'Significado', '意味')} val={form.meaningSpanish} />}
                       {form.transliteration && <ReviewRow label={tri('Transliteration', '音译', 'Transliteración', 'Transliteration', 'Translittération', 'लिप्यंतरण', 'Transliteração', '翻字')} val={form.transliteration} />}
-                      {form.claimsColor && <ReviewRow label={tri('Color Claim', '颜色声明', 'Reclamo de Color', 'Farbanspruch', 'Revendication couleur', 'रंग दावा', 'Reivindicação de Cor', '色彩主張')} val={form.colorDescription || tri('Yes', '是', 'Sí', 'Ja', 'Oui', 'हाँ', 'Sim', 'はい')} />}
+                      {form.claimsColor && <ReviewRow label={tri('Color Claim', '颜色声明', 'Solicitud de Color', 'Farbanspruch', 'Demande de couleur', 'रंग दावा', 'Solicitação de Cor', '色彩主張')} val={form.colorDescription || tri('Yes', '是', 'Sí', 'Ja', 'Oui', 'हाँ', 'Sim', 'はい')} />}
                       {form.markDescription && <ReviewRow label={tri('Description', '描述', 'Descripción', 'Beschreibung', 'Description', 'विवरण', 'Descrição', '説明')} val={form.markDescription} />}
                       {form.logoFile && <ReviewRow label={tri('Logo File', '标志文件', 'Archivo de Logo', 'Logo-Datei', 'Fichier logo', 'लोगो फ़ाइल', 'Arquivo de Logo', 'ロゴファイル')} val={form.logoFile.name} />}
                     </div>
@@ -2597,7 +2597,7 @@ export default function ApplyPage() {
                     <div className="divide-y divide-gray-100">
                       <ReviewRow label={tri('Used in Mexico', '在墨西哥使用', 'Usada en México', 'In Mexiko verwendet', 'Utilisée au Mexique', 'मेक्सिको में उपयोग', 'Usada no México', 'メキシコで使用')} val={form.usedInMexico ? tri('Yes', '是', 'Sí', 'Ja', 'Oui', 'हाँ', 'Sim', 'はい') : tri('No', '否', 'No', 'Nein', 'Non', 'नहीं', 'Não', 'いいえ')} />
                       {form.usedInMexico && form.firstUseDate && <ReviewRow label={tri('First Use Date', '首次使用日期', 'Fecha Primer Uso', 'Erstbenutzungsdatum', 'Date 1er usage', 'पहले उपयोग की तारीख', 'Data 1º Uso', '初使用日')} val={form.firstUseDate} />}
-                      <ReviewRow label={tri('Priority Claimed', '声明优先权', 'Prioridad Reclamada', 'Priorität beansprucht', 'Priorité revendiquée', 'प्राथमिकता का दावा', 'Prioridade Reivindicada', '優先権主張')} val={form.priorityClaimed ? tri('Yes', '是', 'Sí', 'Ja', 'Oui', 'हाँ', 'Sim', 'はい') : tri('No', '否', 'No', 'Nein', 'Non', 'नहीं', 'Não', 'いいえ')} />
+                      <ReviewRow label={tri('Priority Claimed', '声明优先权', 'Prioridad Solicitada', 'Priorität beansprucht', 'Priorité demandée', 'प्राथमिकता का दावा', 'Prioridade Solicitada', '優先権主張')} val={form.priorityClaimed ? tri('Yes', '是', 'Sí', 'Ja', 'Oui', 'हाँ', 'Sim', 'はい') : tri('No', '否', 'No', 'Nein', 'Non', 'नहीं', 'Não', 'いいえ')} />
                       {form.priorityClaimed && form.priorityCountry && <ReviewRow label={tri('Priority Country', '优先权国家', 'País de Prioridad', 'Prioritätsland', 'Pays de priorité', 'प्राथमिकता देश', 'País de Prioridade', '優先権国')} val={form.priorityCountry} />}
                       {form.priorityClaimed && form.priorityAppNumber && <ReviewRow label={tri('App. Number', '申请号', 'Nº Solicitud', 'Antragsnr.', 'Nº demande', 'आवेदन नं.', 'Nº Pedido', '出願番号')} val={form.priorityAppNumber} />}
                       {form.priorityClaimed && form.priorityFilingDate && <ReviewRow label={tri('Filing Date', '申请日期', 'Fecha Presentación', 'Einreichungsdatum', 'Date de dépôt', 'दाखिल तारीख', 'Data Protocolo', '出願日')} val={form.priorityFilingDate} />}
