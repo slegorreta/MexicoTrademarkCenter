@@ -38,6 +38,10 @@ export interface Database {
           whatsapp: string;
           tax_id: string;
           contact_person: string;
+          rfc: string;
+          curp: string;
+          authorized_representative: string;
+          co_owners: Json;
           preferred_language: 'en' | 'zh' | 'es';
           notes: string;
           is_active: boolean;
@@ -64,6 +68,9 @@ export interface Database {
           priority_country: string;
           priority_app_number: string;
           priority_filing_date: string | null;
+          priority_claims: Json;
+          establishment_address: Json | null;
+          notification_address: Json | null;
           impi_application_number: string;
           impi_filing_date: string | null;
           impi_publication_date: string | null;
@@ -87,15 +94,18 @@ export interface Database {
           application_id: string;
           mark_name: string;
           mark_type: 'word' | 'design' | 'combined' | 'three_dimensional' | 'trade_name' | 'slogan';
+          impi_figure_type: 'marca' | 'marca_colectiva' | 'aviso_comercial' | 'nombre_comercial' | 'imagen_comercial';
           contains_non_spanish: boolean;
           mark_language: string;
           meaning_spanish: string;
           transliteration: string;
           mark_description: string;
+          unprotected_elements: string;
           claims_color: boolean;
           color_description: string;
           logo_file_path: string;
           logo_preview_url: string;
+          rules_of_use_file_path: string;
           spanish_translation_status: 'pending' | 'auto' | 'reviewed' | 'approved';
           created_at: string;
           updated_at: string;
@@ -150,7 +160,7 @@ export interface Database {
           file_path: string;
           mime_type: string;
           file_size_bytes: number;
-          category: 'logo' | 'priority_doc' | 'filing_receipt' | 'registration_cert' | 'office_action' | 'other';
+          category: 'logo' | 'priority_doc' | 'filing_receipt' | 'registration_cert' | 'office_action' | 'rules_of_use' | 'power_of_attorney' | 'priority_translation' | 'other';
           created_at: string;
         };
         Insert: Omit<Database['public']['Tables']['uploaded_files']['Row'], 'id' | 'created_at'> & { id?: string };
