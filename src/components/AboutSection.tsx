@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, Youtube, X } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import sofiaImg from '../assets/Captura_de_pantalla_2026-05-14_a_la(s)_5.12.23_p.m..png';
@@ -18,17 +18,6 @@ const SOFIA_VIDEO_IDS: Record<string, string> = {
 };
 
 export { SOFIA_VIDEO_IDS };
-
-const WATCH_LABEL: Record<string, string> = {
-  en: 'Watch my welcome video',
-  es: 'Ver mi video de bienvenida',
-  zh: '观看我的欢迎视频',
-  de: 'Mein Willkommensvideo ansehen',
-  fr: 'Regarder ma vidéo de bienvenue',
-  hi: 'मेरा स्वागत वीडियो देखें',
-  pt: 'Assistir ao meu vídeo de boas-vindas',
-  ja: 'ウェルカムビデオを見る',
-};
 
 // ── Per-language "We are…" stanza ─────────────────────────────────────────────
 const WE_ARE: Record<string, string[]> = {
@@ -198,10 +187,6 @@ export default function AboutSection() {
   const terminalRef = useRef<HTMLDivElement>(null);
   const sectionRef = useRef<HTMLDivElement>(null);
   const [inView, setInView] = useState(false);
-  const [videoOpen, setVideoOpen] = useState(false);
-
-  const videoId = SOFIA_VIDEO_IDS[language] ?? null;
-  const watchLabel = WATCH_LABEL[language] ?? WATCH_LABEL.en;
 
   useEffect(() => {
     const el = sectionRef.current;
@@ -307,50 +292,10 @@ export default function AboutSection() {
           <div className="space-y-3 text-gray-300 mt-6">
             <p className="text-white text-xl font-semibold">{t('about.sofia.role')}</p>
             <p className="text-base leading-relaxed max-w-xl mx-auto">{t('about.sofia.desc')}</p>
-            {videoId && (
-              <div className="pt-2">
-                <button
-                  onClick={() => setVideoOpen(true)}
-                  className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white font-semibold text-sm px-5 py-2.5 rounded-full transition-all duration-200 shadow-lg hover:shadow-red-600/40 hover:scale-105 active:scale-100"
-                >
-                  <Youtube size={17} />
-                  {watchLabel}
-                </button>
-              </div>
-            )}
           </div>
         </div>
       </section>
 
-      {/* ── Video modal ── */}
-      {videoOpen && videoId && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
-          onClick={() => setVideoOpen(false)}
-        >
-          <div
-            className="relative w-full max-w-3xl bg-black rounded-2xl overflow-hidden shadow-2xl"
-            onClick={e => e.stopPropagation()}
-          >
-            <button
-              onClick={() => setVideoOpen(false)}
-              className="absolute top-3 right-3 z-10 flex items-center justify-center w-9 h-9 rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors"
-              aria-label="Close video"
-            >
-              <X size={18} />
-            </button>
-            <div className="aspect-video">
-              <iframe
-                src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`}
-                title="SofIA Welcome Video"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                className="w-full h-full"
-              />
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ── CTA ── */}
       <section className="bg-navy-900 border-t border-navy-800 py-12">
