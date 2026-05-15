@@ -33,7 +33,11 @@ export default function AboutPage() {
       <SEOHead
         title={`${t('about.title')} — Mexico Trademark Center`}
         description={t('about.p1')}
-        canonicalUrl="https://mexicotrademarkcenter.com/about"
+        canonicalPath="/about"
+        lang="en"
+        ogLocale="en_US"
+        ogImageAlt="Mexico Trademark Center team"
+        hreflangAlternates={[{ lang: 'x-default', href: '/about' }]}
       />
 
       {/* ── Hero — dark navy with image triptych ───────────────────────── */}

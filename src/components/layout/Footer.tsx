@@ -36,6 +36,7 @@ export default function Footer() {
               <li><Link to="/apply" className="text-sm hover:text-gold-400 transition-colors">{t('footer.startFiling')}</Link></li>
               <li><Link to="/pricing" className="text-sm hover:text-gold-400 transition-colors">{t('nav.pricing')}</Link></li>
               <li><Link to="/how-it-works" className="text-sm hover:text-gold-400 transition-colors">{t('nav.howItWorks')}</Link></li>
+              <li><Link to="/about" className="text-sm hover:text-gold-400 transition-colors">{t('nav.about')}</Link></li>
               <li><Link to="/faq" className="text-sm hover:text-gold-400 transition-colors">{t('nav.faq')}</Link></li>
               <li><Link to="/contact" className="text-sm hover:text-gold-400 transition-colors">{t('nav.contact')}</Link></li>
             </ul>
