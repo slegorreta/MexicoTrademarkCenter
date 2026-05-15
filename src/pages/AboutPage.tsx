@@ -1,11 +1,11 @@
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import SEOHead from '../components/SEOHead';
+import sofiaImg from '../assets/Captura_de_pantalla_2026-05-14_a_la(s)_5.12.23_p.m..png';
 
-const FILTER = 'saturate(0.72) contrast(1.1) brightness(0.93)';
-
-// Per-language "We are…" lines (one per line in the original copy)
+// ── Per-language "We are…" stanza ────────────────────────────────────────────
 const WE_ARE: Record<string, string[]> = {
   en: ['We are lawyers.', 'We are engineers.', 'We are strategists.', 'We are builders.', 'We are machines.', 'We are code.', 'We are agents.', 'We are human.', 'We are futurists.'],
   es: ['Somos abogados.', 'Somos ingenieros.', 'Somos estrategas.', 'Somos constructores.', 'Somos máquinas.', 'Somos código.', 'Somos agentes.', 'Somos humanos.', 'Somos futuristas.'],
@@ -17,9 +17,224 @@ const WE_ARE: Record<string, string[]> = {
   ja: ['私たちは弁護士です。', '私たちはエンジニアです。', '私たちはストラテジストです。', '私たちはビルダーです。', '私たちはマシンです。', '私たちはコードです。', '私たちはエージェントです。', '私たちは人間です。', '私たちは未来主義者です。'],
 };
 
+// Build the full terminal text block for a given language
+function buildLines(t: (k: string) => string, lang: string): string[] {
+  const weAre = WE_ARE[lang] ?? WE_ARE.en;
+  return [
+    t('about.tagline'),
+    '',
+    t('about.p1'),
+    '',
+    t('about.p2'),
+    '',
+    ...weAre,
+    '',
+    t('about.p3'),
+    '',
+    t('about.p4'),
+    '',
+    t('about.p5'),
+    '',
+    t('about.p6'),
+    '',
+    t('about.p7'),
+    '',
+    t('about.closing'),
+  ];
+}
+
+// Inject a realistic typo-then-correct sequence into a word inside a line
+function injectTypo(line: string): { corrupted: string; fixed: string } | null {
+  // Only inject into lines with 6+ chars, not empty lines
+  if (line.length < 6) return null;
+  const words = line.split(' ');
+  const longWords = words.map((w, i) => ({ w, i })).filter(({ w }) => w.length >= 4);
+  if (longWords.length === 0) return null;
+  const { w, i } = longWords[Math.floor(Math.random() * longWords.length)];
+  // Swap two adjacent chars in the word
+  const pos = Math.floor(Math.random() * (w.length - 1));
+  const typo = w.slice(0, pos) + w[pos + 1] + w[pos] + w.slice(pos + 2);
+  const corrupted = [...words.slice(0, i), typo, ...words.slice(i + 1)].join(' ');
+  return { corrupted, fixed: line };
+}
+
+// ── Typewriter hook ───────────────────────────────────────────────────────────
+function useTypewriter(lines: string[], active: boolean) {
+  // displayed: array of fully-rendered lines; current: line being typed right now
+  const [displayed, setDisplayed] = useState<string[]>([]);
+  const [current, setCurrent] = useState('');
+  const [done, setDone] = useState(false);
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!active) return;
+    setDisplayed([]);
+    setCurrent('');
+    setDone(false);
+
+    let lineIdx = 0;
+    let charIdx = 0;
+    // typo state
+    let typoState: null | { corrupted: string; fixed: string; phase: 'typing-typo' | 'erasing' | 'retyping'; typoCharIdx: number; eraseCount: number; retypeIdx: number } = null;
+    let typoScheduled = false;
+
+    // Char timing (ms) — vary per char for organic feel
+    const charDelay = () => 28 + Math.random() * 38;
+    const lineDelay = () => 120 + Math.random() * 180;
+
+    let lastTime = 0;
+    let waitUntil = 0;
+    let pendingLineBreak = false;
+
+    function tick(now: number) {
+      if (now < waitUntil) {
+        rafRef.current = requestAnimationFrame(tick);
+        return;
+      }
+
+      if (lineIdx >= lines.length) {
+        setDone(true);
+        return;
+      }
+
+      const line = lines[lineIdx];
+
+      // Empty line — just push a blank and move on
+      if (line === '') {
+        setDisplayed(prev => [...prev, '']);
+        setCurrent('');
+        lineIdx++;
+        charIdx = 0;
+        typoState = null;
+        typoScheduled = false;
+        waitUntil = now + lineDelay() * 0.4;
+        rafRef.current = requestAnimationFrame(tick);
+        return;
+      }
+
+      // Check if we should inject a typo on this line (30% chance, once per line)
+      if (!typoScheduled && charIdx === 0 && line.length >= 6) {
+        typoScheduled = true;
+        if (Math.random() < 0.3) {
+          const t = injectTypo(line);
+          if (t) {
+            typoState = {
+              ...t,
+              phase: 'typing-typo',
+              typoCharIdx: 0,
+              eraseCount: 0,
+              retypeIdx: 0,
+            };
+          }
+        }
+      }
+
+      if (typoState) {
+        const ts = typoState;
+        if (ts.phase === 'typing-typo') {
+          // Type the corrupted version up to the first differing char position
+          const diffPos = [...ts.corrupted].findIndex((c, i) => c !== (ts.fixed[i] ?? ''));
+          const target = diffPos >= 0 ? diffPos + 2 : ts.corrupted.length;
+          if (ts.typoCharIdx < target) {
+            setCurrent(ts.corrupted.slice(0, ts.typoCharIdx + 1));
+            ts.typoCharIdx++;
+            waitUntil = now + charDelay();
+          } else {
+            // Pause before noticing the mistake
+            ts.phase = 'erasing';
+            ts.eraseCount = 0;
+            waitUntil = now + 350 + Math.random() * 250;
+          }
+          rafRef.current = requestAnimationFrame(tick);
+          return;
+        }
+
+        if (ts.phase === 'erasing') {
+          const currentStr = ts.corrupted.slice(0, ts.typoCharIdx - ts.eraseCount);
+          setCurrent(currentStr);
+          ts.eraseCount++;
+          if (currentStr.length <= (ts.typoCharIdx - ts.corrupted.length + ts.fixed.length - 3)) {
+            ts.phase = 'retyping';
+            ts.retypeIdx = currentStr.length;
+            waitUntil = now + 80;
+          } else {
+            waitUntil = now + 40 + Math.random() * 30;
+          }
+          rafRef.current = requestAnimationFrame(tick);
+          return;
+        }
+
+        if (ts.phase === 'retyping') {
+          if (ts.retypeIdx < ts.fixed.length) {
+            setCurrent(ts.fixed.slice(0, ts.retypeIdx + 1));
+            ts.retypeIdx++;
+            waitUntil = now + charDelay();
+            rafRef.current = requestAnimationFrame(tick);
+            return;
+          } else {
+            // Done retyping — commit the line
+            setDisplayed(prev => [...prev, ts.fixed]);
+            setCurrent('');
+            lineIdx++;
+            charIdx = 0;
+            typoState = null;
+            typoScheduled = false;
+            waitUntil = now + lineDelay();
+            rafRef.current = requestAnimationFrame(tick);
+            return;
+          }
+        }
+      }
+
+      // Normal typing
+      if (charIdx < line.length) {
+        setCurrent(line.slice(0, charIdx + 1));
+        charIdx++;
+        waitUntil = now + charDelay();
+      } else {
+        // Line complete — commit
+        setDisplayed(prev => [...prev, line]);
+        setCurrent('');
+        lineIdx++;
+        charIdx = 0;
+        typoState = null;
+        typoScheduled = false;
+        waitUntil = now + lineDelay();
+      }
+
+      rafRef.current = requestAnimationFrame(tick);
+    }
+
+    rafRef.current = requestAnimationFrame(tick);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+  }, [active, lines.join('|')]);
+
+  return { displayed, current, done };
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
 export default function AboutPage() {
   const { language, t } = useLanguage();
-  const weAre = WE_ARE[language] ?? WE_ARE.en;
+  const lines = buildLines(t, language);
+
+  const terminalRef = useRef<HTMLDivElement>(null);
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    const el = terminalRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setInView(true); }, { threshold: 0.05 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  const { displayed, current, done } = useTypewriter(lines, inView);
+
+  // Auto-scroll terminal
+  useEffect(() => {
+    const el = terminalRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [displayed, current]);
 
   return (
     <>
@@ -34,122 +249,114 @@ export default function AboutPage() {
       />
 
       {/* ── Hero ── */}
-      <section className="bg-navy-950 pt-28 pb-20">
-        <div className="max-w-3xl mx-auto px-6 text-center">
-          <p className="text-gold-400 text-sm font-semibold uppercase tracking-[0.2em] mb-5">
-            {t('about.eyebrow')}
-          </p>
-          <h1 className="text-6xl lg:text-8xl font-bold text-white leading-none tracking-tight mb-10">
-            {t('about.title')}
-          </h1>
-        </div>
+      <section className="bg-navy-950 pt-28 pb-20 text-center px-6">
+        <p className="text-gold-400 text-sm font-semibold uppercase tracking-[0.22em] mb-4">
+          {t('about.title')}
+        </p>
+        <h1 className="text-5xl lg:text-7xl font-bold text-white leading-tight tracking-tight max-w-3xl mx-auto">
+          {t('about.eyebrow')}
+        </h1>
+      </section>
 
-        {/* Full-width image triptych */}
-        <div className="grid grid-cols-3 w-full mt-10" style={{ height: '380px' }}>
-          {[
-            '/pexels-kampus-8190827.jpg',
-            '/pexels-pavel-danilyuk-7658400.jpg',
-            '/pexels-pavel-danilyuk-7658388.jpg',
-          ].map((src, i) => (
-            <div key={i} className="relative overflow-hidden">
-              <img
-                src={src}
-                alt=""
-                className="w-full h-full object-cover"
-                style={{ filter: FILTER }}
-              />
-              <div className="absolute inset-0 bg-navy-900/35" />
+      {/* ── Terminal declaration ── */}
+      <section className="bg-[#0d0d0d] py-16 px-4 sm:px-8">
+        <div className="max-w-4xl mx-auto">
+          {/* Terminal chrome */}
+          <div className="rounded-xl overflow-hidden shadow-2xl border border-[#1e1e1e]">
+            {/* Title bar */}
+            <div className="bg-[#1a1a1a] px-4 py-3 flex items-center gap-2 border-b border-[#2a2a2a]">
+              <span className="w-3 h-3 rounded-full bg-[#ff5f57]" />
+              <span className="w-3 h-3 rounded-full bg-[#febc2e]" />
+              <span className="w-3 h-3 rounded-full bg-[#28c840]" />
+              <span className="ml-4 text-[#555] text-xs font-mono">declaration.txt — mexico-trademark-center</span>
             </div>
-          ))}
-        </div>
-      </section>
 
-      {/* ── Declaration body ── */}
-      <section className="bg-white py-20">
-        <div className="max-w-2xl mx-auto px-6 space-y-7 text-gray-800 text-lg leading-relaxed">
+            {/* Terminal body */}
+            <div
+              ref={terminalRef}
+              className="bg-[#0a0a0a] px-6 sm:px-10 py-8 min-h-[520px] max-h-[70vh] overflow-y-auto"
+              style={{ fontFamily: '"Courier New", Courier, monospace', scrollBehavior: 'smooth' }}
+            >
+              {/* Prompt line */}
+              <p className="text-[#555] text-sm mb-5 font-mono">
+                <span className="text-[#28c840]">mtc@aindependence</span>
+                <span className="text-[#555]">:</span>
+                <span className="text-[#4da6ff]">~</span>
+                <span className="text-[#555]">$ </span>
+                <span className="text-[#aaa]">cat declaration.txt</span>
+              </p>
 
-          <p>{t('about.tagline')}</p>
+              {/* Rendered lines */}
+              {displayed.map((line, i) => (
+                <p
+                  key={i}
+                  className={`text-[15px] leading-[1.8] whitespace-pre-wrap break-words ${
+                    line === '' ? 'h-4' : 'text-[#39ff14]'
+                  }`}
+                  style={{ fontFamily: '"Courier New", Courier, monospace' }}
+                >
+                  {line}
+                </p>
+              ))}
 
-          <p>{t('about.p1')}</p>
+              {/* Currently-typing line */}
+              {!done && (
+                <p
+                  className="text-[15px] leading-[1.8] text-[#39ff14] whitespace-pre-wrap break-words"
+                  style={{ fontFamily: '"Courier New", Courier, monospace' }}
+                >
+                  {current}
+                  <span className="inline-block w-[9px] h-[16px] bg-[#39ff14] ml-[1px] animate-pulse align-middle" />
+                </p>
+              )}
 
-          <p>{t('about.p2')}</p>
-
-          {/* "We are…" stanza */}
-          <div className="py-2 space-y-1">
-            {weAre.map((line, i) => (
-              <p key={i} className="font-medium text-navy-900">{line}</p>
-            ))}
+              {/* Done — show prompt again */}
+              {done && (
+                <p className="text-[#555] text-sm mt-4 font-mono">
+                  <span className="text-[#28c840]">mtc@aindependence</span>
+                  <span className="text-[#555]">:</span>
+                  <span className="text-[#4da6ff]">~</span>
+                  <span className="text-[#555]">$ </span>
+                  <span className="inline-block w-[9px] h-[16px] bg-[#555] ml-[1px] animate-pulse align-middle" />
+                </p>
+              )}
+            </div>
           </div>
-
-          <p>{t('about.p3')}</p>
-
-          <p>{t('about.p4')}</p>
-
-          <p>{t('about.p5')}</p>
-
-          <p>{t('about.p6')}</p>
-
-        </div>
-      </section>
-
-      {/* ── Full-width image break ── */}
-      <div
-        className="w-full overflow-hidden"
-        style={{ height: '420px' }}
-      >
-        <img
-          src="/pexels-pavel-danilyuk-7658388.jpg"
-          alt="Our team at work"
-          className="w-full h-full object-cover object-center"
-          style={{ filter: FILTER }}
-        />
-      </div>
-
-      {/* ── Closing + SofIA ── */}
-      <section className="bg-white py-20">
-        <div className="max-w-2xl mx-auto px-6 space-y-7 text-gray-800 text-lg leading-relaxed">
-
-          <p className="text-navy-900 font-medium">{t('about.p7')}</p>
-
-          <p className="text-2xl font-bold text-navy-950 leading-snug">
-            {t('about.closing')}
-          </p>
-
         </div>
       </section>
 
       {/* ── SofIA — AgenticEO ── */}
       <section className="bg-navy-950 py-20">
-        <div className="max-w-2xl mx-auto px-6">
+        <div className="max-w-2xl mx-auto px-6 text-center">
 
-          {/* Portrait */}
-          <div className="flex justify-center mb-10">
+          {/* Portrait — cropped to show full face, no distortion */}
+          <div className="flex justify-center mb-8">
             <div className="relative">
-              <div className="w-48 h-48 rounded-full overflow-hidden ring-4 ring-gold-400/50 shadow-2xl">
+              <div className="w-52 h-52 rounded-full overflow-hidden ring-4 ring-gold-400/40 shadow-2xl">
                 <img
-                  src="/image.png"
+                  src={sofiaImg}
                   alt="SofIA — AgenticEO"
-                  className="w-full h-full object-cover object-top"
-                  style={{ filter: 'saturate(0.85) contrast(1.05)' }}
+                  className="w-full h-full object-cover"
+                  style={{ objectPosition: 'center 8%' }}
                 />
               </div>
-              <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap bg-gold-500 text-navy-950 font-bold text-xs px-4 py-1.5 rounded-full shadow-lg tracking-wide uppercase">
+              <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap bg-gold-500 text-navy-950 font-bold text-xs px-5 py-1.5 rounded-full shadow-lg tracking-widest uppercase">
                 SofIA &middot; AgenticEO
               </div>
             </div>
           </div>
 
-          <div className="text-center space-y-4 text-gray-300">
+          <div className="space-y-3 text-gray-300 mt-6">
             <p className="text-white text-xl font-semibold">{t('about.sofia.role')}</p>
-            <p className="text-lg leading-relaxed">{t('about.sofia.desc')}</p>
+            <p className="text-base leading-relaxed max-w-xl mx-auto">{t('about.sofia.desc')}</p>
           </div>
 
         </div>
       </section>
 
       {/* ── CTA ── */}
-      <section className="bg-navy-900 border-t border-navy-800 py-16">
-        <div className="max-w-2xl mx-auto px-6 flex flex-wrap justify-center gap-4">
+      <section className="bg-navy-900 border-t border-navy-800 py-14">
+        <div className="max-w-xl mx-auto px-6 flex flex-wrap justify-center gap-4">
           <Link
             to="/apply"
             className="inline-flex items-center gap-2 bg-gold-500 hover:bg-gold-400 text-navy-950 font-bold px-8 py-4 rounded-xl transition-colors shadow-lg"
