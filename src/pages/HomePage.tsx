@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, ArrowDown, Shield, Clock, Globe as Globe2, DollarSign, FileText, Award, ChevronDown, Sparkles, Search, HelpCircle, X, Star, Scale, Youtube, Play } from 'lucide-react';
+import { ArrowRight, ArrowDown, Shield, Clock, Globe as Globe2, DollarSign, FileText, Award, ChevronDown, Sparkles, Search, HelpCircle, X, Star, Scale, Youtube } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { useState, useEffect, type ReactNode } from 'react';
 import AboutSection, { SOFIA_VIDEO_IDS } from '../components/AboutSection';
@@ -143,10 +143,120 @@ export default function HomePage() {
           <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-500 rounded-full blur-3xl" />
         </div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28">
-          <div className={`flex ${heroVideoId ? 'flex-col lg:flex-row lg:items-center lg:gap-16' : ''}`}>
+          {heroVideoId ? (
+            /* ── Two-column layout when a video is available ── */
+            <div className="flex flex-col lg:grid lg:grid-cols-[1fr_420px] lg:gap-14">
 
-            {/* ── Left: copy + CTAs ── */}
-            <div className={heroVideoId ? 'flex-1 max-w-2xl' : 'max-w-3xl'}>
+              {/* Row 1 left: headline + subheading */}
+              <div>
+                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight mb-6">
+                  {t('hero.headline')}
+                </h1>
+                <p className="text-lg text-gray-300 leading-relaxed mb-8 max-w-2xl">
+                  {t('hero.subheading')}
+                </p>
+              </div>
+
+              {/* Row 1 right: empty spacer on desktop, nothing on mobile */}
+              <div className="hidden lg:block" />
+
+              {/* Row 2 left: CTAs + secondary nudge + trust row */}
+              <div>
+                {/* Primary CTAs */}
+                <div className="flex flex-col gap-1 mb-4 max-w-md">
+                  <p className="text-sm font-bold text-white mb-1">{t('hero.step1')}</p>
+
+                  <Link
+                    to="/trademark-check"
+                    className="group flex items-center gap-3 bg-white text-navy-900 font-bold px-6 py-4 rounded-2xl transition-all duration-200 shadow-xl hover:shadow-2xl hover:-translate-y-0.5"
+                  >
+                    <div className="w-9 h-9 rounded-xl bg-gold-500 flex items-center justify-center flex-shrink-0 group-hover:bg-gold-400 transition-colors">
+                      <Search size={18} className="text-white" />
+                    </div>
+                    <span className="text-base font-bold text-navy-900 leading-tight">{t('hero.clearance.cta')}</span>
+                    <ArrowRight size={18} className="ml-auto text-gold-500 group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
+                  </Link>
+
+                  <div className="flex justify-center py-0.5">
+                    <ArrowDown size={18} className="text-gold-400/60" />
+                  </div>
+
+                  <p className="text-sm font-bold text-white mb-1">{t('hero.step2')}</p>
+
+                  <Link
+                    to="/apply"
+                    className="group flex items-center gap-3 bg-gold-500 hover:bg-gold-400 text-white font-bold px-6 py-4 rounded-2xl transition-all duration-200 shadow-lg hover:shadow-gold-500/25 hover:-translate-y-0.5"
+                  >
+                    <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 group-hover:bg-white/30 transition-colors">
+                      <FileText size={18} className="text-white" />
+                    </div>
+                    <span className="text-base font-bold leading-tight">{t('hero.cta.start')}</span>
+                    <ArrowRight size={18} className="ml-auto group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
+                  </Link>
+                </div>
+
+                {/* AI Idea Generator */}
+                <div className="inline-flex items-center gap-2.5 bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5">
+                  <Sparkles size={14} className="text-gold-400 flex-shrink-0" />
+                  <span className="text-gray-400 text-xs">{t('hero.ai.question')}</span>
+                  <Link
+                    to="/trademark-ideas"
+                    className="flex-shrink-0 text-gold-300 hover:text-gold-200 text-xs font-semibold underline underline-offset-2 transition-colors"
+                  >
+                    {t('hero.ai.cta')}
+                  </Link>
+                </div>
+
+                {/* Trust row */}
+                <div className="flex flex-wrap gap-4 mt-8">
+                  {trustBadges.map((badge, i) => (
+                    <div key={i} className="flex items-center gap-2 text-gray-300">
+                      <badge.icon size={16} className="text-gold-400 flex-shrink-0" />
+                      <span className="text-sm">{t(badge.key)}</span>
+                      {badge.onTooltip && (
+                        <button
+                          onClick={badge.onTooltip}
+                          className="text-gold-400/70 hover:text-gold-300 transition-colors flex-shrink-0"
+                        >
+                          <HelpCircle size={13} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Row 2 right: embedded video aligned with CTAs */}
+              <div className="mt-8 lg:mt-0">
+                {/* Desktop: inline iframe embed */}
+                <div className="hidden lg:block rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10">
+                  <div className="aspect-video">
+                    <iframe
+                      src={`https://www.youtube.com/embed/${heroVideoId}?rel=0&modestbranding=1`}
+                      title={HERO_WATCH_LABEL[language] ?? HERO_WATCH_LABEL.en}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      className="w-full h-full"
+                    />
+                  </div>
+                </div>
+
+                {/* Mobile: compact button that opens modal */}
+                <div className="lg:hidden">
+                  <button
+                    onClick={() => setHeroVideoOpen(true)}
+                    className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white font-semibold text-sm px-5 py-2.5 rounded-full transition-all duration-200 shadow-lg hover:scale-105 active:scale-100"
+                  >
+                    <Youtube size={17} />
+                    {HERO_WATCH_LABEL[language] ?? HERO_WATCH_LABEL.en}
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          ) : (
+            /* ── Single-column layout (no video for this language) ── */
+            <div className="max-w-3xl">
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight mb-6">
                 {t('hero.headline')}
               </h1>
@@ -154,11 +264,9 @@ export default function HomePage() {
                 {t('hero.subheading')}
               </p>
 
-              {/* Primary CTAs */}
               <div className="flex flex-col gap-1 mb-4 max-w-md">
                 <p className="text-sm font-bold text-white mb-1">{t('hero.step1')}</p>
 
-                {/* CTA 1 — Check availability */}
                 <Link
                   to="/trademark-check"
                   className="group flex items-center gap-3 bg-white text-navy-900 font-bold px-6 py-4 rounded-2xl transition-all duration-200 shadow-xl hover:shadow-2xl hover:-translate-y-0.5"
@@ -170,14 +278,12 @@ export default function HomePage() {
                   <ArrowRight size={18} className="ml-auto text-gold-500 group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
                 </Link>
 
-                {/* Sequence arrow */}
                 <div className="flex justify-center py-0.5">
                   <ArrowDown size={18} className="text-gold-400/60" />
                 </div>
 
                 <p className="text-sm font-bold text-white mb-1">{t('hero.step2')}</p>
 
-                {/* CTA 2 — Register now */}
                 <Link
                   to="/apply"
                   className="group flex items-center gap-3 bg-gold-500 hover:bg-gold-400 text-white font-bold px-6 py-4 rounded-2xl transition-all duration-200 shadow-lg hover:shadow-gold-500/25 hover:-translate-y-0.5"
@@ -190,7 +296,6 @@ export default function HomePage() {
                 </Link>
               </div>
 
-              {/* AI Idea Generator — secondary nudge */}
               <div className="inline-flex items-center gap-2.5 bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5">
                 <Sparkles size={14} className="text-gold-400 flex-shrink-0" />
                 <span className="text-gray-400 text-xs">{t('hero.ai.question')}</span>
@@ -202,7 +307,6 @@ export default function HomePage() {
                 </Link>
               </div>
 
-              {/* Trust row */}
               <div className="flex flex-wrap gap-4 mt-8">
                 {trustBadges.map((badge, i) => (
                   <div key={i} className="flex items-center gap-2 text-gray-300">
@@ -220,53 +324,11 @@ export default function HomePage() {
                 ))}
               </div>
             </div>
-
-            {/* ── Right: video panel (only for languages with a video) ── */}
-            {heroVideoId && (
-              <div className="flex-shrink-0 w-full lg:w-[420px] mt-10 lg:mt-0">
-                {/* Desktop: inline video thumbnail with play overlay */}
-                <div className="hidden lg:block">
-                  <div
-                    className="relative group cursor-pointer rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10 hover:ring-gold-400/40 transition-all duration-300"
-                    onClick={() => setHeroVideoOpen(true)}
-                  >
-                    <img
-                      src={`https://img.youtube.com/vi/${heroVideoId}/maxresdefault.jpg`}
-                      alt="Welcome video thumbnail"
-                      className="w-full aspect-video object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                    <div className="absolute inset-0 bg-black/40 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-                      <div className="w-16 h-16 rounded-full bg-red-600 group-hover:bg-red-500 flex items-center justify-center shadow-xl transition-all duration-200 group-hover:scale-110">
-                        <Play size={26} className="text-white ml-1" fill="white" />
-                      </div>
-                    </div>
-                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <Youtube size={15} className="text-red-400 flex-shrink-0" />
-                        <span className="text-white text-sm font-medium">{HERO_WATCH_LABEL[language] ?? HERO_WATCH_LABEL.en}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Mobile: compact button */}
-                <div className="lg:hidden">
-                  <button
-                    onClick={() => setHeroVideoOpen(true)}
-                    className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white font-semibold text-sm px-5 py-2.5 rounded-full transition-all duration-200 shadow-lg hover:scale-105 active:scale-100"
-                  >
-                    <Youtube size={17} />
-                    {HERO_WATCH_LABEL[language] ?? HERO_WATCH_LABEL.en}
-                  </button>
-                </div>
-              </div>
-            )}
-
-          </div>
+          )}
         </div>
       </section>
 
-      {/* Hero video modal */}
+      {/* Mobile hero video modal */}
       {heroVideoOpen && heroVideoId && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
