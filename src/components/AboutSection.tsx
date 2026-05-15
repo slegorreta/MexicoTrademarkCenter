@@ -7,15 +7,12 @@ import sofiaImg from '../assets/Captura_de_pantalla_2026-05-14_a_la(s)_5.12.23_p
 // ── Per-language YouTube video IDs for SofIA's welcome video ──────────────────
 // Replace each value with the actual YouTube video ID for that language version.
 const SOFIA_VIDEO_IDS: Record<string, string> = {
-  en: 'dQw4w9WgXcQ',
-  es: 'dQw4w9WgXcQ',
-  zh: 'dQw4w9WgXcQ',
-  de: 'dQw4w9WgXcQ',
-  fr: 'dQw4w9WgXcQ',
-  hi: 'dQw4w9WgXcQ',
-  pt: 'dQw4w9WgXcQ',
-  ja: 'dQw4w9WgXcQ',
+  hi: 'KfCpbk9FOzc',
+  pt: 'TZVJ_whPSck',
+  ja: '-fsnNbCjk7c',
 };
+
+export { SOFIA_VIDEO_IDS };
 
 const WATCH_LABEL: Record<string, string> = {
   en: 'Watch my welcome video',
@@ -198,7 +195,7 @@ export default function AboutSection() {
   const [inView, setInView] = useState(false);
   const [videoOpen, setVideoOpen] = useState(false);
 
-  const videoId = SOFIA_VIDEO_IDS[language] ?? SOFIA_VIDEO_IDS.en;
+  const videoId = SOFIA_VIDEO_IDS[language] ?? null;
   const watchLabel = WATCH_LABEL[language] ?? WATCH_LABEL.en;
 
   useEffect(() => {
@@ -305,21 +302,23 @@ export default function AboutSection() {
           <div className="space-y-3 text-gray-300 mt-6">
             <p className="text-white text-xl font-semibold">{t('about.sofia.role')}</p>
             <p className="text-base leading-relaxed max-w-xl mx-auto">{t('about.sofia.desc')}</p>
-            <div className="pt-2">
-              <button
-                onClick={() => setVideoOpen(true)}
-                className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white font-semibold text-sm px-5 py-2.5 rounded-full transition-all duration-200 shadow-lg hover:shadow-red-600/40 hover:scale-105 active:scale-100"
-              >
-                <Youtube size={17} />
-                {watchLabel}
-              </button>
-            </div>
+            {videoId && (
+              <div className="pt-2">
+                <button
+                  onClick={() => setVideoOpen(true)}
+                  className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white font-semibold text-sm px-5 py-2.5 rounded-full transition-all duration-200 shadow-lg hover:shadow-red-600/40 hover:scale-105 active:scale-100"
+                >
+                  <Youtube size={17} />
+                  {watchLabel}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </section>
 
       {/* ── Video modal ── */}
-      {videoOpen && (
+      {videoOpen && videoId && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
           onClick={() => setVideoOpen(false)}
