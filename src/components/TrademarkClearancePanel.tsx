@@ -103,6 +103,9 @@ type Lang = 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt' | 'ja';
 const UI: Record<string, Record<string, string>> = {
   // Executive summary
   clearanceAnalysis: { en: 'Clearance Analysis', es: 'Análisis de Disponibilidad', zh: '检索分析', de: 'Rechercheanalyse', fr: 'Analyse de disponibilité', hi: 'क्लीयरेंस विश्लेषण', pt: 'Análise de Disponibilidade' },
+  idleTitle: { en: 'Trademark Clearance Analysis', es: 'Análisis de Disponibilidad de Marca', zh: '商标检索分析', de: 'Markenrecherche-Analyse', fr: 'Analyse de disponibilité de marque', hi: 'ट्रेडमार्क क्लीयरेंस विश्लेषण', pt: 'Análise de Disponibilidade de Marca' },
+  idleDesc: { en: 'Full DuPont, distinctiveness, IMPI MARCia, web & domain check', es: 'DuPont completo, distintividad, IMPI MARCia, búsqueda web y dominios', zh: '完整杜邦分析、显著性、IMPI MARCia、网络和域名检查', de: 'Vollständige DuPont-Analyse, Unterscheidungskraft, IMPI MARCia, Web & Domains', fr: 'Analyse DuPont complète, distinctivité, IMPI MARCia, web & domaines', hi: 'पूर्ण DuPont, विशिष्टता, IMPI MARCia, वेब और डोमेन जांच', pt: 'DuPont completo, distintividade, IMPI MARCia, web e domínios' },
+  checkBtn: { en: 'Check', es: 'Verificar', zh: '检索', de: 'Prüfen', fr: 'Vérifier', hi: 'जांचें', pt: 'Verificar' },
   riskSummaryTitle: { en: 'Risk Summary', es: 'Resumen de Riesgo', zh: '风险摘要', de: 'Risikozusammenfassung', fr: 'Résumé des risques', hi: 'जोखिम सारांश', pt: 'Resumo de Risco' },
   printReport: { en: 'Print', es: 'Imprimir', zh: '打印', de: 'Drucken', fr: 'Imprimer', hi: 'प्रिंट', pt: 'Imprimir' },
   // Scorecard
@@ -607,7 +610,7 @@ export default function TrademarkClearancePanel({
   const [domainExpanded, setDomainExpanded] = useState(false);
 
   const runCheck = async () => {
-    if (runningRef.current || !markName.trim()) return;
+    if (runningRef.current || (!markName.trim() && !imageBase64)) return;
     runningRef.current = true;
     setStatus('checking');
     setResult(null);
@@ -632,12 +635,12 @@ export default function TrademarkClearancePanel({
   };
 
   useEffect(() => {
-    if (autoRun && markName.trim()) {
+    if (autoRun && (markName.trim() || imageBase64)) {
       const t = setTimeout(runCheck, 600);
       return () => clearTimeout(t);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [markName, goodsServices, classes.join(',')]);
+  }, [markName, goodsServices, classes.join(','), imageBase64]);
 
   // ── Fetch PDF URL after payment ───────────────────────────────────────────
   useEffect(() => {
@@ -667,12 +670,12 @@ export default function TrademarkClearancePanel({
       <div className="mt-3 rounded-xl border border-[#c9a84c]/30 bg-[#c9a84c]/5 px-4 py-3 flex items-start gap-3">
         <Shield size={15} className="text-[#c9a84c] flex-shrink-0 mt-0.5" />
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium text-[#b8963e]">Trademark Clearance Analysis</p>
-          <p className="text-xs text-[#c9a84c]/80 mt-0.5">Full DuPont, distinctiveness, IMPI MARCia, web &amp; domain check</p>
+          <p className="text-xs font-medium text-[#b8963e]">{tr('idleTitle', lang)}</p>
+          <p className="text-xs text-[#c9a84c]/80 mt-0.5">{tr('idleDesc', lang)}</p>
         </div>
         <button type="button" onClick={runCheck}
           className="flex-shrink-0 text-xs font-semibold bg-[#c9a84c] hover:bg-[#b8963e] text-white px-3 py-1.5 rounded-lg transition-colors">
-          Check
+          {tr('checkBtn', lang)}
         </button>
       </div>
     );
