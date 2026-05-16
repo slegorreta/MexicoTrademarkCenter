@@ -23,6 +23,9 @@ import ApplyPage from './pages/ApplyPage';
 import TrademarkIdeaPage from './pages/TrademarkIdeaPage';
 import TrademarkCheckPage from './pages/TrademarkCheckPage';
 
+// Homepage V2 preview
+import HomePageV2 from './pages/HomePageV2';
+
 // Admin
 import AdminLoginPage from './pages/admin/AdminLoginPage';
 import AdminLayout from './pages/admin/AdminLayout';
@@ -112,6 +115,9 @@ function AppRoutes() {
     <Routes>
       {/* Root: on app subdomain go straight to admin login, otherwise public home */}
       <Route path="/" element={isAppSubdomain ? <Navigate to="/admin/login" replace /> : <Layout><HomePage /></Layout>} />
+
+      {/* Homepage V2 preview */}
+      <Route path="/preview" element={<Layout><HomePageV2 /></Layout>} />
 
       {/* Public site */}
       <Route path="/about" element={<Layout><AboutPage /></Layout>} />
