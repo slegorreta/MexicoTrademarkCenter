@@ -569,6 +569,7 @@ export default function TrademarkCheckPage() {
   const step3Ref   = useRef<HTMLDivElement>(null);
   const step4Ref   = useRef<HTMLDivElement>(null);
   const chatBottomRef = useRef<HTMLDivElement>(null);
+  const questionsRef  = useRef<HTMLDivElement>(null);
 
   // ── clear session on unmount so next visit starts fresh ──────────────────
   useEffect(() => {
@@ -577,9 +578,11 @@ export default function TrademarkCheckPage() {
     };
   }, []);
 
-  // ── scroll chat to bottom when questions arrive ────────────────────────────
+  // ── scroll to questions when AI questions arrive ──────────────────────────
   useEffect(() => {
-    chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (pendingQuestions.length > 0) {
+      questionsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   }, [pendingQuestions]);
 
   // ── persist helpers ────────────────────────────────────────────────────────
@@ -926,7 +929,7 @@ export default function TrademarkCheckPage() {
 
               {/* AI question bubble */}
               {pendingQuestions.length > 0 && (
-                <div className="space-y-3">
+                <div className="space-y-3" ref={questionsRef}>
                   {/* Conversation so far (user turns) */}
                   {chatHistory.filter(m => m.role === 'user').length > 1 && (
                     <div className="space-y-2">

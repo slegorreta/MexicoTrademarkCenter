@@ -916,7 +916,7 @@ export default function TrademarkClearancePanel({
               <p className="text-[10px] text-gray-400 italic">{tr('noMarciaFindings', lang)}</p>
             ) : (
               <>
-                {topConflicts.slice(0, 1).map((f, i) => {
+                {topConflicts.slice(0, 3).map((f, i) => {
                   const isExact = f.name.toLowerCase().trim() === markName.toLowerCase().trim();
                   return (
                     <div key={i} className={`rounded-lg border px-2.5 py-1.5 mb-1 flex items-start gap-2 ${isExact ? 'border-red-200 bg-red-50' : 'border-amber-100 bg-amber-50/50'}`}>
@@ -931,10 +931,10 @@ export default function TrademarkClearancePanel({
                     </div>
                   );
                 })}
-                {totalMarcia > 1 && <LockedRow lang={lang} />}
+                {totalMarcia > 3 && <LockedRow lang={lang} />}
               </>
             )}
-            {totalMarcia > 1 && (
+            {totalMarcia > 3 && (
               <FullReportNotice lang={lang} />
             )}
           </div>
@@ -948,7 +948,7 @@ export default function TrademarkClearancePanel({
                 <InfoTooltip text={tr('tooltipLfppi', lang)} className="ml-0.5" />
                 <Lock size={9} className="text-gray-300 ml-auto" />
               </div>
-              {regFlags.slice(0, 1).map((f, i) => (
+              {regFlags.slice(0, 3).map((f, i) => (
                 <div key={i} className={`rounded-lg border px-2.5 py-1.5 mb-1 ${f.severity === 'high' ? 'border-red-100 bg-red-50/50' : f.severity === 'medium' ? 'border-amber-100 bg-amber-50/50' : 'border-blue-100 bg-blue-50/50'}`}>
                   <div className="flex items-center gap-1.5 mb-0.5">
                     <span className={`text-[9px] font-bold px-1 py-0.5 rounded ${f.severity === 'high' ? 'bg-red-100 text-red-700' : f.severity === 'medium' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>{f.severity.toUpperCase()}</span>
@@ -957,7 +957,7 @@ export default function TrademarkClearancePanel({
                   <p className="text-[10px] text-gray-400 blur-[2px] select-none">{f.explanation?.slice(0, 60) ?? 'explanation locked'}...</p>
                 </div>
               ))}
-              {regFlags.length > 1 && <LockedRow lang={lang} />}
+              {regFlags.length > 3 && <LockedRow lang={lang} />}
               <FullReportNotice lang={lang} />
             </div>
           )}
@@ -971,7 +971,7 @@ export default function TrademarkClearancePanel({
                 <InfoTooltip text={tr('tooltipDupont', lang)} className="ml-0.5" />
                 <Lock size={9} className="text-gray-300 ml-auto" />
               </div>
-              {dupont.slice(0, 2).map((f, i) => (
+              {dupont.slice(0, 3).map((f, i) => (
                 <div key={i} className="rounded-lg border border-gray-100 bg-white px-2.5 py-1.5 mb-1 flex items-center gap-2">
                   <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${f.verdict === 'favors_registration' ? 'bg-emerald-400' : f.verdict === 'against_registration' ? 'bg-red-400' : 'bg-gray-300'}`} />
                   <span className="text-[10px] font-semibold text-gray-600 flex-1 min-w-0">{DUPONT_LABELS[f.factor] ?? f.factor}</span>
@@ -1556,7 +1556,7 @@ export default function TrademarkClearancePanel({
             <button
               type="button"
               onClick={onStartFiling}
-              className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-5 py-2.5 rounded-xl transition-colors shadow-md text-sm"
+              className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-5 py-2.5 rounded-xl transition-colors shadow-md text-sm animate-pulse hover:animate-none ring-2 ring-emerald-400 ring-offset-2"
             >
               <FileText size={14} />
               {lang === 'es' ? 'Iniciar Registro de Marca' :
@@ -1571,7 +1571,7 @@ export default function TrademarkClearancePanel({
           ) : (
             <a
               href={`/apply?mark=${encodeURIComponent(markName)}`}
-              className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-5 py-2.5 rounded-xl transition-colors shadow-md text-sm"
+              className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-5 py-2.5 rounded-xl transition-colors shadow-md text-sm animate-pulse hover:animate-none ring-2 ring-emerald-400 ring-offset-2"
             >
               <FileText size={14} />
               {lang === 'es' ? 'Iniciar Registro de Marca' :

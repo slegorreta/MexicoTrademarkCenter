@@ -3,10 +3,13 @@ import { useLanguage } from '../context/LanguageContext';
 
 interface Props {
   variant?: 'float' | 'inline';
+  hidden?: boolean;
 }
 
-export default function PriceGuaranteeBadge({ variant = 'float' }: Props) {
+export default function PriceGuaranteeBadge({ variant = 'float', hidden = false }: Props) {
   const { language } = useLanguage();
+
+  if (hidden) return null;
 
   const label = language === 'zh'
     ? '市场最低价，有保障。'

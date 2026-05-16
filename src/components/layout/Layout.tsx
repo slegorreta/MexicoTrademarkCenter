@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import Header from './Header';
 import Footer from './Footer';
 import PriceGuaranteeBadge from '../PriceGuaranteeBadge';
@@ -59,9 +60,14 @@ function WeChatWidget() {
   );
 }
 
+// Routes where the badge is a distractor (active clearance, filing, payment flows)
+const BADGE_HIDDEN_PATHS = ['/trademark-check', '/apply'];
+
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { language } = useLanguage();
+  const location = useLocation();
   const showWeChat = language === 'zh' || language === 'en';
+  const hideBadge = BADGE_HIDDEN_PATHS.some(p => location.pathname.startsWith(p));
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
@@ -71,7 +77,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </main>
       <Footer />
       {showWeChat && <WeChatWidget />}
-      <PriceGuaranteeBadge variant="float" />
+      <PriceGuaranteeBadge variant="float" hidden={hideBadge} />
     </div>
   );
 }
