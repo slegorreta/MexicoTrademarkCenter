@@ -43,7 +43,13 @@ const RELATED_CLASSES: Record<number, number[]> = {
   3: [5, 44], 5: [3, 44], 9: [42, 38], 25: [18, 24, 26], 18: [25],
   24: [25], 26: [25], 35: [42, 36], 36: [35], 38: [9, 42],
   39: [40], 40: [39], 41: [42, 35], 42: [9, 35, 38, 41],
-  43: [30, 29, 32, 33], 44: [3, 5],
+  // Food & beverage cluster — packaged foods, staples, produce, drinks, food service
+  29: [30, 31, 32, 43],
+  30: [29, 31, 32, 43],
+  31: [29, 30],
+  32: [29, 30, 43],
+  33: [32, 43],
+  43: [29, 30, 32, 33], 44: [3, 5],
 };
 
 type ClassOverlap = "same" | "related" | "unrelated";
@@ -67,13 +73,51 @@ function getRelatedClasses(classes: number[]): number[] {
   return Array.from(related);
 }
 
-function toDomainSlug(name: string): string {
+// Normalize a mark name for fuzzy comparison: lowercase, strip accents, spaces, hyphens, punctuation
+function normalizeMark(name: string): string {
   return name
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[-\s_'".]/g, "")
     .replace(/[^a-z0-9]/g, "")
     .trim();
+}
+
+// Levenshtein distance (capped at maxDist+1 for performance)
+function levenshtein(a: string, b: string, maxDist = 3): number {
+  if (Math.abs(a.length - b.length) > maxDist) return maxDist + 1;
+  const dp: number[] = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = i;
+    for (let j = 1; j <= b.length; j++) {
+      const val = a[i - 1] === b[j - 1] ? dp[j - 1] : Math.min(dp[j - 1], dp[j], prev) + 1;
+      dp[j - 1] = prev;
+      prev = val;
+    }
+    dp[b.length] = prev;
+  }
+  return dp[b.length];
+}
+
+// Returns true when two mark names are likely the same or confusingly similar
+function isSimilarName(a: string, b: string): boolean {
+  const na = normalizeMark(a);
+  const nb = normalizeMark(b);
+  if (!na || !nb) return false;
+  // Exact normalized match (catches "Wild Roots" == "WildRoots")
+  if (na === nb) return true;
+  // One is a substring of the other (for compound marks like "WildRootsOrganic" ⊃ "WildRoots")
+  if (na.length >= 5 && nb.length >= 5 && (na.includes(nb) || nb.includes(na))) return true;
+  // Fuzzy: edit distance ≤ 2 on normalized forms (typos, single-char differences)
+  const shorter = Math.min(na.length, nb.length);
+  const maxDist = shorter <= 6 ? 1 : 2;
+  if (levenshtein(na, nb, maxDist) <= maxDist) return true;
+  return false;
+}
+
+function toDomainSlug(name: string): string {
+  return normalizeMark(name);
 }
 
 interface DomainResult {
@@ -118,6 +162,38 @@ async function checkDomains(markName: string): Promise<DomainResult[]> {
   const order = tlds.map(t => `${slug}${t}`);
   results.sort((a, b) => order.indexOf(a.domain) - order.indexOf(b.domain));
   return results;
+}
+
+// Executes a single MARCia quick search and returns raw result items
+async function runMarciaQuery(
+  BASE: string,
+  apiHeaders: Record<string, string>,
+  query: string,
+  allClasses: number[],
+): Promise<{ items: Record<string, unknown>[]; totalCount: number }> {
+  const recordRes = await fetch(`${BASE}/search/internal/record`, {
+    method: "POST",
+    headers: apiHeaders,
+    body: JSON.stringify({ _type: "Search$Quick", query: query.trim(), images: [] }),
+    signal: AbortSignal.timeout(12000),
+  });
+  if (!recordRes.ok) return { items: [], totalCount: 0 };
+
+  const record = await recordRes.json();
+  const searchId: string = record.id;
+  const totalCount: number = record.count ?? 0;
+  if (!searchId) return { items: [], totalCount: 0 };
+
+  const resultRes = await fetch(`${BASE}/search/internal/result`, {
+    method: "POST",
+    headers: apiHeaders,
+    body: JSON.stringify({ searchId, pageSize: 20, pageNumber: 0, statusFilter: [], viennaCodeFilter: [], niceClassFilter: allClasses.length > 0 ? allClasses : [] }),
+    signal: AbortSignal.timeout(12000),
+  });
+  if (!resultRes.ok) return { items: [], totalCount };
+
+  const resultData = await resultRes.json();
+  return { items: resultData.resultPage ?? [], totalCount };
 }
 
 async function searchMarcia(markName: string, classes: number[]): Promise<{
@@ -172,32 +248,39 @@ async function searchMarcia(markName: string, classes: number[]): Promise<{
     if (cookieString) apiHeaders["Cookie"] = cookieString;
     if (xsrfToken) apiHeaders["X-XSRF-TOKEN"] = xsrfToken;
 
-    const recordRes = await fetch(`${BASE}/search/internal/record`, {
-      method: "POST",
-      headers: apiHeaders,
-      body: JSON.stringify({ _type: "Search$Quick", query: markName.trim(), images: [] }),
-      signal: AbortSignal.timeout(12000),
-    });
-    if (!recordRes.ok) { return { findings: [], marciaUrl, totalCount: 0 }; }
-
-    const record = await recordRes.json();
-    const searchId: string = record.id;
-    const totalCount: number = record.count ?? 0;
-    if (!searchId) { return { findings: [], marciaUrl, totalCount: 0 }; }
-
     const allClasses = classes.length > 0 ? [...classes, ...getRelatedClasses(classes)] : [];
 
-    const resultRes = await fetch(`${BASE}/search/internal/result`, {
-      method: "POST",
-      headers: apiHeaders,
-      body: JSON.stringify({ searchId, pageSize: 20, pageNumber: 0, statusFilter: [], viennaCodeFilter: [], niceClassFilter: allClasses.length > 0 ? allClasses : [] }),
-      signal: AbortSignal.timeout(12000),
-    });
-    if (!resultRes.ok) { return { findings: [], marciaUrl, totalCount }; }
+    // Build a deduplicated set of query strings to try:
+    // 1. Original mark name (e.g. "Wild Roots")
+    // 2. Normalized (spaces/hyphens stripped) variant (e.g. "WildRoots") — only if different
+    const normalized = normalizeMark(markName);
+    const queries = [markName.trim()];
+    // Add the no-space camelCase-style variant only when it actually differs
+    if (normalized && normalized !== markName.trim().toLowerCase().replace(/[^a-z0-9]/g, "")) {
+      // reconstruct a spaced version from normalized isn't possible, but
+      // querying the normalized slug catches registrations like "WILDROOTS"
+      queries.push(normalized);
+    }
+    // Also try the slug in case the registry stores it concatenated
+    const slug = normalizeMark(markName);
+    if (slug && !queries.includes(slug)) queries.push(slug);
 
-    const resultData = await resultRes.json();
-    const items: Record<string, unknown>[] = resultData.resultPage ?? [];
-    const findings = items.slice(0, 15).map((item) => {
+    // Run both queries sequentially (session/cookies are shared)
+    const allItems: Record<string, unknown>[] = [];
+    let maxTotal = 0;
+    for (const q of queries) {
+      const { items, totalCount } = await runMarciaQuery(BASE, apiHeaders, q, allClasses);
+      maxTotal = Math.max(maxTotal, totalCount);
+      for (const item of items) {
+        // Deduplicate by title
+        const title = String(item.title ?? "");
+        if (title && !allItems.some(x => String(x.title ?? "") === title)) {
+          allItems.push(item);
+        }
+      }
+    }
+
+    const findings = allItems.slice(0, 20).map((item) => {
       const classNums: number[] = Array.isArray(item.classes) ? (item.classes as number[]) : [];
       const classNum = classNums.length > 0 ? classNums.join(", ") : "";
       return {
@@ -209,7 +292,7 @@ async function searchMarcia(markName: string, classes: number[]): Promise<{
       };
     }).filter(f => f.name);
 
-    return { findings, marciaUrl, totalCount };
+    return { findings, marciaUrl, totalCount: maxTotal };
   } catch (err) {
     console.error("MARCia fetch error:", err);
     return { findings: [], marciaUrl, totalCount: 0 };
@@ -257,6 +340,7 @@ async function analyzeRegistrability(
   goodsServices: string,
   language: string,
   conflictingClassNums: string[],
+  similarConflictNames: Array<{ name: string; classNum: string; classOverlap: ClassOverlap }>,
 ): Promise<{
   flags: RegistrabilityFlag[];
   risk: "low" | "medium" | "high";
@@ -277,9 +361,24 @@ async function analyzeRegistrability(
   const isUserLang = language !== "es";
   const isEnglish = language === "en";
 
-  const conflictClassContext = conflictingClassNums.length > 0
-    ? `\n\nCONTEXTO DE CLASES EN CONFLICTO: Se encontraron marcas existentes en el registro IMPI con las siguientes clases Niza: ${conflictingClassNums.join("; ")}. El solicitante busca registro en la(s) clase(s) ${classes.join(", ")}. INSTRUCCIÓN CRÍTICA: Al evaluar el factor DuPont "relatedness_of_goods", DEBES comparar explícitamente estos números de clase. Si las marcas en conflicto están en clases completamente diferentes sin superposición económica o comercial con la(s) clase(s) del solicitante, DEBES calificar "relatedness_of_goods" como "favors_registration" y explicar claramente la distinción de clases. NO asumas relación solo porque las marcas comparten un nombre — la separación de clases es una protección legal clave bajo la LFPPI.`
+  const similarNamesContext = similarConflictNames.length > 0
+    ? (() => {
+        const sameClass = similarConflictNames.filter(f => f.classOverlap === "same");
+        const relatedClass = similarConflictNames.filter(f => f.classOverlap === "related");
+        const parts: string[] = [];
+        if (sameClass.length > 0) {
+          parts.push(`MARCAS CONFUSAMENTE SIMILARES EN LA MISMA CLASE: Se encontraron ${sameClass.length} marca(s) con nombre visualmente/fonéticamente similar a "${markName}" registradas en la MISMA clase Niza (${classes.join(", ")}): ${sameClass.map(f => `"${f.name}" (clase ${f.classNum})`).join(", ")}. INSTRUCCIÓN CRÍTICA: Esto constituye un conflicto directo bajo LFPPI Art. 173 Fr. VIII. El factor DuPont "similarity_of_marks" DEBE calificarse como "against_registration" y el riskColor DEBE ser "ROJO".`);
+        }
+        if (relatedClass.length > 0) {
+          parts.push(`MARCAS SIMILARES EN CLASES RELACIONADAS: ${relatedClass.map(f => `"${f.name}" (clase ${f.classNum})`).join(", ")}. Evalúa el riesgo de confusión teniendo en cuenta la proximidad comercial entre estas clases y la del solicitante (${classes.join(", ")}).`);
+        }
+        return `\n\n${parts.join("\n")}`;
+      })()
     : "";
+
+  const conflictClassContext = conflictingClassNums.length > 0
+    ? `\n\nCONTEXTO DE CLASES EN CONFLICTO: Se encontraron marcas existentes en el registro IMPI con las siguientes clases Niza: ${conflictingClassNums.join("; ")}. El solicitante busca registro en la(s) clase(s) ${classes.join(", ")}. INSTRUCCIÓN CRÍTICA: Al evaluar el factor DuPont "relatedness_of_goods", DEBES comparar explícitamente estos números de clase. Si las marcas en conflicto están en clases completamente diferentes sin superposición económica o comercial con la(s) clase(s) del solicitante, DEBES calificar "relatedness_of_goods" como "favors_registration" y explicar claramente la distinción de clases. NO asumas relación solo porque las marcas comparten un nombre — la separación de clases es una protección legal clave bajo la LFPPI.${similarNamesContext}`
+    : similarNamesContext ? `\n\n${similarNamesContext.trim()}` : "";
 
   const userLangInstruction = isUserLang
     ? `\n\nREQUISITO DE TRADUCCIÓN: Para cada campo de texto libre, proporciona TRES versiones:
@@ -536,12 +635,30 @@ async function searchWeb(apiKey: string, markName: string, classes: number[], go
   const langName = LANGUAGE_NAMES[language] ?? "English";
   const langInstruction = language !== "en" ? ` Write all findings strings in ${langName}.` : "";
 
-  const prompt = `Search the web for existing trademark registrations, brand names, or companies named "${markName}"${classContext}${goodsContext}.${langInstruction}
+  // Build a list of spelling/spacing variants to explicitly probe
+  const normalized = normalizeMark(markName);
+  const variants = [markName];
+  if (normalized !== markName.toLowerCase()) variants.push(normalized);
+  // Also add a spaced version if the original appears to be CamelCase or concatenated
+  const spacedFromCamel = markName.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2");
+  if (spacedFromCamel !== markName && !variants.includes(spacedFromCamel)) variants.push(spacedFromCamel);
+  const variantNote = variants.length > 1
+    ? ` Also check these spelling/spacing variants of the same mark: ${variants.slice(1).map(v => `"${v}"`).join(", ")}.`
+    : "";
 
-Focus on: registered trademarks with this exact/similar name, well-known brands, IMPI registered marks, international registrations (USPTO, EUIPO, WIPO).
+  const prompt = `Search the web for existing trademark registrations, brand names, or companies named "${markName}"${classContext}${goodsContext}.${variantNote}${langInstruction}
+
+IMPORTANT: Consider ALL of the following when assessing conflicts:
+1. Exact name matches (e.g. "WildRoots" and "Wild Roots" are the same mark — spacing/hyphens do NOT distinguish trademarks).
+2. Phonetically identical or near-identical marks (e.g. "WildRoots" vs "Wild Roots" vs "Wild-Roots").
+3. Marks registered in the SAME Nice class AND in commercially related classes (e.g. if applying in class 29, also flag conflicts in classes 30, 31, 32, 43).
+4. International registrations at IMPI (Mexico), USPTO (US), EUIPO (EU), and WIPO that cover Mexico.
 
 Return JSON: { "risk": "low"|"medium"|"high", "findings": ["finding 1", ...], "reasoning": "..." }
-Risk: "high"=exact match in same/related class, "medium"=similar names or different class, "low"=no significant existing marks.`;
+Risk levels:
+- "high": exact or near-identical match in the same or a commercially related Nice class
+- "medium": similar names (different spelling or spacing), or same name in a different but related class
+- "low": no significant existing marks found`;
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -551,16 +668,28 @@ Risk: "high"=exact match in same/related class, "medium"=similar names or differ
     });
 
     if (!response.ok) {
+      const fallbackPrompt = `You are a trademark clearance expert with deep knowledge of IMPI (Mexico), USPTO, EUIPO, and WIPO registrations.
+
+Assess whether the trademark "${markName}"${classContext}${goodsContext} can be registered without conflict.${variantNote}
+
+CRITICAL INSTRUCTIONS:
+1. Treat "${markName}" and any spacing/hyphen variants (e.g. "${normalized}") as the SAME mark — spacing never distinguishes trademarks.
+2. Search your training knowledge for any brands, companies, or registered trademarks with this name or a confusingly similar one.
+3. Consider conflicts in the SAME Nice class AND in commercially related classes (for class 29: also check 30, 31, 32, 43; for class 25: also check 18, 24, 26).
+4. If you know of any registration under this name or a variant, set risk to "high" and list it.
+
+Return JSON only: { "risk": "low"|"medium"|"high", "findings": ["specific finding..."], "reasoning": "..." }`;
+
       const fallback = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
         body: JSON.stringify({
           model: "gpt-4o",
           messages: [
-            { role: "system", content: "You are a trademark clearance assistant. Return JSON only." },
-            { role: "user", content: `Assess trademark "${markName}"${classContext}${goodsContext}: { "risk": "low"|"medium"|"high", "findings": [...], "reasoning": "..." }` },
+            { role: "system", content: "You are a trademark clearance expert. Return JSON only, no markdown." },
+            { role: "user", content: fallbackPrompt },
           ],
-          temperature: 0.1, max_tokens: 600, response_format: { type: "json_object" },
+          temperature: 0.1, max_tokens: 800, response_format: { type: "json_object" },
         }),
       });
       if (!fallback.ok) return { findings: [], risk: "medium" };
@@ -810,28 +939,42 @@ Deno.serve(async (req: Request) => {
     ]);
 
     const conflictingClassNums = marciaResult.findings.map(f => f.classNum).filter(Boolean);
-    const registrabilityResult = await analyzeRegistrability(apiKey, markName.trim(), classes, goodsServices, lang, conflictingClassNums);
+    // Collect all fuzzy-similar findings so the AI can reason about specific conflicting mark names
+    const similarConflictNames = marciaResult.findings.filter(f =>
+      isSimilarName(f.name, markName) && (f.classOverlap === "same" || f.classOverlap === "related")
+    );
+    const registrabilityResult = await analyzeRegistrability(apiKey, markName.trim(), classes, goodsServices, lang, conflictingClassNums, similarConflictNames);
 
     let risk: "low" | "medium" | "high" = webResult.risk;
 
-    const exactSameClass = marciaResult.findings.some(
-      f => f.name.toLowerCase().trim() === markName.toLowerCase().trim() && f.classOverlap === "same"
+    // Use isSimilarName (fuzzy) instead of strict string equality so that
+    // "Wild Roots" correctly matches a registered "WildRoots" (and vice-versa)
+    const similarSameClass = marciaResult.findings.some(
+      f => isSimilarName(f.name, markName) && f.classOverlap === "same"
     );
-    const exactRelatedClass = marciaResult.findings.some(
-      f => f.name.toLowerCase().trim() === markName.toLowerCase().trim() && f.classOverlap === "related"
+    const similarRelatedClass = marciaResult.findings.some(
+      f => isSimilarName(f.name, markName) && f.classOverlap === "related"
     );
-    const exactUnrelatedOnly =
-      marciaResult.findings.some(f => f.name.toLowerCase().trim() === markName.toLowerCase().trim()) &&
-      !exactSameClass && !exactRelatedClass;
+    const similarUnrelatedOnly =
+      marciaResult.findings.some(f => isSimilarName(f.name, markName)) &&
+      !similarSameClass && !similarRelatedClass;
+
+    // Keep legacy variable names for backward-compat with generateConsistentRiskSummary call
+    const exactSameClass = similarSameClass;
+    const exactRelatedClass = similarRelatedClass;
+    const exactUnrelatedOnly = similarUnrelatedOnly;
 
     const relevantFindings = marciaResult.findings.filter(f => f.classOverlap === "same" || f.classOverlap === "related");
 
     if (exactSameClass) {
       risk = "high";
     } else if (exactRelatedClass) {
+      // A similar mark in a related class is a meaningful obstacle — escalate to medium
+      // and to high if web risk was already medium (two independent signals)
       if (risk === "low") risk = "medium";
+      else if (risk === "medium") risk = "high";
     } else if (exactUnrelatedOnly) {
-      // Identical name exists but only in completely unrelated classes — do not escalate
+      // Similar name exists but only in completely unrelated classes — do not escalate
     } else if (relevantFindings.length >= 5) {
       risk = "high";
     } else if (relevantFindings.length > 0 && risk === "low") {
@@ -850,10 +993,10 @@ Deno.serve(async (req: Request) => {
     if (translationHighRisk && risk !== "high") risk = "high";
     else if (translationMedRisk && risk === "low") risk = "medium";
 
-    // Derive final riskColor: escalate to ROJO if exact same-class conflict, otherwise trust AI's color
+    // Derive final riskColor
     let riskColor: "VERDE" | "AMARILLO" | "NARANJA" | "ROJO" = registrabilityResult.riskColor;
     if (exactSameClass) riskColor = "ROJO";
-    else if (exactRelatedClass && riskColor === "VERDE") riskColor = "AMARILLO";
+    else if (exactRelatedClass) riskColor = riskColor === "VERDE" ? "AMARILLO" : riskColor === "AMARILLO" ? "NARANJA" : riskColor;
     else if (risk === "high" && riskColor !== "ROJO") riskColor = "ROJO";
     else if (risk === "medium" && riskColor === "VERDE") riskColor = "AMARILLO";
 
