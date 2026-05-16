@@ -1111,7 +1111,7 @@ export default function ApplyPage() {
       const missing: string[] = [];
 
       // Step 1 — Trademark Details
-      if (!form.markName.trim()) missing.push(tri('Trademark name', '商标名称', 'Nombre de marca', 'Markenname', 'Nom de marque', 'ट्रेडमार्क नाम', 'Nome de marca'));
+      if ((form.markType === 'word' || form.markType === 'combined') && !form.markName.trim()) missing.push(tri('Trademark name', '商标名称', 'Nombre de marca', 'Markenname', 'Nom de marque', 'ट्रेडमार्क नाम', 'Nome de marca'));
       if (form.markType === 'logo' || form.markType === 'combined') {
         if (!form.logoFile) missing.push(tri('Logo file', 'Logo文件', 'Archivo de logo', 'Logo-Datei', 'Fichier logo', 'लोगो फ़ाइल', 'Arquivo de logo'));
       }
@@ -1493,7 +1493,10 @@ export default function ApplyPage() {
               <div className="space-y-4">
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-sm font-medium text-gray-700">{tri('Trademark / Word Mark *', '商标/文字商标 *', 'Nombre de Marca *', 'Marke / Wortmarke *', 'Marque / Marque verbale *', 'ट्रेडमार्क / शब्द चिह्न *', 'Marca / Marca Denominativa *')}</label>
+                    <label className="block text-sm font-medium text-gray-700">
+                      {tri('Trademark Name', '商标名称', 'Nombre de Marca', 'Markenname', 'Nom de marque', 'ट्रेडमार्क नाम', 'Nome de Marca')}
+                      {(form.markType === 'word' || form.markType === 'combined') && <span className="text-red-500 ml-0.5">*</span>}
+                    </label>
                     <Link to="/trademark-ideas" className="flex items-center gap-1 text-xs text-gold-600 hover:text-gold-700 font-medium">
                       <Sparkles size={11} />
                       {tri('Need a name idea?', '需要名称创意？', '¿Necesitas ideas para el nombre?', 'Benötigen Sie eine Namensidee?', 'Besoin d\'une idée de nom ?', 'एक नाम विचार चाहिए?', 'Precisa de uma ideia de nome?')}
@@ -1509,7 +1512,7 @@ export default function ApplyPage() {
                       )}
                     </div>
                   )}
-                  <input type="text" required className={inputClass} value={form.markName} onChange={e => set({ markName: e.target.value })} />
+                  <input type="text" className={inputClass} value={form.markName} onChange={e => set({ markName: e.target.value })} />
                 </div>
                 <div>
                   <label className={labelClass}>
