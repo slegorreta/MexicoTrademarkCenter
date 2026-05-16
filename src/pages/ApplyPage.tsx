@@ -1420,10 +1420,8 @@ export default function ApplyPage() {
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-10">
         {step < 8 && (
           <StepIndicator
-            current={fromClearance
-              ? (step === 1 ? 1 : step === 4 ? 2 : step === 5 ? 3 : step === 6 ? 4 : step === 7 ? 5 : 6) as Step
-              : step}
-            total={fromClearance ? 6 : 8}
+            current={step}
+            total={8}
             t={t}
           />
         )}
@@ -1530,6 +1528,7 @@ export default function ApplyPage() {
                   <div>
                     <label className={labelClass}>{tri('Language of the Mark', '商标语言', 'Idioma de la Marca', 'Sprache der Marke', 'Langue de la marque', 'चिह्न की भाषा', 'Idioma da Marca')}</label>
                     <select className={inputClass} value={form.markLanguage} onChange={e => set({ markLanguage: e.target.value })}>
+                      <option value="none">{tri('No Language / Figurative Only', '无语言/纯图形', 'Sin Idioma / Solo Figurativa', 'Keine Sprache / Nur Bildmarke', 'Aucune langue / Purement figuratif', 'कोई भाषा नहीं / केवल आकृति', 'Sem Idioma / Apenas Figurativa', '言語なし / 図形のみ')}</option>
                       <option value="en">English</option>
                       <option value="zh">中文 (Chinese)</option>
                       <option value="es">Español (Spanish)</option>
@@ -1537,7 +1536,7 @@ export default function ApplyPage() {
                       <option value="fr">Français (French)</option>
                       <option value="hi">हिन्दी (Hindi)</option>
                       <option value="pt">Português (Portuguese)</option>
-                      <option value="other">{tri('Other / No Language', '其他/无语言', 'Otro / Sin Idioma', 'Andere / Keine Sprache', 'Autre / Aucune langue', 'अन्य / कोई भाषा नहीं', 'Outro / Sem Idioma')}</option>
+                      <option value="other">{tri('Other', '其他', 'Otro', 'Andere', 'Autre', 'अन्य', 'Outro', 'その他')}</option>
                     </select>
                   </div>
                   <div className="flex items-center gap-3 pt-6">
@@ -2066,6 +2065,18 @@ export default function ApplyPage() {
               slogan: tri('Slogan', '口号', 'Eslogan', 'Slogan', 'Slogan', 'नारा', 'Slogan', 'スローガン'),
             }[form.markType] ?? form.markType;
 
+            const markLanguageLabel: Record<string, string> = {
+              none: tri('No Language / Figurative Only', '无语言/纯图形', 'Sin Idioma / Solo Figurativa', 'Keine Sprache / Nur Bildmarke', 'Aucune langue / Purement figuratif', 'कोई भाषा नहीं / केवल आकृति', 'Sem Idioma / Apenas Figurativa', '言語なし / 図形のみ'),
+              en: 'English',
+              zh: tri('Chinese', '中文', 'Chino', 'Chinesisch', 'Chinois', 'चीनी', 'Chinês', '中国語'),
+              es: tri('Spanish', '西班牙语', 'Español', 'Spanisch', 'Espagnol', 'स्पेनिश', 'Espanhol', 'スペイン語'),
+              de: tri('German', '德语', 'Alemán', 'Deutsch', 'Allemand', 'जर्मन', 'Alemão', 'ドイツ語'),
+              fr: tri('French', '法语', 'Francés', 'Französisch', 'Français', 'फ्रेंच', 'Francês', 'フランス語'),
+              hi: tri('Hindi', '印地语', 'Hindi', 'Hindi', 'Hindi', 'हिंदी', 'Hindi', 'ヒンディー語'),
+              pt: tri('Portuguese', '葡萄牙语', 'Portugués', 'Portugiesisch', 'Portugais', 'पुर्तगाली', 'Português', 'ポルトガル語'),
+              other: tri('Other', '其他', 'Otro', 'Andere', 'Autre', 'अन्य', 'Outro', 'その他'),
+            };
+
             return (
               <div>
                 <h2 className="text-lg font-bold text-navy-900 mb-2">{t('form.step6')}</h2>
@@ -2112,13 +2123,23 @@ export default function ApplyPage() {
                     <div className="divide-y divide-gray-100">
                       <ReviewRow label={tri('Mark Name', '商标名称', 'Nombre de Marca', 'Markenname', 'Nom de marque', 'चिह्न का नाम', 'Nome da Marca', '商標名')} val={form.markName} />
                       <ReviewRow label={tri('Mark Type', '商标类型', 'Tipo de Marca', 'Markentyp', 'Type de marque', 'चिह्न का प्रकार', 'Tipo de Marca', '商標種別')} val={markTypeLabel} />
-                      <ReviewRow label={tri('Language', '语言', 'Idioma', 'Sprache', 'Langue', 'भाषा', 'Idioma', '言語')} val={form.markLanguage} />
+                      <ReviewRow label={tri('Language', '语言', 'Idioma', 'Sprache', 'Langue', 'भाषा', 'Idioma', '言語')} val={markLanguageLabel[form.markLanguage] ?? form.markLanguage} />
                       {form.containsNonSpanish && <ReviewRow label={tri('Non-Spanish', '非西班牙语', 'No español', 'Nicht-Spanisch', 'Non espagnol', 'गैर-स्पेनिश', 'Não espanhol', '非スペイン語')} val={tri('Yes', '是', 'Sí', 'Ja', 'Oui', 'हाँ', 'Sim', 'はい')} />}
                       {form.meaningSpanish && <ReviewRow label={tri('Meaning (ES)', '西班牙语含义', 'Significado', 'Bedeutung', 'Signification', 'अर्थ', 'Significado', '意味')} val={form.meaningSpanish} />}
                       {form.transliteration && <ReviewRow label={tri('Transliteration', '音译', 'Transliteración', 'Transliteration', 'Translittération', 'लिप्यंतरण', 'Transliteração', '翻字')} val={form.transliteration} />}
                       {form.claimsColor && <ReviewRow label={tri('Color Claim', '颜色声明', 'Reclamo de Color', 'Farbanspruch', 'Revendication couleur', 'रंग दावा', 'Reivindicação de Cor', '色彩主張')} val={form.colorDescription || tri('Yes', '是', 'Sí', 'Ja', 'Oui', 'हाँ', 'Sim', 'はい')} />}
                       {form.markDescription && <ReviewRow label={tri('Description', '描述', 'Descripción', 'Beschreibung', 'Description', 'विवरण', 'Descrição', '説明')} val={form.markDescription} />}
-                      {form.logoFile && <ReviewRow label={tri('Logo File', '标志文件', 'Archivo de Logo', 'Logo-Datei', 'Fichier logo', 'लोगो फ़ाइल', 'Arquivo de Logo', 'ロゴファイル')} val={form.logoFile.name} />}
+                      {form.logoFile && (
+                        <div className="flex px-4 py-3 gap-4 items-start">
+                          <span className="text-xs text-gray-500 w-36 flex-shrink-0 pt-0.5">{tri('Logo File', '标志文件', 'Archivo de Logo', 'Logo-Datei', 'Fichier logo', 'लोगो फ़ाइल', 'Arquivo de Logo', 'ロゴファイル')}</span>
+                          <div className="flex items-center gap-3 min-w-0">
+                            {logoPreview && (
+                              <img src={logoPreview} alt="Logo preview" className="w-16 h-16 object-contain rounded-lg border border-gray-200 bg-white flex-shrink-0" />
+                            )}
+                            <span className="text-sm text-gray-800 break-words">{form.logoFile.name}</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 
