@@ -25,6 +25,7 @@ import TrademarkCheckPage from './pages/TrademarkCheckPage';
 
 // Homepage V2 preview
 import HomePageV2 from './pages/HomePageV2';
+import PreviewPage from './pages/PreviewPage';
 
 // Admin
 import AdminLoginPage from './pages/admin/AdminLoginPage';
@@ -117,7 +118,8 @@ function AppRoutes() {
       <Route path="/" element={isAppSubdomain ? <Navigate to="/admin/login" replace /> : <Layout><HomePage /></Layout>} />
 
       {/* Homepage V2 preview */}
-      <Route path="/preview" element={<Layout><HomePageV2 /></Layout>} />
+      <Route path="/preview" element={<Layout><PreviewPage /></Layout>} />
+      <Route path="/preview-v2" element={<Layout><HomePageV2 /></Layout>} />
 
       {/* Public site */}
       <Route path="/about" element={<Layout><AboutPage /></Layout>} />
