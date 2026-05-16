@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ArrowRight, Search, Shield, Clock, CheckCircle2, Star, ChevronDown, X, FileText, Award, Zap, Globe as Globe2, Scale, Lock } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
-import { useLanguage } from '../context/LanguageContext';
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
@@ -201,21 +200,14 @@ function MockupCard() {
 // ─── Main page ───────────────────────────────────────────────────────────────
 
 export default function HomePageV2() {
-  const { t } = useLanguage();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
-  const [heroLoaded, setHeroLoaded] = useState(false);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setHeroLoaded(true), 50);
-    return () => clearTimeout(timer);
-  }, []);
 
   return (
     <div className="bg-white">
       <StickyMobileCTA />
 
       {/* ─── HERO ──────────────────────────────────────────────────────────── */}
-      <section className="relative min-h-screen flex flex-col overflow-hidden">
+      <section className="relative min-h-[calc(100vh-4rem)] lg:min-h-[calc(100vh-5rem)] flex flex-col overflow-hidden bg-navy-950">
         {/* Background photo */}
         <div className="absolute inset-0">
           <img
@@ -234,11 +226,7 @@ export default function HomePageV2() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 lg:py-32 w-full">
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               {/* Left: copy */}
-              <div
-                className={`transition-all duration-700 delay-100 ${
-                  heroLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-                }`}
-              >
+              <div>
                 {/* Eyebrow */}
                 <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-1.5 mb-8">
                   <span className="text-base leading-none">🇲🇽</span>
@@ -290,11 +278,7 @@ export default function HomePageV2() {
               </div>
 
               {/* Right: product mockup */}
-              <div
-                className={`flex justify-center lg:justify-end transition-all duration-700 delay-300 ${
-                  heroLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
-                }`}
-              >
+              <div className="flex justify-center lg:justify-end">
                 <MockupCard />
               </div>
             </div>
