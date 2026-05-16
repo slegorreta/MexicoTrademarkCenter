@@ -243,7 +243,7 @@ async function runMarciaQuery(
 }
 
 async function searchMarcia(markName: string, classes: number[]): Promise<{
-  findings: Array<{ name: string; status: string; classNum: string; holder: string; classOverlap: ClassOverlap }>;
+  findings: Array<{ name: string; status: string; classNum: string; holder: string; classOverlap: ClassOverlap; imageUrl?: string; goodsServices?: string }>;
   marciaUrl: string;
   totalCount: number;
 }> {
@@ -339,12 +339,31 @@ async function searchMarcia(markName: string, classes: number[]): Promise<{
         baseOverlap === "unrelated" && isComponentConflict(markName, name)
           ? "component"
           : baseOverlap;
+
+      // imageUrl: MARCia returns a relative path like "/marcas/image/..." or a full URL
+      const rawImageUrl = typeof item.imageUrl === "string" ? item.imageUrl
+        : typeof item.image === "string" ? item.image
+        : typeof item.logo === "string" ? item.logo
+        : "";
+      const imageUrl = rawImageUrl
+        ? (rawImageUrl.startsWith("http") ? rawImageUrl : `https://marcia.impi.gob.mx${rawImageUrl.startsWith("/") ? "" : "/"}${rawImageUrl}`)
+        : undefined;
+
+      // goods/services description — MARCia may return as products, goodsServices, description, or productos
+      const goodsServices = typeof item.products === "string" ? item.products
+        : typeof item.goodsServices === "string" ? item.goodsServices
+        : typeof item.description === "string" ? item.description
+        : typeof item.productos === "string" ? item.productos
+        : undefined;
+
       return {
         name,
         status: String(item.status ?? ""),
         classNum,
         holder: Array.isArray(item.owners) ? (item.owners as string[]).join(", ") : String(item.owners ?? ""),
         classOverlap,
+        imageUrl,
+        goodsServices,
       };
     }).filter(f => f.name);
 

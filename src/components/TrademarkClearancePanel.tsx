@@ -11,7 +11,7 @@ import {
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-interface MarciaFinding { name: string; status: string; classNum: string; holder: string; }
+interface MarciaFinding { name: string; status: string; classNum: string; holder: string; imageUrl?: string; goodsServices?: string; }
 interface DomainResult { domain: string; available: boolean | null; status: 'available' | 'taken' | 'unknown'; }
 export interface RegistrabilityFlag { category: string; severity: 'low' | 'medium' | 'high'; explanation: string; explanation_en?: string; explanation_user?: string; }
 export interface DupontFactor { factor: string; verdict: 'favors_registration' | 'neutral' | 'against_registration'; reasoning: string; reasoning_en?: string; reasoning_user?: string; }
@@ -923,12 +923,19 @@ export default function TrademarkClearancePanel({
               <>
                 {topConflicts.slice(0, 3).map((f, i) => {
                   const isExact = f.name.toLowerCase().trim() === markName.toLowerCase().trim();
+                  const showImage = !!imageBase64; // design or mixed mark
                   return (
                     <div key={i} className={`rounded-lg border px-2.5 py-1.5 mb-1 flex items-start gap-2 ${isExact ? 'border-red-200 bg-red-50' : 'border-amber-100 bg-amber-50/50'}`}>
-                      <AlertTriangle size={11} className={`flex-shrink-0 mt-0.5 ${isExact ? 'text-red-500' : 'text-amber-500'}`} />
+                      {showImage ? (
+                        f.imageUrl
+                          ? <img src={f.imageUrl} alt={f.name} className="w-7 h-7 object-contain rounded border border-gray-200 bg-white flex-shrink-0" />
+                          : <div className="w-7 h-7 rounded border border-gray-200 bg-white flex items-center justify-center flex-shrink-0"><Shield size={10} className="text-gray-300" /></div>
+                      ) : (
+                        <AlertTriangle size={11} className={`flex-shrink-0 mt-0.5 ${isExact ? 'text-red-500' : 'text-amber-500'}`} />
+                      )}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-[10px] font-bold text-gray-800">{f.name}</span>
+                          <span className="text-[10px] font-bold text-gray-800">{f.name || (showImage ? '—' : f.name)}</span>
                           {isExact && <span className="text-[8px] font-bold bg-red-100 text-red-700 px-1 py-0.5 rounded-full uppercase">{tr('exactMatch', lang)}</span>}
                         </div>
                         <p className="text-[9px] text-gray-500">{f.status}{f.classNum ? ` · Cl. ${f.classNum}` : ''}</p>
@@ -1058,33 +1065,64 @@ export default function TrademarkClearancePanel({
               {marciaExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
             </button>
             {marciaExpanded && (
-              <div className="px-4 pb-3">
+              <div className="px-4 pb-4">
                 {result.marciaFindings.length === 0 ? (
                   <p className="text-xs text-gray-500 italic">{tr('noMarciaFindings', lang)}</p>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs">
-                      <thead><tr className="text-gray-400 border-b border-gray-100">
-                        <th className="text-left pb-1 font-medium pr-3">Name</th>
-                        <th className="text-left pb-1 font-medium pr-3">Class</th>
-                        <th className="text-left pb-1 font-medium pr-3">Status</th>
-                        <th className="text-left pb-1 font-medium">Holder</th>
-                      </tr></thead>
-                      <tbody>
-                        {result.marciaFindings.map((f, i) => (
-                          <tr key={i} className="border-b border-gray-50 last:border-0">
-                            <td className="py-1 pr-3 font-medium text-gray-700">{f.name}</td>
-                            <td className="py-1 pr-3 text-gray-500">{f.classNum}</td>
-                            <td className="py-1 pr-3 text-gray-500">{f.status}</td>
-                            <td className="py-1 text-gray-500 truncate max-w-24">{f.holder}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                  <div className="space-y-2 mt-1">
+                    {result.marciaFindings.map((f, i) => {
+                      const isDesignResult = !!imageBase64;
+                      const statusLower = f.status.toLowerCase();
+                      const isRegistered = statusLower.includes('reg') && !statusLower.includes('tram') && !statusLower.includes('pend');
+                      const isPending = statusLower.includes('tram') || statusLower.includes('pend') || statusLower.includes('proc');
+                      const statusBadge = isRegistered
+                        ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                        : isPending
+                        ? 'bg-amber-100 text-amber-700 border-amber-200'
+                        : 'bg-gray-100 text-gray-600 border-gray-200';
+                      const statusLabel = isRegistered
+                        ? (lang === 'es' ? 'Registrada' : 'Registered')
+                        : isPending
+                        ? (lang === 'es' ? 'En Trámite' : 'Pending')
+                        : f.status;
+                      return (
+                        <div key={i} className="flex items-start gap-3 bg-white border border-gray-100 rounded-xl px-3 py-2.5 shadow-sm">
+                          {/* Image (always for design/mixed, placeholder for word) */}
+                          <div className="flex-shrink-0 w-10 h-10 rounded-lg border border-gray-200 bg-gray-50 overflow-hidden flex items-center justify-center">
+                            {isDesignResult && f.imageUrl
+                              ? <img src={f.imageUrl} alt={f.name} className="w-full h-full object-contain" />
+                              : isDesignResult
+                              ? <Shield size={14} className="text-gray-300" />
+                              : <span className="text-[9px] font-bold text-gray-400 text-center leading-tight px-0.5">{f.name.slice(0, 3).toUpperCase()}</span>
+                            }
+                          </div>
+                          {/* Details */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2 mb-0.5">
+                              <span className="text-xs font-semibold text-gray-800 leading-tight">{f.name || '—'}</span>
+                              <span className={`text-[9px] font-bold border rounded-full px-1.5 py-0.5 flex-shrink-0 ${statusBadge}`}>{statusLabel}</span>
+                            </div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {f.classNum && (
+                                <span className="text-[10px] font-medium bg-navy-50 text-navy-700 border border-navy-100 px-1.5 py-0.5 rounded-full">
+                                  {lang === 'es' ? 'Cl.' : 'Cl.'} {f.classNum}
+                                </span>
+                              )}
+                              {f.holder && (
+                                <span className="text-[10px] text-gray-500 truncate">{f.holder}</span>
+                              )}
+                            </div>
+                            {f.goodsServices && (
+                              <p className="text-[10px] text-gray-400 mt-0.5 line-clamp-2 leading-snug">{f.goodsServices}</p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
                 <a href={result.marciaUrl} target="_blank" rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 mt-2 text-xs text-blue-600 hover:text-blue-800 font-medium">
+                  className="inline-flex items-center gap-1 mt-3 text-xs text-blue-600 hover:text-blue-800 font-medium">
                   <ExternalLink size={11} />{tr('openMarciaFull', lang)}
                 </a>
               </div>
