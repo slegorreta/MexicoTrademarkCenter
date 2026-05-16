@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, ArrowRight, Sparkles, CheckCircle2, FileText, HelpCircle, Loader2, Plus, X, Tag, ChevronDown, Send, CreditCard as Edit2, AlertTriangle, ChevronRight } from 'lucide-react';
+import { Search, ArrowRight, Sparkles, CheckCircle2, FileText, HelpCircle, Loader2, Plus, X, Tag, ChevronDown, Send, CreditCard as Edit2, AlertTriangle, ChevronRight, Upload, Image as ImageIcon, Type } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import TrademarkClearancePanel from '../components/TrademarkClearancePanel';
 
@@ -435,6 +435,106 @@ const copy: Record<string, Partial<Record<Lang, string>>> = {
     pt: 'Gerar ideias com IA',
     ja: 'AIでアイデアを生成',
   },
+  tabWord: {
+    en: 'Word / Combined Mark',
+    zh: '文字 / 组合商标',
+    es: 'Marca Denominativa / Mixta',
+    de: 'Wort- / Kombinationsmarke',
+    fr: 'Marque verbale / Mixte',
+    hi: 'शब्द / संयुक्त चिह्न',
+    pt: 'Marca Denominativa / Mista',
+    ja: '文字 / 結合商標',
+  },
+  tabDesign: {
+    en: 'Design / Logo Mark',
+    zh: '图形 / 标志商标',
+    es: 'Marca Figurativa / Logo',
+    de: 'Bildmarke / Logo',
+    fr: 'Marque figurative / Logo',
+    hi: 'डिज़ाइन / लोगो चिह्न',
+    pt: 'Marca Figurativa / Logo',
+    ja: '図形 / ロゴ商標',
+  },
+  designUploadLabel: {
+    en: 'Upload your logo or design file',
+    zh: '上传您的徽标或设计文件',
+    es: 'Sube tu logo o archivo de diseño',
+    de: 'Laden Sie Ihr Logo oder Designdatei hoch',
+    fr: 'Téléversez votre logo ou fichier de design',
+    hi: 'अपना लोगो या डिज़ाइन फ़ाइल अपलोड करें',
+    pt: 'Envie seu logo ou arquivo de design',
+    ja: 'ロゴまたはデザインファイルをアップロード',
+  },
+  designUploadHint: {
+    en: 'PNG, JPG, SVG or WebP · Max 10 MB',
+    zh: 'PNG、JPG、SVG 或 WebP · 最大 10 MB',
+    es: 'PNG, JPG, SVG o WebP · Máx. 10 MB',
+    de: 'PNG, JPG, SVG oder WebP · Max. 10 MB',
+    fr: 'PNG, JPG, SVG ou WebP · Max 10 Mo',
+    hi: 'PNG, JPG, SVG या WebP · अधिकतम 10 MB',
+    pt: 'PNG, JPG, SVG ou WebP · Máx. 10 MB',
+    ja: 'PNG・JPG・SVG・WebP · 最大10MB',
+  },
+  designUploadDrag: {
+    en: 'Drag & drop here, or click to browse',
+    zh: '拖拽到此处，或点击浏览',
+    es: 'Arrastra y suelta aquí, o haz clic para explorar',
+    de: 'Hierher ziehen oder klicken zum Durchsuchen',
+    fr: 'Glissez-déposez ici, ou cliquez pour parcourir',
+    hi: 'यहाँ खींचें और छोड़ें, या ब्राउज़ करने के लिए क्लिक करें',
+    pt: 'Arraste e solte aqui, ou clique para navegar',
+    ja: 'ここにドラッグ&ドロップ、またはクリックして参照',
+  },
+  designOptionalName: {
+    en: 'Word element (optional)',
+    zh: '文字元素（可选）',
+    es: 'Elemento denominativo (opcional)',
+    de: 'Wortelement (optional)',
+    fr: 'Élément verbal (facultatif)',
+    hi: 'शब्द तत्व (वैकल्पिक)',
+    pt: 'Elemento denominativo (opcional)',
+    ja: '文字要素（任意）',
+  },
+  designOptionalNameHint: {
+    en: 'If your design includes a word element, enter it here for more thorough analysis.',
+    zh: '如果您的设计包含文字元素，请在此处输入以进行更彻底的分析。',
+    es: 'Si tu diseño incluye un elemento denominativo, ingrésalo aquí para un análisis más exhaustivo.',
+    de: 'Falls Ihr Design ein Wortelement enthält, geben Sie es hier für eine gründlichere Analyse ein.',
+    fr: "Si votre design contient un élément verbal, saisissez-le ici pour une analyse plus approfondie.",
+    hi: 'यदि आपके डिज़ाइन में कोई शब्द तत्व है, तो अधिक संपूर्ण विश्लेषण के लिए इसे यहाँ दर्ज करें।',
+    pt: 'Se o seu design inclui um elemento denominativo, insira-o aqui para uma análise mais completa.',
+    ja: 'デザインに文字要素が含まれる場合は、より詳細な分析のためにここに入力してください。',
+  },
+  designFileSizeError: {
+    en: 'File exceeds 10 MB. Please choose a smaller file.',
+    zh: '文件超过 10 MB，请选择较小的文件。',
+    es: 'El archivo supera 10 MB. Por favor elige un archivo más pequeño.',
+    de: 'Datei überschreitet 10 MB. Bitte wählen Sie eine kleinere Datei.',
+    fr: 'Le fichier dépasse 10 Mo. Veuillez choisir un fichier plus petit.',
+    hi: 'फ़ाइल 10 MB से अधिक है। कृपया एक छोटी फ़ाइल चुनें।',
+    pt: 'O arquivo excede 10 MB. Por favor, escolha um arquivo menor.',
+    ja: 'ファイルが10MBを超えています。より小さなファイルを選択してください。',
+  },
+  designFileTypeError: {
+    en: 'Unsupported file type. Please upload PNG, JPG, SVG, or WebP.',
+    zh: '不支持的文件类型。请上传 PNG、JPG、SVG 或 WebP。',
+    es: 'Tipo de archivo no compatible. Por favor sube PNG, JPG, SVG o WebP.',
+    de: 'Nicht unterstützter Dateityp. Bitte PNG, JPG, SVG oder WebP hochladen.',
+    fr: "Type de fichier non pris en charge. Veuillez téléverser PNG, JPG, SVG ou WebP.",
+    hi: 'असमर्थित फ़ाइल प्रकार। कृपया PNG, JPG, SVG, या WebP अपलोड करें।',
+    pt: 'Tipo de arquivo não suportado. Por favor envie PNG, JPG, SVG ou WebP.',
+    ja: 'サポートされていないファイル形式です。PNG・JPG・SVG・WebPをアップロードしてください。',
+  },
+  changeFile: {
+    en: 'Change file',
+    zh: '更换文件',
+    es: 'Cambiar archivo',
+    de: 'Datei ändern',
+    fr: 'Changer le fichier',
+    hi: 'फ़ाइल बदलें',
+    pt: 'Trocar arquivo',
+    ja: 'ファイルを変更',
+  },
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -550,6 +650,18 @@ export default function TrademarkCheckPage() {
     return (s >= 1 && s <= 4 ? s : 1) as WizardStep;
   });
 
+  // ── design mark state ─────────────────────────────────────────────────────
+  const [markType, setMarkType]             = useState<'word' | 'design'>(() =>
+    sessionStorage.getItem('tcpMarkType') === 'design' ? 'design' : 'word'
+  );
+  const [designFile, setDesignFile]         = useState<File | null>(null);
+  const [designPreviewUrl, setDesignPreviewUrl] = useState<string | null>(null);
+  const [designBase64, setDesignBase64]     = useState(() => sessionStorage.getItem('tcpDesignB64') ?? '');
+  const [designMime, setDesignMime]         = useState(() => sessionStorage.getItem('tcpDesignMime') ?? '');
+  const [designFileError, setDesignFileError] = useState<string | null>(null);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const designInputRef = useRef<HTMLInputElement>(null);
+
   // ── ephemeral UI state ─────────────────────────────────────────────────────
   const [markInputLocal, setMarkInputLocal] = useState(markName);
   const [goodsInputLocal, setGoodsInputLocal] = useState(goodsInput);
@@ -574,7 +686,7 @@ export default function TrademarkCheckPage() {
   // ── clear session on unmount so next visit starts fresh ──────────────────
   useEffect(() => {
     return () => {
-      ['tcpMark','tcpGoods','tcpChat','tcpSuggested','tcpSelected','tcpQuestions','tcpStep','tcpMaxStep','tcpOrderId'].forEach(k => sessionStorage.removeItem(k));
+      ['tcpMark','tcpMarkType','tcpDesignB64','tcpDesignMime','tcpGoods','tcpChat','tcpSuggested','tcpSelected','tcpQuestions','tcpStep','tcpMaxStep','tcpOrderId'].forEach(k => sessionStorage.removeItem(k));
     };
   }, []);
 
@@ -602,12 +714,52 @@ export default function TrademarkCheckPage() {
     }, 80);
   };
 
-  // ── Step 1: confirm mark name ──────────────────────────────────────────────
+  // ── Design file helpers ────────────────────────────────────────────────────
+  const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/webp'];
+  const MAX_BYTES = 10 * 1024 * 1024;
+
+  const processDesignFile = (file: File) => {
+    setDesignFileError(null);
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      setDesignFileError(tr('designFileTypeError'));
+      return;
+    }
+    if (file.size > MAX_BYTES) {
+      setDesignFileError(tr('designFileSizeError'));
+      return;
+    }
+    setDesignFile(file);
+    const url = URL.createObjectURL(file);
+    setDesignPreviewUrl(url);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      const b64 = result.split(',')[1] ?? '';
+      setDesignBase64(b64);
+      setDesignMime(file.type);
+      persist({ tcpDesignB64: b64, tcpDesignMime: file.type });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const clearDesignFile = () => {
+    setDesignFile(null);
+    if (designPreviewUrl) URL.revokeObjectURL(designPreviewUrl);
+    setDesignPreviewUrl(null);
+    setDesignBase64('');
+    setDesignMime('');
+    setDesignFileError(null);
+    sessionStorage.removeItem('tcpDesignB64');
+    sessionStorage.removeItem('tcpDesignMime');
+  };
+
+  // ── Step 1: confirm mark name / design ─────────────────────────────────────
   const submitStep1 = () => {
+    if (markType === 'design' && !designBase64) return;
     const name = markInputLocal.trim();
-    if (!name) return;
+    if (markType === 'word' && !name) return;
     setMarkName(name);
-    persist({ tcpMark: name });
+    persist({ tcpMark: name, tcpMarkType: markType });
     advanceTo(2);
   };
 
@@ -765,18 +917,23 @@ export default function TrademarkCheckPage() {
 
   // ── Navigate to filing flow, passing clearance data via transfer keys ─────
   const handleStartFiling = () => {
-    // Write data under transfer keys (not cleaned up by TCP unmount handler)
     sessionStorage.setItem('clrMark', markName);
     sessionStorage.setItem('clrGoods', goodsInput);
     sessionStorage.setItem('clrSuggested', sessionStorage.getItem('tcpSuggested') ?? '[]');
     sessionStorage.setItem('clrSelected', sessionStorage.getItem('tcpSelected') ?? '[]');
+    if (markType === 'design' && designBase64) {
+      sessionStorage.setItem('clrDesignB64', designBase64);
+      sessionStorage.setItem('clrDesignMime', designMime);
+    }
     navigate(`/apply?mark=${encodeURIComponent(markName)}&fromClearance=1`);
   };
 
   // ── Start over ─────────────────────────────────────────────────────────────
   const doStartOver = () => {
-    ['tcpMark','tcpGoods','tcpChat','tcpSuggested','tcpSelected','tcpQuestions','tcpStep','tcpMaxStep'].forEach(k => sessionStorage.removeItem(k));
+    ['tcpMark','tcpMarkType','tcpDesignB64','tcpDesignMime','tcpGoods','tcpChat','tcpSuggested','tcpSelected','tcpQuestions','tcpStep','tcpMaxStep'].forEach(k => sessionStorage.removeItem(k));
     setMarkName(''); setMarkInputLocal('');
+    setMarkType('word');
+    clearDesignFile();
     setGoodsInput(''); setGoodsInputLocal('');
     setChatHistory([]); setPendingQuestions([]);
     setSuggestedClasses([]); setSelectedNums([]);
@@ -829,34 +986,163 @@ export default function TrademarkCheckPage() {
           subtitle={tr('step1Subtitle')}
           current={currentStep}
           maxReached={maxReached}
-          completedSummary={markName}
+          completedSummary={
+            markType === 'design'
+              ? (designFile ? designFile.name : markName || tr('tabDesign'))
+              : markName
+          }
           onEditRequest={() => requestEdit(1)}
           editLabel={tr('editLabel')}
         >
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                <span className="inline-flex items-center gap-0.5">
-                  {tr('trademarkLabel')}
-                  <InfoTooltip text={tr('trademarkTooltip')} />
-                </span>
-              </label>
-              <div className="relative">
-                <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                <input
-                  type="text"
-                  value={markInputLocal}
-                  onChange={e => setMarkInputLocal(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter' && markInputLocal.trim()) submitStep1(); }}
-                  placeholder={tr('trademarkPlaceholder')}
-                  className="w-full border border-gray-300 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500 focus:border-transparent transition-all"
-                />
-              </div>
+            {/* Mark type tabs */}
+            <div className="flex rounded-xl border border-gray-200 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => { setMarkType('word'); setDesignFileError(null); }}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors ${
+                  markType === 'word'
+                    ? 'bg-navy-900 text-white'
+                    : 'bg-white text-gray-500 hover:bg-gray-50'
+                }`}
+              >
+                <Type size={14} />
+                {tr('tabWord')}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setMarkType('design'); }}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors border-l border-gray-200 ${
+                  markType === 'design'
+                    ? 'bg-navy-900 text-white'
+                    : 'bg-white text-gray-500 hover:bg-gray-50'
+                }`}
+              >
+                <ImageIcon size={14} />
+                {tr('tabDesign')}
+              </button>
             </div>
+
+            {/* Word mark input */}
+            {markType === 'word' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  <span className="inline-flex items-center gap-0.5">
+                    {tr('trademarkLabel')}
+                    <InfoTooltip text={tr('trademarkTooltip')} />
+                  </span>
+                </label>
+                <div className="relative">
+                  <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={markInputLocal}
+                    onChange={e => setMarkInputLocal(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter' && markInputLocal.trim()) submitStep1(); }}
+                    placeholder={tr('trademarkPlaceholder')}
+                    className="w-full border border-gray-300 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500 focus:border-transparent transition-all"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Design mark upload */}
+            {markType === 'design' && (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    {tr('designUploadLabel')}
+                  </label>
+                  {designPreviewUrl ? (
+                    <div className="flex items-center gap-4 bg-gray-50 border border-gray-200 rounded-xl p-4">
+                      <img
+                        src={designPreviewUrl}
+                        alt="Design preview"
+                        className="w-20 h-20 object-contain rounded-lg bg-white border border-gray-100 flex-shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-800 truncate">{designFile?.name}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {designFile ? `${(designFile.size / 1024).toFixed(0)} KB` : ''}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={clearDesignFile}
+                          className="mt-2 text-xs text-red-500 hover:text-red-700 font-medium transition-colors"
+                        >
+                          {tr('changeFile')}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      onDragOver={e => { e.preventDefault(); setIsDraggingOver(true); }}
+                      onDragLeave={() => setIsDraggingOver(false)}
+                      onDrop={e => {
+                        e.preventDefault();
+                        setIsDraggingOver(false);
+                        const file = e.dataTransfer.files?.[0];
+                        if (file) processDesignFile(file);
+                      }}
+                      onClick={() => designInputRef.current?.click()}
+                      className={`border-2 border-dashed rounded-xl px-5 py-8 flex flex-col items-center justify-center gap-3 cursor-pointer transition-all ${
+                        isDraggingOver
+                          ? 'border-navy-500 bg-navy-50'
+                          : 'border-gray-300 bg-gray-50 hover:border-navy-400 hover:bg-gray-100'
+                      }`}
+                    >
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${isDraggingOver ? 'bg-navy-100' : 'bg-white border border-gray-200'}`}>
+                        <Upload size={22} className={isDraggingOver ? 'text-navy-600' : 'text-gray-400'} />
+                      </div>
+                      <div className="text-center">
+                        <p className="text-sm font-medium text-gray-700">{tr('designUploadDrag')}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">{tr('designUploadHint')}</p>
+                      </div>
+                      <input
+                        ref={designInputRef}
+                        type="file"
+                        accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                        className="sr-only"
+                        onChange={e => {
+                          const file = e.target.files?.[0];
+                          if (file) processDesignFile(file);
+                          e.target.value = '';
+                        }}
+                      />
+                    </div>
+                  )}
+                  {designFileError && (
+                    <p className="mt-1.5 text-xs text-red-600 flex items-center gap-1">
+                      <AlertTriangle size={12} />
+                      {designFileError}
+                    </p>
+                  )}
+                </div>
+
+                {/* Optional word element */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {tr('designOptionalName')}
+                  </label>
+                  <p className="text-xs text-gray-500 mb-1.5">{tr('designOptionalNameHint')}</p>
+                  <div className="relative">
+                    <Type size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={markInputLocal}
+                      onChange={e => setMarkInputLocal(e.target.value)}
+                      placeholder="e.g. APEX, BluePeak…"
+                      className="w-full border border-gray-300 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500 focus:border-transparent transition-all"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
             <button
               type="button"
               onClick={submitStep1}
-              disabled={!markInputLocal.trim()}
+              disabled={markType === 'word' ? !markInputLocal.trim() : !designBase64}
               className="inline-flex items-center gap-2 bg-navy-900 hover:bg-navy-800 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold px-5 py-2.5 rounded-xl transition-colors shadow-sm text-sm"
             >
               {tr('step2Title')} <ChevronRight size={15} />
@@ -1195,6 +1481,8 @@ export default function TrademarkCheckPage() {
               autoRun={true}
               showFilingCta={true}
               onStartFiling={handleStartFiling}
+              imageBase64={markType === 'design' ? designBase64 : undefined}
+              imageMimeType={markType === 'design' ? designMime : undefined}
             />
           </StepCard>
         </div>

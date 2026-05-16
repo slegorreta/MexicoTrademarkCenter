@@ -51,6 +51,8 @@ interface Props {
   onResult?: (result: ClearanceResult) => void;
   onSelectDespiteRisk?: (markName: string) => void;
   onRiskAcknowledgedChange?: (acknowledged: boolean) => void;
+  imageBase64?: string;
+  imageMimeType?: string;
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -565,7 +567,7 @@ function FullReportNotice({ lang }: { lang: Lang }) {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function TrademarkClearancePanel({
-  markName, goodsServices = '', classes, language, autoRun = true, showFilingCta = false, onStartFiling, onResult, onSelectDespiteRisk, onRiskAcknowledgedChange,
+  markName, goodsServices = '', classes, language, autoRun = true, showFilingCta = false, onStartFiling, onResult, onSelectDespiteRisk, onRiskAcknowledgedChange, imageBase64, imageMimeType,
 }: Props) {
   const lang = (language in (UI.clearanceAnalysis)) ? language : 'en' as Lang;
   const { user } = useAuth();
@@ -614,7 +616,7 @@ export default function TrademarkClearancePanel({
       const res = await fetch(`${SUPABASE_URL}/functions/v1/verify-trademark`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
-        body: JSON.stringify({ markName: markName.trim(), goodsServices, classes, language: lang }),
+        body: JSON.stringify({ markName: markName.trim(), goodsServices, classes, language: lang, ...(imageBase64 ? { imageBase64, imageMimeType } : {}) }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Check failed');

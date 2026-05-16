@@ -996,52 +996,99 @@ Deno.serve(async (req: Request) => {
     }
 
     const body = await req.json();
-    const { markName, classes = [], language = "en", goodsServices = "" } = body as {
-      markName: string; classes?: number[]; language?: string; goodsServices?: string;
+    const { markName: rawMarkName = "", classes = [], language = "en", goodsServices = "", imageBase64 = "", imageMimeType = "image/png" } = body as {
+      markName?: string; classes?: number[]; language?: string; goodsServices?: string; imageBase64?: string; imageMimeType?: string;
     };
 
-    if (!markName?.trim()) {
-      return new Response(JSON.stringify({ error: "markName is required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const isDesignOnly = !!imageBase64 && !rawMarkName.trim();
+
+    if (!rawMarkName?.trim() && !imageBase64) {
+      return new Response(JSON.stringify({ error: "markName or imageBase64 is required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const lang = DISCLAIMERS[language] ? language : "en";
 
+    // For design marks: use GPT-4o Vision to describe the design and extract any word elements
+    let markName = rawMarkName.trim();
+    let designDescription = "";
+    if (imageBase64) {
+      try {
+        const visionRes = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+          body: JSON.stringify({
+            model: "gpt-4o",
+            messages: [{
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: `You are a trademark specialist. Analyze this design/logo trademark image.\n\n1. Identify any word or letter elements present (return exactly as shown).\n2. Describe the design elements (shapes, colors, figurative elements, style) in 2-3 sentences.\n3. Identify the overall concept or theme the design evokes.\n\nRespond in JSON: { "wordElements": "exact word text or empty string", "designDescription": "visual description", "concept": "evoked concept/theme" }`,
+                },
+                { type: "image_url", image_url: { url: `data:${imageMimeType};base64,${imageBase64}`, detail: "low" } },
+              ],
+            }],
+            max_tokens: 400,
+            response_format: { type: "json_object" },
+          }),
+        });
+        if (visionRes.ok) {
+          const visionData = await visionRes.json();
+          const parsed = JSON.parse(visionData.choices?.[0]?.message?.content ?? "{}");
+          if (!markName && parsed.wordElements) markName = parsed.wordElements;
+          designDescription = [parsed.designDescription, parsed.concept ? `Concept: ${parsed.concept}` : ""].filter(Boolean).join(" ");
+        }
+      } catch (err) {
+        console.error("Vision analysis error:", err);
+      }
+    }
+
+    // For pure design marks with no word element at all, use a placeholder for text-based searches
+    const searchName = markName || "[design mark]";
+    const enhancedGoodsServices = designDescription
+      ? [goodsServices, `Design description: ${designDescription}`].filter(Boolean).join(". ")
+      : goodsServices;
+
     // Run MARCia first so conflicting class numbers can inform the registrability analysis
+    // Skip text-based searches when pure design with no word element extracted
     const [webResult, marciaResult, domainResults, translationAnalysis, niceClassification] = await Promise.all([
-      searchWeb(apiKey, markName.trim(), classes, goodsServices, lang),
-      searchMarcia(markName.trim(), classes),
-      checkDomains(markName.trim()),
-      analyzeTranslations(apiKey, markName.trim(), classes, goodsServices, lang),
-      classifyNiceClasses(apiKey, markName.trim(), goodsServices, lang),
+      markName ? searchWeb(apiKey, searchName, classes, enhancedGoodsServices, lang) : Promise.resolve({ findings: [], risk: "low" as const }),
+      markName ? searchMarcia(searchName, classes) : Promise.resolve({ findings: [], marciaUrl: "https://marcia.impi.gob.mx/marcas/search/quick", totalCount: 0 }),
+      markName ? checkDomains(searchName) : Promise.resolve([]),
+      markName ? analyzeTranslations(apiKey, searchName, classes, enhancedGoodsServices, lang) : Promise.resolve([]),
+      classifyNiceClasses(apiKey, searchName, enhancedGoodsServices || (isDesignOnly ? "design mark" : ""), lang),
     ]);
 
     const conflictingClassNums = marciaResult.findings.map(f => f.classNum).filter(Boolean);
 
     // Full-name fuzzy conflicts (same/related class)
     const similarConflictNames = marciaResult.findings.filter(f =>
-      isSimilarName(f.name, markName) && (f.classOverlap === "same" || f.classOverlap === "related")
+      isSimilarName(f.name, searchName) && (f.classOverlap === "same" || f.classOverlap === "related")
     );
-    // Component-word conflicts in same/related class (e.g. "Wild" or "Roots" found independently)
+    // Component-word conflicts in same/related class
     const componentConflicts = marciaResult.findings.filter(
-      f => f.classOverlap === "component" && !isSimilarName(f.name, markName)
+      f => f.classOverlap === "component" && !isSimilarName(f.name, searchName)
     );
 
     const registrabilityResult = await analyzeRegistrability(
-      apiKey, markName.trim(), classes, goodsServices, lang,
+      apiKey,
+      isDesignOnly ? `[design mark]${designDescription ? ` — ${designDescription}` : ""}` : searchName,
+      classes, enhancedGoodsServices, lang,
       conflictingClassNums, similarConflictNames, componentConflicts,
     );
 
     let risk: "low" | "medium" | "high" = webResult.risk;
 
-    // Full-name fuzzy matches
-    const exactSameClass = marciaResult.findings.some(
-      f => isSimilarName(f.name, markName) && f.classOverlap === "same"
+    // Full-name fuzzy matches (only meaningful when there's a word element)
+    const exactSameClass = !!markName && marciaResult.findings.some(
+      f => isSimilarName(f.name, searchName) && f.classOverlap === "same"
     );
-    const exactRelatedClass = marciaResult.findings.some(
-      f => isSimilarName(f.name, markName) && f.classOverlap === "related"
+    const exactRelatedClass = !!markName && marciaResult.findings.some(
+      f => isSimilarName(f.name, searchName) && f.classOverlap === "related"
     );
     const exactUnrelatedOnly =
-      marciaResult.findings.some(f => isSimilarName(f.name, markName)) &&
+      !!markName &&
+      marciaResult.findings.some(f => isSimilarName(f.name, searchName)) &&
       !exactSameClass && !exactRelatedClass;
 
     const relevantFindings = marciaResult.findings.filter(
@@ -1090,10 +1137,13 @@ Deno.serve(async (req: Request) => {
     else if (risk === "medium" && riskColor === "VERDE") riskColor = "AMARILLO";
 
     // Generate a risk summary that is guaranteed to match the final aggregated risk level
+    const summaryMarkName = isDesignOnly
+      ? `[design mark]${designDescription ? ` — ${designDescription}` : ""}`
+      : searchName;
     const consistentSummary = await generateConsistentRiskSummary(
       apiKey,
-      markName.trim(),
-      goodsServices,
+      summaryMarkName,
+      enhancedGoodsServices,
       classes,
       risk,
       riskColor,
