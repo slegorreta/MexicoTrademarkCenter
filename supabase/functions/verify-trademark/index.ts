@@ -52,7 +52,8 @@ const RELATED_CLASSES: Record<number, number[]> = {
   43: [29, 30, 32, 33], 44: [3, 5],
 };
 
-type ClassOverlap = "same" | "related" | "unrelated";
+// "component" = a word-part of the applicant's mark conflicts (lower severity than same/related)
+type ClassOverlap = "same" | "related" | "component" | "unrelated";
 
 function classifyOverlap(applicantClasses: number[], conflictClassNums: string): ClassOverlap {
   if (!conflictClassNums.trim()) return "unrelated";
@@ -113,6 +114,51 @@ function isSimilarName(a: string, b: string): boolean {
   const shorter = Math.min(na.length, nb.length);
   const maxDist = shorter <= 6 ? 1 : 2;
   if (levenshtein(na, nb, maxDist) <= maxDist) return true;
+  return false;
+}
+
+// Generic filler words that should not be treated as meaningful trademark tokens
+const FILLER_WORDS = new Set([
+  "de", "la", "el", "los", "las", "del", "un", "una", "the", "and", "for",
+  "van", "von", "of", "in", "at", "by", "to", "or", "co", "ltd", "inc", "sa",
+]);
+
+// Splits a compound mark into its meaningful word-components.
+// "WildRoots"        → ["Wild", "Roots"]
+// "Wild Roots"       → ["Wild", "Roots"]
+// "Wild-Roots"       → ["Wild", "Roots"]
+// "BioTechPro"       → ["Bio", "Tech", "Pro"]
+// "Wild Roots Organic 100" → ["Wild", "Roots", "Organic"]
+function getMarkTokens(markName: string): string[] {
+  // 1. Split on whitespace and hyphens/underscores
+  let parts = markName.split(/[\s\-_]+/);
+  // 2. Within each part, split CamelCase (e.g. "WildRoots" → ["Wild","Roots"])
+  parts = parts.flatMap(p => p.split(/(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])/));
+  // 3. Strip punctuation, accents, digits from each token
+  const tokens = parts
+    .map(t => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z]/g, "").toLowerCase())
+    .filter(t => t.length >= 3 && !FILLER_WORDS.has(t));
+  // 4. Deduplicate while preserving order
+  return Array.from(new Set(tokens));
+}
+
+// Returns true when a registry finding name shares a meaningful word-component
+// with the applicant's mark (or vice-versa).
+// This catches: "WildRoots" applicant vs. "Wild Organic" or "Roots Natural Foods" registrant.
+function isComponentConflict(markName: string, findingName: string): boolean {
+  const applicantTokens = getMarkTokens(markName);
+  const findingTokens = getMarkTokens(findingName);
+  if (applicantTokens.length === 0 || findingTokens.length === 0) return false;
+  // Only flag when the applicant mark has >1 token (single-word marks handled by isSimilarName)
+  if (applicantTokens.length < 2 && findingTokens.length < 2) return false;
+  for (const at of applicantTokens) {
+    for (const ft of findingTokens) {
+      // Exact token match (e.g. "wild" == "wild")
+      if (at === ft && at.length >= 4) return true;
+      // Near-identical token (edit distance ≤ 1 for tokens ≥ 5 chars)
+      if (at.length >= 5 && ft.length >= 5 && levenshtein(at, ft, 1) <= 1) return true;
+    }
+  }
   return false;
 }
 
@@ -250,22 +296,24 @@ async function searchMarcia(markName: string, classes: number[]): Promise<{
 
     const allClasses = classes.length > 0 ? [...classes, ...getRelatedClasses(classes)] : [];
 
-    // Build a deduplicated set of query strings to try:
+    // Build a deduplicated set of query strings:
     // 1. Original mark name (e.g. "Wild Roots")
-    // 2. Normalized (spaces/hyphens stripped) variant (e.g. "WildRoots") — only if different
+    // 2. Normalized no-space slug (e.g. "wildroots") — catches different spacing conventions
+    // 3. Individual meaningful tokens (e.g. "wild", "roots") — catches partial-word conflicts
     const normalized = normalizeMark(markName);
     const queries = [markName.trim()];
-    // Add the no-space camelCase-style variant only when it actually differs
-    if (normalized && normalized !== markName.trim().toLowerCase().replace(/[^a-z0-9]/g, "")) {
-      // reconstruct a spaced version from normalized isn't possible, but
-      // querying the normalized slug catches registrations like "WILDROOTS"
+    if (normalized && !queries.map(normalizeMark).includes(normalized)) {
       queries.push(normalized);
     }
-    // Also try the slug in case the registry stores it concatenated
-    const slug = normalizeMark(markName);
-    if (slug && !queries.includes(slug)) queries.push(slug);
+    // Add per-token queries for compound marks (tokens ≥ 4 chars to avoid noise)
+    const tokens = getMarkTokens(markName).filter(t => t.length >= 4);
+    for (const token of tokens) {
+      if (!queries.map(normalizeMark).includes(normalizeMark(token))) {
+        queries.push(token);
+      }
+    }
 
-    // Run both queries sequentially (session/cookies are shared)
+    // Run all queries sequentially (session/cookies are shared)
     const allItems: Record<string, unknown>[] = [];
     let maxTotal = 0;
     for (const q of queries) {
@@ -280,15 +328,23 @@ async function searchMarcia(markName: string, classes: number[]): Promise<{
       }
     }
 
-    const findings = allItems.slice(0, 20).map((item) => {
+    const findings = allItems.slice(0, 25).map((item) => {
       const classNums: number[] = Array.isArray(item.classes) ? (item.classes as number[]) : [];
       const classNum = classNums.length > 0 ? classNums.join(", ") : "";
+      const name = String(item.title ?? "");
+      const baseOverlap = classifyOverlap(classes, classNum);
+      // Component conflicts are only meaningful when the finding is in the same or related class.
+      // "unrelated" class + component token match = too weak to flag.
+      const classOverlap: ClassOverlap =
+        baseOverlap === "unrelated" && isComponentConflict(markName, name)
+          ? "component"
+          : baseOverlap;
       return {
-        name: String(item.title ?? ""),
+        name,
         status: String(item.status ?? ""),
         classNum,
         holder: Array.isArray(item.owners) ? (item.owners as string[]).join(", ") : String(item.owners ?? ""),
-        classOverlap: classifyOverlap(classes, classNum),
+        classOverlap,
       };
     }).filter(f => f.name);
 
@@ -341,6 +397,7 @@ async function analyzeRegistrability(
   language: string,
   conflictingClassNums: string[],
   similarConflictNames: Array<{ name: string; classNum: string; classOverlap: ClassOverlap }>,
+  componentConflicts: Array<{ name: string; classNum: string; classOverlap: ClassOverlap }>,
 ): Promise<{
   flags: RegistrabilityFlag[];
   risk: "low" | "medium" | "high";
@@ -361,20 +418,32 @@ async function analyzeRegistrability(
   const isUserLang = language !== "es";
   const isEnglish = language === "en";
 
-  const similarNamesContext = similarConflictNames.length > 0
-    ? (() => {
-        const sameClass = similarConflictNames.filter(f => f.classOverlap === "same");
-        const relatedClass = similarConflictNames.filter(f => f.classOverlap === "related");
-        const parts: string[] = [];
-        if (sameClass.length > 0) {
-          parts.push(`MARCAS CONFUSAMENTE SIMILARES EN LA MISMA CLASE: Se encontraron ${sameClass.length} marca(s) con nombre visualmente/fonéticamente similar a "${markName}" registradas en la MISMA clase Niza (${classes.join(", ")}): ${sameClass.map(f => `"${f.name}" (clase ${f.classNum})`).join(", ")}. INSTRUCCIÓN CRÍTICA: Esto constituye un conflicto directo bajo LFPPI Art. 173 Fr. VIII. El factor DuPont "similarity_of_marks" DEBE calificarse como "against_registration" y el riskColor DEBE ser "ROJO".`);
-        }
-        if (relatedClass.length > 0) {
-          parts.push(`MARCAS SIMILARES EN CLASES RELACIONADAS: ${relatedClass.map(f => `"${f.name}" (clase ${f.classNum})`).join(", ")}. Evalúa el riesgo de confusión teniendo en cuenta la proximidad comercial entre estas clases y la del solicitante (${classes.join(", ")}).`);
-        }
-        return `\n\n${parts.join("\n")}`;
-      })()
-    : "";
+  const similarNamesContext = (() => {
+    const parts: string[] = [];
+    if (similarConflictNames.length > 0) {
+      const sameClass = similarConflictNames.filter(f => f.classOverlap === "same");
+      const relatedClass = similarConflictNames.filter(f => f.classOverlap === "related");
+      if (sameClass.length > 0) {
+        parts.push(`MARCAS CONFUSAMENTE SIMILARES EN LA MISMA CLASE: Se encontraron ${sameClass.length} marca(s) con nombre visualmente/fonéticamente similar a "${markName}" registradas en la MISMA clase Niza (${classes.join(", ")}): ${sameClass.map(f => `"${f.name}" (clase ${f.classNum})`).join(", ")}. INSTRUCCIÓN CRÍTICA: Esto constituye un conflicto directo bajo LFPPI Art. 173 Fr. VIII. El factor DuPont "similarity_of_marks" DEBE calificarse como "against_registration" y el riskColor DEBE ser "ROJO".`);
+      }
+      if (relatedClass.length > 0) {
+        parts.push(`MARCAS SIMILARES EN CLASES RELACIONADAS: ${relatedClass.map(f => `"${f.name}" (clase ${f.classNum})`).join(", ")}. Evalúa el riesgo de confusión teniendo en cuenta la proximidad comercial entre estas clases y la del solicitante (${classes.join(", ")}).`);
+      }
+    }
+    if (componentConflicts.length > 0) {
+      const tokens = getMarkTokens(markName);
+      parts.push(
+        `CONFLICTOS POR PALABRAS COMPONENTES: La marca "${markName}" está formada por las palabras: [${tokens.join(", ")}]. ` +
+        `Se encontraron ${componentConflicts.length} marca(s) en el registro IMPI que coinciden con una o más de estas palabras individuales en clases iguales o relacionadas: ` +
+        componentConflicts.map(f => `"${f.name}" (clase ${f.classNum})`).join(", ") +
+        `. INSTRUCCIÓN CRÍTICA: Bajo la doctrina de marcas compuestas (LFPPI Art. 173 Fr. VIII y jurisprudencia IMPI), el registro de un componente dominante de la marca solicitada puede generar riesgo de confusión aunque la marca completa no coincida exactamente. ` +
+        `Evalúa: (1) si alguna de estas palabras es el elemento dominante o más distintivo de "${markName}"; ` +
+        `(2) si los consumidores podrían abreviar la marca a esa palabra (p.ej. llamar "WildRoots" simplemente "Wild" o "Roots"); ` +
+        `(3) refleja este análisis en los factores DuPont "similarity_of_marks" y "number_of_similar_marks".`
+      );
+    }
+    return parts.length > 0 ? `\n\n${parts.join("\n")}` : "";
+  })();
 
   const conflictClassContext = conflictingClassNums.length > 0
     ? `\n\nCONTEXTO DE CLASES EN CONFLICTO: Se encontraron marcas existentes en el registro IMPI con las siguientes clases Niza: ${conflictingClassNums.join("; ")}. El solicitante busca registro en la(s) clase(s) ${classes.join(", ")}. INSTRUCCIÓN CRÍTICA: Al evaluar el factor DuPont "relatedness_of_goods", DEBES comparar explícitamente estos números de clase. Si las marcas en conflicto están en clases completamente diferentes sin superposición económica o comercial con la(s) clase(s) del solicitante, DEBES calificar "relatedness_of_goods" como "favors_registration" y explicar claramente la distinción de clases. NO asumas relación solo porque las marcas comparten un nombre — la separación de clases es una protección legal clave bajo la LFPPI.${similarNamesContext}`
@@ -646,18 +715,25 @@ async function searchWeb(apiKey: string, markName: string, classes: number[], go
     ? ` Also check these spelling/spacing variants of the same mark: ${variants.slice(1).map(v => `"${v}"`).join(", ")}.`
     : "";
 
-  const prompt = `Search the web for existing trademark registrations, brand names, or companies named "${markName}"${classContext}${goodsContext}.${variantNote}${langInstruction}
+  // Component tokens for partial-word conflict check
+  const tokens = getMarkTokens(markName).filter(t => t.length >= 4);
+  const tokenNote = tokens.length > 1
+    ? ` Additionally, check whether any of the individual component words — ${tokens.map(t => `"${t}"`).join(", ")} — are independently registered as trademarks in the same or related Nice classes. Under Mexican trademark law (LFPPI Art. 173 Fr. VIII), a registered mark that matches a dominant word-component of the applied mark can block registration of the compound mark.`
+    : "";
+
+  const prompt = `Search the web for existing trademark registrations, brand names, or companies named "${markName}"${classContext}${goodsContext}.${variantNote}${tokenNote}${langInstruction}
 
 IMPORTANT: Consider ALL of the following when assessing conflicts:
 1. Exact name matches (e.g. "WildRoots" and "Wild Roots" are the same mark — spacing/hyphens do NOT distinguish trademarks).
 2. Phonetically identical or near-identical marks (e.g. "WildRoots" vs "Wild Roots" vs "Wild-Roots").
-3. Marks registered in the SAME Nice class AND in commercially related classes (e.g. if applying in class 29, also flag conflicts in classes 30, 31, 32, 43).
-4. International registrations at IMPI (Mexico), USPTO (US), EUIPO (EU), and WIPO that cover Mexico.
+3. Component-word conflicts: if the mark is compound (e.g. "WildRoots"), flag any existing marks that consist of just one of its words (e.g. "Wild" or "Roots") in the same or commercially related classes.
+4. Marks registered in the SAME Nice class AND in commercially related classes (e.g. if applying in class 29, also flag conflicts in classes 30, 31, 32, 43).
+5. International registrations at IMPI (Mexico), USPTO (US), EUIPO (EU), and WIPO that cover Mexico.
 
 Return JSON: { "risk": "low"|"medium"|"high", "findings": ["finding 1", ...], "reasoning": "..." }
 Risk levels:
-- "high": exact or near-identical match in the same or a commercially related Nice class
-- "medium": similar names (different spelling or spacing), or same name in a different but related class
+- "high": exact or near-identical match in the same or a commercially related Nice class, OR a dominant component word is already registered
+- "medium": similar names (different spelling or spacing), component-word conflicts in related classes
 - "low": no significant existing marks found`;
 
   try {
@@ -675,8 +751,9 @@ Assess whether the trademark "${markName}"${classContext}${goodsContext} can be 
 CRITICAL INSTRUCTIONS:
 1. Treat "${markName}" and any spacing/hyphen variants (e.g. "${normalized}") as the SAME mark — spacing never distinguishes trademarks.
 2. Search your training knowledge for any brands, companies, or registered trademarks with this name or a confusingly similar one.
-3. Consider conflicts in the SAME Nice class AND in commercially related classes (for class 29: also check 30, 31, 32, 43; for class 25: also check 18, 24, 26).
-4. If you know of any registration under this name or a variant, set risk to "high" and list it.
+3. If the mark is compound (e.g. formed of multiple words like ${tokens.length > 0 ? tokens.map(t => `"${t}"`).join(" + ") : `"${markName}"`}), also check whether any of those individual words are independently registered in the same or related classes. A registered mark matching a dominant component can block the compound mark.
+4. Consider conflicts in the SAME Nice class AND in commercially related classes (for class 29: also check 30, 31, 32, 43; for class 25: also check 18, 24, 26).
+5. If you know of any registration under this name, a variant, or a component word, set risk to "high" and list it.
 
 Return JSON only: { "risk": "low"|"medium"|"high", "findings": ["specific finding..."], "reasoning": "..." }`;
 
@@ -939,47 +1016,59 @@ Deno.serve(async (req: Request) => {
     ]);
 
     const conflictingClassNums = marciaResult.findings.map(f => f.classNum).filter(Boolean);
-    // Collect all fuzzy-similar findings so the AI can reason about specific conflicting mark names
+
+    // Full-name fuzzy conflicts (same/related class)
     const similarConflictNames = marciaResult.findings.filter(f =>
       isSimilarName(f.name, markName) && (f.classOverlap === "same" || f.classOverlap === "related")
     );
-    const registrabilityResult = await analyzeRegistrability(apiKey, markName.trim(), classes, goodsServices, lang, conflictingClassNums, similarConflictNames);
+    // Component-word conflicts in same/related class (e.g. "Wild" or "Roots" found independently)
+    const componentConflicts = marciaResult.findings.filter(
+      f => f.classOverlap === "component" && !isSimilarName(f.name, markName)
+    );
+
+    const registrabilityResult = await analyzeRegistrability(
+      apiKey, markName.trim(), classes, goodsServices, lang,
+      conflictingClassNums, similarConflictNames, componentConflicts,
+    );
 
     let risk: "low" | "medium" | "high" = webResult.risk;
 
-    // Use isSimilarName (fuzzy) instead of strict string equality so that
-    // "Wild Roots" correctly matches a registered "WildRoots" (and vice-versa)
-    const similarSameClass = marciaResult.findings.some(
+    // Full-name fuzzy matches
+    const exactSameClass = marciaResult.findings.some(
       f => isSimilarName(f.name, markName) && f.classOverlap === "same"
     );
-    const similarRelatedClass = marciaResult.findings.some(
+    const exactRelatedClass = marciaResult.findings.some(
       f => isSimilarName(f.name, markName) && f.classOverlap === "related"
     );
-    const similarUnrelatedOnly =
+    const exactUnrelatedOnly =
       marciaResult.findings.some(f => isSimilarName(f.name, markName)) &&
-      !similarSameClass && !similarRelatedClass;
+      !exactSameClass && !exactRelatedClass;
 
-    // Keep legacy variable names for backward-compat with generateConsistentRiskSummary call
-    const exactSameClass = similarSameClass;
-    const exactRelatedClass = similarRelatedClass;
-    const exactUnrelatedOnly = similarUnrelatedOnly;
+    const relevantFindings = marciaResult.findings.filter(
+      f => f.classOverlap === "same" || f.classOverlap === "related"
+    );
+    const componentFindingsCount = componentConflicts.length;
 
-    const relevantFindings = marciaResult.findings.filter(f => f.classOverlap === "same" || f.classOverlap === "related");
-
+    // Full-name conflict escalation
     if (exactSameClass) {
       risk = "high";
     } else if (exactRelatedClass) {
-      // A similar mark in a related class is a meaningful obstacle — escalate to medium
-      // and to high if web risk was already medium (two independent signals)
       if (risk === "low") risk = "medium";
       else if (risk === "medium") risk = "high";
     } else if (exactUnrelatedOnly) {
-      // Similar name exists but only in completely unrelated classes — do not escalate
+      // Identical name only in unrelated classes — do not escalate
     } else if (relevantFindings.length >= 5) {
       risk = "high";
     } else if (relevantFindings.length > 0 && risk === "low") {
       risk = "medium";
     }
+
+    // Component-word conflict escalation (weaker signal — partial matches only)
+    if (!exactSameClass && !exactRelatedClass) {
+      if (componentFindingsCount >= 3 && risk !== "high") risk = "high";
+      else if (componentFindingsCount >= 1 && risk === "low") risk = "medium";
+    }
+
     if (registrabilityResult.risk === "high") risk = "high";
     else if (registrabilityResult.risk === "medium" && risk === "low") risk = "medium";
 
