@@ -22,6 +22,7 @@ import DashboardPage from './pages/DashboardPage';
 import ApplyPage from './pages/ApplyPage';
 import TrademarkIdeaPage from './pages/TrademarkIdeaPage';
 import TrademarkCheckPage from './pages/TrademarkCheckPage';
+import FigurativeSearchPage from './pages/FigurativeSearchPage';
 
 // Homepage V2 preview
 import HomePageV2 from './pages/HomePageV2';
@@ -161,6 +162,9 @@ function AppRoutes() {
 
       {/* Free Trademark Check */}
       <Route path="/trademark-check" element={<Layout><TrademarkCheckPage /></Layout>} />
+
+      {/* Figurative / Design Trademark Search */}
+      <Route path="/figurative-search" element={<Layout><FigurativeSearchPage /></Layout>} />
 
       {/* Client dashboard — has its own layout (sidebar), no Layout wrapper */}
       <Route

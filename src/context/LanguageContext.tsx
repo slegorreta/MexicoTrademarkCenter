@@ -20,6 +20,7 @@ const translations: Record<string, Record<Language, string>> = {
   'nav.dashboard': { en: 'My Dashboard', zh: '我的面板', es: 'Mi Panel', de: 'Mein Dashboard', fr: 'Mon tableau de bord', hi: 'डैशबोर्ड', pt: 'Meu Painel', ja: 'マイダッシュボード' },
   'nav.logout': { en: 'Logout', zh: '退出登录', es: 'Cerrar Sesión', de: 'Abmelden', fr: 'Se déconnecter', hi: 'लॉग आउट', pt: 'Sair', ja: 'ログアウト' },
   'nav.ideaGenerator': { en: 'Idea Generator', zh: '商标创意', es: 'Generador de Ideas', de: 'Ideen-Generator', fr: 'Générateur d\'idées', hi: 'ट्रेडमार्क विचार', pt: 'Gerador de Ideias', ja: 'アイデア生成' },
+  'nav.figurativeSearch': { en: 'Logo Search', zh: '图形搜索', es: 'Búsqueda de Logo', de: 'Bildmarkensuche', fr: 'Recherche logo', hi: 'लोगो खोज', pt: 'Pesquisa de Logo', ja: 'ロゴ検索' },
 
   // Hero badge
   'hero.badge': {

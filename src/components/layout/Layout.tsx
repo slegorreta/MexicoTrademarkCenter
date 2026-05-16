@@ -61,7 +61,7 @@ function WeChatWidget() {
 }
 
 // Routes where the badge is a distractor (active clearance, filing, payment flows)
-const BADGE_HIDDEN_PATHS = ['/trademark-check', '/apply'];
+const BADGE_HIDDEN_PATHS = ['/trademark-check', '/apply', '/figurative-search'];
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { language } = useLanguage();
