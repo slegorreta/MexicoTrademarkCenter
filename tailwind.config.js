@@ -5,17 +5,17 @@ export default {
     extend: {
       colors: {
         navy: {
-          50: '#f0f4f8',
-          100: '#d9e2ec',
-          200: '#bcccdc',
-          300: '#9fb3c8',
-          400: '#829ab1',
-          500: '#627d98',
-          600: '#486581',
-          700: '#334e68',
-          800: '#243b53',
-          900: '#102a43',
-          950: '#0a1929',
+          50: '#eef4f0',
+          100: '#d4e6d9',
+          200: '#a8ccb3',
+          300: '#7aae8a',
+          400: '#558f69',
+          500: '#3d7a52',
+          600: '#2d6040',
+          700: '#1f4a30',
+          800: '#163822',
+          900: '#0f2a19',
+          950: '#091810',
         },
         gold: {
           50: '#fffbeb',
@@ -32,6 +32,7 @@ export default {
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
+        serif: ['Lora', 'Georgia', 'serif'],
         mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
       },
     },

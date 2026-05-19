@@ -89,6 +89,10 @@ export default function Header() {
             <div className="flex-shrink-0">
               <div className="text-navy-900 font-bold text-sm sm:text-base leading-tight whitespace-nowrap">Mexico Trademark</div>
               <div className="text-gold-600 text-xs font-medium tracking-wide">CENTER</div>
+              <div className="flex items-baseline gap-0.5 mt-0.5">
+                <span className="text-[8px] text-gray-400 leading-none">powered by</span>
+                <span className="text-[9px] font-semibold text-gray-600 leading-none">Syner</span><span className="text-[9px] font-semibold leading-none" style={{ color: '#3d7a52' }}>Sage</span>
+              </div>
             </div>
           </Link>
 

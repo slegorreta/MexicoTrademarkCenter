@@ -133,12 +133,12 @@ export default function LandingPage({ lang }: Props) {
       <section className="relative bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800 text-white overflow-hidden">
         <div className="absolute inset-0 opacity-10 pointer-events-none">
           <div className="absolute top-16 left-8 w-72 h-72 bg-gold-500 rounded-full blur-3xl" />
-          <div className="absolute bottom-12 right-8 w-96 h-96 bg-blue-500 rounded-full blur-3xl" />
+          <div className="absolute bottom-12 right-8 w-96 h-96 bg-gold-500 rounded-full blur-3xl" />
         </div>
         <div className={`relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28 ${data.heroVideoId ? 'flex flex-col lg:flex-row items-center gap-12' : ''}`}>
           {/* Text content */}
           <div className={data.heroVideoId ? 'flex-1 min-w-0' : 'max-w-3xl'}>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight mb-5">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold font-serif leading-tight mb-5">
               {data.h1}
             </h1>
             <p className="text-lg text-gray-300 leading-relaxed mb-8 max-w-2xl">
@@ -278,14 +278,14 @@ export default function LandingPage({ lang }: Props) {
       {/* Body Copy */}
       <section className="py-16 lg:py-20 bg-white">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 prose-custom">
-          <h2 className="text-2xl font-bold text-navy-900 mb-4 leading-snug">
+          <h2 className="text-2xl font-bold font-serif text-navy-900 mb-4 leading-snug">
             {data.bodyHeading1}
           </h2>
           <p className="text-gray-600 leading-relaxed mb-10">
             {data.bodyParagraph1}
           </p>
 
-          <h2 className="text-2xl font-bold text-navy-900 mb-5 leading-snug">
+          <h2 className="text-2xl font-bold font-serif text-navy-900 mb-5 leading-snug">
             {data.bodyHeading2}
           </h2>
           <ul className="space-y-3 mb-10">
@@ -297,7 +297,7 @@ export default function LandingPage({ lang }: Props) {
             ))}
           </ul>
 
-          <h2 className="text-2xl font-bold text-navy-900 mb-4 leading-snug">
+          <h2 className="text-2xl font-bold font-serif text-navy-900 mb-4 leading-snug">
             {data.bodyHeading3}
           </h2>
           <p className="text-gray-600 leading-relaxed">
@@ -320,7 +320,7 @@ export default function LandingPage({ lang }: Props) {
                   <div className="w-10 h-10 bg-navy-50 rounded-xl flex items-center justify-center mb-4">
                     <Icon size={20} className="text-navy-700" />
                   </div>
-                  <h3 className="text-base font-bold text-navy-900 mb-2 leading-snug">
+                  <h3 className="text-base font-bold font-serif text-navy-900 mb-2 leading-snug">
                     {feat.title}
                   </h3>
                   <p className="text-gray-500 text-sm leading-relaxed mb-4">
@@ -345,7 +345,7 @@ export default function LandingPage({ lang }: Props) {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <div className="text-gold-600 font-semibold text-sm uppercase tracking-wider mb-3">{t('faq.eyebrow')}</div>
-            <h2 className="text-3xl lg:text-4xl font-bold text-navy-900 mb-4">{t('faq.title')}</h2>
+            <h2 className="text-3xl lg:text-4xl font-bold font-serif text-navy-900 mb-4">{t('faq.title')}</h2>
             <p className="text-gray-500 max-w-xl mx-auto text-sm">{t('faq.intro')}</p>
           </div>
           {faqCategories.map((cat, ci) => {
@@ -386,7 +386,7 @@ export default function LandingPage({ lang }: Props) {
             );
           })}
           <div className="mt-10 bg-navy-50 rounded-2xl p-8 text-center border border-navy-100">
-            <h3 className="text-lg font-bold text-navy-900 mb-2">{t('faq.stillQuestions')}</h3>
+            <h3 className="text-lg font-bold font-serif text-navy-900 mb-2">{t('faq.stillQuestions')}</h3>
             <p className="text-gray-600 text-sm mb-6">{t('faq.stillQuestions.sub')}</p>
             <Link
               to="/contact"
@@ -404,7 +404,7 @@ export default function LandingPage({ lang }: Props) {
       {/* Final CTA */}
       <section className="py-16 bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-2xl lg:text-3xl font-bold text-white mb-3 leading-snug">
+          <h2 className="text-2xl lg:text-3xl font-bold font-serif text-white mb-3 leading-snug">
             {data.finalCtaHeading}
           </h2>
           <p className="text-gray-300 mb-8 leading-relaxed">
