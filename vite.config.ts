@@ -60,6 +60,8 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
+    strictPort: true,
+    allowedHosts: true,
     headers: {
       'X-Frame-Options': 'ALLOWALL',
       'Content-Security-Policy': "frame-ancestors *",
