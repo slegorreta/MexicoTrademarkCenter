@@ -60,6 +60,10 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
+    headers: {
+      'X-Frame-Options': 'ALLOWALL',
+      'Content-Security-Policy': "frame-ancestors *",
+    },
   },
   optimizeDeps: {
     exclude: ['lucide-react'],
