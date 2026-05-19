@@ -186,14 +186,14 @@ function pageBreak() {
 // DATA
 // ═══════════════════════════════════════════════════════════════════════════
 const LANGS = [
-  { code: 'es', path: '/es/', lang: 'es',      ogLocale: 'es_MX', title: 'Registro de Marca Asequible en México | IMPI Online — MexicoTrademarkCenter',             desc: 'Registro de marca asequible en México ante el IMPI, 100% en línea. Desde USD $270 por clase, todo incluido. Presentación en 24 horas hábiles.',                                                                                           imgAlt: 'Registro de marca asequible en México — MexicoTrademarkCenter' },
-  { code: 'en', path: '/en/', lang: 'en',      ogLocale: 'en_US', title: 'Affordable Trademark Registration in Mexico | IMPI Filing — MexicoTrademarkCenter',        desc: 'Affordable trademark registration in Mexico with IMPI — all fees included from USD $270 per class. AI-powered classification, 24-hour filing, no hidden charges.',                                                                      imgAlt: 'Affordable trademark registration in Mexico — MexicoTrademarkCenter' },
-  { code: 'zh', path: '/zh/', lang: 'zh-Hans', ogLocale: 'zh_CN', title: '墨西哥商标注册低价全包 | IMPI在线申请 — MexicoTrademarkCenter',                            desc: '墨西哥商标注册费用低廉，每类仅USD $270全包含官费，IMPI官方在线申请，24工作小时内提交。AI智能分类，中文服务。',                                                                                                             imgAlt: '墨西哥商标注册低价全包 — MexicoTrademarkCenter' },
-  { code: 'pt', path: '/pt/', lang: 'pt',      ogLocale: 'pt_BR', title: 'Registro de Marca Acessível no México | Protocolo IMPI Online — MexicoTrademarkCenter',    desc: 'Registro de marca acessível no México junto ao IMPI — a partir de USD $270 por classe, tudo incluído. Protocolo em 24 horas úteis, classificação por IA, sem taxas ocultas.',                                                         imgAlt: 'Registro de marca acessível no México — MexicoTrademarkCenter' },
-  { code: 'de', path: '/de/', lang: 'de',      ogLocale: 'de_DE', title: 'Günstige Markenanmeldung in Mexiko | IMPI Online — MexicoTrademarkCenter',                 desc: 'Günstige Markenanmeldung in Mexiko beim IMPI — Komplettpreis ab USD $270 pro Klasse, alle Gebühren inklusive. Einreichung innerhalb von 24 Geschäftsstunden, vollständig online.',                                                      imgAlt: 'Günstige Markenanmeldung in Mexiko — MexicoTrademarkCenter' },
-  { code: 'fr', path: '/fr/', lang: 'fr',      ogLocale: 'fr_FR', title: 'Enregistrement de Marque Abordable au Mexique | Dépôt IMPI — MexicoTrademarkCenter',       desc: "Enregistrement de marque abordable au Mexique auprès de l'IMPI — à partir de USD $270 par classe, tous frais inclus. Dépôt en 24 heures ouvrées, sans frais cachés.",                                                                  imgAlt: 'Enregistrement de marque abordable au Mexique — MexicoTrademarkCenter' },
-  { code: 'hi', path: '/hi/', lang: 'hi',      ogLocale: 'hi_IN', title: 'मेक्सिको में किफायती ट्रेडमार्क पंजीकरण | IMPI ऑनलाइन — MexicoTrademarkCenter',         desc: 'मेक्सिको में किफायती ट्रेडमार्क पंजीकरण — USD $270 प्रति वर्ग, सभी शुल्क सहित। IMPI के साथ 24 व्यावसायिक घंटों में दाखिल। Amazon Brand Registry के लिए मान्य।',                                                                imgAlt: 'मेक्सिको में किफायती ट्रेडमार्क पंजीकरण — MexicoTrademarkCenter' },
-  { code: 'ja', path: '/ja/', lang: 'ja',      ogLocale: 'ja_JP', title: 'メキシコ商標登録 低価格・全費用込み | IMPI オンライン申請 — MexicoTrademarkCenter',          desc: 'メキシコ商標登録が低価格・全費用込みでUSD $270/区分から。IMPIにオンラインで申請、AIによる区分分類、24営業時間以内の提出。Amazon Brand Registryにも対応。',                                                                       imgAlt: 'メキシコ商標登録 低価格・全費用込み — MexicoTrademarkCenter' },
+  { code: 'es', path: '/es/', lang: 'es',      ogLocale: 'es_MX', title: 'Registro de Marca Asequible en México | IMPI Online — MexicoTrademarkCenter',             desc: 'Registro de marca asequible en México ante el IMPI, 100% en línea. Desde USD $299 por clase, todo incluido. Presentación en 24 horas hábiles.',                                                                                           imgAlt: 'Registro de marca asequible en México — MexicoTrademarkCenter' },
+  { code: 'en', path: '/en/', lang: 'en',      ogLocale: 'en_US', title: 'Affordable Trademark Registration in Mexico | IMPI Filing — MexicoTrademarkCenter',        desc: 'Affordable trademark registration in Mexico with IMPI — all fees included from USD $299 per class. AI-powered classification, 24-hour filing, no hidden charges.',                                                                      imgAlt: 'Affordable trademark registration in Mexico — MexicoTrademarkCenter' },
+  { code: 'zh', path: '/zh/', lang: 'zh-Hans', ogLocale: 'zh_CN', title: '墨西哥商标注册低价全包 | IMPI在线申请 — MexicoTrademarkCenter',                            desc: '墨西哥商标注册费用低廉，每类仅USD $299全包含官费，IMPI官方在线申请，24工作小时内提交。AI智能分类，中文服务。',                                                                                                             imgAlt: '墨西哥商标注册低价全包 — MexicoTrademarkCenter' },
+  { code: 'pt', path: '/pt/', lang: 'pt',      ogLocale: 'pt_BR', title: 'Registro de Marca Acessível no México | Protocolo IMPI Online — MexicoTrademarkCenter',    desc: 'Registro de marca acessível no México junto ao IMPI — a partir de USD $299 por classe, tudo incluído. Protocolo em 24 horas úteis, classificação por IA, sem taxas ocultas.',                                                         imgAlt: 'Registro de marca acessível no México — MexicoTrademarkCenter' },
+  { code: 'de', path: '/de/', lang: 'de',      ogLocale: 'de_DE', title: 'Günstige Markenanmeldung in Mexiko | IMPI Online — MexicoTrademarkCenter',                 desc: 'Günstige Markenanmeldung in Mexiko beim IMPI — Komplettpreis ab USD $299 pro Klasse, alle Gebühren inklusive. Einreichung innerhalb von 24 Geschäftsstunden, vollständig online.',                                                      imgAlt: 'Günstige Markenanmeldung in Mexiko — MexicoTrademarkCenter' },
+  { code: 'fr', path: '/fr/', lang: 'fr',      ogLocale: 'fr_FR', title: 'Enregistrement de Marque Abordable au Mexique | Dépôt IMPI — MexicoTrademarkCenter',       desc: "Enregistrement de marque abordable au Mexique auprès de l'IMPI — à partir de USD $299 par classe, tous frais inclus. Dépôt en 24 heures ouvrées, sans frais cachés.",                                                                  imgAlt: 'Enregistrement de marque abordable au Mexique — MexicoTrademarkCenter' },
+  { code: 'hi', path: '/hi/', lang: 'hi',      ogLocale: 'hi_IN', title: 'मेक्सिको में किफायती ट्रेडमार्क पंजीकरण | IMPI ऑनलाइन — MexicoTrademarkCenter',         desc: 'मेक्सिको में किफायती ट्रेडमार्क पंजीकरण — USD $299 प्रति वर्ग, सभी शुल्क सहित। IMPI के साथ 24 व्यावसायिक घंटों में दाखिल। Amazon Brand Registry के लिए मान्य।',                                                                imgAlt: 'मेक्सिको में किफायती ट्रेडमार्क पंजीकरण — MexicoTrademarkCenter' },
+  { code: 'ja', path: '/ja/', lang: 'ja',      ogLocale: 'ja_JP', title: 'メキシコ商標登録 低価格・全費用込み | IMPI オンライン申請 — MexicoTrademarkCenter',          desc: 'メキシコ商標登録が低価格・全費用込みでUSD $299/区分から。IMPIにオンラインで申請、AIによる区分分類、24営業時間以内の提出。Amazon Brand Registryにも対応。',                                                                       imgAlt: 'メキシコ商標登録 低価格・全費用込み — MexicoTrademarkCenter' },
 ];
 
 const BASE = 'https://www.mexicotrademarkcenter.com';
@@ -307,7 +307,7 @@ function langDetailSection(l) {
 
     h('JSON-LD Schemas Injected', 3),
     bullet('Organization + LegalService schema (shared across all pages)'),
-    bullet('Service + Offer schema with USD $270 pricing (shared across all pages)'),
+    bullet('Service + Offer schema with USD $299 pricing (shared across all pages)'),
     bullet('FAQPage schema — 4 Q&A pairs, localized in ' + flagMap[l.code]),
     ...spacer(1),
     pageBreak(),
@@ -366,7 +366,7 @@ const orgSchema = `{
   "logo": "https://www.mexicotrademarkcenter.com/IMG_2221_2.jpg",
   "description": "Affordable trademark registration in Mexico with IMPI —
     AI-powered classification, 24-hour filing, all fees included
-    from USD $270 per class.",
+    from USD $299 per class.",
   "areaServed": { "@type": "Country", "name": "Mexico" },
   "serviceType": "Trademark Registration",
   "priceRange": "$",
@@ -394,7 +394,7 @@ const offerSchema = `{
   "areaServed": { "@type": "Country", "name": "Mexico" },
   "offers": {
     "@type": "Offer",
-    "price": "270",
+    "price": "299",
     "priceCurrency": "USD",
     "description": "All-inclusive price per Nice class — covers service fees
       and official IMPI government fees. No hidden charges.",
@@ -421,7 +421,7 @@ const faqSchemaExample = `{
       "name": "How much does it cost to register a trademark in Mexico?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "USD $270 per class, all-inclusive: service fee USD $100
+        "text": "USD $299 per class, all-inclusive: service fee USD $129
                  plus IMPI government fees USD $170."
       }
     },
@@ -456,7 +456,7 @@ const structuredDataSection = [
   ...spacer(1),
 
   h('Schema 2 — Service + Offer (Pricing)', 3),
-  p(run('Scope: pricing signal. USD $270 per Nice class, InStock availability. Identical across all 8 pages.', { size: 19, italic: true, color: C.subText })),
+  p(run('Scope: pricing signal. USD $299 per Nice class, InStock availability. Identical across all 8 pages.', { size: 19, italic: true, color: C.subText })),
   ...codeBlock(offerSchema.split('\n')),
   ...spacer(1),
 

@@ -8,7 +8,7 @@ const STATS = [
   { value: '500+', label: 'Trademarks filed' },
   { value: '30+', label: 'Countries served' },
   { value: '4.9', label: 'Average rating' },
-  { value: '$270', label: 'All-in price per class' },
+  { value: '$299', label: 'All-in price per class' },
 ];
 
 const STEPS = [
@@ -42,7 +42,7 @@ const COMPARISON_LEFT = [
 ];
 
 const COMPARISON_RIGHT = [
-  '$270 flat per class',
+  '$299 flat per class',
   'Same-day filing available',
   '100% online guided form',
   'Attorney review included',
@@ -85,8 +85,8 @@ const FAQS = [
     a: 'After filing, IMPI typically issues a registration certificate within 12–18 months. You receive a filing receipt within days of submission, which gives you provisional protection.',
   },
   {
-    q: 'Is the $270 price the total cost, all included?',
-    a: 'Yes. Our $270 all-inclusive price covers the government fee ($170) and our service fee ($100). There are no hidden charges. Additional classes are $270 each.',
+    q: 'Is the $299 price the total cost, all included?',
+    a: 'Yes. Our $299 all-inclusive price covers the government fee ($170) and our service fee ($129). There are no hidden charges. Additional classes are $299 each.',
   },
   {
     q: 'Do I need to be present or send physical documents?',
@@ -161,7 +161,7 @@ function SearchMockup() {
                 </div>
                 <div className="flex justify-between">
                   <span>Filing fee</span>
-                  <span className="font-bold text-navy-900">$270 USD</span>
+                  <span className="font-bold text-navy-900">$299 USD</span>
                 </div>
               </div>
             </div>
@@ -225,7 +225,7 @@ export default function PreviewPage() {
                   to="/pricing"
                   className="inline-flex items-center justify-center gap-2 bg-white border border-gray-200 hover:border-gray-300 text-gray-700 font-semibold px-7 py-4 rounded-xl transition-all duration-200 text-sm hover:shadow-sm"
                 >
-                  See Pricing — $270 / class
+                  See Pricing — $299 / class
                 </Link>
               </div>
 
@@ -314,7 +314,7 @@ export default function PreviewPage() {
               One price. No surprises.
             </h2>
             <p className="text-gray-500 max-w-lg mx-auto text-base leading-relaxed">
-              Traditional law firms charge $800–$2,000 per class. We charge $270 — government fee and attorney review included.
+              Traditional law firms charge $800–$2,000 per class. We charge $299 — government fee and attorney review included.
             </p>
           </div>
 
@@ -323,7 +323,7 @@ export default function PreviewPage() {
             <div className="p-8">
               <div className="flex items-start justify-between mb-2">
                 <div>
-                  <div className="text-7xl font-extrabold text-navy-950 tracking-tight leading-none">$270</div>
+                  <div className="text-7xl font-extrabold text-navy-950 tracking-tight leading-none">$299</div>
                   <div className="text-sm text-gray-400 mt-1">per trademark class (USD)</div>
                 </div>
                 <span className="text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-full px-3 py-1 mt-1">
@@ -336,7 +336,7 @@ export default function PreviewPage() {
               <div className="bg-gray-50 rounded-xl p-4 mb-7 space-y-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Our service fee</span>
-                  <span className="font-semibold text-gray-800">$100</span>
+                  <span className="font-semibold text-gray-800">$129</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">IMPI government fee</span>
@@ -344,7 +344,7 @@ export default function PreviewPage() {
                 </div>
                 <div className="border-t border-gray-200 pt-3 flex justify-between font-bold text-sm">
                   <span className="text-navy-900">Total</span>
-                  <span className="text-navy-900">$270 USD</span>
+                  <span className="text-navy-900">$299 USD</span>
                 </div>
               </div>
 
@@ -557,7 +557,7 @@ export default function PreviewPage() {
               to="/apply"
               className="group inline-flex items-center justify-center gap-2.5 bg-gold-500 hover:bg-gold-400 text-white font-bold px-9 py-5 rounded-xl transition-all duration-200 text-sm shadow-xl hover:-translate-y-0.5"
             >
-              Start Filing — $270 per class
+              Start Filing — $299 per class
               <ArrowRight size={15} className="group-hover:translate-x-0.5 transition-transform" />
             </Link>
             <Link

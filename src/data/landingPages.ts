@@ -58,7 +58,7 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
     ogImageAlt: 'Registro de marca asequible en México — MexicoTrademarkCenter',
     targetCurrency: 'MXN',
     title: 'Registro de Marca en México | MexicoTrademarkCenter',
-    metaDescription: 'Registro de marca asequible en México ante el IMPI, 100% en línea. Desde USD $270 por clase, todo incluido. Presentación en 24 horas hábiles.',
+    metaDescription: 'Registro de marca asequible en México ante el IMPI, 100% en línea. Desde USD $299 por clase, todo incluido. Presentación en 24 horas hábiles.',
     h1: 'Registra tu marca en México ante el IMPI',
     valueProposition: 'La forma más rápida y asequible de registrar tu marca en México: IA para clasificación, presentación en 24 horas hábiles y precios todo incluido.',
     ctaLabel: 'Registrar mi marca ahora',
@@ -69,7 +69,7 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
     bodyBullets: [
       'IA de clasificación de Nice: describe tus productos o servicios en español y nuestra IA selecciona automáticamente la clase o clases correctas de las 45 disponibles.',
       'Generador de ideas de marca: si todavía no tienes nombre, nuestra IA propone opciones originales y verifica disponibilidad ante el IMPI al instante.',
-      'Precio todo incluido: USD $270 por clase cubre honorarios de servicio y tasas oficiales del IMPI. Sin sorpresas al final.',
+      'Precio todo incluido: USD $299 por clase cubre honorarios de servicio y tasas oficiales del IMPI. Sin sorpresas al final.',
       'Presentación en 24 horas hábiles: tu solicitud se presenta ante el IMPI dentro de las 24 horas hábiles siguientes a la confirmación del pago.',
       'Acuse de recibo válido para Amazon Brand Registry: el acuse oficial del IMPI que emitimos sirve como comprobante para activar Amazon Brand Registry México.',
     ],
@@ -87,7 +87,7 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
         role: 'Vendedor en línea — Ciudad de México, México',
       },
       {
-        quote: 'Excelente relación calidad-precio. Por USD $270 por clase obtuve un servicio profesional que en un despacho tradicional me hubiera costado el triple.',
+        quote: 'Excelente relación calidad-precio. Por USD $299 por clase obtuve un servicio profesional que en un despacho tradicional me hubiera costado el triple.',
         author: 'Sofía L.',
         role: 'Directora de operaciones, distribuidora — Monterrey, México',
       },
@@ -119,7 +119,7 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
       },
       {
         q: '¿Cuánto cuesta registrar una marca en México?',
-        a: 'Nuestro precio es de USD $270 por clase, todo incluido: honorarios de servicio (USD $100) y tasas oficiales del IMPI (USD $170, aproximadamente MXN $2,890). No hay cargos adicionales.',
+        a: 'Nuestro precio es de USD $299 por clase, todo incluido: honorarios de servicio (USD $129) y tasas oficiales del IMPI (USD $170, aproximadamente MXN $2,890). No hay cargos adicionales.',
       },
       {
         q: '¿Cuánto tiempo tarda el registro de marca en México?',
@@ -139,7 +139,7 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
       },
       {
         q: '¿Puedo registrar varias clases al mismo tiempo?',
-        a: 'Sí. Puedes incluir múltiples clases en una sola solicitud. El precio es de USD $270 por clase.',
+        a: 'Sí. Puedes incluir múltiples clases en una sola solicitud. El precio es de USD $299 por clase.',
       },
     ],
     finalCtaHeading: 'Protege tu marca en México hoy',
@@ -161,9 +161,9 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
     ogImageAlt: 'Affordable trademark registration in Mexico — MexicoTrademarkCenter',
     targetCurrency: 'USD',
     title: 'Mexico Trademark Registration | MexicoTrademarkCenter',
-    metaDescription: 'Affordable trademark registration in Mexico with IMPI — all fees included from USD $270 per class. AI-powered classification, 24-hour filing, no hidden charges.',
+    metaDescription: 'Affordable trademark registration in Mexico with IMPI — all fees included from USD $299 per class. AI-powered classification, 24-hour filing, no hidden charges.',
     h1: 'Register a Trademark in Mexico with IMPI',
-    valueProposition: 'The most affordable way to file a Mexico trademark — AI-powered classification, all fees included from USD $270 per class, 24-hour IMPI submission.',
+    valueProposition: 'The most affordable way to file a Mexico trademark — AI-powered classification, all fees included from USD $299 per class, 24-hour IMPI submission.',
     ctaLabel: 'Start My Application',
     trustStrip: ['Tax inclusive', 'Price match guarantee', '24-hour IMPI submission'],
     bodyHeading1: 'Why Register a Trademark in Mexico?',
@@ -172,7 +172,7 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
     bodyBullets: [
       'AI-powered Nice Classification: describe your goods and services in plain English and our AI maps them to the correct class out of 45 international categories — no legal knowledge required.',
       'AI Trademark Name Generator: not sure what to call your brand? Our AI generates options and checks IMPI availability instantly.',
-      'All-inclusive pricing: USD $270 per class covers service fees and official IMPI government fees. No hidden charges.',
+      'All-inclusive pricing: USD $299 per class covers service fees and official IMPI government fees. No hidden charges.',
       '24-hour IMPI submission: your application is filed with IMPI within 24 business hours of payment confirmation.',
       'Amazon Brand Registry ready: the official IMPI receipt we provide upon filing is accepted by Amazon to activate Amazon Brand Registry Mexico.',
     ],
@@ -222,7 +222,7 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
       },
       {
         q: 'How much does it cost to register a trademark in Mexico?',
-        a: 'Our all-inclusive price is USD $270 per class: service fee of USD $100 plus official IMPI government fees of USD $170. No hidden charges.',
+        a: 'Our all-inclusive price is USD $299 per class: service fee of USD $129 plus official IMPI government fees of USD $170. No hidden charges.',
       },
       {
         q: 'How long does Mexico trademark registration take?',
@@ -264,7 +264,7 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
     ogImageAlt: '墨西哥商标注册低价全包 — MexicoTrademarkCenter',
     targetCurrency: 'CNY',
     title: '墨西哥商标注册 | MexicoTrademarkCenter',
-    metaDescription: '墨西哥商标注册费用低廉，每类仅USD $270全包含官费，IMPI官方在线申请，24工作小时内提交。AI智能分类，中文服务。',
+    metaDescription: '墨西哥商标注册费用低廉，每类仅USD $299全包含官费，IMPI官方在线申请，24工作小时内提交。AI智能分类，中文服务。',
     h1: '墨西哥商标注册 — IMPI在线申请',
     valueProposition: '专为中国跨境卖家打造：费用低廉全透明，AI智能分类、24小时内向IMPI提交申请、含全部官费。',
     ctaLabel: '立即申请商标注册',
@@ -275,7 +275,7 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
     bodyBullets: [
       'AI智能尼斯分类：用中文描述您的商品或服务，AI自动从45个国际分类中选出正确类别，无需专业法律知识。',
       'AI商标创意生成器：还没想好品牌名？AI为您生成创意选项并即时查询IMPI数据库确认可用性。',
-      '全包价格透明：每类USD $270，含服务费（USD $100）和IMPI官方注册费（USD $170），无隐藏收费。',
+      '全包价格透明：每类USD $299，含服务费（USD $129）和IMPI官方注册费（USD $170），无隐藏收费。',
       '24工作小时内提交：付款确认后24工作小时内向IMPI提交申请。',
       'IMPI受理回执可用于Amazon品牌注册：我们提供的官方IMPI受理通知书是Amazon品牌注册中国卖家最常用的申请证明文件。',
     ],
@@ -325,7 +325,7 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
       },
       {
         q: '墨西哥商标注册费用是多少？',
-        a: '我们的全包价格为每类USD $270，包含服务费USD $100和IMPI官方注册费USD $170（约合人民币¥1,950，视汇率而定）。',
+        a: '我们的全包价格为每类USD $299，包含服务费USD $129和IMPI官方注册费USD $170（约合人民币¥1,950，视汇率而定）。',
       },
       {
         q: 'IMPI受理回执可以用于Amazon品牌注册吗？',
@@ -341,7 +341,7 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
       },
       {
         q: '可以同时注册多个类别吗？',
-        a: '可以。您可以在同一订单中申请多个类别，每类USD $270。',
+        a: '可以。您可以在同一订单中申请多个类别，每类USD $299。',
       },
       {
         q: '如果IMPI发出官方意见书怎么办？',
@@ -367,9 +367,9 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
     ogImageAlt: 'Registro de marca acessível no México — MexicoTrademarkCenter',
     targetCurrency: 'BRL',
     title: 'Registro de Marca no México | MexicoTrademarkCenter',
-    metaDescription: 'Registro de marca acessível no México junto ao IMPI — a partir de USD $270 por classe, tudo incluído. Protocolo em 24 horas úteis, classificação por IA, sem taxas ocultas.',
+    metaDescription: 'Registro de marca acessível no México junto ao IMPI — a partir de USD $299 por classe, tudo incluído. Protocolo em 24 horas úteis, classificação por IA, sem taxas ocultas.',
     h1: 'Registro de Marca no México — Protocolo IMPI Online',
-    valueProposition: 'A forma mais acessível de registrar sua marca no México: classificação por IA, todos os impostos inclusos a partir de USD $270 por classe, protocolo em 24 horas úteis.',
+    valueProposition: 'A forma mais acessível de registrar sua marca no México: classificação por IA, todos os impostos inclusos a partir de USD $299 por classe, protocolo em 24 horas úteis.',
     ctaLabel: 'Registrar Minha Marca',
     trustStrip: ['Impostos inclusos', 'Garantia de menor preço', 'Protocolo no IMPI em 24 horas úteis'],
     bodyHeading1: 'Por que registrar uma marca no México?',
@@ -378,7 +378,7 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
     bodyBullets: [
       'Classificação por IA: descreva seus produtos ou serviços em português e nossa IA seleciona automaticamente a classe correta entre as 45 da Classificação de Nice.',
       'Gerador de nomes de marca por IA: ainda não sabe como chamar sua marca? Nossa IA sugere opções criativas e verifica disponibilidade no IMPI em tempo real.',
-      'Preço com tudo incluído: USD $270 por classe cobre honorários de serviço e taxas oficiais do IMPI. Sem surpresas.',
+      'Preço com tudo incluído: USD $299 por classe cobre honorários de serviço e taxas oficiais do IMPI. Sem surpresas.',
       'Protocolo em 24 horas úteis: sua solicitação é protocolada no IMPI dentro de 24 horas úteis após a confirmação do pagamento.',
       'Comprovante aceito pelo Amazon Brand Registry: o comprovante oficial do IMPI é reconhecido pelo Amazon para ativar o Amazon Brand Registry México.',
     ],
@@ -428,7 +428,7 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
       },
       {
         q: 'Quanto custa o registro de marca no México?',
-        a: 'Nosso preço é USD $270 por classe, tudo incluído: honorários de serviço (USD $100) e taxas oficiais do IMPI (USD $170).',
+        a: 'Nosso preço é USD $299 por classe, tudo incluído: honorários de serviço (USD $129) e taxas oficiais do IMPI (USD $170).',
       },
       {
         q: 'O comprovante do IMPI serve para o Amazon Brand Registry?',
@@ -444,7 +444,7 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
       },
       {
         q: 'Posso registrar mais de uma classe ao mesmo tempo?',
-        a: 'Sim. Você pode incluir múltiplas classes em um único pedido. O preço é de USD $270 por classe.',
+        a: 'Sim. Você pode incluir múltiplas classes em um único pedido. O preço é de USD $299 por classe.',
       },
     ],
     finalCtaHeading: 'Proteja sua marca no México hoje mesmo',
@@ -465,7 +465,7 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
     ogImageAlt: 'Günstige Markenanmeldung in Mexiko — MexicoTrademarkCenter',
     targetCurrency: 'EUR',
     title: 'Markenanmeldung in Mexiko | MexicoTrademarkCenter',
-    metaDescription: 'Günstige Markenanmeldung in Mexiko beim IMPI — Komplettpreis ab USD $270 pro Klasse, alle Gebühren inklusive. Einreichung innerhalb von 24 Geschäftsstunden, vollständig online.',
+    metaDescription: 'Günstige Markenanmeldung in Mexiko beim IMPI — Komplettpreis ab USD $299 pro Klasse, alle Gebühren inklusive. Einreichung innerhalb von 24 Geschäftsstunden, vollständig online.',
     h1: 'Markenanmeldung in Mexiko beim IMPI',
     valueProposition: 'Die günstigste Markenanmeldung in Mexiko: KI-gestützte Klassifizierung, Einreichung innerhalb von 24 Geschäftsstunden, Komplettpreis inklusive aller IMPI-Gebühren.',
     ctaLabel: 'Marke jetzt anmelden',
@@ -476,7 +476,7 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
     bodyBullets: [
       'KI-gestützte Nizza-Klassifizierung: Beschreiben Sie Ihre Waren oder Dienstleistungen auf Deutsch und unsere KI wählt automatisch die korrekte Klasse aus den 45 Nizza-Klassen aus.',
       'KI-Markenideengenerator: Noch kein Markenname? Unsere KI schlägt kreative Optionen vor und prüft die IMPI-Verfügbarkeit sofort.',
-      'Komplettpreis: USD $270 pro Klasse deckt Service- und offizielle IMPI-Gebühren. Keine versteckten Kosten.',
+      'Komplettpreis: USD $299 pro Klasse deckt Service- und offizielle IMPI-Gebühren. Keine versteckten Kosten.',
       'Einreichung innerhalb von 24 Geschäftsstunden: Ihre Anmeldung wird innerhalb von 24 Geschäftsstunden nach Zahlungsbestätigung beim IMPI eingereicht.',
       'Amazon Brand Registry: Der offizielle IMPI-Eingangsbeleg wird von Amazon als Nachweis für die Aktivierung des Amazon Brand Registry Mexiko akzeptiert.',
     ],
@@ -526,7 +526,7 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
       },
       {
         q: 'Was kostet eine Markenanmeldung in Mexiko?',
-        a: 'Unser Komplettpreis beträgt USD $270 pro Klasse (Servicegebühr USD $100 + offizielle IMPI-Gebühren USD $170). Keine Zusatzkosten.',
+        a: 'Unser Komplettpreis beträgt USD $299 pro Klasse (Servicegebühr USD $129 + offizielle IMPI-Gebühren USD $170). Keine Zusatzkosten.',
       },
       {
         q: 'Wie lange dauert die Eintragung?',
@@ -538,7 +538,7 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
       },
       {
         q: 'Kann ich mehrere Klassen gleichzeitig anmelden?',
-        a: 'Ja. Sie können mehrere Klassen in einem Auftrag anmelden. Der Preis beträgt USD $270 pro Klasse.',
+        a: 'Ja. Sie können mehrere Klassen in einem Auftrag anmelden. Der Preis beträgt USD $299 pro Klasse.',
       },
       {
         q: 'Was passiert bei einer IMPI-Beanstandung?',
@@ -564,9 +564,9 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
     ogImageAlt: 'Enregistrement de marque abordable au Mexique — MexicoTrademarkCenter',
     targetCurrency: 'EUR',
     title: 'Enregistrement de Marque au Mexique | MexicoTrademarkCenter',
-    metaDescription: 'Enregistrement de marque abordable au Mexique auprès de l\'IMPI — à partir de USD $270 par classe, tous frais inclus. Dépôt en 24 heures ouvrées, sans frais cachés.',
+    metaDescription: 'Enregistrement de marque abordable au Mexique auprès de l\'IMPI — à partir de USD $299 par classe, tous frais inclus. Dépôt en 24 heures ouvrées, sans frais cachés.',
     h1: 'Enregistrement de marque au Mexique — Dépôt IMPI en ligne',
-    valueProposition: 'La solution la plus abordable pour enregistrer votre marque au Mexique : classification par IA, tous frais inclus dès USD $270 par classe, dépôt en 24 heures ouvrées.',
+    valueProposition: 'La solution la plus abordable pour enregistrer votre marque au Mexique : classification par IA, tous frais inclus dès USD $299 par classe, dépôt en 24 heures ouvrées.',
     ctaLabel: 'Déposer ma marque maintenant',
     trustStrip: ['Taxes incluses', 'Garantie meilleur prix', 'Dépôt IMPI en 24 heures ouvrées'],
     bodyHeading1: 'Pourquoi enregistrer une marque au Mexique ?',
@@ -575,7 +575,7 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
     bodyBullets: [
       'Classification par IA : décrivez vos produits ou services en français et notre IA sélectionne automatiquement la classe correcte parmi les 45 de la Classification de Nice.',
       'Générateur d\'idées de marque par IA : pas encore de nom ? L\'IA propose des options créatives et vérifie la disponibilité auprès de l\'IMPI instantanément.',
-      'Tarif tout compris : USD $270 par classe couvre les honoraires de service et les taxes officielles de l\'IMPI. Aucun frais caché.',
+      'Tarif tout compris : USD $299 par classe couvre les honoraires de service et les taxes officielles de l\'IMPI. Aucun frais caché.',
       'Dépôt en 24 heures ouvrées : votre demande est déposée auprès de l\'IMPI dans les 24 heures ouvrées suivant la confirmation du paiement.',
       'Accusé de réception valable pour Amazon Brand Registry : l\'accusé officiel de l\'IMPI est reconnu par Amazon pour activer Amazon Brand Registry Mexique.',
     ],
@@ -625,7 +625,7 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
       },
       {
         q: 'Quel est le coût d\'enregistrement d\'une marque au Mexique ?',
-        a: 'Notre tarif tout compris est de USD $270 par classe : honoraires de service (USD $100) + taxes officielles IMPI (USD $170). Aucun frais supplémentaire.',
+        a: 'Notre tarif tout compris est de USD $299 par classe : honoraires de service (USD $129) + taxes officielles IMPI (USD $170). Aucun frais supplémentaire.',
       },
       {
         q: 'Quel est le délai d\'enregistrement au Mexique ?',
@@ -641,7 +641,7 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
       },
       {
         q: 'Puis-je déposer plusieurs classes simultanément ?',
-        a: 'Oui. Vous pouvez inclure plusieurs classes dans une seule demande. Le tarif est de USD $270 par classe.',
+        a: 'Oui. Vous pouvez inclure plusieurs classes dans une seule demande. Le tarif est de USD $299 par classe.',
       },
     ],
     finalCtaHeading: 'Protégez votre marque au Mexique dès aujourd\'hui',
@@ -663,9 +663,9 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
     ogImageAlt: 'मेक्सिको में किफायती ट्रेडमार्क पंजीकरण — MexicoTrademarkCenter',
     targetCurrency: 'INR',
     title: 'मेक्सिको में ट्रेडमार्क पंजीकरण | MexicoTrademarkCenter',
-    metaDescription: 'मेक्सिको में किफायती ट्रेडमार्क पंजीकरण — USD $270 प्रति वर्ग, सभी शुल्क सहित। IMPI के साथ 24 व्यावसायिक घंटों में दाखिल। Amazon Brand Registry के लिए मान्य।',
+    metaDescription: 'मेक्सिको में किफायती ट्रेडमार्क पंजीकरण — USD $299 प्रति वर्ग, सभी शुल्क सहित। IMPI के साथ 24 व्यावसायिक घंटों में दाखिल। Amazon Brand Registry के लिए मान्य।',
     h1: 'मेक्सिको में ट्रेडमार्क पंजीकरण — IMPI ऑनलाइन',
-    valueProposition: 'भारतीय Amazon विक्रेताओं और निर्यातकों के लिए किफायती समाधान: AI-संचालित वर्गीकरण, USD $270 प्रति वर्ग सर्व-समावेशी, 24 घंटे में IMPI दाखिलगी।',
+    valueProposition: 'भारतीय Amazon विक्रेताओं और निर्यातकों के लिए किफायती समाधान: AI-संचालित वर्गीकरण, USD $299 प्रति वर्ग सर्व-समावेशी, 24 घंटे में IMPI दाखिलगी।',
     ctaLabel: 'अभी आवेदन करें',
     trustStrip: ['कर सहित मूल्य', 'मूल्य गारंटी', '24 व्यावसायिक घंटों में IMPI दाखिलगी'],
     bodyHeading1: 'मेक्सिको में ट्रेडमार्क पंजीकरण क्यों आवश्यक है?',
@@ -674,7 +674,7 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
     bodyBullets: [
       'AI-संचालित Nice वर्गीकरण: अपने उत्पादों या सेवाओं को हिंदी में वर्णित करें और हमारी AI 45 अंतर्राष्ट्रीय वर्गों में से सही वर्ग स्वचालित रूप से चुनती है।',
       'AI ट्रेडमार्क आइडिया जनरेटर: ब्रांड नाम नहीं तय किया? AI रचनात्मक विकल्प उत्पन्न करती है और तुरंत IMPI उपलब्धता जाँचती है।',
-      'सर्व-समावेशी मूल्य: प्रति वर्ग USD $270 में सेवा शुल्क और IMPI आधिकारिक शुल्क दोनों शामिल हैं। कोई छिपा हुआ शुल्क नहीं।',
+      'सर्व-समावेशी मूल्य: प्रति वर्ग USD $299 में सेवा शुल्क और IMPI आधिकारिक शुल्क दोनों शामिल हैं। कोई छिपा हुआ शुल्क नहीं।',
       '24 व्यावसायिक घंटों में दाखिलगी: भुगतान की पुष्टि के 24 व्यावसायिक घंटों के भीतर आपका आवेदन IMPI में दाखिल किया जाता है।',
       'Amazon Brand Registry के लिए मान्य: IMPI की आधिकारिक रसीद Amazon Brand Registry Mexico सक्रिय करने के लिए Amazon द्वारा स्वीकृत है।',
     ],
@@ -724,7 +724,7 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
       },
       {
         q: 'मेक्सिको में ट्रेडमार्क पंजीकरण की लागत कितनी है?',
-        a: 'हमारा सर्व-समावेशी मूल्य USD $270 प्रति वर्ग है: सेवा शुल्क USD $100 + IMPI आधिकारिक शुल्क USD $170। कोई अतिरिक्त शुल्क नहीं।',
+        a: 'हमारा सर्व-समावेशी मूल्य USD $299 प्रति वर्ग है: सेवा शुल्क USD $129 + IMPI आधिकारिक शुल्क USD $170। कोई अतिरिक्त शुल्क नहीं।',
       },
       {
         q: 'क्या IMPI रसीद Amazon Brand Registry के लिए मान्य है?',
@@ -740,7 +740,7 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
       },
       {
         q: 'क्या एक साथ कई वर्गों के लिए आवेदन कर सकते हैं?',
-        a: 'हाँ। एक ही ऑर्डर में कई वर्ग शामिल कर सकते हैं। मूल्य USD $270 प्रति वर्ग है।',
+        a: 'हाँ। एक ही ऑर्डर में कई वर्ग शामिल कर सकते हैं। मूल्य USD $299 प्रति वर्ग है।',
       },
     ],
     finalCtaHeading: 'आज ही मेक्सिको में अपने ब्रांड की सुरक्षा करें',
@@ -761,9 +761,9 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
     ogImageAlt: 'メキシコ商標登録 低価格・全費用込み — MexicoTrademarkCenter',
     targetCurrency: 'JPY',
     title: 'メキシコ商標登録 | MexicoTrademarkCenter',
-    metaDescription: 'メキシコ商標登録が低価格・全費用込みでUSD $270/区分から。IMPIにオンラインで申請、AIによる区分分類、24営業時間以内の提出。Amazon Brand Registryにも対応。',
+    metaDescription: 'メキシコ商標登録が低価格・全費用込みでUSD $299/区分から。IMPIにオンラインで申請、AIによる区分分類、24営業時間以内の提出。Amazon Brand Registryにも対応。',
     h1: 'メキシコ商標登録 — IMPI オンライン申請',
-    valueProposition: '日本企業・ブランドのための低コストなメキシコ商標登録：AIによる区分分類、全費用込みUSD $270/区分、24営業時間以内のIMPI申請提出。',
+    valueProposition: '日本企業・ブランドのための低コストなメキシコ商標登録：AIによる区分分類、全費用込みUSD $299/区分、24営業時間以内のIMPI申請提出。',
     ctaLabel: '今すぐ商標登録を申請する',
     trustStrip: ['税込み価格', '最低価格保証', '24営業時間以内にIMPI申請'],
     bodyHeading1: 'なぜメキシコで商標登録が必要なのか？',
@@ -772,7 +772,7 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
     bodyBullets: [
       'AIによるニース分類：商品・サービスを日本語で説明するだけで、AIが45の国際分類の中から正しい区分を自動的に選択します。',
       'AI商標アイデアジェネレーター：ブランド名が決まっていない場合は、AIが独創的な選択肢を提案し、IMPIデータベースで即座に空き状況を確認します。',
-      '全費用込み価格：1区分USD $270でサービス料とIMPI公式登録費用がすべて含まれます。追加料金なし。',
+      '全費用込み価格：1区分USD $299でサービス料とIMPI公式登録費用がすべて含まれます。追加料金なし。',
       '24営業時間以内の申請提出：支払い確認後24営業時間以内にIMPIへ申請書を提出します。',
       'Amazon Brand Registry対応：申請時に発行するIMPI公式受理書は、Amazon Brand Registry Mexicoの有効化にAmazonが認める書類です。',
     ],
@@ -790,7 +790,7 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
         role: 'ライセンス担当、消費財メーカー — 大阪、日本',
       },
       {
-        quote: '全費用込みのUSD $270という価格は非常に透明で、代理人を使った場合の数分の1のコストです。サービスの質も申し分ありません。',
+        quote: '全費用込みのUSD $299という価格は非常に透明で、代理人を使った場合の数分の1のコストです。サービスの質も申し分ありません。',
         author: '山本 K.',
         role: 'IP担当マネージャー、化粧品会社 — 名古屋、日本',
       },
@@ -822,7 +822,7 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
       },
       {
         q: 'メキシコ商標登録の費用はいくらですか？',
-        a: '1区分あたりUSD $270（全費用込み）：サービス料USD $100 + IMPI公式登録費USD $170。追加費用は一切ありません。',
+        a: '1区分あたりUSD $299（全費用込み）：サービス料USD $129 + IMPI公式登録費USD $170。追加費用は一切ありません。',
       },
       {
         q: 'IMPI受理書はAmazon Brand Registryに使えますか？',
@@ -838,7 +838,7 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
       },
       {
         q: '複数の区分を同時に申請できますか？',
-        a: 'はい。1つの出願で複数の区分を申請できます。価格は1区分あたりUSD $270です。',
+        a: 'はい。1つの出願で複数の区分を申請できます。価格は1区分あたりUSD $299です。',
       },
       {
         q: 'IMPIから拒絶理由通知が届いた場合はどうなりますか？',

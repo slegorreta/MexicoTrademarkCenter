@@ -1585,13 +1585,13 @@ export default function TrademarkClearancePanel({
                  'File Your Trademark'}
               </p>
               <p className="text-xs text-emerald-700 mt-0.5">
-                {lang === 'es' ? '100% en línea · USD$270 por clase · Revisado por expertos' :
-                 lang === 'zh' ? '100%在线 · 每类USD$270 · 专家审核' :
-                 lang === 'de' ? '100% online · USD$270 pro Klasse · Expertengeprüft' :
-                 lang === 'fr' ? '100% en ligne · USD$270 par classe · Révisé par des experts' :
-                 lang === 'hi' ? '100% ऑनलाइन · प्रति वर्ग USD$270 · विशेषज्ञ समीक्षित' :
-                 lang === 'pt' ? '100% online · USD$270 por classe · Revisado por especialistas' :
-                 '100% online · USD$270 per class · Expert-reviewed'}
+                {lang === 'es' ? '100% en línea · USD$299 por clase · Revisado por expertos' :
+                 lang === 'zh' ? '100%在线 · 每类USD$299 · 专家审核' :
+                 lang === 'de' ? '100% online · USD$299 pro Klasse · Expertengeprüft' :
+                 lang === 'fr' ? '100% en ligne · USD$299 par classe · Révisé par des experts' :
+                 lang === 'hi' ? '100% ऑनलाइन · प्रति वर्ग USD$299 · विशेषज्ञ समीक्षित' :
+                 lang === 'pt' ? '100% online · USD$299 por classe · Revisado por especialistas' :
+                 '100% online · USD$299 per class · Expert-reviewed'}
               </p>
             </div>
           </div>

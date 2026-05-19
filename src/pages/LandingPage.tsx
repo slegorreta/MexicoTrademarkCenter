@@ -7,7 +7,7 @@ import CurrencyDisplay from '../components/CurrencyDisplay';
 import { LANDING_PAGES, HREFLANG_ALTERNATES, type LandingPageData } from '../data/landingPages';
 import AboutSection from '../components/AboutSection';
 
-const PRICE_PER_CLASS = 270;
+const PRICE_PER_CLASS = 299;
 
 interface Props {
   lang: string;

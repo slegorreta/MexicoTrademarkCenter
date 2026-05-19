@@ -56,14 +56,14 @@ export default function PricingPage() {
             <div className="px-8 pt-8 pb-10">
               {/* Price breakdown */}
               <div className="text-center mb-8">
-                <div className="text-6xl font-bold text-navy-900 mb-2">$270</div>
+                <div className="text-6xl font-bold text-navy-900 mb-2">$299</div>
                 <div className="text-gray-500 text-sm mb-6">
                   {t('pricing.card.perClass')}
                 </div>
                 <div className="bg-gray-50 rounded-2xl p-4 text-left space-y-2">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-600">{t('pricing.card.serviceFee')}</span>
-                    <span className="font-semibold text-navy-900">USD $100</span>
+                    <span className="font-semibold text-navy-900">USD $129</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-600">{t('pricing.card.govFee')}</span>
@@ -71,7 +71,7 @@ export default function PricingPage() {
                   </div>
                   <div className="border-t border-gray-200 pt-2 flex items-center justify-between text-sm font-bold">
                     <span className="text-navy-900">{t('pricing.card.total')}</span>
-                    <span className="text-gold-600">USD $270</span>
+                    <span className="text-gold-600">USD $299</span>
                   </div>
                   <div className="pt-2">
                     <p className="text-xs font-bold text-emerald-700">{t('pricing.taxesIncluded')}</p>

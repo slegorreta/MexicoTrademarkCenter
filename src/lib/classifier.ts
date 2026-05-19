@@ -144,6 +144,6 @@ export function getAllClasses(): NiceClassData[] {
 }
 
 export function calculatePrice(classCount: number): { pricePerClass: number; total: number } {
-  const pricePerClass = 100;
+  const pricePerClass = 129;
   return { pricePerClass, total: pricePerClass * classCount };
 }

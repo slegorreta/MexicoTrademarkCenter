@@ -249,7 +249,7 @@ export default function HomePage() {
                   <div className="text-xs text-gray-500 mt-0.5">Traditional firms</div>
                 </div>
                 <div className="text-center flex-1">
-                  <div className="text-2xl font-bold text-green-600">$270</div>
+                  <div className="text-2xl font-bold text-green-600">$299</div>
                   <div className="text-xs text-gray-500 mt-0.5">Mexico Trademark Center</div>
                 </div>
               </div>
@@ -349,14 +349,14 @@ export default function HomePage() {
               <div className="text-xs font-bold text-white/80 uppercase tracking-widest mb-3">
                 {t('pricing.package.label')}
               </div>
-              <div className="text-6xl font-bold mb-1">$270</div>
+              <div className="text-6xl font-bold mb-1">$299</div>
               <div className="text-white/80 text-sm mb-5">
                 {t('pricing.package.perClass')}
               </div>
               <div className="bg-white/15 rounded-xl px-5 py-4 text-left space-y-2 mb-5">
                 <div className="flex justify-between text-sm text-white/90">
                   <span>{t('pricing.package.serviceFee')}</span>
-                  <span className="font-semibold">USD $100</span>
+                  <span className="font-semibold">USD $129</span>
                 </div>
                 <div className="flex justify-between text-sm text-white/90">
                   <span>{t('pricing.package.govFee')}</span>

@@ -50,7 +50,7 @@ const TESTIMONIALS = [
 ];
 
 const COMPARISON = [
-  { label: 'Total cost', them: '$800–$2,000+', us: '$270 / class' },
+  { label: 'Total cost', them: '$800–$2,000+', us: '$299 / class' },
   { label: 'Timeline to file', them: '2–4 weeks', us: 'Same day' },
   { label: 'Process', them: 'Email chains & PDFs', us: '100% online guided form' },
   { label: 'AI assistance', them: false, us: true },
@@ -73,8 +73,8 @@ const FAQS = [
     a: 'After filing, IMPI typically issues a registration certificate within 12–18 months. You receive a filing receipt within days of submission, which gives you provisional protection.',
   },
   {
-    q: 'Is the $270 price the total cost, all included?',
-    a: 'Yes. Our $270 all-inclusive price covers the government fee ($170) and our service fee ($100). There are no hidden charges. Additional classes are $270 each.',
+    q: 'Is the $299 price the total cost, all included?',
+    a: 'Yes. Our $299 all-inclusive price covers the government fee ($170) and our service fee ($129). There are no hidden charges. Additional classes are $299 each.',
   },
   {
     q: 'Do I need to be present or send physical documents?',
@@ -108,7 +108,7 @@ function StickyMobileCTA() {
           to="/apply"
           className="flex-1 flex items-center justify-center gap-2 bg-gold-500 hover:bg-gold-600 text-white font-bold py-3.5 rounded-xl transition-colors text-sm"
         >
-          Start Filing — $270 / class
+          Start Filing — $299 / class
           <ArrowRight size={15} />
         </Link>
       </div>
@@ -172,7 +172,7 @@ function MockupCard() {
           <div className="flex gap-2">
             <div className="flex-1 bg-white/10 rounded-lg px-3 py-2">
               <div className="text-white/40 text-xs mb-0.5">Total</div>
-              <div className="text-gold-300 text-sm font-bold">$270 USD</div>
+              <div className="text-gold-300 text-sm font-bold">$299 USD</div>
             </div>
             <div className="flex-1 bg-emerald-500/20 border border-emerald-400/30 rounded-lg px-3 py-2 flex items-center justify-center gap-1">
               <CheckCircle2 size={12} className="text-emerald-400" />
@@ -370,7 +370,7 @@ export default function HomePageV2() {
                 One price.<br />No surprises.
               </h2>
               <p className="text-gray-500 text-lg leading-relaxed mb-8">
-                Traditional law firms charge $800–$2,000 per class. We charge $270 — that's the government fee plus our service, all in.
+                Traditional law firms charge $800–$2,000 per class. We charge $299 — that's the government fee plus our service, all in.
               </p>
               <div className="flex flex-col gap-3">
                 {[
@@ -407,7 +407,7 @@ export default function HomePageV2() {
 
                     <div className="mb-6">
                       <div className="flex items-end gap-2 mb-1">
-                        <span className="text-6xl font-extrabold text-navy-900 tracking-tight">$270</span>
+                        <span className="text-6xl font-extrabold text-navy-900 tracking-tight">$299</span>
                         <span className="text-gray-400 text-lg mb-2">USD</span>
                       </div>
                       <div className="text-gray-400 text-sm line-through">vs. $800–$2,000 at a law firm</div>
@@ -417,7 +417,7 @@ export default function HomePageV2() {
                     <div className="bg-gray-50 rounded-xl p-4 mb-6 space-y-2.5">
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-500">Our service fee</span>
-                        <span className="font-semibold text-gray-800">$100</span>
+                        <span className="font-semibold text-gray-800">$129</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-500">IMPI government fee</span>
@@ -425,7 +425,7 @@ export default function HomePageV2() {
                       </div>
                       <div className="border-t border-gray-200 pt-2 flex justify-between text-sm font-bold">
                         <span className="text-navy-900">Total</span>
-                        <span className="text-navy-900">$270 USD</span>
+                        <span className="text-navy-900">$299 USD</span>
                       </div>
                     </div>
 
@@ -444,7 +444,7 @@ export default function HomePageV2() {
                   </div>
                 </div>
                 <p className="text-center text-xs text-gray-400 mt-3">
-                  Need multiple classes? Each additional class is $270.
+                  Need multiple classes? Each additional class is $299.
                 </p>
               </div>
             </div>
@@ -645,7 +645,7 @@ export default function HomePageV2() {
               to="/apply"
               className="group inline-flex items-center justify-center gap-2.5 bg-gold-500 hover:bg-gold-400 text-white font-bold px-8 py-5 rounded-xl transition-all duration-200 shadow-xl hover:shadow-gold-500/30 hover:-translate-y-0.5 text-base"
             >
-              Start Filing — $270 per class
+              Start Filing — $299 per class
               <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
             </Link>
             <Link

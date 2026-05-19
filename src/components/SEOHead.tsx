@@ -30,7 +30,7 @@ const ORGANIZATION_SCHEMA = JSON.stringify({
   name: 'MexicoTrademarkCenter',
   url: BASE_URL,
   logo: `${BASE_URL}/IMG_2221_2.jpg`,
-  description: 'Affordable trademark registration in Mexico with IMPI — AI-powered classification, 24-hour filing, all fees included from USD $270 per class.',
+  description: 'Affordable trademark registration in Mexico with IMPI — AI-powered classification, 24-hour filing, all fees included from USD $299 per class.',
   areaServed: {
     '@type': 'Country',
     name: 'Mexico',
@@ -61,7 +61,7 @@ const OFFER_SCHEMA = JSON.stringify({
   },
   offers: {
     '@type': 'Offer',
-    price: '270',
+    price: '299',
     priceCurrency: 'USD',
     description: 'All-inclusive price per Nice class — covers service fees and official IMPI government fees. No hidden charges.',
     availability: 'https://schema.org/InStock',
