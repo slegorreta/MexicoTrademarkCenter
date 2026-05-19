@@ -57,6 +57,10 @@ function publicSafe() {
 export default defineConfig({
   plugins: [react(), publicSafe()],
   publicDir: false,
+  server: {
+    host: true,
+    port: 5173,
+  },
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
