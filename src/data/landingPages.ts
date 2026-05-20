@@ -751,6 +751,7 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
     perClass: 'प्रति वर्ग',
     socialProofLabel: 'विश्वभर के व्यवसायों का भरोसा',
     starLabel: 'ग्राहक रेटिंग',
+    heroVideoId: 'KfCpbk9FOzc',
   },
 
   ja: {
