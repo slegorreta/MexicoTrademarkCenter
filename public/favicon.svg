@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96">
+  <!-- Dark navy rounded square background -->
+  <rect width="96" height="96" rx="18" fill="#0d1f3c"/>
+  <!-- "MX" in gold -->
+  <text x="48" y="45" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="32" fill="#c9a84c" text-anchor="middle" dominant-baseline="middle" letter-spacing="-1">MX</text>
+  <!-- Gold sparkle star -->
+  <g transform="translate(74,22)">
+    <path d="M0,-7 L1.5,-1.5 L7,0 L1.5,1.5 L0,7 L-1.5,1.5 L-7,0 L-1.5,-1.5 Z" fill="#c9a84c"/>
+  </g>
+  <!-- Small "®" circle -->
+  <circle cx="48" cy="68" r="10" fill="none" stroke="#c9a84c" stroke-width="2"/>
+  <text x="48" y="72" font-family="Arial, sans-serif" font-weight="700" font-size="10" fill="#c9a84c" text-anchor="middle">R</text>
+</svg>
