@@ -854,6 +854,7 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
     perClass: '/区分',
     socialProofLabel: '世界中の企業・ブランドに信頼されています',
     starLabel: '顧客評価',
+    heroVideoId: '-fsnNbCjk7c',
   },
 };
 
