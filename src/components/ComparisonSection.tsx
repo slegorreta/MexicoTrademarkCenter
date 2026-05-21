@@ -94,9 +94,8 @@ export default function ComparisonSection({ lang, compact = false, onClose }: Pr
               <td className="px-2 py-3 text-center">{YES}</td>
               <td className="px-2 py-3 text-center">{YES}</td>
               <td className="px-2 py-3 text-center">
-                <span className="inline-flex items-center gap-1 bg-navy-900 text-white text-[9px] font-bold px-2 py-0.5 rounded-full">
-                  <Globe size={9} />
-                  8
+                <span className="inline-flex items-center gap-1 bg-navy-900 text-white text-[9px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap">
+                  {t('comparison.languages')}
                 </span>
               </td>
             </tr>
@@ -207,3 +206,6 @@ export default function ComparisonSection({ lang, compact = false, onClose }: Pr
     </section>
   );
 }
+
+
+export default ComparisonSection
