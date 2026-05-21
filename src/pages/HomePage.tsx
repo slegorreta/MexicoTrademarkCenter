@@ -1,12 +1,14 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, ArrowDown, Shield, Clock, Globe as Globe2, DollarSign, FileText, Award, ChevronDown, Sparkles, Search, HelpCircle, X, Star, Scale } from 'lucide-react';
+import { ArrowRight, ArrowDown, Shield, Clock, Globe as Globe2, DollarSign, FileText, Award, ChevronDown, Sparkles, Search, HelpCircle, X, Star, Scale, BarChart2 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { useState, useEffect, type ReactNode } from 'react';
 import AboutSection from '../components/AboutSection';
+import ComparisonSection from '../components/ComparisonSection';
 
 export default function HomePage() {
   const { t } = useLanguage();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [showComparisonModal, setShowComparisonModal] = useState(false);
 
   useEffect(() => {
     if (window.location.hash === '#faq') {
@@ -343,6 +345,14 @@ export default function HomePage() {
             </div>
             <h2 className="text-3xl lg:text-4xl font-bold mb-4">{t('pricing.title')}</h2>
             <p className="text-gray-400 max-w-xl mx-auto">{t('pricing.sub')}</p>
+            <button
+              type="button"
+              onClick={() => setShowComparisonModal(true)}
+              className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-semibold text-gold-400 border border-gold-500/40 hover:border-gold-400 hover:bg-gold-500/10 px-3 py-1.5 rounded-full transition-all duration-200 group"
+            >
+              <BarChart2 size={11} className="group-hover:scale-110 transition-transform" />
+              {t('comparison.badge')}
+            </button>
           </div>
           <div className="max-w-sm mx-auto mb-8">
             <div className="rounded-2xl bg-gold-500 border-2 border-gold-400 shadow-2xl p-8 text-center">
@@ -555,6 +565,18 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Comparison modal */}
+      {showComparisonModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowComparisonModal(false); }}
+        >
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-6">
+            <ComparisonSection compact onClose={() => setShowComparisonModal(false)} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
