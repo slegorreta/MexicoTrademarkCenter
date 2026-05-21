@@ -45,13 +45,10 @@ export default function ComparisonSection({ lang, compact = false, onClose }: Pr
               <th className="text-left px-4 py-3 font-semibold uppercase tracking-wider text-[10px] w-[30%]">
                 {t('comparison.col.service')}
               </th>
-              <th className="text-center px-3 py-3 font-semibold uppercase tracking-wider text-[10px] w-[13%]">
+              <th className="text-center px-3 py-3 font-semibold uppercase tracking-wider text-[10px] w-[15%]">
                 {t('comparison.col.price')}
               </th>
-              <th className="text-center px-2 py-3 font-semibold uppercase tracking-wider text-[10px] w-[13%]">
-                {t('comparison.col.inclusive')}
-              </th>
-              <th className="text-center px-2 py-3 font-semibold uppercase tracking-wider text-[10px] w-[15%]">
+              <th className="text-center px-2 py-3 font-semibold uppercase tracking-wider text-[10px] w-[17%]">
                 <span className="flex flex-col items-center gap-0.5">
                   <Sparkles size={11} className="text-gold-400" />
                   {t('comparison.col.aiClearance')}
@@ -92,7 +89,6 @@ export default function ComparisonSection({ lang, compact = false, onClose }: Pr
               </td>
               <td className="px-2 py-3 text-center">{YES}</td>
               <td className="px-2 py-3 text-center">{YES}</td>
-              <td className="px-2 py-3 text-center">{YES}</td>
               <td className="px-2 py-3 text-center">
                 <span className="inline-flex items-center gap-1 bg-navy-900 text-white text-[9px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap">
                   {t('comparison.languages')}
@@ -115,7 +111,6 @@ export default function ComparisonSection({ lang, compact = false, onClose }: Pr
                   <span className="font-semibold text-gray-400 block leading-none">${c.price}</span>
                   <X size={10} className="text-red-400 mx-auto mt-0.5" />
                 </td>
-                <td className="px-2 py-2.5 text-center">{NO}</td>
                 <td className="px-2 py-2.5 text-center">{NO}</td>
                 <td className="px-2 py-2.5 text-center">{NO}</td>
                 <td className="px-2 py-2.5 text-center">{NO}</td>
@@ -206,6 +201,3 @@ export default function ComparisonSection({ lang, compact = false, onClose }: Pr
     </section>
   );
 }
-
-
-export default ComparisonSection
