@@ -29,16 +29,21 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({ error: "paymentIntentId and reportOrderId are required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Verify payment with Stripe
-    const piRes = await fetch(`https://api.stripe.com/v1/payment_intents/${paymentIntentId}`, {
-      headers: { Authorization: `Bearer ${stripeKey}` },
-    });
-    if (!piRes.ok) {
-      return new Response(JSON.stringify({ error: "Failed to verify payment" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-    const pi = await piRes.json();
-    if (pi.status !== "succeeded") {
-      return new Response(JSON.stringify({ error: "Payment not completed" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    // Free orders have a sentinel id prefixed with "free_" — skip Stripe verification
+    const isFree = paymentIntentId.startsWith("free_");
+
+    if (!isFree) {
+      // Verify payment with Stripe
+      const piRes = await fetch(`https://api.stripe.com/v1/payment_intents/${paymentIntentId}`, {
+        headers: { Authorization: `Bearer ${stripeKey}` },
+      });
+      if (!piRes.ok) {
+        return new Response(JSON.stringify({ error: "Failed to verify payment" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const pi = await piRes.json();
+      if (pi.status !== "succeeded") {
+        return new Response(JSON.stringify({ error: "Payment not completed" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
     }
 
     // Check order exists and isn't already paid
@@ -79,11 +84,10 @@ Deno.serve(async (req: Request) => {
       .eq("id", reportOrderId);
 
     // Fire PDF generation and email in background
-    const selfUrl = supabaseUrl;
     EdgeRuntime.waitUntil(
       (async () => {
         try {
-          const pdfRes = await fetch(`${selfUrl}/functions/v1/generate-clearance-pdf`, {
+          const pdfRes = await fetch(`${supabaseUrl}/functions/v1/generate-clearance-pdf`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",

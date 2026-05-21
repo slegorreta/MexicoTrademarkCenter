@@ -598,6 +598,8 @@ export default function ApplyPage() {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [isFreeOrder, setIsFreeOrder] = useState(false);
+  const [freeConfirming, setFreeConfirming] = useState(false);
 
   // Coupon state
   const [couponInput, setCouponInput] = useState('');
@@ -826,7 +828,9 @@ export default function ApplyPage() {
   };
 
   const discountedTotal = couponApplied
-    ? Math.max(0.50, grandTotal * (1 - couponApplied.discountPercent / 100))
+    ? couponApplied.discountPercent === 100
+      ? 0
+      : Math.max(0.50, grandTotal * (1 - couponApplied.discountPercent / 100))
     : grandTotal;
 
   // Called when user clicks "Proceed to Payment" — saves records, creates PaymentIntent
@@ -1380,18 +1384,46 @@ export default function ApplyPage() {
       });
 
       const data = await res.json();
-      if (!res.ok || !data.clientSecret) {
+      if (!res.ok) {
         throw new Error(data.error || 'Failed to initialize payment');
       }
 
-      setClientSecret(data.clientSecret);
       setPaymentIntentId(data.paymentIntentId ?? null);
       setFinalTotal(data.finalAmountUsd ?? grandTotal);
+
+      if (data.isFree) {
+        setIsFreeOrder(true);
+      } else {
+        if (!data.clientSecret) throw new Error('Failed to initialize payment');
+        setClientSecret(data.clientSecret);
+      }
     } catch (err) {
       console.error(err);
       setPaymentError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleConfirmFreeOrder = async () => {
+    if (!applicationId || !paymentIntentId) return;
+    setFreeConfirming(true);
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      await fetch(`${supabaseUrl}/functions/v1/confirm-payment-client`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'Apikey': supabaseAnonKey,
+        },
+        body: JSON.stringify({ paymentIntentId, applicationId, language }),
+      });
+      handlePaymentSuccess();
+    } catch (e) {
+      console.error('confirm-payment-client failed:', e);
+      setFreeConfirming(false);
     }
   };
 
@@ -2611,8 +2643,8 @@ export default function ApplyPage() {
                 </div>
               )}
 
-              {/* Payment section — either "proceed" button or Stripe Element */}
-              {!clientSecret ? (
+              {/* Payment section — "proceed" button, free confirmation, or Stripe Element */}
+              {!clientSecret && !isFreeOrder ? (
                 <div className="space-y-4">
                   <div className="bg-navy-50 rounded-xl p-4 border border-navy-100">
                     <p className="text-xs text-navy-700">
@@ -2635,8 +2667,30 @@ export default function ApplyPage() {
                   >
                     <Lock size={16} />
                     {submitting
-                      ? (tri('Preparing payment...', '准备付款中...', 'Preparando pago...', 'Zahlung wird vorbereitet...', 'Préparation du paiement...', 'भुगतान तैयार हो रहा है...', 'Preparando pagamento...'))
-                      : (tri(`Proceed to Payment — USD $${discountedTotal.toFixed(2)}`, `前往付款 — USD $${discountedTotal.toFixed(2)}`, `Proceder al Pago — USD $${discountedTotal.toFixed(2)}`, `Zur Zahlung — USD $${discountedTotal.toFixed(2)}`, `Procéder au Paiement — USD $${discountedTotal.toFixed(2)}`, `भुगतान करें — USD $${discountedTotal.toFixed(2)}`, `Prosseguir para Pagamento — USD $${discountedTotal.toFixed(2)}`))}
+                      ? (tri('Preparing...', '准备中...', 'Preparando...', 'Wird vorbereitet...', 'Préparation...', 'तैयार हो रहा है...', 'Preparando...'))
+                      : discountedTotal === 0
+                        ? (tri('Confirm Free Filing', '确认免费申请', 'Confirmar Solicitud Gratuita', 'Kostenlose Einreichung bestätigen', 'Confirmer le dépôt gratuit', 'निःशुल्क दाखिला पुष्टि करें', 'Confirmar Registro Gratuito'))
+                        : (tri(`Proceed to Payment — USD $${discountedTotal.toFixed(2)}`, `前往付款 — USD $${discountedTotal.toFixed(2)}`, `Proceder al Pago — USD $${discountedTotal.toFixed(2)}`, `Zur Zahlung — USD $${discountedTotal.toFixed(2)}`, `Procéder au Paiement — USD $${discountedTotal.toFixed(2)}`, `भुगतान करें — USD $${discountedTotal.toFixed(2)}`, `Prosseguir para Pagamento — USD $${discountedTotal.toFixed(2)}`))}
+                  </button>
+                </div>
+              ) : isFreeOrder ? (
+                <div className="space-y-4">
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-start gap-3">
+                    <CheckCircle2 size={18} className="text-emerald-500 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-emerald-800 font-medium">
+                      {tri('100% discount applied — no payment required. Click below to confirm your filing.', '已应用100%折扣，无需付款。点击下方确认您的申请。', 'Descuento del 100% aplicado — no se requiere pago. Haz clic abajo para confirmar tu solicitud.', '100% Rabatt angewendet — keine Zahlung erforderlich. Klicken Sie unten, um Ihre Einreichung zu bestätigen.', 'Remise de 100% appliquée — aucun paiement requis. Cliquez ci-dessous pour confirmer votre dépôt.', '100% छूट लागू — कोई भुगतान आवश्यक नहीं। अपनी दाखिल करने की पुष्टि के लिए नीचे क्लिक करें।', 'Desconto de 100% aplicado — nenhum pagamento necessário. Clique abaixo para confirmar seu registro.')}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleConfirmFreeOrder}
+                    disabled={freeConfirming}
+                    className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-bold py-4 rounded-xl text-base transition-colors shadow-md"
+                  >
+                    <CheckCircle2 size={16} />
+                    {freeConfirming
+                      ? (tri('Confirming...', '确认中...', 'Confirmando...', 'Bestätigung...', 'Confirmation...', 'पुष्टि हो रही है...', 'Confirmando...'))
+                      : (tri('Confirm Filing — $0.00', '确认申请 — $0.00', 'Confirmar Solicitud — $0.00', 'Einreichung bestätigen — $0.00', 'Confirmer le dépôt — $0.00', 'दाखिला पुष्टि करें — $0.00', 'Confirmar Registro — $0.00'))}
                   </button>
                 </div>
               ) : (
@@ -2652,7 +2706,7 @@ export default function ApplyPage() {
                     <Elements
                       stripe={stripePromise}
                       options={{
-                        clientSecret,
+                        clientSecret: clientSecret!,
                         appearance: {
                           theme: 'stripe',
                           variables: {

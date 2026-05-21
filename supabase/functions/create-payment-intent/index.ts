@@ -104,10 +104,55 @@ Deno.serve(async (req: Request) => {
       couponId = coupon.id;
     }
 
-    // Apply discount
-    const discountedAmount = discountPercent > 0
-      ? Math.max(0.50, amountUsd * (1 - discountPercent / 100)) // Stripe minimum $0.50
-      : amountUsd;
+    // Apply discount — 100% discount means truly $0, no Stripe floor
+    const isFree = discountPercent === 100;
+    const discountedAmount = isFree
+      ? 0
+      : discountPercent > 0
+        ? Math.max(0.50, amountUsd * (1 - discountPercent / 100))
+        : amountUsd;
+
+    // Increment coupon usage counter
+    if (couponId) {
+      const { data: current } = await supabase
+        .from("coupons")
+        .select("uses_count")
+        .eq("id", couponId)
+        .maybeSingle();
+      if (current) {
+        await supabase
+          .from("coupons")
+          .update({ uses_count: current.uses_count + 1 })
+          .eq("id", couponId);
+      }
+    }
+
+    // Free order: skip Stripe entirely — use a sentinel payment intent id
+    if (isFree) {
+      const freeOrderId = `free_${crypto.randomUUID()}`;
+
+      await supabase.from("payments").insert({
+        application_id: applicationId,
+        client_id: app.client_id,
+        stripe_payment_intent_id: freeOrderId,
+        amount_usd: 0,
+        currency: "usd",
+        status: "paid",
+        paid_at: new Date().toISOString(),
+      });
+
+      return new Response(
+        JSON.stringify({
+          clientSecret: null,
+          paymentIntentId: freeOrderId,
+          discountPercent,
+          finalAmountUsd: 0,
+          originalAmountUsd: amountUsd,
+          isFree: true,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const finalAmountCents = Math.round(discountedAmount * 100);
 
@@ -140,21 +185,6 @@ Deno.serve(async (req: Request) => {
       status: "pending",
     });
 
-    // Increment coupon usage counter atomically (service role bypasses RLS)
-    if (couponId) {
-      const { data: current } = await supabase
-        .from("coupons")
-        .select("uses_count")
-        .eq("id", couponId)
-        .maybeSingle();
-      if (current) {
-        await supabase
-          .from("coupons")
-          .update({ uses_count: current.uses_count + 1 })
-          .eq("id", couponId);
-      }
-    }
-
     return new Response(
       JSON.stringify({
         clientSecret: paymentIntent.client_secret,
@@ -162,6 +192,7 @@ Deno.serve(async (req: Request) => {
         discountPercent,
         finalAmountUsd: discountedAmount,
         originalAmountUsd: amountUsd,
+        isFree: false,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

@@ -43,46 +43,47 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Verify the payment intent with Stripe to confirm it actually succeeded
-    const intent = await stripe.paymentIntents.retrieve(paymentIntentId, {
-      expand: ["latest_charge"],
-    });
+    // Free orders have a sentinel id prefixed with "free_" — skip Stripe verification
+    const isFree = paymentIntentId.startsWith("free_");
+    const resolvedLanguage = language || "en";
+    let amountUsd = 0;
 
-    if (intent.status !== "succeeded") {
-      return new Response(
-        JSON.stringify({ error: `Payment not succeeded — status: ${intent.status}` }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (!isFree) {
+      // Verify the payment intent with Stripe to confirm it actually succeeded
+      const intent = await stripe.paymentIntents.retrieve(paymentIntentId, {
+        expand: ["latest_charge"],
+      });
+
+      if (intent.status !== "succeeded") {
+        return new Response(
+          JSON.stringify({ error: `Payment not succeeded — status: ${intent.status}` }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Guard: only process if application_id in metadata matches
+      if (intent.metadata?.application_id && intent.metadata.application_id !== applicationId) {
+        return new Response(
+          JSON.stringify({ error: "applicationId mismatch" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      amountUsd = intent.amount / 100;
+
+      // Update payments record
+      const charge = intent.latest_charge as Stripe.Charge | null;
+      const receiptUrl = charge && typeof charge === "object" ? (charge.receipt_url ?? null) : null;
+      await supabase
+        .from("payments")
+        .update({
+          status: "paid",
+          paid_at: new Date().toISOString(),
+          ...(receiptUrl ? { receipt_url: receiptUrl } : {}),
+        })
+        .eq("stripe_payment_intent_id", paymentIntentId);
     }
-
-    // Guard: only process if application_id in metadata matches
-    if (intent.metadata?.application_id && intent.metadata.application_id !== applicationId) {
-      return new Response(
-        JSON.stringify({ error: "applicationId mismatch" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Resolve language: prefer value sent by client (live site language at payment time),
-    // fall back to what was stored in Stripe metadata, then default to 'en'
-    const resolvedLanguage = language || intent.metadata?.language || "en";
-
-    // Get receipt URL from the latest charge
-    let receiptUrl: string | null = null;
-    const charge = intent.latest_charge as Stripe.Charge | null;
-    if (charge && typeof charge === "object") {
-      receiptUrl = charge.receipt_url ?? null;
-    }
-
-    // Update payments record
-    await supabase
-      .from("payments")
-      .update({
-        status: "paid",
-        paid_at: new Date().toISOString(),
-        ...(receiptUrl ? { receipt_url: receiptUrl } : {}),
-      })
-      .eq("stripe_payment_intent_id", paymentIntentId);
+    // Free orders: payments row was already inserted as "paid" by create-payment-intent
 
     // Update application payment + filing status (idempotent), persist language and geo coords
     await supabase
@@ -100,7 +101,7 @@ Deno.serve(async (req: Request) => {
       application_id: applicationId,
       event_type: "payment_confirmed",
       language: resolvedLanguage,
-      amount_usd: intent.amount / 100,
+      amount_usd: amountUsd,
       ...(geo_lat != null && geo_lng != null ? { geo_lat, geo_lng } : {}),
     });
 
@@ -146,7 +147,7 @@ Deno.serve(async (req: Request) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, receiptUrl }),
+      JSON.stringify({ success: true, receiptUrl: null }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {

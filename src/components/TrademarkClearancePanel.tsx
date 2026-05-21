@@ -225,6 +225,10 @@ const UI: Record<string, Record<string, string>> = {
   afterDiscount: { en: 'After discount', es: 'Después del descuento', zh: '折扣后', de: 'Nach Rabatt', fr: 'Après réduction', hi: 'छूट के बाद', pt: 'Após desconto' },
   minCharge: { en: '(Stripe minimum $0.50 applies)', es: '(Se aplica el mínimo de Stripe $0.50)', zh: '（Stripe最低收费$0.50）', de: '(Stripe-Mindestbetrag $0.50 gilt)', fr: '(Minimum Stripe $0.50 applicable)', hi: '(Stripe न्यूनतम $0.50 लागू)', pt: '(Mínimo Stripe $0.50 aplicável)' },
   proceedPayment: { en: 'Proceed to Payment', es: 'Proceder al Pago', zh: '进行付款', de: 'Zur Zahlung fortfahren', fr: 'Procéder au paiement', hi: 'भुगतान आगे बढ़ें', pt: 'Prosseguir para Pagamento' },
+  // Free order
+  freeOrder: { en: 'Free Report — $0.00', es: 'Reporte Gratuito — $0.00', zh: '免费报告 — $0.00', de: 'Kostenloser Bericht — $0.00', fr: 'Rapport gratuit — $0.00', hi: 'निःशुल्क रिपोर्ट — $0.00', pt: 'Relatório Gratuito — $0.00', ja: '無料レポート — $0.00' },
+  freeOrderMsg: { en: '100% discount applied — no payment required. Click below to receive your report.', es: 'Descuento del 100% aplicado — no se requiere pago. Haz clic abajo para recibir tu reporte.', zh: '已应用100%折扣，无需付款。点击下方接收您的报告。', de: '100% Rabatt angewendet — keine Zahlung erforderlich. Klicken Sie unten, um Ihren Bericht zu erhalten.', fr: 'Remise de 100% appliquée — aucun paiement requis. Cliquez ci-dessous pour recevoir votre rapport.', hi: '100% छूट लागू — कोई भुगतान आवश्यक नहीं। अपनी रिपोर्ट प्राप्त करने के लिए नीचे क्लिक करें।', pt: 'Desconto de 100% aplicado — nenhum pagamento necessário. Clique abaixo para receber seu relatório.', ja: '100%割引適用 — お支払い不要。レポートを受け取るには以下をクリックしてください。' },
+  confirmFree: { en: 'Get My Free Report', es: 'Obtener Reporte Gratuito', zh: '获取免费报告', de: 'Kostenlosen Bericht erhalten', fr: 'Obtenir mon rapport gratuit', hi: 'निःशुल्क रिपोर्ट प्राप्त करें', pt: 'Obter Relatório Gratuito', ja: '無料レポートを取得' },
   // Payment step
   securedByStripe: { en: 'Secured by Stripe', es: 'Pago seguro vía Stripe', zh: '由Stripe保护', de: 'Gesichert durch Stripe', fr: 'Sécurisé par Stripe', hi: 'Stripe द्वारा सुरक्षित', pt: 'Protegido pelo Stripe' },
   processing: { en: 'Processing…', es: 'Procesando…', zh: '处理中…', de: 'Wird verarbeitet…', fr: 'Traitement en cours…', hi: 'प्रसंस्करण…', pt: 'Processando…' },
@@ -596,6 +600,8 @@ export default function TrademarkClearancePanel({
   const [clientSecret, setClientSecret] = useState('');
   const [paymentIntentId, setPaymentIntentId] = useState('');
   const [reportOrderId, setReportOrderId] = useState('');
+  const [isFreeOrder, setIsFreeOrder] = useState(false);
+  const [freeConfirming, setFreeConfirming] = useState(false);
   const [piLoading, setPiLoading] = useState(false);
   const [piError, setPiError] = useState('');
   const [pdfUrl, setPdfUrl] = useState('');
@@ -740,7 +746,7 @@ export default function TrademarkClearancePanel({
       if (!res.ok || d.error) { setCouponError(tr('invalidCoupon', lang)); return; }
       const pct: number = d.discountPercent ?? d.discount_percent ?? 0;
       setDiscountPercent(pct);
-      const final = pct > 0 ? Math.max(0.50, 4.99 * (1 - pct / 100)) : 4.99;
+      const final = pct === 100 ? 0 : pct > 0 ? Math.max(0.50, 4.99 * (1 - pct / 100)) : 4.99;
       setFinalAmount(parseFloat(final.toFixed(2)));
       setCouponApplied(true);
     } catch { setCouponError(tr('invalidCoupon', lang)); }
@@ -767,14 +773,34 @@ export default function TrademarkClearancePanel({
       });
       const d = await res.json();
       if (!res.ok) { setPiError(d.message || 'Payment setup failed'); setPiLoading(false); return; }
-      setClientSecret(d.clientSecret);
       setPaymentIntentId(d.paymentIntentId);
       setReportOrderId(d.reportOrderId);
       setFinalAmount(d.finalAmountUsd);
       setDiscountPercent(d.discountPercent);
-      setPurchaseStep('payment');
+      if (d.isFree) {
+        setIsFreeOrder(true);
+        setPurchaseStep('payment');
+      } else {
+        setClientSecret(d.clientSecret);
+        setPurchaseStep('payment');
+      }
     } catch { setPiError('Payment setup failed. Please try again.'); }
     finally { setPiLoading(false); }
+  };
+
+  const handleConfirmFreeOrder = async () => {
+    setFreeConfirming(true);
+    try {
+      await fetch(`${SUPABASE_URL}/functions/v1/confirm-report-payment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({ paymentIntentId, reportOrderId, userId: user?.id }),
+      });
+      handlePaymentSuccess();
+    } catch (e) {
+      console.error('confirm-report-payment failed:', e);
+      setFreeConfirming(false);
+    }
   };
 
   const handlePaymentSuccess = () => {
@@ -1537,32 +1563,57 @@ export default function TrademarkClearancePanel({
             <button type="button" onClick={handleProceedToPayment} disabled={piLoading}
               className="w-full flex items-center justify-center gap-2 bg-[#c9a84c] hover:bg-[#b8963e] disabled:opacity-60 text-white font-bold px-4 py-3 rounded-xl transition-colors text-sm">
               {piLoading ? <Loader2 size={14} className="animate-spin" /> : <Lock size={14} />}
-              {tr('proceedPayment', lang)} — USD ${finalAmount.toFixed(2)}
+              {finalAmount === 0 ? tr('confirmFree', lang) : `${tr('proceedPayment', lang)} — USD $${finalAmount.toFixed(2)}`}
             </button>
             <button type="button" onClick={() => setPurchaseStep('email')}
               className="w-full text-xs text-gray-400 hover:text-gray-600 underline mt-2">{tr('back', lang)}</button>
           </div>
         )}
 
-        {/* Step 3: Stripe payment */}
-        {!paid && purchaseStep === 'payment' && clientSecret && stripePromise && (
+        {/* Step 3: Payment — either free confirmation or Stripe */}
+        {!paid && purchaseStep === 'payment' && (isFreeOrder || (clientSecret && stripePromise)) && (
           <div className="px-4 py-4 bg-white">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-6 h-6 rounded-full bg-[#1a2e1a] text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0">3</div>
-              <p className="text-sm font-bold text-gray-800">Secure Payment — USD ${finalAmount.toFixed(2)}</p>
+              <p className="text-sm font-bold text-gray-800">
+                {isFreeOrder ? tr('freeOrder', lang) : `Secure Payment — USD $${finalAmount.toFixed(2)}`}
+              </p>
             </div>
-            <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'stripe' } }}>
-              <InlineCheckout
-                lang={lang}
-                finalAmount={finalAmount}
-                clientSecret={clientSecret}
-                paymentIntentId={paymentIntentId}
-                reportOrderId={reportOrderId}
-                userId={user?.id}
-                onSuccess={handlePaymentSuccess}
-                onBack={() => setPurchaseStep('coupon')}
-              />
-            </Elements>
+            {isFreeOrder ? (
+              <div className="space-y-4">
+                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-start gap-3">
+                  <CheckCircle2 size={16} className="text-emerald-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-emerald-800 font-medium">
+                    {tr('freeOrderMsg', lang)}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleConfirmFreeOrder}
+                  disabled={freeConfirming}
+                  className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-bold py-3.5 rounded-xl text-sm transition-colors shadow-md"
+                >
+                  <CheckCircle2 size={14} />
+                  {freeConfirming ? tr('processing', lang) : tr('confirmFree', lang)}
+                </button>
+                <button type="button" onClick={() => setPurchaseStep('coupon')} className="w-full text-xs text-gray-400 hover:text-gray-600 underline">
+                  {tr('back', lang)}
+                </button>
+              </div>
+            ) : (
+              <Elements stripe={stripePromise!} options={{ clientSecret, appearance: { theme: 'stripe' } }}>
+                <InlineCheckout
+                  lang={lang}
+                  finalAmount={finalAmount}
+                  clientSecret={clientSecret}
+                  paymentIntentId={paymentIntentId}
+                  reportOrderId={reportOrderId}
+                  userId={user?.id}
+                  onSuccess={handlePaymentSuccess}
+                  onBack={() => setPurchaseStep('coupon')}
+                />
+              </Elements>
+            )}
           </div>
         )}
       </div>

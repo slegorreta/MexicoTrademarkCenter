@@ -61,10 +61,13 @@ Deno.serve(async (req: Request) => {
       couponId = coupon.id;
     }
 
-    const finalAmountUsd = discountPercent > 0
-      ? Math.max(0.50, BASE_PRICE_USD * (1 - discountPercent / 100))
-      : BASE_PRICE_USD;
-    const amountCents = Math.round(finalAmountUsd * 100);
+    // 100% discount means truly $0 — no Stripe floor applied
+    const isFree = discountPercent === 100;
+    const finalAmountUsd = isFree
+      ? 0
+      : discountPercent > 0
+        ? Math.max(0.50, BASE_PRICE_USD * (1 - discountPercent / 100))
+        : BASE_PRICE_USD;
 
     // Insert report order (pending)
     const { data: order, error: insertError } = await supabase
@@ -79,7 +82,8 @@ Deno.serve(async (req: Request) => {
         coupon_code: normalizedCoupon || null,
         discount_percent: discountPercent,
         final_amount_usd: finalAmountUsd,
-        status: "pending",
+        status: isFree ? "paid" : "pending",
+        paid_at: isFree ? new Date().toISOString() : null,
         ...(userId ? { user_id: userId } : {}),
       })
       .select("id")
@@ -94,6 +98,50 @@ Deno.serve(async (req: Request) => {
     if (couponId) {
       await supabase.rpc("increment_coupon_uses", { coupon_id: couponId });
     }
+
+    // Free order: skip Stripe — trigger PDF generation in background and return immediately
+    if (isFree) {
+      const freeOrderId = `free_${crypto.randomUUID()}`;
+
+      // Update order with sentinel payment id
+      await supabase
+        .from("clearance_report_orders")
+        .update({ stripe_payment_intent_id: freeOrderId })
+        .eq("id", order.id);
+
+      // Fire PDF generation + email in background
+      EdgeRuntime.waitUntil(
+        (async () => {
+          try {
+            const pdfRes = await fetch(`${supabaseUrl}/functions/v1/generate-clearance-pdf`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${supabaseServiceKey}`,
+              },
+              body: JSON.stringify({ reportOrderId: order.id }),
+            });
+            if (!pdfRes.ok) {
+              console.error("generate-clearance-pdf failed:", await pdfRes.text());
+            }
+          } catch (e) {
+            console.error("Background PDF generation error:", e);
+          }
+        })()
+      );
+
+      return new Response(JSON.stringify({
+        clientSecret: null,
+        paymentIntentId: freeOrderId,
+        reportOrderId: order.id,
+        discountPercent,
+        finalAmountUsd: 0,
+        originalAmountUsd: BASE_PRICE_USD,
+        isFree: true,
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    const amountCents = Math.round(finalAmountUsd * 100);
 
     // Create Stripe PaymentIntent
     const piBody = new URLSearchParams({
@@ -137,6 +185,7 @@ Deno.serve(async (req: Request) => {
       discountPercent,
       finalAmountUsd,
       originalAmountUsd: BASE_PRICE_USD,
+      isFree: false,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err) {
     console.error("create-report-payment-intent error:", err);
