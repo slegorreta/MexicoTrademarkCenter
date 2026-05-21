@@ -6,6 +6,7 @@ import SEOHead from '../components/SEOHead';
 import CurrencyDisplay from '../components/CurrencyDisplay';
 import { LANDING_PAGES, HREFLANG_ALTERNATES, type LandingPageData } from '../data/landingPages';
 import AboutSection from '../components/AboutSection';
+import ComparisonSection from '../components/ComparisonSection';
 
 const PRICE_PER_CLASS = 299;
 
@@ -339,6 +340,9 @@ export default function LandingPage({ lang }: Props) {
           </div>
         </div>
       </section>
+
+      {/* Competitor comparison chart */}
+      <ComparisonSection lang={language as Language} />
 
       {/* FAQ — full categorized section matching the main site */}
       <section className="py-16 lg:py-20 bg-white">
