@@ -10,7 +10,7 @@ const corsHeaders = {
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const FROM_EMAIL = "Mexico Trademark Center <tm@mexicotrademarkcenter.com>";
 const FILING_TO_EMAIL = "tm@mexicotrademarkcenter.com";
-const FILING_CC_EMAIL = "sergiolegorreta@yahoo.com";
+const FILING_CC_EMAILS = ["sergiolegorreta@yahoo.com", "Sergio.Legorreta@lawteam.com"];
 
 async function sendEmail(
   to: string,
@@ -637,9 +637,9 @@ Deno.serve(async (req: Request) => {
     // 2. Staff instruction form email
     const staffResult = await sendEmail(
       FILING_TO_EMAIL,
-      `NEW FILING INSTRUCTION — ${app.case_number} — ${safeTrademark.mark_name ?? "Trademark"}`,
+      `🚨 NEW FILING INSTRUCTION — ${app.case_number} — ${safeTrademark.mark_name ?? "Trademark"}`,
       formHtml,
-      [FILING_CC_EMAIL]
+      FILING_CC_EMAILS
     );
     results.staff_email = staffResult;
 
