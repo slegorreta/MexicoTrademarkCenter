@@ -10,7 +10,7 @@ const corsHeaders = {
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const FROM_EMAIL = "Mexico Trademark Center <tm@mexicotrademarkcenter.com>";
 const FILING_TO_EMAIL = "tm@mexicotrademarkcenter.com";
-const FILING_CC_EMAILS = ["sergiolegorreta@yahoo.com", "Sergio.Legorreta@lawteam.com"];
+const FILING_CC_EMAILS = ["sergiolegorreta@yahoo.com", "Sergio.Legorreta@lawtaem.com"];
 
 async function sendEmail(
   to: string,
