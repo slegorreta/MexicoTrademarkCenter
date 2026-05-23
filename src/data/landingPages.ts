@@ -455,6 +455,7 @@ export const LANDING_PAGES: Record<string, LandingPageData> = {
     perClass: 'por classe',
     socialProofLabel: 'Empresas e empreendedores que confiam em nós',
     starLabel: 'Avaliação dos clientes',
+    heroVideoId: 'TZVJ_whPSck',
   },
 
   de: {
