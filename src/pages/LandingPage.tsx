@@ -441,7 +441,7 @@ export default function LandingPage({ lang }: Props) {
             </div>
             <div className="p-5">
               <div className="rounded-xl border border-gray-200 overflow-hidden">
-                <img src="/V4GAB234QBHWBO2ZRAZZA2TTPA.jpg" alt="Sample trademark certificate" className="w-full h-auto block" />
+                <img src="/TITULO_DE_MARCA.png" alt="Sample trademark certificate" className="w-full h-auto block" />
               </div>
             </div>
           </div>
@@ -460,7 +460,7 @@ export default function LandingPage({ lang }: Props) {
             </div>
             <div className="p-5">
               <div className="rounded-xl border border-gray-200 overflow-hidden">
-                <img src="/Captura_de_pantalla_2026-05-10_a_la(s)_1.35.26_p.m..png" alt="Filing certificate" className="w-full h-auto block" />
+                <img src="/CONSTANCIA_DE_REGISTRO.png" alt="Filing certificate" className="w-full h-auto block" />
               </div>
             </div>
           </div>

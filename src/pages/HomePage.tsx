@@ -222,7 +222,7 @@ export default function HomePage() {
             <div className="p-5">
               <p className="text-gray-600 text-sm leading-relaxed mb-5">{t('trust.impi.tooltip.body')}</p>
               <div className="rounded-xl border border-gray-200 overflow-hidden">
-                <img src="/Captura_de_pantalla_2026-05-10_a_la(s)_4.39.02_p.m..png" alt="Constancia de Presentación IMPI" className="w-full h-auto block" />
+                <img src="/CONSTANCIA_DE_REGISTRO.png" alt="Constancia de Presentación IMPI" className="w-full h-auto block" />
               </div>
             </div>
           </div>
@@ -310,7 +310,7 @@ export default function HomePage() {
             <div className="p-5">
               <p className="text-gray-600 text-sm leading-relaxed mb-5">{t('faq.a12')}</p>
               <div className="rounded-xl border border-gray-200 overflow-hidden">
-                <img src="/Captura_de_pantalla_2026-05-10_a_la(s)_5.22.49_p.m..png" alt="Título de Registro de Marca IMPI" className="w-full h-auto block" />
+                <img src="/TITULO_DE_MARCA.png" alt="Título de Registro de Marca IMPI" className="w-full h-auto block" />
               </div>
             </div>
           </div>
@@ -329,7 +329,7 @@ export default function HomePage() {
             </div>
             <div className="p-5">
               <div className="rounded-xl border border-gray-200 overflow-hidden">
-                <img src="/Captura_de_pantalla_2026-05-10_a_la(s)_4.39.02_p.m..png" alt="Constancia de Presentación IMPI" className="w-full h-auto block" />
+                <img src="/CONSTANCIA_DE_REGISTRO.png" alt="Constancia de Presentación IMPI" className="w-full h-auto block" />
               </div>
             </div>
           </div>
@@ -438,7 +438,7 @@ export default function HomePage() {
               <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden z-10" onClick={e => e.stopPropagation()}>
                 <div className="relative h-52 overflow-hidden">
                   <img
-                    src="/V4GAB234QBHWBO2ZRAZZA2TTPA.jpg"
+                    src="/TITULO_DE_MARCA.png"
                     alt="IMPI — Instituto Mexicano de la Propiedad Industrial"
                     className="w-full h-full object-cover object-center"
                   />
