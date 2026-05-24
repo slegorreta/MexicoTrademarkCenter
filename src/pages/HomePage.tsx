@@ -4,6 +4,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { useState, useEffect, type ReactNode } from 'react';
 import AboutSection from '../components/AboutSection';
 import ComparisonSection from '../components/ComparisonSection';
+import impiBuilding from '../assets/IMPI-blindara-artesanias-poblanas-analiza-3-zonas-para-Indicacion-Geografica.webp';
 
 export default function HomePage() {
   const { t } = useLanguage();
@@ -438,7 +439,7 @@ export default function HomePage() {
               <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden z-10" onClick={e => e.stopPropagation()}>
                 <div className="relative h-52 overflow-hidden">
                   <img
-                    src="/download.jpg"
+                    src={impiBuilding}
                     alt="IMPI — Instituto Mexicano de la Propiedad Industrial"
                     className="w-full h-full object-cover object-center"
                   />
