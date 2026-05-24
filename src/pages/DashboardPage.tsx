@@ -1400,6 +1400,7 @@ function ApplicationDetail({ appId, onBack }: { appId: string; onBack: () => voi
 
 function AccountSettings({ language }: { language: string }) {
   const { user, profile } = useAuth();
+  const { setLanguage } = useLanguage();
 
   // Profile editing
   const [editName, setEditName] = useState(profile?.full_name ?? '');
@@ -1420,6 +1421,11 @@ function AccountSettings({ language }: { language: string }) {
   const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [resetSent, setResetSent] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
+
+  // Language preference
+  const [langSaving, setLangSaving] = useState(false);
+  const [langMsg, setLangMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [selectedLang, setSelectedLang] = useState<Language>((profile?.preferred_language as Language) ?? (language as Language) ?? 'en');
 
   const l = (en: string, zh: string, es: string, de?: string, fr?: string, hi?: string, pt?: string, ja?: string) =>
     language === 'zh' ? zh : language === 'es' ? es : language === 'de' ? (de ?? en) : language === 'fr' ? (fr ?? en) : language === 'hi' ? (hi ?? en) : language === 'pt' ? (pt ?? en) : language === 'ja' ? (ja ?? en) : en;
@@ -1448,6 +1454,21 @@ function AccountSettings({ language }: { language: string }) {
       setProfileMsg({ type: 'success', text: l('Profile saved.', '个人资料已保存。', 'Perfil guardado.', 'Profil gespeichert.', 'Profil enregistré.', 'प्रोफ़ाइल सहेजा गया।', 'Perfil salvo.', 'プロフィールを保存しました。') });
     }
     setProfileSaving(false);
+  };
+
+  const saveLangPreference = async (lang: Language) => {
+    setSelectedLang(lang);
+    setLanguage(lang);
+    setLangSaving(true);
+    setLangMsg(null);
+    const { error } = await supabase.from('profiles').update({ preferred_language: lang }).eq('id', user!.id);
+    if (error) {
+      setLangMsg({ type: 'error', text: error.message });
+    } else {
+      setLangMsg({ type: 'success', text: l('Language preference saved. Future emails will be sent in this language.', '语言偏好已保存。后续邮件将以此语言发送。', 'Preferencia de idioma guardada. Los próximos correos se enviarán en este idioma.', 'Sprachpräferenz gespeichert. Zukünftige E-Mails werden in dieser Sprache gesendet.', 'Préférence de langue enregistrée. Les prochains e-mails seront envoyés dans cette langue.', 'भाषा प्राथमिकता सहेजी गई। भविष्य के ईमेल इस भाषा में भेजे जाएंगे।', 'Preferência de idioma salva. Futuros e-mails serão enviados neste idioma.', '言語設定を保存しました。以降のメールはこの言語で送信されます。') });
+      setTimeout(() => setLangMsg(null), 4000);
+    }
+    setLangSaving(false);
   };
 
   const changeEmail = async () => {
@@ -1521,6 +1542,48 @@ function AccountSettings({ language }: { language: string }) {
             {profileSaving ? <Loader2 size={14} className="animate-spin" /> : null}
             {profileSaving ? l('Saving…', '保存中…', 'Guardando…', 'Speichern…', 'Enregistrement…', 'सहेज रहे हैं…', 'Salvando…', '保存中…') : l('Save Profile', '保存个人资料', 'Guardar perfil', 'Profil speichern', 'Enregistrer le profil', 'प्रोफ़ाइल सहेजें', 'Salvar perfil', 'プロフィールを保存')}
           </button>
+        </div>
+      </div>
+
+      {/* Language preference card */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <h3 className="text-sm font-semibold text-gray-900 mb-1 flex items-center gap-2">
+          <Globe size={15} className="text-[#2d5a2d]" />
+          {l('Email Language', '邮件语言', 'Idioma de correo', 'E-Mail-Sprache', 'Langue des e-mails', 'ईमेल भाषा', 'Idioma do e-mail', 'メール言語')}
+        </h3>
+        <p className="text-xs text-gray-400 mb-4">
+          {l('Choose the language for emails from Mexico Trademark Center.', '选择接收Mexico Trademark Center邮件的语言。', 'Elige el idioma para los correos de Mexico Trademark Center.', 'Wählen Sie die Sprache für E-Mails von Mexico Trademark Center.', 'Choisissez la langue pour les e-mails de Mexico Trademark Center.', 'Mexico Trademark Center से ईमेल के लिए भाषा चुनें।', 'Escolha o idioma para e-mails do Mexico Trademark Center.', 'Mexico Trademark Centerからのメールの言語を選択してください。')}
+        </p>
+        {langMsg && (
+          <div className={`mb-4 px-3 py-2 rounded-lg text-sm ${langMsg.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+            {langMsg.text}
+          </div>
+        )}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {([
+            { code: 'en' as Language, label: 'English', native: 'English' },
+            { code: 'zh' as Language, label: 'Chinese', native: '中文' },
+            { code: 'es' as Language, label: 'Spanish', native: 'Español' },
+            { code: 'de' as Language, label: 'German', native: 'Deutsch' },
+            { code: 'fr' as Language, label: 'French', native: 'Français' },
+            { code: 'hi' as Language, label: 'Hindi', native: 'हिंदी' },
+            { code: 'pt' as Language, label: 'Portuguese', native: 'Português' },
+            { code: 'ja' as Language, label: 'Japanese', native: '日本語' },
+          ] as const).map(opt => (
+            <button
+              key={opt.code}
+              onClick={() => saveLangPreference(opt.code)}
+              disabled={langSaving}
+              className={`flex flex-col items-center gap-0.5 px-3 py-2.5 rounded-xl border text-xs font-medium transition-all ${
+                selectedLang === opt.code
+                  ? 'border-[#2d5a2d] bg-[#f0f7f0] text-[#1a2e1a] shadow-sm'
+                  : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              <span className="font-semibold">{opt.native}</span>
+              <span className="text-[10px] text-gray-400">{opt.label}</span>
+            </button>
+          ))}
         </div>
       </div>
 
