@@ -19,10 +19,6 @@ export default function Footer() {
               <div>
                 <div className="text-white font-bold text-base leading-tight">Mexico Trademark</div>
                 <div className="text-gold-500 text-xs font-medium tracking-wide">CENTER</div>
-                <div className="flex items-baseline gap-0.5 mt-0.5">
-                  <span className="text-[8px] text-gray-500 leading-none">powered by</span>
-                  <span className="text-[9px] font-semibold text-gray-300 leading-none">Syner</span><span className="text-[9px] font-semibold leading-none" style={{ color: '#6bb887' }}>Sage</span>
-                </div>
               </div>
             </div>
             <p className="text-sm leading-relaxed max-w-xs mb-4">
