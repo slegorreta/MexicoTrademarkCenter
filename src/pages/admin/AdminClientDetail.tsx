@@ -3,14 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, UserPlus, Mail, Phone, Globe, Building2, FileText, RefreshCw } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
-
-const STATUS_COLORS: Record<string, string> = {
-  new: 'bg-blue-100 text-blue-700',
-  pending_review: 'bg-amber-100 text-amber-700',
-  filed: 'bg-green-100 text-green-700',
-  registered: 'bg-emerald-100 text-emerald-700',
-  abandoned: 'bg-gray-100 text-gray-500',
-};
+import TrademarkStatusBadge from '../../components/TrademarkStatusBadge';
 
 export default function AdminClientDetail() {
   const { id } = useParams<{ id: string }>();
@@ -190,9 +183,7 @@ export default function AdminClientDetail() {
                         </td>
                         <td className="px-5 py-3 text-xs text-gray-700">{tm ? String(tm.mark_name ?? '—') : '—'}</td>
                         <td className="px-5 py-3">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[String(app.filing_status)] ?? 'bg-gray-100 text-gray-600'}`}>
-                            {String(app.filing_status).replace(/_/g, ' ')}
-                          </span>
+                          <TrademarkStatusBadge status={String(app.filing_status)} />
                         </td>
                         <td className="px-5 py-3 text-xs text-gray-500">{new Date(String(app.created_at)).toLocaleDateString()}</td>
                       </tr>

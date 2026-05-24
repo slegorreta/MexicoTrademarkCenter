@@ -1,5 +1,7 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
+export type { FilingStatus } from '../constants/tm5Statuses';
+
 export interface Database {
   public: {
     Tables: {
@@ -55,7 +57,7 @@ export interface Database {
           user_id: string | null;
           assigned_staff_id: string | null;
           payment_status: 'pending' | 'paid' | 'failed' | 'refunded';
-          filing_status: string;
+          filing_status: import('../constants/tm5Statuses').FilingStatus;
           total_classes: number;
           service_fee_usd: number;
           government_fee_usd: number;

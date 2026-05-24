@@ -14,6 +14,11 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage, type Language } from '../context/LanguageContext';
 import { supabase } from '../lib/supabase';
 import { COUNTRIES } from '../lib/countries';
+import TrademarkStatusBadge, { TM5Icon } from '../components/TrademarkStatusBadge';
+import {
+  STATUS_LABELS, STATUS_COLORS, TM5_STATUS_MAP,
+} from '../constants/tm5Statuses';
+import type { FilingStatus } from '../constants/tm5Statuses';
 
 // ─── Stripe singleton ─────────────────────────────────────────────────────────
 const stripePromise = (() => {
@@ -186,34 +191,6 @@ function getStageIndex(status: string): number {
   return 0;
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  new: 'New',
-  pending_review: 'Pending Review',
-  pending_payment: 'Awaiting Payment',
-  info_requested: 'Info Requested',
-  classification_pending: 'Classification Pending',
-  ready_to_file: 'Ready to File',
-  filed: 'Filed',
-  office_action_pending: 'Office Action',
-  published: 'Published',
-  registered: 'Registered',
-  abandoned: 'Abandoned',
-};
-
-const STATUS_COLORS: Record<string, string> = {
-  new: 'bg-blue-100 text-blue-700',
-  pending_review: 'bg-amber-100 text-amber-700',
-  pending_payment: 'bg-orange-100 text-orange-700',
-  info_requested: 'bg-rose-100 text-rose-700',
-  classification_pending: 'bg-sky-100 text-sky-700',
-  ready_to_file: 'bg-teal-100 text-teal-700',
-  filed: 'bg-green-100 text-green-700',
-  office_action_pending: 'bg-red-100 text-red-700',
-  published: 'bg-cyan-100 text-cyan-700',
-  registered: 'bg-emerald-100 text-emerald-700',
-  abandoned: 'bg-gray-100 text-gray-500',
-};
-
 const APP_STATUS_LABELS: Record<string, string> = {
   pending_payment: 'Awaiting Payment',
   in_review: 'In Review',
@@ -311,6 +288,15 @@ function printDocket(rows: DocketRow[]) {
 
 // ─── Stage progress bar ───────────────────────────────────────────────────────
 
+// Representative status for each stage (drives TM5 icon)
+const STAGE_REPRESENTATIVE: Record<string, FilingStatus> = {
+  received:   'new',
+  review:     'classification_pending',
+  filed:      'filed',
+  published:  'published',
+  registered: 'registered',
+};
+
 function StageProgress({ status }: { status: string }) {
   const current = getStageIndex(status);
   return (
@@ -318,13 +304,20 @@ function StageProgress({ status }: { status: string }) {
       {FILING_STAGES.map((stage, i) => {
         const done = i < current;
         const active = i === current;
+        const repStatus = STAGE_REPRESENTATIVE[stage.key] ?? 'new';
         return (
           <div key={stage.key} className="flex items-center flex-1 min-w-0">
             <div className="flex flex-col items-center flex-1 min-w-0">
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all
-                ${done ? 'bg-[#1a2e1a] text-white' : active ? 'bg-[#2d5a2d] text-white ring-2 ring-[#2d5a2d] ring-offset-2' : 'bg-gray-200 text-gray-400'}`}>
-                {done ? <CheckCircle2 size={14} /> : i + 1}
-              </div>
+              {/* TM5 icon for active/done, plain circle for future */}
+              {done || active ? (
+                <div className={`transition-all ${active ? 'ring-2 ring-[#2d5a2d] ring-offset-2 rounded-full' : ''}`}>
+                  <TM5Icon status={repStatus} size="sm" />
+                </div>
+              ) : (
+                <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold bg-gray-200 text-gray-400">
+                  {i + 1}
+                </div>
+              )}
               <span className={`text-[10px] mt-1 text-center leading-tight hidden sm:block
                 ${active ? 'text-[#1a2e1a] font-semibold' : done ? 'text-gray-500' : 'text-gray-400'}`}>
                 {stage.label}
@@ -747,9 +740,7 @@ function DocketTable({
 
                     {/* Filing status */}
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[row.filing_status] ?? 'bg-gray-100 text-gray-600'}`}>
-                        {STATUS_LABELS[row.filing_status] ?? row.filing_status}
-                      </span>
+                      <TrademarkStatusBadge status={row.filing_status} showInfoButton={true} />
                     </td>
 
                     {/* Application status (admin-set) */}
@@ -911,9 +902,7 @@ function FilingParticularsCard({ app, printRef, onDownloadReceipt }: { app: AppD
           <h3 className="font-bold text-gray-900 text-base">{trademark?.mark_name ?? 'Trademark Application'}</h3>
           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
             <span className="text-xs font-mono text-gray-500">{app.case_number}</span>
-            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[app.filing_status] ?? 'bg-gray-100 text-gray-600'}`}>
-              {STATUS_LABELS[app.filing_status] ?? app.filing_status}
-            </span>
+            <TrademarkStatusBadge status={app.filing_status} showInfoButton={true} />
           </div>
         </div>
         {onDownloadReceipt && (
@@ -1244,9 +1233,7 @@ function ApplicationDetail({ appId, onBack }: { appId: string; onBack: () => voi
               <h2 className="text-xl font-bold text-gray-900">{trademark?.mark_name ?? 'Trademark Application'}</h2>
               <div className="flex items-center gap-3 mt-1 flex-wrap">
                 <span className="text-sm font-mono text-gray-500">{app.case_number}</span>
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[app.filing_status] ?? 'bg-gray-100 text-gray-600'}`}>
-                  {STATUS_LABELS[app.filing_status] ?? app.filing_status}
-                </span>
+                <TrademarkStatusBadge status={app.filing_status} showInfoButton={true} />
               </div>
             </div>
           </div>
@@ -1274,12 +1261,22 @@ function ApplicationDetail({ appId, onBack }: { appId: string; onBack: () => voi
           <StageProgress status={app.filing_status} />
           {FILING_STAGES[currentStageIndex] && (
             <div className="mt-4 bg-[#f0f7f0] border border-[#c8e0c8] rounded-xl px-4 py-3">
-              <p className="text-xs font-semibold text-[#1a2e1a] mb-1">
-                Current Stage: {FILING_STAGES[currentStageIndex].label}
-              </p>
-              <p className="text-xs text-[#2d5a2d] leading-relaxed">
-                {FILING_STAGES[currentStageIndex].desc}
-              </p>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1">
+                  <p className="text-xs font-semibold text-[#1a2e1a] mb-1">
+                    Current Stage: {FILING_STAGES[currentStageIndex].label}
+                  </p>
+                  <p className="text-xs text-[#2d5a2d] leading-relaxed">
+                    {FILING_STAGES[currentStageIndex].desc}
+                  </p>
+                </div>
+                <TrademarkStatusBadge
+                  status={app.filing_status}
+                  showInfoButton={true}
+                  iconOnly={true}
+                  size="md"
+                />
+              </div>
             </div>
           )}
         </div>

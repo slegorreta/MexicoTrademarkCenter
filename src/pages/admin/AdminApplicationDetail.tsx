@@ -6,12 +6,10 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
+import { TM5Icon } from '../../components/TrademarkStatusBadge';
+import { ALL_FILING_STATUSES, TM5_STATUS_MAP, STATUS_COLORS, STATUS_LABELS } from '../../constants/tm5Statuses';
 
-const FILING_STATUSES = [
-  'new','pending_review','pending_payment','info_requested','classification_pending',
-  'ready_to_file','filed','office_action_pending','office_action_responded',
-  'published','opposed','registered','abandoned','closed'
-];
+const FILING_STATUSES = ALL_FILING_STATUSES;
 
 const FILE_CATEGORIES = [
   { value: 'filing_receipt', label: 'Filing Receipt' },
@@ -31,6 +29,72 @@ const TIMELINE_EVENT_TYPES = [
   { value: 'staff_comment', label: 'Staff Comment' },
   { value: 'custom', label: 'Custom Update' },
 ];
+
+// ─── TM5 Reference Panel (inline collapsible) ────────────────────────────────
+
+function TM5StatusReference() {
+  const [open, setOpen] = useState(false);
+
+  // Deduplicate by tm5Name+ringColor
+  const seen = new Set<string>();
+  const entries: { status: string; tm5Name: string; description: string; ringColor: string }[] = [];
+  for (const s of ALL_FILING_STATUSES) {
+    const cfg = TM5_STATUS_MAP[s];
+    const key = `${cfg.ringColor}::${cfg.tm5Name}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      entries.push({ status: s, tm5Name: cfg.tm5Name, description: cfg.description, ringColor: cfg.ringColor });
+    }
+  }
+
+  return (
+    <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center justify-between px-5 py-3 text-left hover:bg-gray-50 transition-colors"
+      >
+        <span className="text-sm font-semibold text-navy-900">TM5 Status Reference</span>
+        <span className="text-xs text-gray-500 flex items-center gap-2">
+          {open ? 'Hide' : 'Show'} reference
+          <span className="text-gray-400">{open ? '▲' : '▼'}</span>
+        </span>
+      </button>
+      {open && (
+        <div className="px-5 pb-5 border-t border-gray-100">
+          <p className="text-xs text-gray-500 mt-3 mb-4 leading-relaxed">
+            TM5 standard icons used across USPTO, EUIPO, and other IP offices. Green ring = live; Red ring = dead/terminated.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {entries.map(e => (
+              <div key={e.tm5Name} className="flex gap-3 items-start p-3 rounded-lg bg-gray-50 border border-gray-100">
+                <TM5Icon status={e.status as import('../../constants/tm5Statuses').FilingStatus} size="md" />
+                <div className="min-w-0">
+                  <div className={`text-xs font-bold leading-tight ${e.ringColor === 'green' ? 'text-[#22a048]' : e.ringColor === 'red' ? 'text-[#d93025]' : 'text-gray-500'}`}>
+                    {e.tm5Name}
+                  </div>
+                  <p className="text-[11px] text-gray-500 mt-0.5 leading-relaxed">{e.description}</p>
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {ALL_FILING_STATUSES.filter(s => TM5_STATUS_MAP[s].tm5Name === e.tm5Name && TM5_STATUS_MAP[s].ringColor === e.ringColor).map(s => (
+                      <span key={s} className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${STATUS_COLORS[s]}`}>
+                        {STATUS_LABELS[s]}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 text-right">
+            <a href="/admin/status-guide" target="_blank" rel="noopener noreferrer"
+              className="text-xs text-navy-600 hover:text-navy-800 underline">
+              Open full status guide →
+            </a>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function AdminApplicationDetail() {
   const { id } = useParams<{ id: string }>();
@@ -485,6 +549,9 @@ export default function AdminApplicationDetail() {
               </button>
             </div>
           </div>
+
+          {/* TM5 Status Reference */}
+          <TM5StatusReference />
         </div>
       )}
 

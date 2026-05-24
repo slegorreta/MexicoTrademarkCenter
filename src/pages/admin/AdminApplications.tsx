@@ -2,28 +2,12 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Filter, ArrowRight, RefreshCw } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import TrademarkStatusBadge from '../../components/TrademarkStatusBadge';
+import { ALL_FILING_STATUSES } from '../../constants/tm5Statuses';
 
-const STATUS_OPTIONS = [
-  'all','new','pending_review','pending_payment','info_requested',
-  'classification_pending','ready_to_file','filed','office_action_pending',
-  'registered','abandoned','closed'
-];
+const STATUS_OPTIONS = ['all', ...ALL_FILING_STATUSES];
 
 const PAYMENT_OPTIONS = ['all','pending','paid','failed','refunded'];
-
-const statusColors: Record<string, string> = {
-  new: 'bg-blue-100 text-blue-700',
-  pending_review: 'bg-yellow-100 text-yellow-700',
-  pending_payment: 'bg-orange-100 text-orange-700',
-  info_requested: 'bg-purple-100 text-purple-700',
-  classification_pending: 'bg-sky-100 text-sky-700',
-  ready_to_file: 'bg-teal-100 text-teal-700',
-  filed: 'bg-green-100 text-green-700',
-  office_action_pending: 'bg-red-100 text-red-700',
-  registered: 'bg-emerald-100 text-emerald-700',
-  abandoned: 'bg-gray-100 text-gray-500',
-  closed: 'bg-gray-100 text-gray-400',
-};
 
 export default function AdminApplications() {
   const [applications, setApplications] = useState<any[]>([]);
@@ -132,9 +116,7 @@ export default function AdminApplications() {
                       <span className="text-sm text-gray-700">{app.total_classes}</span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${statusColors[app.filing_status] || 'bg-gray-100 text-gray-600'}`}>
-                        {app.filing_status.replace(/_/g, ' ')}
-                      </span>
+                      <TrademarkStatusBadge status={app.filing_status} />
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${

@@ -45,6 +45,7 @@ import AdminSettings from './pages/admin/AdminSettings';
 import AdminStaffManagement from './pages/admin/AdminStaffManagement';
 import AdminClearanceReports from './pages/admin/AdminClearanceReports';
 import AdminVideoUpload from './pages/admin/AdminVideoUpload';
+import AdminStatusGuide from './pages/admin/AdminStatusGuide';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -228,6 +229,11 @@ function AppRoutes() {
       <Route
         path="/admin/settings"
         element={<ProtectedRoute requireStaff><AdminLayout><AdminSettings /></AdminLayout></ProtectedRoute>}
+      />
+
+      <Route
+        path="/admin/status-guide"
+        element={<ProtectedRoute requireStaff><AdminLayout><AdminStatusGuide /></AdminLayout></ProtectedRoute>}
       />
 
       {/* Video upload utility */}

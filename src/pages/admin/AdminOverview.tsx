@@ -5,6 +5,7 @@ import {
   TrendingUp, ArrowRight, Users, Search
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import TrademarkStatusBadge from '../../components/TrademarkStatusBadge';
 
 interface Stats {
   total: number;
@@ -83,17 +84,6 @@ export default function AdminOverview() {
     { label: 'Office Action', value: stats.officeAction, icon: AlertCircle, color: 'text-red-600', bg: 'bg-red-50' },
     { label: 'Registered', value: stats.registered, icon: CheckCircle2, color: 'text-green-700', bg: 'bg-green-100' },
   ];
-
-  const statusColors: Record<string, string> = {
-    new: 'bg-blue-100 text-blue-700',
-    pending_review: 'bg-yellow-100 text-yellow-700',
-    pending_payment: 'bg-orange-100 text-orange-700',
-    ready_to_file: 'bg-teal-100 text-teal-700',
-    filed: 'bg-green-100 text-green-700',
-    registered: 'bg-emerald-100 text-emerald-700',
-    office_action_pending: 'bg-red-100 text-red-700',
-    abandoned: 'bg-gray-100 text-gray-500',
-  };
 
   if (loading) {
     return (
@@ -185,9 +175,7 @@ export default function AdminOverview() {
                       <span className="text-sm font-mono font-medium text-navy-900">{app.case_number}</span>
                     </td>
                     <td className="px-5 py-3">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[app.filing_status] || 'bg-gray-100 text-gray-600'}`}>
-                        {app.filing_status.replace('_', ' ')}
-                      </span>
+                      <TrademarkStatusBadge status={app.filing_status} />
                     </td>
                     <td className="px-5 py-3">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
