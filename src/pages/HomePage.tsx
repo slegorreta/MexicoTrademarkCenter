@@ -438,7 +438,7 @@ export default function HomePage() {
               <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden z-10" onClick={e => e.stopPropagation()}>
                 <div className="relative h-52 overflow-hidden">
                   <img
-                    src="/TITULO_DE_MARCA.png"
+                    src="/download.jpg"
                     alt="IMPI — Instituto Mexicano de la Propiedad Industrial"
                     className="w-full h-full object-cover object-center"
                   />
