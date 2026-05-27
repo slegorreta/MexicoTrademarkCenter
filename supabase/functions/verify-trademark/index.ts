@@ -433,10 +433,14 @@ async function searchMarcia(markName: string, classes: number[], phoneticVariant
       const classNum = classNums.length > 0 ? classNums.join(", ") : "";
       const name = String(item.title ?? "");
       const baseOverlap = classifyOverlap(classes, classNum);
-      // Component conflicts are only meaningful when the finding is in the same or related class.
-      // "unrelated" class + component token match = too weak to flag.
+      // When MARCia returns no class data for a finding, classifyOverlap returns "unrelated"
+      // by default. If the name is an exact/near-exact match, we must not silently ignore it —
+      // treat it as "same" (conservative) so the conflict is properly escalated.
+      const hasNoClassData = classNum === "";
       const classOverlap: ClassOverlap =
-        baseOverlap === "unrelated" && isComponentConflict(markName, name)
+        hasNoClassData && isSimilarName(markName, name)
+          ? "same"
+          : baseOverlap === "unrelated" && isComponentConflict(markName, name)
           ? "component"
           : baseOverlap;
 
