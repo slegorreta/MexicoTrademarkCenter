@@ -355,16 +355,17 @@ function drawPageBackground(page: PDFPage) {
 }
 
 function addSectionHeader(page: PDFPage, bold: PDFFont, title: string, subtitle: string, y: number): number {
-  const H = 28;
-  // Full-width dark green bar
-  page.drawRectangle({ x: 0, y: y - H, width: PAGE_W, height: H, color: C.deepGreen });
-  // 4px gold left accent stripe
-  page.drawRectangle({ x: 0, y: y - H, width: 4, height: H, color: C.gold });
-  page.drawText(safeText(title).toUpperCase(), { x: MARGIN_X + 6, y: y - 12, size: 9, font: bold, color: C.white });
+  const H = subtitle ? 28 : 20;
+  // 4px gold left accent stripe (ink-efficient: no full-width fill)
+  page.drawRectangle({ x: MARGIN_X, y: y - H, width: 3, height: H, color: C.gold });
+  // Title text in deep green on page background
+  page.drawText(safeText(title).toUpperCase(), { x: MARGIN_X + 10, y: y - 12, size: 9, font: bold, color: C.deepGreen });
   if (subtitle) {
-    page.drawText(safeText(subtitle).slice(0, 80), { x: MARGIN_X + 6, y: y - 22, size: 7.5, font: bold, color: rgb(0.7, 0.8, 0.7) });
+    page.drawText(safeText(subtitle).slice(0, 90), { x: MARGIN_X + 10, y: y - 22, size: 7.5, font: bold, color: C.textMuted });
   }
-  return y - H - 8;
+  // Full-width hairline rule below header
+  page.drawRectangle({ x: MARGIN_X, y: y - H - 1, width: CONTENT_W, height: 0.8, color: C.deepGreen });
+  return y - H - 10;
 }
 
 function drawCard(page: PDFPage, x: number, y: number, w: number, h: number, bg = C.cardWhite) {
@@ -375,11 +376,13 @@ function drawCard(page: PDFPage, x: number, y: number, w: number, h: number, bg 
 function drawStatusBadge(page: PDFPage, bold: PDFFont, status: string, x: number, y: number) {
   const isReg = /registrad|vigente|registered|active/i.test(status);
   const isPend = /tr[aá]mite|pendiente|solicitud|pending|filed/i.test(status);
-  const bgColor = isReg ? C.midGreen : isPend ? C.accentOrange : C.textMuted;
+  const borderColor = isReg ? C.accentGreen : isPend ? C.accentOrange : C.textMuted;
+  const textColor = isReg ? C.accentGreen : isPend ? C.accentOrange : C.textMuted;
   const label = isReg ? "REGISTERED" : isPend ? "PENDING" : "ABANDONED";
   const w = bold.widthOfTextAtSize(label, 7) + 10;
-  page.drawRectangle({ x, y: y - 12, width: w, height: 14, color: bgColor });
-  page.drawText(label, { x: x + 5, y: y - 7, size: 7, font: bold, color: C.white });
+  // Outlined badge — border only, white fill (print-friendly)
+  page.drawRectangle({ x, y: y - 12, width: w, height: 14, color: C.cardWhite, borderColor, borderWidth: 1 });
+  page.drawText(label, { x: x + 5, y: y - 7, size: 7, font: bold, color: textColor });
   return w;
 }
 
@@ -543,71 +546,87 @@ async function buildPdf(
   // ════════════════════════════════════════════════════════════════════
   {
     const p = newPage("Cover");
-    // Full-bleed dark green
-    p.drawRectangle({ x: 0, y: 0, width: PAGE_W, height: PAGE_H, color: C.deepGreen });
+    // White base — no full-bleed ink fill
+    p.drawRectangle({ x: 0, y: 0, width: PAGE_W, height: PAGE_H, color: C.cardWhite });
 
-    // ── TOP AREA ──
-    p.drawText("MEXICO TRADEMARK CENTER", { x: MARGIN_X, y: PAGE_H - 44, size: 11, font: bold, color: C.white });
+    // ── Left sidebar strip (22mm = ~62pt) — brand anchor, minimal ink ──
+    const SIDEBAR_W = 62;
+    p.drawRectangle({ x: 0, y: 0, width: SIDEBAR_W, height: PAGE_H, color: C.deepGreen });
+    // Gold accent line on sidebar right edge
+    p.drawRectangle({ x: SIDEBAR_W, y: 0, width: 2, height: PAGE_H, color: C.gold });
+
+    // Vertical brand text in sidebar (drawn as rotated — approximate with positioned chars)
+    // Render "MTC" initials large in sidebar center
+    p.drawText("M", { x: 18, y: PAGE_H / 2 + 30, size: 22, font: bold, color: C.gold });
+    p.drawText("T", { x: 18, y: PAGE_H / 2 + 6, size: 22, font: bold, color: C.gold });
+    p.drawText("C", { x: 18, y: PAGE_H / 2 - 18, size: 22, font: bold, color: C.gold });
+
+    // ── TOP AREA (right of sidebar) ──
+    const cX = SIDEBAR_W + 16; // content left edge
+    const cW = PAGE_W - cX - 20; // content width
+
+    p.drawText("MEXICO TRADEMARK CENTER", { x: cX, y: PAGE_H - 44, size: 11, font: bold, color: C.deepGreen });
 
     const coverRightLabel = "TRADEMARK CLEARANCE REPORT";
     const crW = regular.widthOfTextAtSize(coverRightLabel, 8);
-    p.drawText(coverRightLabel, { x: PAGE_W - MARGIN_X - crW, y: PAGE_H - 38, size: 8, font: regular, color: C.gold });
+    p.drawText(coverRightLabel, { x: PAGE_W - 24 - crW, y: PAGE_H - 38, size: 8, font: regular, color: C.gold });
     const coverRightLabel2 = "DICTAMEN DE VIABILIDAD MARCARIA";
     const crW2 = regular.widthOfTextAtSize(coverRightLabel2, 8);
-    p.drawText(coverRightLabel2, { x: PAGE_W - MARGIN_X - crW2, y: PAGE_H - 50, size: 8, font: regular, color: rgb(0.7, 0.8, 0.7) });
+    p.drawText(coverRightLabel2, { x: PAGE_W - 24 - crW2, y: PAGE_H - 50, size: 8, font: regular, color: C.textMuted });
 
-    // Gold rule at 80%
+    // Gold rule at 80% (right of sidebar)
     const rule1Y = PAGE_H * 0.80;
-    p.drawRectangle({ x: MARGIN_X, y: rule1Y, width: CONTENT_W, height: 1.5, color: C.gold });
+    p.drawRectangle({ x: cX, y: rule1Y, width: cW, height: 1.5, color: C.gold });
 
     // ── CENTER — Mark Name ──
     const mnStr = safeText(markName).toUpperCase().slice(0, 22);
     const mnSize = mnStr.length > 12 ? 36 : 48;
     const mnW = bold.widthOfTextAtSize(mnStr, mnSize);
-    p.drawText(mnStr, { x: (PAGE_W - mnW) / 2, y: rule1Y - 50, size: mnSize, font: bold, color: C.white });
+    const centerX = cX + (cW - mnW) / 2;
+    p.drawText(mnStr, { x: Math.max(cX, centerX), y: rule1Y - 50, size: mnSize, font: bold, color: C.deepGreen });
 
     // Class line
     const classLine = niceClasses.length > 0
       ? `Class ${niceClasses.map(c => c.classNumber).join(", ")} — ${safeText(niceClasses[0].className_en || niceClasses[0].className).slice(0, 40)}`
       : "Trademark Clearance Analysis";
     const clW = bold.widthOfTextAtSize(classLine, 12);
-    p.drawText(classLine, { x: (PAGE_W - clW) / 2, y: rule1Y - 80, size: 12, font: bold, color: C.gold });
+    p.drawText(classLine, { x: cX + (cW - clW) / 2, y: rule1Y - 78, size: 12, font: bold, color: C.gold });
 
     // Goods/Services (max 2 lines)
     if (goodsServices) {
-      const gsLines = wrapText(goodsServices, regular, 9.5, CONTENT_W - 60).slice(0, 2);
+      const gsLines = wrapText(goodsServices, regular, 9.5, cW - 20).slice(0, 2);
       const gsY = rule1Y - 100;
       for (let i = 0; i < gsLines.length; i++) {
         const gW = regular.widthOfTextAtSize(gsLines[i], 9.5);
-        p.drawText(gsLines[i], { x: (PAGE_W - gW) / 2, y: gsY - i * 15, size: 9.5, font: regular, color: rgb(0.75, 0.75, 0.75) });
+        p.drawText(gsLines[i], { x: cX + (cW - gW) / 2, y: gsY - i * 15, size: 9.5, font: regular, color: C.textSecond });
       }
     }
 
     const rule2Y = rule1Y - 130;
-    p.drawRectangle({ x: MARGIN_X, y: rule2Y, width: CONTENT_W, height: 1.5, color: C.gold });
+    p.drawRectangle({ x: cX, y: rule2Y, width: cW, height: 1.5, color: C.gold });
 
-    // ── SCORE CIRCLE ──
-    const circleY = rule2Y - 85;
-    const circleCX = PAGE_W / 2;
+    // ── SCORE CIRCLE — on white background ──
+    const circleY = rule2Y - 90;
+    const circleCX = cX + cW / 2;
     const circleR = 42;
 
-    // Outer arc (risk color) — background ring first
-    drawArc(p, circleCX, circleY, circleR, 8, 1, rgb(0.2, 0.35, 0.25));
-    // Progress arc
+    // Outer ring background (light border color)
+    drawArc(p, circleCX, circleY, circleR, 8, 1, C.border);
+    // Progress arc in risk color
     drawArc(p, circleCX, circleY, circleR, 8, score / 100, rc);
-    // Inner fill
-    p.drawCircle({ x: circleCX, y: circleY, size: circleR - 6, color: C.deepGreen });
+    // Inner fill — white (print-friendly)
+    p.drawCircle({ x: circleCX, y: circleY, size: circleR - 6, color: C.cardWhite });
 
-    // Score number
+    // Score number in dark green
     const scoreStr = String(score);
     const scoreSize = 34;
     const scoreW = bold.widthOfTextAtSize(scoreStr, scoreSize);
-    p.drawText(scoreStr, { x: circleCX - scoreW / 2, y: circleY + 8, size: scoreSize, font: bold, color: C.white });
+    p.drawText(scoreStr, { x: circleCX - scoreW / 2, y: circleY + 8, size: scoreSize, font: bold, color: C.deepGreen });
     const outOfStr = "/100";
     const outOfW = bold.widthOfTextAtSize(outOfStr, 13);
     p.drawText(outOfStr, { x: circleCX - outOfW / 2, y: circleY - 14, size: 13, font: bold, color: C.gold });
 
-    // Risk badge below circle
+    // Risk badge below circle — outlined style
     const rl = riskLabel(result.risk, "en");
     const rlW = bold.widthOfTextAtSize(rl, 9) + 20;
     const badgeX = circleCX - rlW / 2;
@@ -618,45 +637,45 @@ async function buildPdf(
     // ── BOTTOM AREA ──
     const bottomY = PAGE_H * 0.28;
 
-    // Three data pills
+    // Three outlined data pills
     const pillData = [
       "Mexico - IMPI Registry",
       `${now.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`,
       "Confidential",
     ];
-    const totalPillW = pillData.reduce((acc, t) => acc + regular.widthOfTextAtSize(t, 8) + 28, 0) + 20;
-    let pillX = (PAGE_W - totalPillW) / 2;
+    const totalPillW = pillData.reduce((acc, t) => acc + regular.widthOfTextAtSize(t, 8) + 24, 0) + 20;
+    let pillX = cX + (cW - totalPillW) / 2;
     for (const pd of pillData) {
-      const pw = regular.widthOfTextAtSize(pd, 8) + 28;
-      p.drawRectangle({ x: pillX, y: bottomY - 14, width: pw, height: 18, color: rgb(0.102, 0.29, 0.196), borderColor: C.gold, borderWidth: 0.8 });
-      p.drawText(pd, { x: pillX + 14, y: bottomY - 7, size: 8, font: regular, color: C.white });
+      const pw = regular.widthOfTextAtSize(pd, 8) + 24;
+      p.drawRectangle({ x: pillX, y: bottomY - 14, width: pw, height: 18, color: C.cardWhite, borderColor: C.gold, borderWidth: 1 });
+      p.drawText(pd, { x: pillX + 12, y: bottomY - 7, size: 8, font: regular, color: C.deepGreen });
       pillX += pw + 10;
     }
 
     // Gold rule
-    p.drawRectangle({ x: MARGIN_X, y: bottomY - 26, width: CONTENT_W, height: 1, color: C.gold });
+    p.drawRectangle({ x: cX, y: bottomY - 26, width: cW, height: 1, color: C.gold });
 
-    // Bilingual disclaimer block (two columns)
-    const colW = (CONTENT_W - 20) / 2;
+    // Bilingual disclaimer block (two columns, dark text on white)
+    const colW = (cW - 16) / 2;
     const disclaimerEN = "This report is an AI-powered trademark screening analysis against the official IMPI MARCia database. It does not constitute legal advice.";
     const disclaimerES = "Este informe es un analisis automatizado de disponibilidad marcaria contra el registro oficial IMPI MARCia. No constituye asesoria legal.";
     const enLines = wrapText(disclaimerEN, regular, 7.5, colW);
     const esLines = wrapText(disclaimerES, italic, 7.5, colW);
     let dy = bottomY - 42;
     for (const line of enLines) {
-      p.drawText(line, { x: MARGIN_X, y: dy, size: 7.5, font: regular, color: rgb(0.55, 0.65, 0.55) });
+      p.drawText(line, { x: cX, y: dy, size: 7.5, font: regular, color: C.textSecond });
       dy -= 12;
     }
     dy = bottomY - 42;
     for (const line of esLines) {
-      p.drawText(line, { x: MARGIN_X + colW + 20, y: dy, size: 7.5, font: italic, color: rgb(0.45, 0.55, 0.45) });
+      p.drawText(line, { x: cX + colW + 16, y: dy, size: 7.5, font: italic, color: C.textMuted });
       dy -= 12;
     }
 
     // Bottom domain
     const siteLabel = "MexicoTrademarkCenter.com";
     const slW = bold.widthOfTextAtSize(siteLabel, 9);
-    p.drawText(siteLabel, { x: (PAGE_W - slW) / 2, y: 30, size: 9, font: bold, color: C.gold });
+    p.drawText(siteLabel, { x: cX + (cW - slW) / 2, y: 30, size: 9, font: bold, color: C.gold });
   }
 
   // ════════════════════════════════════════════════════════════════════
@@ -944,10 +963,11 @@ async function buildPdf(
         p.drawText(T("BACKGROUND NOISE", "RUIDO DE FONDO"), { x: MARGIN_X, y, size: 7.5, font: bold, color: C.textMuted });
         y -= 14;
 
-        // Table header
-        p.drawRectangle({ x: MARGIN_X, y: y - 16, width: CONTENT_W, height: 18, color: C.midGreen });
+        // Table header — light tint, no heavy ink fill
+        p.drawRectangle({ x: MARGIN_X, y: y - 16, width: CONTENT_W, height: 18, color: rgb(0.922, 0.937, 0.922) });
+        p.drawRectangle({ x: MARGIN_X, y: y - 16, width: CONTENT_W, height: 0.8, color: C.deepGreen });
         const cols = [{ x: MARGIN_X + 6, w: 130, label: "Mark" }, { x: MARGIN_X + 144, w: 120, label: "Owner" }, { x: MARGIN_X + 272, w: 60, label: "Class" }, { x: MARGIN_X + 340, w: 100, label: "Status" }];
-        for (const col of cols) p.drawText(T(col.label, col.label === "Mark" ? "Marca" : col.label === "Owner" ? "Titular" : col.label === "Class" ? "Clase" : "Estado"), { x: col.x, y: y - 10, size: 7.5, font: bold, color: C.white });
+        for (const col of cols) p.drawText(T(col.label, col.label === "Mark" ? "Marca" : col.label === "Owner" ? "Titular" : col.label === "Class" ? "Clase" : "Estado"), { x: col.x, y: y - 10, size: 7.5, font: bold, color: C.deepGreen });
         y -= 22;
 
         for (let i = 0; i < Math.min(background.length, 15) && y > MARGIN_BOT; i++) {
@@ -978,13 +998,14 @@ async function buildPdf(
       );
       y -= 8;
 
-      // Summary box
+      // Summary box — outlined, no heavy fill
       const failed = flags.filter(f => f.severity === "high" || f.severity === "medium").length;
       const passed = Math.max(0, 8 - flags.length);
       const summaryStr = `${failed} ${T("grounds failed", "motivos fallidos")}  ·  ${passed} ${T("grounds passed", "motivos aprobados")}  ·  ${Math.max(0, 13 - failed - passed)} ${T("not applicable", "no aplicables")}`;
-      p.drawRectangle({ x: MARGIN_X, y: y - 26, width: CONTENT_W, height: 30, color: C.deepGreen });
+      p.drawRectangle({ x: MARGIN_X, y: y - 26, width: CONTENT_W, height: 30, color: C.offWhite, borderColor: C.deepGreen, borderWidth: 1 });
+      p.drawRectangle({ x: MARGIN_X, y: y - 26, width: 4, height: 30, color: C.gold });
       const sumW = bold.widthOfTextAtSize(summaryStr, 9);
-      p.drawText(summaryStr, { x: (PAGE_W - sumW) / 2, y: y - 12, size: 9, font: bold, color: C.white });
+      p.drawText(summaryStr, { x: (PAGE_W - sumW) / 2, y: y - 12, size: 9, font: bold, color: C.deepGreen });
       y -= 42;
 
       if (flags.length === 0) {
@@ -1070,7 +1091,7 @@ async function buildPdf(
       );
       y -= 8;
 
-      // Summary bar
+      // Summary bar — outlined boxes, no heavy fill
       const boxW = (CONTENT_W - 8) / 3;
       const summaryBoxes = [
         { label: T(`${favor} Favoring Registration`, `${favor} A Favor del Registro`), color: C.accentGreen },
@@ -1079,9 +1100,10 @@ async function buildPdf(
       ];
       for (let i = 0; i < summaryBoxes.length; i++) {
         const bx = MARGIN_X + i * (boxW + 4);
-        p.drawRectangle({ x: bx, y: y - 28, width: boxW, height: 30, color: summaryBoxes[i].color });
+        p.drawRectangle({ x: bx, y: y - 28, width: boxW, height: 30, color: C.cardWhite, borderColor: summaryBoxes[i].color, borderWidth: 1.5 });
+        p.drawRectangle({ x: bx, y: y - 28, width: 4, height: 30, color: summaryBoxes[i].color });
         const lw = bold.widthOfTextAtSize(safeText(summaryBoxes[i].label), 8.5);
-        p.drawText(safeText(summaryBoxes[i].label).slice(0, 28), { x: bx + (boxW - lw) / 2, y: y - 16, size: 8.5, font: bold, color: C.white });
+        p.drawText(safeText(summaryBoxes[i].label).slice(0, 28), { x: bx + (boxW - lw) / 2, y: y - 16, size: 8.5, font: bold, color: summaryBoxes[i].color });
       }
       y -= 44;
 
@@ -1439,8 +1461,8 @@ async function buildPdf(
           const alt = alts[ai];
           p.drawText(safeText(alt.name).slice(0, 16).toUpperCase(), { x: ax + 8, y: y - 16, size: 12, font: bold, color: C.deepGreen });
           const typeW = regular.widthOfTextAtSize(alt.type, 7) + 8;
-          p.drawRectangle({ x: ax + 8, y: y - 30, width: typeW, height: 12, color: C.accentGreen });
-          p.drawText(alt.type, { x: ax + 12, y: y - 23, size: 7, font: bold, color: C.white });
+          p.drawRectangle({ x: ax + 8, y: y - 30, width: typeW, height: 12, color: C.cardWhite, borderColor: C.accentGreen, borderWidth: 1 });
+          p.drawText(alt.type, { x: ax + 12, y: y - 23, size: 7, font: bold, color: C.accentGreen });
           const reasonLines = wrapText(alt.reason, regular, 7, altW - 16).slice(0, 2);
           let ary = y - 44;
           for (const rl of reasonLines) {
@@ -1452,14 +1474,15 @@ async function buildPdf(
         y -= 74;
       }
 
-      // IMPI Cost & Timeline card
+      // IMPI Cost & Timeline card — white + left border, no heavy fill
       if (y > MARGIN_BOT + 80) {
         y -= 4;
         const tlH = 104;
-        p.drawRectangle({ x: MARGIN_X, y: y - tlH, width: CONTENT_W, height: tlH, color: C.deepGreen });
-        p.drawRectangle({ x: MARGIN_X, y: y - tlH, width: CONTENT_W, height: 2, color: C.gold });
-        p.drawText(T("FILING TIMELINE & OFFICIAL FEES", "CRONOGRAMA DE TRAMITE Y CUOTAS OFICIALES"), { x: MARGIN_X + 16, y: y - 18, size: 10, font: bold, color: C.white });
-        p.drawRectangle({ x: MARGIN_X + 16, y: y - 26, width: CONTENT_W - 32, height: 0.8, color: C.gold });
+        drawCard(p, MARGIN_X, y, CONTENT_W, tlH);
+        p.drawRectangle({ x: MARGIN_X, y: y - tlH, width: 4, height: tlH, color: C.gold });
+        p.drawRectangle({ x: MARGIN_X, y: y - 1, width: CONTENT_W, height: 1.5, color: C.deepGreen });
+        p.drawText(T("FILING TIMELINE & OFFICIAL FEES", "CRONOGRAMA DE TRAMITE Y CUOTAS OFICIALES"), { x: MARGIN_X + 14, y: y - 18, size: 10, font: bold, color: C.deepGreen });
+        p.drawRectangle({ x: MARGIN_X + 14, y: y - 26, width: CONTENT_W - 28, height: 0.8, color: C.gold });
         const timelineItems = [
           T("12-18 months typical registration timeline", "12-18 meses plazo tipico de registro"),
           T("USD $170 IMPI official filing fee per class", "USD $170 cuota oficial IMPI de presentacion por clase"),
@@ -1468,11 +1491,11 @@ async function buildPdf(
         ];
         let ty = y - 40;
         for (const item of timelineItems) {
-          p.drawText(safeText(item), { x: MARGIN_X + 24, y: ty, size: 8.5, font: regular, color: rgb(0.85, 0.9, 0.85) });
+          p.drawText(safeText(item), { x: MARGIN_X + 20, y: ty, size: 8.5, font: regular, color: C.textPrimary });
           ty -= 14;
         }
-        p.drawRectangle({ x: MARGIN_X + 16, y: y - tlH + 22, width: CONTENT_W - 32, height: 0.6, color: rgb(0.4, 0.6, 0.4) });
-        p.drawText(T("MexicoTrademarkCenter Filing Service: from USD $299  |  Includes: preparation, filing, prosecution, reporting", "Servicio de registro MexicoTrademarkCenter: desde USD $299  |  Incluye: preparacion, presentacion, gestion, reportes"), { x: MARGIN_X + 16, y: y - tlH + 11, size: 7.5, font: regular, color: C.gold });
+        p.drawRectangle({ x: MARGIN_X + 14, y: y - tlH + 22, width: CONTENT_W - 28, height: 0.6, color: C.border });
+        p.drawText(T("MexicoTrademarkCenter Filing Service: from USD $299  |  Includes: preparation, filing, prosecution, reporting", "Servicio de registro MexicoTrademarkCenter: desde USD $299  |  Incluye: preparacion, presentacion, gestion, reportes"), { x: MARGIN_X + 14, y: y - tlH + 11, size: 7.5, font: bold, color: C.gold });
         y -= tlH + 8;
       }
     }
@@ -1501,10 +1524,11 @@ async function buildPdf(
         const officialHeading = useEnglish ? (nc.officialHeading_en || nc.officialHeading) : nc.officialHeading;
         const items = useEnglish ? (nc.relevantItems_en?.length ? nc.relevantItems_en : nc.relevantItems) : nc.relevantItems;
 
-        p.drawRectangle({ x: MARGIN_X, y: y - 32, width: 44, height: 36, color: C.deepGreen });
+        // Class badge — outlined, no heavy fill
+        p.drawRectangle({ x: MARGIN_X, y: y - 32, width: 44, height: 36, color: C.cardWhite, borderColor: C.deepGreen, borderWidth: 1.5 });
         const cnStr = String(nc.classNumber);
         const cnW = bold.widthOfTextAtSize(cnStr, 16);
-        p.drawText(cnStr, { x: MARGIN_X + (44 - cnW) / 2, y: y - 20, size: 16, font: bold, color: C.gold });
+        p.drawText(cnStr, { x: MARGIN_X + (44 - cnW) / 2, y: y - 20, size: 16, font: bold, color: C.deepGreen });
         p.drawText(safeText(className), { x: MARGIN_X + 52, y: y - 12, size: 10.5, font: bold, color: C.deepGreen });
         p.drawText(safeText(officialHeading).slice(0, 80), { x: MARGIN_X + 52, y: y - 26, size: 7.5, font: regular, color: C.textSecond });
         y -= 42;
@@ -1529,15 +1553,20 @@ async function buildPdf(
   if (isBilingual) {
     renderAllSections(searchLangTyped, false);
 
-    // Divider page
+    // Divider page — white with sidebar strip, no full bleed
     const dp = newPage("Language Divider");
-    dp.drawRectangle({ x: 0, y: 0, width: PAGE_W, height: PAGE_H, color: C.deepGreen });
+    dp.drawRectangle({ x: 0, y: 0, width: PAGE_W, height: PAGE_H, color: C.cardWhite });
+    dp.drawRectangle({ x: 0, y: 0, width: 62, height: PAGE_H, color: C.deepGreen });
+    dp.drawRectangle({ x: 62, y: 0, width: 2, height: PAGE_H, color: C.gold });
+    // Gold rule across center
+    dp.drawRectangle({ x: 80, y: PAGE_H / 2 + 30, width: PAGE_W - 100, height: 1.5, color: C.gold });
+    dp.drawRectangle({ x: 80, y: PAGE_H / 2 - 22, width: PAGE_W - 100, height: 1.5, color: C.gold });
     const divLabel = "ENGLISH VERSION";
     const divW = bold.widthOfTextAtSize(divLabel, 22);
-    dp.drawText(divLabel, { x: (PAGE_W - divW) / 2, y: PAGE_H / 2 + 10, size: 22, font: bold, color: C.gold });
+    dp.drawText(divLabel, { x: (PAGE_W - divW) / 2 + 30, y: PAGE_H / 2 + 4, size: 22, font: bold, color: C.deepGreen });
     const subLabel = "MexicoTrademarkCenter.com";
-    const subW = regular.widthOfTextAtSize(subLabel, 11);
-    dp.drawText(subLabel, { x: (PAGE_W - subW) / 2, y: PAGE_H / 2 - 18, size: 11, font: regular, color: rgb(0.6, 0.75, 0.65) });
+    const subW = regular.widthOfTextAtSize(subLabel, 10);
+    dp.drawText(subLabel, { x: (PAGE_W - subW) / 2 + 30, y: PAGE_H / 2 - 36, size: 10, font: regular, color: C.textMuted });
 
     renderAllSections("en", true);
   } else {
@@ -1549,18 +1578,29 @@ async function buildPdf(
   // ════════════════════════════════════════════════════════════════════
   {
     const p = newPage("Disclaimer");
-    p.drawRectangle({ x: 0, y: 0, width: PAGE_W, height: PAGE_H, color: C.deepGreen });
+    // White base with sidebar — matching cover bookend aesthetic
+    p.drawRectangle({ x: 0, y: 0, width: PAGE_W, height: PAGE_H, color: C.cardWhite });
+    p.drawRectangle({ x: 0, y: 0, width: 62, height: PAGE_H, color: C.deepGreen });
+    p.drawRectangle({ x: 62, y: 0, width: 2, height: PAGE_H, color: C.gold });
+    // Sidebar initials mirroring cover
+    p.drawText("M", { x: 18, y: PAGE_H / 2 + 30, size: 22, font: bold, color: C.gold });
+    p.drawText("T", { x: 18, y: PAGE_H / 2 + 6, size: 22, font: bold, color: C.gold });
+    p.drawText("C", { x: 18, y: PAGE_H / 2 - 18, size: 22, font: bold, color: C.gold });
 
-    // Logo centered top
-    p.drawText("MEXICO TRADEMARK CENTER", { x: (PAGE_W - bold.widthOfTextAtSize("MEXICO TRADEMARK CENTER", 14)) / 2, y: PAGE_H - 60, size: 14, font: bold, color: C.white });
-    p.drawText("MexicoTrademarkCenter.com", { x: (PAGE_W - regular.widthOfTextAtSize("MexicoTrademarkCenter.com", 10)) / 2, y: PAGE_H - 80, size: 10, font: regular, color: C.gold });
+    // Content area starts right of sidebar
+    const dX = 80;
+    const dW = PAGE_W - dX - 20;
 
-    // White disclaimer card
-    const cardX = MARGIN_X;
-    const cardW = CONTENT_W;
-    const cardY = PAGE_H - 110;
-    const cardH = 440;
-    p.drawRectangle({ x: cardX, y: cardY - cardH, width: cardW, height: cardH, color: C.cardWhite });
+    // Logo top
+    p.drawText("MEXICO TRADEMARK CENTER", { x: dX, y: PAGE_H - 52, size: 13, font: bold, color: C.deepGreen });
+    p.drawText("MexicoTrademarkCenter.com", { x: dX, y: PAGE_H - 68, size: 9, font: regular, color: C.gold });
+    p.drawRectangle({ x: dX, y: PAGE_H - 76, width: dW, height: 1, color: C.gold });
+
+    // Disclaimer card — just a bordered white box on the white page
+    const cardY = PAGE_H - 90;
+    const cardH = 480;
+    p.drawRectangle({ x: dX, y: cardY - cardH, width: dW, height: cardH, color: C.offWhite, borderColor: C.border, borderWidth: 0.8 });
+    p.drawRectangle({ x: dX, y: cardY - cardH, width: 3, height: cardH, color: C.gold });
 
     const disclaimerEN = [
       "This Trademark Clearance Report was generated by MexicoTrademarkCenter.com using AI-powered",
@@ -1588,36 +1628,36 @@ async function buildPdf(
       "Mexico antes de tomar decisiones de registro.",
     ];
 
-    let dy = cardY - 20;
-    p.drawText("DISCLAIMER", { x: cardX + 20, y: dy, size: 9, font: bold, color: C.deepGreen });
+    let dy = cardY - 18;
+    p.drawText("DISCLAIMER", { x: dX + 16, y: dy, size: 9, font: bold, color: C.deepGreen });
     dy -= 6;
-    p.drawRectangle({ x: cardX + 20, y: dy, width: cardW - 40, height: 1, color: C.gold });
+    p.drawRectangle({ x: dX + 16, y: dy, width: dW - 32, height: 1, color: C.gold });
     dy -= 14;
 
     for (const line of disclaimerEN) {
       if (!line) { dy -= 8; continue; }
-      p.drawText(line, { x: cardX + 20, y: dy, size: 8.5, font: regular, color: C.textPrimary });
+      p.drawText(line, { x: dX + 16, y: dy, size: 8.5, font: regular, color: C.textPrimary });
       dy -= 13;
     }
 
     dy -= 8;
-    p.drawRectangle({ x: cardX + 20, y: dy, width: cardW - 40, height: 0.8, color: C.gold });
+    p.drawRectangle({ x: dX + 16, y: dy, width: dW - 32, height: 0.8, color: C.gold });
     dy -= 14;
 
-    p.drawText("AVISO LEGAL", { x: cardX + 20, y: dy, size: 9, font: bold, color: C.deepGreen });
+    p.drawText("AVISO LEGAL", { x: dX + 16, y: dy, size: 9, font: bold, color: C.deepGreen });
     dy -= 14;
 
     for (const line of disclaimerES) {
       if (!line) { dy -= 8; continue; }
-      p.drawText(line, { x: cardX + 20, y: dy, size: 8.5, font: italic, color: C.textSecond });
+      p.drawText(line, { x: dX + 16, y: dy, size: 8.5, font: italic, color: C.textSecond });
       dy -= 13;
     }
 
     // Bottom metadata
     const metaStr = `Report generated: ${timestamp}${purchaserEmail ? ` | Prepared for: ${purchaserEmail}` : ""}`;
     const meta2Str = "MexicoTrademarkCenter.com  |  Independent Trademark Filing Services for Mexico";
-    p.drawText(safeText(metaStr).slice(0, 80), { x: (PAGE_W - regular.widthOfTextAtSize(safeText(metaStr).slice(0, 80), 7.5)) / 2, y: 54, size: 7.5, font: regular, color: C.gold });
-    p.drawText(meta2Str, { x: (PAGE_W - regular.widthOfTextAtSize(meta2Str, 7.5)) / 2, y: 40, size: 7.5, font: regular, color: rgb(0.6, 0.75, 0.65) });
+    p.drawText(safeText(metaStr).slice(0, 80), { x: dX, y: 54, size: 7.5, font: regular, color: C.textMuted });
+    p.drawText(meta2Str, { x: dX, y: 40, size: 7.5, font: bold, color: C.gold });
   }
 
   // ── Apply running headers + footers to all body pages ─────────────
