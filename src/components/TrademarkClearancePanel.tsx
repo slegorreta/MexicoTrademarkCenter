@@ -752,43 +752,50 @@ function PentagonChart({ data }: { data: PentagonData[] }) {
   );
 }
 
-function computePentagonScores(result: ClearanceResult): PentagonData[] {
+const PENTAGON_LABELS: Record<string, { originality: string; distinctiveness: string; compliance: string; opposition: string; dilution: string }> = {
+  en: { originality: 'Originality',        distinctiveness: 'Distinctiveness', compliance: 'Compliance',     opposition: 'Opposition',    dilution: 'Dilution'       },
+  es: { originality: 'Originalidad',       distinctiveness: 'Distintividad',   compliance: 'Cumplimiento',   opposition: 'Oposición',     dilution: 'Dilución'       },
+  zh: { originality: '独创性',              distinctiveness: '显著性',           compliance: '合规性',          opposition: '异议风险',       dilution: '淡化风险'        },
+  de: { originality: 'Originalität',       distinctiveness: 'Unterscheidungsk.', compliance: 'Konformität',  opposition: 'Widerspruch',   dilution: 'Verwässerung'   },
+  fr: { originality: 'Originalité',        distinctiveness: 'Distinctivité',   compliance: 'Conformité',     opposition: 'Opposition',    dilution: 'Dilution'       },
+  hi: { originality: 'मौलिकता',            distinctiveness: 'विशिष्टता',        compliance: 'अनुपालन',        opposition: 'विरोध',          dilution: 'तनुकरण'         },
+  pt: { originality: 'Originalidade',      distinctiveness: 'Distintividade',  compliance: 'Conformidade',   opposition: 'Oposição',      dilution: 'Diluição'       },
+  ja: { originality: '独自性',              distinctiveness: '識別力',           compliance: 'コンプライアンス', opposition: '異議申立',       dilution: '希釈化'          },
+};
+
+function computePentagonScores(result: ClearanceResult, lang: string): PentagonData[] {
   const d = result.distinctiveness;
   const dupont = result.dupont ?? [];
   const flags = result.registrabilityFlags ?? [];
   const marcia = result.marciaFindings ?? [];
   const translations = result.translationAnalysis ?? [];
+  const labels = PENTAGON_LABELS[lang] ?? PENTAGON_LABELS['en'];
 
-  // Originalidad (distinctiveness): 0–100 based on tier score 1–5
   const tierScore = d?.score ?? 3;
-  const originalidad = Math.round(((tierScore - 1) / 4) * 100);
+  const originality = Math.round(((tierScore - 1) / 4) * 100);
 
-  // Dilución (dilution risk): inversely proportional to saturation
   const total = result.marciaTotalCount ?? marcia.length;
-  const dilución = Math.max(0, 100 - Math.min(100, total * 5));
+  const dilution = Math.max(0, 100 - Math.min(100, total * 5));
 
-  // Oposición (opposition risk): based on MARCia same/related class conflicts
   const conflictCount = marcia.filter(f => (f as MarciaFinding & { classOverlap?: string }).classOverlap === 'same' || (f as MarciaFinding & { classOverlap?: string }).classOverlap === 'related').length;
-  const oposición = Math.max(0, 100 - Math.min(100, conflictCount * 20));
+  const opposition = Math.max(0, 100 - Math.min(100, conflictCount * 20));
 
-  // Cumplimiento legal (legal compliance): based on LFPPI flags + translation risk
   const highFlags = flags.filter(f => f.severity === 'high').length;
   const medFlags = flags.filter(f => f.severity === 'medium').length;
   const transHigh = translations.filter(t => t.risk === 'high').length;
-  const cumplimiento = Math.max(0, 100 - highFlags * 25 - medFlags * 10 - transHigh * 10);
+  const compliance = Math.max(0, 100 - highFlags * 25 - medFlags * 10 - transHigh * 10);
 
-  // Distintividad (DuPont strength): based on DuPont factors
   const favor = dupont.filter(f => f.verdict === 'favors_registration').length;
   const against = dupont.filter(f => f.verdict === 'against_registration').length;
   const total13 = dupont.length || 13;
-  const distintividad = Math.round(((favor - against + total13) / (2 * total13)) * 100);
+  const distinctiveness = Math.round(((favor - against + total13) / (2 * total13)) * 100);
 
   return [
-    { label: 'Originalidad', value: Math.max(0, Math.min(100, originalidad)) },
-    { label: 'Distintividad', value: Math.max(0, Math.min(100, distintividad)) },
-    { label: 'Cumplimiento', value: Math.max(0, Math.min(100, cumplimiento)) },
-    { label: 'Oposición', value: Math.max(0, Math.min(100, oposición)) },
-    { label: 'Dilución', value: Math.max(0, Math.min(100, dilución)) },
+    { label: labels.originality,      value: Math.max(0, Math.min(100, originality))    },
+    { label: labels.distinctiveness,  value: Math.max(0, Math.min(100, distinctiveness)) },
+    { label: labels.compliance,       value: Math.max(0, Math.min(100, compliance))      },
+    { label: labels.opposition,       value: Math.max(0, Math.min(100, opposition))      },
+    { label: labels.dilution,         value: Math.max(0, Math.min(100, dilution))        },
   ];
 }
 
@@ -1460,7 +1467,7 @@ export default function TrademarkClearancePanel({
 
       {/* ── Feature 3: Pentagon Risk Profile Chart ─────────────────────────── */}
       {(() => {
-        const pentagonData = computePentagonScores(result);
+        const pentagonData = computePentagonScores(result, lang);
         return (
           <div className="border-t border-gray-100 bg-white/50 px-4 py-3">
             <div className="flex items-center gap-1.5 mb-2">

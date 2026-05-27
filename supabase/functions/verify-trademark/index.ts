@@ -1233,9 +1233,36 @@ async function generateConsistentRiskSummary(
 
   const riskLabelEs = finalRisk === "high" ? "Pocas Probabilidades de registro" : finalRisk === "medium" ? "Probabilidades Medias de registro" : "Altas Probabilidades de registro";
 
+  // Helper: classify a MARCia status string as "registered", "pending", or "other"
+  const classifyStatus = (status: string): "registered" | "pending" | "other" => {
+    const s = status.toLowerCase();
+    if (/registrad|vigente|registered|active/i.test(s)) return "registered";
+    if (/tr[aá]mite|pendiente|solicitud|en proceso|pending|filed|application/i.test(s)) return "pending";
+    return "other";
+  };
+
   let marciaContext: string;
   if (exactSameClass) {
-    marciaContext = `Se encontró una coincidencia EXACTA en el registro IMPI MARCia para "${markName}" en la MISMA clase Niza que el solicitante (clase(s) ${applicantClasses.join(", ")}). Este es el obstáculo más importante para el registro.`;
+    const exactMatches = marciaFindings.filter(f =>
+      isSimilarName(f.name, markName) && f.classOverlap === "same"
+    );
+    const registeredMatches = exactMatches.filter(f => classifyStatus((f as { status?: string }).status ?? "") === "registered");
+    const pendingMatches = exactMatches.filter(f => classifyStatus((f as { status?: string }).status ?? "") === "pending");
+    const otherMatches = exactMatches.filter(f => classifyStatus((f as { status?: string }).status ?? "") === "other");
+
+    let statusDesc = "";
+    if (registeredMatches.length > 0 && pendingMatches.length > 0) {
+      statusDesc = `${registeredMatches.length} marca(s) YA REGISTRADA(S) y ${pendingMatches.length} solicitud(es) EN TRÁMITE`;
+    } else if (registeredMatches.length > 0) {
+      statusDesc = `${registeredMatches.length} marca(s) YA REGISTRADA(S)`;
+    } else if (pendingMatches.length > 0) {
+      statusDesc = `${pendingMatches.length} solicitud(es) EN TRÁMITE (aún no registrada(s), pero con derecho de preferencia)`;
+    } else if (otherMatches.length > 0) {
+      statusDesc = `${otherMatches.length} marca(s) con estado: ${otherMatches.map(f => (f as { status?: string }).status ?? "desconocido").join(", ")}`;
+    } else {
+      statusDesc = "una coincidencia exacta";
+    }
+    marciaContext = `Se encontró ${statusDesc} en el registro IMPI MARCia para "${markName}" en la MISMA clase Niza que el solicitante (clase(s) ${applicantClasses.join(", ")}). ${pendingMatches.length > 0 && registeredMatches.length === 0 ? "Una solicitud en trámite en la misma clase constituye un obstáculo significativo: si se registra antes, puede bloquear la solicitud del cliente bajo el principio de prioridad registral." : "Este es el obstáculo más importante para el registro."}`;
   } else if (exactRelatedClass) {
     const unrelatedNames = marciaFindings.filter(f => f.name.toLowerCase().trim() === markName.toLowerCase().trim() && f.classOverlap === "unrelated").map(f => `"${f.name}" (clase ${f.classNum})`);
     marciaContext = `Se encontró una coincidencia exacta de nombre en el registro IMPI MARCia, pero únicamente en una clase RELACIONADA, no en la(s) clase(s) del solicitante (${applicantClasses.join(", ")}). Esto representa un riesgo moderado.${unrelatedNames.length ? ` Nota: también existe una marca idéntica en una clase no relacionada (${unrelatedNames.join(", ")}), lo cual no afecta la registrabilidad en la clase del solicitante.` : ""}`;
