@@ -813,17 +813,26 @@ function renderDistinctivenessSection(
 
   const spectrumLabel = useEnglish ? "Trademark Distinctiveness Spectrum" : safeText(lbl("trademarkSpectrum", lang));
   p.drawText(spectrumLabel, { x: MARGIN, y, size: 10, font: bold, color: C.darkGreen });
-  y -= 16;
+  y -= 18;
+
   for (const [tier, exp] of tierExplanations) {
     const isActive = tier.toLowerCase() === d.tier.toLowerCase();
+    const expLines = wrapText(exp, regular, 9, CONTENT_W - 24);
+    const rowH = (isActive ? 14 : 12) + expLines.length * 13 + 8;
+
     if (isActive) {
-      p.drawRectangle({ x: MARGIN, y: y - 4, width: CONTENT_W, height: 36, color: rgb(0.9, 0.96, 0.9) });
-      p.drawText(">> " + tier + " (Your mark)", { x: MARGIN + 8, y: y + 8, size: 9, font: bold, color: C.darkGreen });
+      p.drawRectangle({ x: MARGIN, y: y - rowH + 4, width: CONTENT_W, height: rowH, color: rgb(0.9, 0.96, 0.9) });
+      p.drawText(">> " + tier + " (Your mark)", { x: MARGIN + 10, y: y - 2, size: 9, font: bold, color: C.darkGreen });
     } else {
-      p.drawText("  " + tier, { x: MARGIN + 8, y: y + 8, size: 9, font: bold, color: C.gray });
+      p.drawText(tier, { x: MARGIN + 10, y: y - 2, size: 9, font: bold, color: C.gray });
     }
-    y = drawWrappedText(p, "   " + exp, MARGIN + 8, y - 4, regular, 9, CONTENT_W - 16, isActive ? C.darkGreen : C.gray);
-    y -= 4;
+
+    let ey = y - 14;
+    for (const expLine of expLines) {
+      p.drawText(expLine, { x: MARGIN + 10, y: ey, size: 9, font: regular, color: isActive ? C.darkGreen : C.gray });
+      ey -= 13;
+    }
+    y = ey - 4;
   }
 }
 
@@ -914,22 +923,28 @@ function renderLfppiSection(
       const sLabel = flag.severity.toUpperCase();
       const catLabel = CATEGORY_EN[flag.category] ?? flag.category;
       const explanationText = useEnglish ? (flag.explanation_en ?? flag.explanation) : flag.explanation;
-      const flagLines = wrapText(explanationText || "", regular, 9, CONTENT_W - 90);
-      const flagH = Math.max(38, flagLines.length * 14 + 20);
+      const flagLines = wrapText(explanationText || "", regular, 9, CONTENT_W - 16);
+      // Header row: badge (56px) + category label; body starts below header
+      const headerH = 22;
+      const bodyH = flagLines.length * 14;
+      const flagH = headerH + bodyH + 16;
 
       if (y - flagH < 80) break;
 
-      p.drawRectangle({ x: MARGIN, y: y - flagH, width: CONTENT_W, height: flagH + 4, color: rgb(0.99, 0.97, 0.96), borderColor: sColor, borderWidth: 1 });
-      p.drawRectangle({ x: MARGIN, y: y - 18, width: 56, height: 18, color: sColor });
-      p.drawText(sLabel, { x: MARGIN + 10, y: y - 12, size: 8, font: bold, color: C.white });
-      p.drawText(catLabel, { x: MARGIN + 64, y: y - 10, size: 9, font: bold, color: C.black });
+      p.drawRectangle({ x: MARGIN, y: y - flagH, width: CONTENT_W, height: flagH, color: rgb(0.99, 0.97, 0.96), borderColor: sColor, borderWidth: 1 });
+      // Badge on header row
+      p.drawRectangle({ x: MARGIN, y: y - headerH, width: 60, height: headerH, color: sColor });
+      p.drawText(sLabel, { x: MARGIN + 8, y: y - 14, size: 8, font: bold, color: C.white });
+      // Category label aligned vertically with badge
+      p.drawText(safeText(catLabel), { x: MARGIN + 68, y: y - 14, size: 9, font: bold, color: C.black });
 
-      let ry = y - 24;
+      // Body text below header
+      let ry = y - headerH - 12;
       for (const line of flagLines) {
-        p.drawText(line, { x: MARGIN + 8, y: ry, size: 9, font: regular, color: C.black });
-        ry -= 13;
+        p.drawText(line, { x: MARGIN + 10, y: ry, size: 9, font: regular, color: C.black });
+        ry -= 14;
       }
-      y -= flagH + 12;
+      y -= flagH + 10;
     }
   }
 }
@@ -1030,22 +1045,43 @@ function renderMarciaSection(
     const statH = safeText(lbl("status", useEnglish ? "en" : lang));
     const holderH = safeText(lbl("holder", useEnglish ? "en" : lang));
 
+    // Column layout: Name(200) | Class(48) | Status(110) | Holder(remaining)
+    const COL_NAME = MARGIN + 6;
+    const COL_CLASS = MARGIN + 210;
+    const COL_STATUS = MARGIN + 268;
+    const COL_HOLDER = MARGIN + 380;
+    const COL_NAME_W = 200;
+    const COL_CLASS_W = 48;
+    const COL_STATUS_W = 108;
+    const COL_HOLDER_W = PAGE_W - MARGIN - COL_HOLDER - 6;
+
     p.drawRectangle({ x: MARGIN, y: y - 14, width: CONTENT_W, height: 20, color: C.darkGreen });
-    p.drawText(nameH, { x: MARGIN + 6, y: y - 8, size: 8, font: bold, color: C.white });
-    p.drawText(classH, { x: MARGIN + 230, y: y - 8, size: 8, font: bold, color: C.white });
-    p.drawText(statH, { x: MARGIN + 280, y: y - 8, size: 8, font: bold, color: C.white });
-    p.drawText(holderH, { x: MARGIN + 360, y: y - 8, size: 8, font: bold, color: C.white });
+    p.drawText(nameH,   { x: COL_NAME,   y: y - 8, size: 8, font: bold, color: C.white });
+    p.drawText(classH,  { x: COL_CLASS,  y: y - 8, size: 8, font: bold, color: C.white });
+    p.drawText(statH,   { x: COL_STATUS, y: y - 8, size: 8, font: bold, color: C.white });
+    p.drawText(holderH, { x: COL_HOLDER, y: y - 8, size: 8, font: bold, color: C.white });
     y -= 26;
 
     for (let i = 0; i < findings.length && y > 80; i++) {
       const f = findings[i];
       const isExact = f.name.toLowerCase().trim() === markName.toLowerCase().trim();
-      p.drawRectangle({ x: MARGIN, y: y - 14, width: CONTENT_W, height: 18, color: isExact ? rgb(0.99, 0.92, 0.92) : i % 2 === 0 ? C.lightGray : C.white });
+      const rowColor = isExact ? rgb(0.99, 0.92, 0.92) : i % 2 === 0 ? C.lightGray : C.white;
+      p.drawRectangle({ x: MARGIN, y: y - 14, width: CONTENT_W, height: 18, color: rowColor });
       if (isExact) p.drawRectangle({ x: MARGIN, y: y - 14, width: 3, height: 18, color: C.red });
-      p.drawText(safeText(f.name).slice(0, 32), { x: MARGIN + 6, y: y - 8, size: 8, font: isExact ? bold : regular, color: isExact ? C.red : C.black });
-      p.drawText(safeText(f.classNum).slice(0, 8), { x: MARGIN + 230, y: y - 8, size: 8, font: regular, color: C.black });
-      p.drawText(safeText(f.status).slice(0, 14), { x: MARGIN + 280, y: y - 8, size: 8, font: regular, color: C.black });
-      p.drawText(safeText(f.holder).slice(0, 22), { x: MARGIN + 360, y: y - 8, size: 8, font: regular, color: C.black });
+
+      const nameText = safeText(f.name);
+      const nameLines = wrapText(nameText, isExact ? bold : regular, 8, COL_NAME_W);
+      p.drawText(nameLines[0] ?? "", { x: COL_NAME, y: y - 8, size: 8, font: isExact ? bold : regular, color: isExact ? C.red : C.black });
+
+      const classText = safeText(String(f.classNum ?? "")).slice(0, 6);
+      p.drawText(classText, { x: COL_CLASS, y: y - 8, size: 8, font: regular, color: C.black });
+
+      const statusText = safeText(f.status).slice(0, 16);
+      p.drawText(statusText, { x: COL_STATUS, y: y - 8, size: 8, font: regular, color: C.black });
+
+      const holderText = safeText(f.holder).slice(0, Math.floor(COL_HOLDER_W / 5));
+      p.drawText(holderText, { x: COL_HOLDER, y: y - 8, size: 8, font: regular, color: C.black });
+
       y -= 20;
     }
   }
@@ -1308,34 +1344,72 @@ function renderAttorneyCommentarySection(
   });
   y -= 20;
 
-  // Gold left-border accent panel
-  p.drawRectangle({ x: MARGIN, y: y - 6, width: 3, height: PAGE_H - MARGIN * 2 - 60, color: C.gold });
+  const INDENT = 16;  // left indent from MARGIN for all text
+  const TEXT_W = CONTENT_W - INDENT - 4;  // available width for wrapped text
 
   const lines = commentary.split("\n").filter(l => l.trim() !== "");
 
+  // Draw gold left-border for first page (height will be drawn per-page)
+  const drawGoldBar = (page: PDFPage, topY: number, bottomY: number) => {
+    if (topY > bottomY) page.drawRectangle({ x: MARGIN, y: bottomY, width: 3, height: topY - bottomY, color: C.gold });
+  };
+
+  let pageTopY = y;
+
   for (const line of lines) {
     if (y < 80) {
+      drawGoldBar(p, pageTopY, y);
       p = pdfDoc.addPage([PAGE_W, PAGE_H]);
       pages.push(p);
       y = PAGE_H - MARGIN;
-      // Continue gold accent
-      p.drawRectangle({ x: MARGIN, y: 80, width: 3, height: y - 80, color: C.gold });
+      pageTopY = y;
     }
 
     const trimmed = line.trim();
     // Detect section headings (all caps or known patterns)
-    const isHeading = /^(EXECUTIVE OPINION|REGISTRABILITY ANALYSIS|CONFLICTING MARKS ASSESSMENT|RECOMMENDED STRATEGY|[A-Z][A-Z\s]{5,}:?)$/.test(trimmed) ||
-      /^\d+\.\s+[A-Z]/.test(trimmed);
+    const isHeading = /^(EXECUTIVE OPINION|REGISTRABILITY ANALYSIS|CONFLICTING MARKS ASSESSMENT|RECOMMENDED STRATEGY|[A-Z][A-Z\s]{5,}:?)$/.test(trimmed);
+    // Detect numbered list items like "1. Something"
+    const isNumbered = /^\d+\.\s+/.test(trimmed);
 
     if (isHeading) {
       y -= 8;
-      p.drawText(safeText(trimmed), { x: MARGIN + 12, y, size: 10, font: bold, color: C.darkGreen });
+      if (y < 80) {
+        drawGoldBar(p, pageTopY, y);
+        p = pdfDoc.addPage([PAGE_W, PAGE_H]);
+        pages.push(p);
+        y = PAGE_H - MARGIN;
+        pageTopY = y;
+      }
+      p.drawText(safeText(trimmed), { x: MARGIN + INDENT, y, size: 10, font: bold, color: C.darkGreen });
       y -= 18;
+    } else if (isNumbered) {
+      // Numbered items: draw number prefix, then wrap remaining text
+      const dotIdx = trimmed.indexOf(". ");
+      const prefix = trimmed.slice(0, dotIdx + 2);
+      const rest = trimmed.slice(dotIdx + 2);
+      const prefixW = bold.widthOfTextAtSize(prefix, 10);
+      const wrappedLines = wrapText(rest, regular, 10, TEXT_W - prefixW);
+      const itemH = wrappedLines.length * 16 + 8;
+      if (y - itemH < 80) {
+        drawGoldBar(p, pageTopY, y);
+        p = pdfDoc.addPage([PAGE_W, PAGE_H]);
+        pages.push(p);
+        y = PAGE_H - MARGIN;
+        pageTopY = y;
+      }
+      p.drawText(safeText(prefix), { x: MARGIN + INDENT, y, size: 10, font: bold, color: C.darkGreen });
+      let iy = y;
+      for (const wl of wrappedLines) {
+        p.drawText(safeText(wl), { x: MARGIN + INDENT + prefixW, y: iy, size: 10, font: regular, color: C.black });
+        iy -= 16;
+      }
+      y = iy - 4;
     } else {
-      y = drawWrappedText(p, trimmed, MARGIN + 12, y, regular, 10, CONTENT_W - 12, C.black, 16);
+      y = drawWrappedText(p, trimmed, MARGIN + INDENT, y, regular, 10, TEXT_W, C.black, 16);
       y -= 4;
     }
   }
+  drawGoldBar(p, pageTopY, Math.max(y, 80));
 }
 
 function addDividerPage(pdfDoc: PDFDocument, pages: PDFPage[], bold: PDFFont, regular: PDFFont, dividerLabel: string) {
