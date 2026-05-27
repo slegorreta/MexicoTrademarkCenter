@@ -28,6 +28,9 @@ import FigurativeSearchPage from './pages/FigurativeSearchPage';
 import HomePageV2 from './pages/HomePageV2';
 import PreviewPage from './pages/PreviewPage';
 
+// Clearance Report V2
+import ClearanceReportV2Page from './pages/ClearanceReportV2Page';
+
 // Admin
 import AdminLoginPage from './pages/admin/AdminLoginPage';
 import AdminLayout from './pages/admin/AdminLayout';
@@ -122,6 +125,9 @@ function AppRoutes() {
       {/* Homepage V2 preview */}
       <Route path="/preview" element={<Layout><PreviewPage /></Layout>} />
       <Route path="/preview-v2" element={<Layout><HomePageV2 /></Layout>} />
+
+      {/* Clearance Report V2 */}
+      <Route path="/clearance-report-v2" element={<ClearanceReportV2Page />} />
 
       {/* Public site */}
       <Route path="/about" element={<Layout><AboutPage /></Layout>} />
