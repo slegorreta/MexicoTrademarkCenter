@@ -8,12 +8,12 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
-// ─── Design System — Pure White + Teal/Coral palette ─────────────────────────
-// Page backgrounds: pure white (#FFFFFF) — print-friendly, no beige/cream
+// ─── Design System -Pure White + Teal/Coral palette ─────────────────────────
+// Page backgrounds: pure white (#FFFFFF) -print-friendly, no beige/cream
 const C = {
-  // Brand primary — soft teal
+  // Brand primary -soft teal
   primary:     rgb(0.055, 0.486, 0.482),  // #0E7C7B
-  primaryTint: rgb(0.878, 0.949, 0.945),  // #E0F2F1 — small pills only
+  primaryTint: rgb(0.878, 0.949, 0.945),  // #E0F2F1 -small pills only
 
   // Status
   success:     rgb(0.298, 0.686, 0.490),  // #4CAF7D
@@ -28,7 +28,7 @@ const C = {
   textSecond:  rgb(0.373, 0.420, 0.478),  // #5F6B7A
   textMuted:   rgb(0.541, 0.584, 0.639),  // #8A95A3
 
-  // Surfaces — pure white
+  // Surfaces -pure white
   white:       rgb(1, 1, 1),
   border:      rgb(0.898, 0.906, 0.922),  // #E5E7EB
   divider:     rgb(0.941, 0.949, 0.961),  // #F0F2F5
@@ -126,7 +126,7 @@ function computeScore(result: ClearanceResult): number {
   if (marciaCount > 5) score -= 12;
   else if (marciaCount > 2) score -= 6;
   const dist = result.distinctiveness?.score ?? 50;
-  // dist is 0-100 (or 0-5 legacy — normalize)
+  // dist is 0-100 (or 0-5 legacy -normalize)
   const normDist = dist <= 5 ? dist * 20 : dist;
   score += Math.round((normDist - 50) / 10);
   return Math.max(5, Math.min(95, Math.round(score)));
@@ -169,17 +169,17 @@ function verdictLabel(v: Verdict, lang: Lang): string {
 
 function verdictOneLiner(v: Verdict, lang: Lang): string {
   const en: Record<Verdict, string> = {
-    CLEAR:    "No material obstacles — favorable outlook for registration",
-    LOW:      "Few obstacles — registrable with standard strategy",
+    CLEAR:    "No material obstacles -favorable outlook for registration",
+    LOW:      "Few obstacles -registrable with standard strategy",
     MODERATE: "Registrable with appropriate filing strategy",
-    HIGH:     "Significant obstacles — registration requires modifications",
+    HIGH:     "Significant obstacles -registration requires modifications",
     CRITICAL: "Registration highly unlikely without major redesign",
   };
   const es: Record<Verdict, string> = {
-    CLEAR:    "Sin obstaculos materiales — perspectiva favorable para el registro",
-    LOW:      "Pocos obstaculos — registrable con estrategia estandar",
+    CLEAR:    "Sin obstaculos materiales -perspectiva favorable para el registro",
+    LOW:      "Pocos obstaculos -registrable con estrategia estandar",
     MODERATE: "Registrable con estrategia de presentacion adecuada",
-    HIGH:     "Obstaculos significativos — el registro requiere modificaciones",
+    HIGH:     "Obstaculos significativos -el registro requiere modificaciones",
     CRITICAL: "Registro altamente improbable sin rediseno mayor de la marca",
   };
   return lang === "es" ? es[v] : en[v];
@@ -213,7 +213,7 @@ function wrapText(text: string, font: PDFFont, size: number, maxWidth: number): 
       current = test;
     } else {
       if (current) lines.push(current);
-      // Never truncate — if a single word is wider than maxWidth, render it anyway
+      // Never truncate -if a single word is wider than maxWidth, render it anyway
       current = word;
     }
   }
@@ -234,19 +234,22 @@ function drawWrappedText(
   return y;
 }
 
-// ─── Arc draw (pixelated but functional for pdf-lib) ─────────────────────────
+// ─── Arc draw -high-density dots for smoother appearance in pdf-lib ─────────
 function drawArc(
   page: PDFPage, cx: number, cy: number, r: number, strokeW: number,
   progress: number,
   color: ReturnType<typeof rgb>,
 ) {
-  const steps = 80;
+  // Use 180 steps and overlap dots for smooth arc. Each dot is slightly smaller
+  // than spacing to avoid boxy appearance.
+  const steps = 180;
   const filled = Math.round(steps * Math.min(1, Math.max(0, progress)));
+  const dotSize = strokeW * 0.72;
   for (let i = 0; i < filled; i++) {
     const angle = (i / steps) * 2 * Math.PI - Math.PI / 2;
     const x = cx + Math.cos(angle) * r;
     const y = cy + Math.sin(angle) * r;
-    page.drawRectangle({ x: x - strokeW / 2, y: y - strokeW / 2, width: strokeW, height: strokeW, color });
+    page.drawCircle({ x, y, size: dotSize / 2, color });
   }
 }
 
@@ -255,7 +258,7 @@ function drawPentagon(
   page: PDFPage,
   cx: number, cy: number, size: number,
   scores: Array<{ label: string; score: number }>,
-  font: PDFFont, bold: PDFFont,
+  font: PDFFont, bold: PDFFont,  // eslint-disable-line @typescript-eslint/no-unused-vars
   rc: ReturnType<typeof rgb>,
 ) {
   const n = 5;
@@ -311,7 +314,8 @@ function drawPentagon(
 }
 
 // ─── 5-axis pentagon scores ───────────────────────────────────────────────────
-function computePentagonScores(result: ClearanceResult): Array<{ label: string; score: number }> {
+// Labels are language-neutral keys; the renderer localizes them via getAxisLabel()
+function computePentagonScores(result: ClearanceResult): Array<{ key: string; score: number }> {
   const dist = result.distinctiveness;
   const rawDist = dist?.score ?? 50;
   const distScore = rawDist <= 5 ? rawDist * 20 : rawDist;
@@ -330,12 +334,23 @@ function computePentagonScores(result: ClearanceResult): Array<{ label: string; 
   const regAvailScore = Math.max(10, Math.round(marciaScore * 0.6 + lfppiScore * 0.4));
 
   return [
-    { label: "Distintividad", score: Math.max(5, Math.min(95, Math.round(distScore))) },
-    { label: "LFPPI", score: Math.max(5, Math.min(95, lfppiScore)) },
-    { label: "Registro IMPI", score: Math.max(5, Math.min(95, marciaScore)) },
-    { label: "Disp. Registral", score: Math.max(5, Math.min(95, regAvailScore)) },
-    { label: "Traduccion", score: Math.max(5, Math.min(95, transScore)) },
+    { key: "Distinctiveness", score: Math.max(5, Math.min(95, Math.round(distScore))) },
+    { key: "LFPPI", score: Math.max(5, Math.min(95, lfppiScore)) },
+    { key: "IMPI Registry", score: Math.max(5, Math.min(95, marciaScore)) },
+    { key: "Registry Availability", score: Math.max(5, Math.min(95, regAvailScore)) },
+    { key: "Translation", score: Math.max(5, Math.min(95, transScore)) },
   ];
+}
+
+function getAxisLabel(key: string, useEnglish: boolean): string {
+  const map: Record<string, { en: string; es: string }> = {
+    "Distinctiveness":        { en: "Distinctiveness",       es: "Distintividad" },
+    "LFPPI":                  { en: "LFPPI",                 es: "LFPPI" },
+    "IMPI Registry":          { en: "IMPI Registry",         es: "Registro IMPI" },
+    "Registry Availability":  { en: "Registry Availability", es: "Disp. Registral" },
+    "Translation":            { en: "Translation",           es: "Traduccion" },
+  };
+  return useEnglish ? (map[key]?.en ?? key) : (map[key]?.es ?? key);
 }
 
 // ─── Page scaffolding ─────────────────────────────────────────────────────────
@@ -343,7 +358,7 @@ function computePentagonScores(result: ClearanceResult): Array<{ label: string; 
 function addRunningFooter(
   page: PDFPage, regular: PDFFont, markName: string, pageNum: number, totalPages: number, shortId: string,
 ) {
-  // Single-line minimalist footer — no brand bar, no color block
+  // Single-line minimalist footer -no brand bar, no color block
   page.drawRectangle({ x: 0, y: 0, width: PAGE_W, height: 20, color: C.divider });
   page.drawRectangle({ x: 0, y: 20, width: PAGE_W, height: 0.5, color: C.border });
   const left = `MexicoTrademarkCenter.com`;
@@ -359,11 +374,11 @@ function addRunningFooter(
 function addPageHeader(
   page: PDFPage, regular: PDFFont, bold: PDFFont, markName: string, niceClasses: NiceClass[], sectionTitle: string,
 ) {
-  // Minimal top strip — white with bottom border line only (no colored fill)
+  // Minimal top strip -white with bottom border line only (no colored fill)
   page.drawRectangle({ x: 0, y: PAGE_H - 24, width: PAGE_W, height: 24, color: C.white });
   page.drawRectangle({ x: 0, y: PAGE_H - 24, width: PAGE_W, height: 0.5, color: C.border });
   const classStr = niceClasses.length > 0 ? `Cl. ${niceClasses.map(c => c.classNumber).join(", ")}` : "";
-  const markStr = safeText(markName).slice(0, 28) + (classStr ? ` — ${classStr}` : "");
+  const markStr = safeText(markName).slice(0, 28) + (classStr ? ` -${classStr}` : "");
   const markW = bold.widthOfTextAtSize(markStr, 7.5);
   page.drawText(markStr, { x: (PAGE_W - markW) / 2, y: PAGE_H - 16, size: 7.5, font: bold, color: C.textPrimary });
   page.drawText("MexicoTrademarkCenter.com", { x: MARGIN_X, y: PAGE_H - 16, size: 7, font: regular, color: C.textMuted });
@@ -375,7 +390,7 @@ function addSectionHeader(
   page: PDFPage, bold: PDFFont, title: string, subtitle: string, y: number,
 ): number {
   const H = subtitle ? 30 : 22;
-  // Teal left accent stripe (4px) + colored title text on white — NO full-width fill
+  // Teal left accent stripe (4px) + colored title text on white -NO full-width fill
   page.drawRectangle({ x: MARGIN_X, y: y - H, width: 3, height: H, color: C.primary });
   page.drawText(safeText(title).toUpperCase(), { x: MARGIN_X + 10, y: y - 14, size: 9.5, font: bold, color: C.primary });
   if (subtitle) {
@@ -389,12 +404,17 @@ function drawCard(page: PDFPage, x: number, y: number, w: number, h: number, bg 
   page.drawRectangle({ x, y: y - h, width: w, height: h, color: bg, borderColor: C.border, borderWidth: 0.8 });
 }
 
-function drawStatusPill(page: PDFPage, bold: PDFFont, status: string, x: number, y: number): number {
+function drawStatusPill(page: PDFPage, bold: PDFFont, status: string, x: number, y: number, useEnglish = false): number {
   const isReg = /registrad|vigente|registered|active/i.test(status);
   const isPend = /tr[aá]mite|pendiente|solicitud|pending|filed/i.test(status);
   const color = isReg ? C.success : isPend ? C.warning : C.textMuted;
   const tint = isReg ? C.successTint : isPend ? C.warningTint : C.divider;
-  const label = isReg ? "REGISTRADA" : isPend ? "EN TRAMITE" : "ABANDONADA";
+  // Always use the language-correct label -never pass raw DB status to display
+  const label = isReg
+    ? (useEnglish ? "REGISTERED" : "REGISTRADA")
+    : isPend
+      ? (useEnglish ? "PENDING" : "EN TRAMITE")
+      : (useEnglish ? "LAPSED" : "ABANDONADA");
   const w = bold.widthOfTextAtSize(label, 7) + 12;
   page.drawRectangle({ x, y: y - 13, width: w, height: 15, color: tint, borderColor: color, borderWidth: 0.8 });
   page.drawText(label, { x: x + 6, y: y - 8, size: 7, font: bold, color });
@@ -425,12 +445,16 @@ async function generateAttorneyCommentary(
   const niceClasses = (result.niceClassification ?? []).map(nc => `Clase ${nc.classNumber} (${nc.className_en || nc.className})`).join(", ");
   const tier = result.distinctiveness?.tier ?? "desconocido";
 
+  const rawDistScore = (result.distinctiveness?.score ?? 50) <= 5
+    ? (result.distinctiveness?.score ?? 50) * 20
+    : (result.distinctiveness?.score ?? 50);
+
   const contextSummary = [
     `Marca: "${markName}"`,
     goodsServices ? `Productos/Servicios: ${goodsServices}` : "",
     niceClasses ? `Clases Niza: ${niceClasses}` : "",
     `Riesgo general: ${result.risk}`,
-    `Distintividad: ${tier} (puntuacion ${result.distinctiveness?.score ?? "N/A"}/5)`,
+    `Distintividad: ${tier} (puntuacion ${rawDistScore}/100)`,
     flags.length > 0 ? `Causales LFPPI identificadas: ${flags.length} (alta severidad: ${highFlags || "ninguna"})` : "LFPPI: Sin causales identificadas",
     `Conflictos MARCia IMPI: ${result.marciaTotalCount ?? marciaFindings.length} marcas encontradas`,
     topConflicts.length > 0 ? `Principales conflictos: ${conflictList}` : "",
@@ -439,12 +463,21 @@ async function generateAttorneyCommentary(
 
   const prompt = `Eres un abogado senior especialista en propiedad intelectual mexicana con mas de 20 anos de experiencia en tramites ante el IMPI.
 
+ESCALA DE PUNTUACION -REGLAS ESTRICTAS
+- La puntuacion de distintividad siempre se reporta como un entero entre 0 y 100.
+- NUNCA uses el formato "X/5". NUNCA uses "X de 5".
+- El UNICO formato valido es "X/100" o "puntuacion de X sobre 100".
+- Ejemplo correcto: "con una puntuacion de distintividad de 85/100"
+- Ejemplo correcto: "con 85 puntos sobre 100 en distintividad"
+- Ejemplo INCORRECTO: "85/5" / "puntuacion de 85/5" / "85 de 5"
+- Si tu borrador contiene "X/5" en cualquier parte, reescribe esa oracion antes de devolver la respuesta.
+
 Con base en los siguientes resultados de busqueda de disponibilidad marcaria, redacta un parrafo de opinion de registrabilidad de 120-180 palabras. Usa EXCLUSIVAMENTE terminologia de la LFPPI (Arts. 171-174, Art. 173 Fr. XVIII, etc.) y la doctrina mexicana de triple similitud (fonetica, visual, conceptual) y del elemento dominante. NO menciones el test DuPont ni ninguna jurisprudencia estadounidense.
 
 RESULTADOS:
 ${contextSummary}
 
-ESTRUCTURA OBLIGATORIA (un solo parrafo fluido — sin encabezados ni bullets):
+ESTRUCTURA OBLIGATORIA (un solo parrafo fluido -sin encabezados ni bullets):
 1. Establece claramente el veredicto de registrabilidad.
 2. Menciona las 2-3 marcas conflictivas mas importantes por nombre con numero de expediente, identifica el elemento dominante que genera el conflicto, y cita el articulo LFPPI especifico (ej. Art. 173 Fr. XVIII LFPPI).
 3. Comenta el nivel de distintividad y su impacto en las posibilidades de registro.
@@ -545,7 +578,7 @@ const CATEGORY_LABELS: Record<string, { en: string; es: string; lfppi: string }>
   "Descriptive Connotation": { en: "Descriptive Connotation", es: "Connotacion Descriptiva", lfppi: "Art. 173 Fr. II LFPPI" },
 };
 
-// LFPPI fracciones that passed — Mexican law only, no USPTO boilerplate
+// LFPPI fracciones that passed -Mexican law only, no USPTO boilerplate
 const LFPPI_PASSED_GROUNDS: Array<{ fraccion: string; question_en: string; question_es: string }> = [
   { fraccion: "Art. 173 Fr. I", question_en: "Mark is not a generic term for its goods/services", question_es: "La marca no es un termino generico para sus productos/servicios" },
   { fraccion: "Art. 173 Fr. II", question_en: "Mark is not purely descriptive of goods/services characteristics", question_es: "La marca no es meramente descriptiva de las caracteristicas de los productos/servicios" },
@@ -583,7 +616,7 @@ function buildKeyFindings(result: ClearanceResult): Array<{ title_en: string; ti
     title_es: "Conflictos Registrales",
     desc_en: `${marciaFindings.length} marks found in IMPI MARCia. ${critical.length} critical, ${totalConflicts - critical.length} significant.`,
     desc_es: `${marciaFindings.length} marcas encontradas en IMPI MARCia. ${critical.length} criticas, ${totalConflicts - critical.length} significativas.`,
-    dataPoint: `${marciaFindings.length} marcas`,
+    dataPoint: `${marciaFindings.length}`,
     color: marciaFindings.length > 3 ? C.critical : marciaFindings.length > 1 ? C.warning : C.success,
   });
 
@@ -593,7 +626,7 @@ function buildKeyFindings(result: ClearanceResult): Array<{ title_en: string; ti
     title_es: "Causales LFPPI",
     desc_en: `${flags.length} ground(s) raised. ${flags.filter(f => f.severity === "high").length} high severity.`,
     desc_es: `${flags.length} causal(es) identificada(s). ${flags.filter(f => f.severity === "high").length} de alta severidad.`,
-    dataPoint: `${flags.length} causales`,
+    dataPoint: `${flags.length}`,
     color: flags.some(f => f.severity === "high") ? C.critical : flags.length > 0 ? C.warning : C.success,
   });
 
@@ -606,7 +639,7 @@ function buildKeyFindings(result: ClearanceResult): Array<{ title_en: string; ti
       title_es: "Distintividad",
       desc_en: `Mark classified as ${dist.tier} (${rawScore}/100). ${rawScore >= 60 ? "Favorable for registration." : "Low distinctiveness increases refusal risk."}`,
       desc_es: `Marca clasificada como ${tierEs[dist.tier] ?? dist.tier} (${rawScore}/100). ${rawScore >= 60 ? "Favorable para el registro." : "Baja distintividad aumenta riesgo de rechazo."}`,
-      dataPoint: `${tierEs[dist.tier] ?? dist.tier} ${dist.score <= 5 ? dist.score + "/5" : rawScore + "/100"}`,
+      dataPoint: `${tierEs[dist.tier] ?? dist.tier} ${rawScore}/100`,
       color: rawScore >= 60 ? C.success : rawScore >= 40 ? C.warning : C.critical,
     });
   }
@@ -700,37 +733,38 @@ function buildStrategies(result: ClearanceResult, markName: string, useEnglish: 
   return paths;
 }
 
-function getAxisInterpretation(label: string, score: number, useEnglish: boolean): string {
+// Uses canonical English keys from computePentagonScores
+function getAxisInterpretation(key: string, score: number, useEnglish: boolean): string {
   const T = (en: string, es: string) => useEnglish ? en : es;
   const level = score >= 70 ? "high" : score >= 40 ? "medium" : "low";
   const map: Record<string, Record<string, string>> = {
-    Distintividad: {
-      high: T("Strong mark — favorable for registration.", "Marca fuerte — favorable para el registro."),
-      medium: T("Moderate strength — consider strengthening the mark.", "Fortaleza moderada — considere reforzar la marca."),
-      low: T("Weak mark — high refusal risk under Art. 173 LFPPI.", "Marca debil — alto riesgo de rechazo bajo Art. 173 LFPPI."),
+    "Distinctiveness": {
+      high: T("Strong mark -favorable for registration.", "Marca fuerte -favorable para el registro."),
+      medium: T("Moderate strength -consider strengthening the mark.", "Fortaleza moderada -considere reforzar la marca."),
+      low: T("Weak mark -high refusal risk under Art. 173 LFPPI.", "Marca debil -alto riesgo de rechazo bajo Art. 173 LFPPI."),
     },
-    LFPPI: {
+    "LFPPI": {
       high: T("No significant absolute grounds for refusal detected.", "No se detectaron causales absolutas significativas de rechazo."),
-      medium: T("Some LFPPI grounds raised — review recommended.", "Algunas causales LFPPI identificadas — se recomienda revision."),
+      medium: T("Some LFPPI grounds raised -review recommended.", "Algunas causales LFPPI identificadas -se recomienda revision."),
       low: T("Multiple absolute grounds for refusal identified.", "Multiples causales absolutas de rechazo identificadas."),
     },
-    "Registro IMPI": {
+    "IMPI Registry": {
       high: T("Few conflicting marks found in IMPI registry.", "Pocas marcas conflictivas encontradas en el registro IMPI."),
       medium: T("Moderate number of potentially conflicting marks.", "Numero moderado de marcas potencialmente conflictivas."),
       low: T("High number of conflicting marks in IMPI registry.", "Alto numero de marcas conflictivas en el registro IMPI."),
     },
-    "Disp. Registral": {
-      high: T("High registry availability — favorable filing outlook.", "Alta disponibilidad registral — panorama favorable."),
-      medium: T("Moderate availability — some conflicts to manage.", "Disponibilidad moderada — algunos conflictos por gestionar."),
-      low: T("Low availability — significant registry obstacles.", "Baja disponibilidad — obstaculos registrales significativos."),
+    "Registry Availability": {
+      high: T("High registry availability -favorable filing outlook.", "Alta disponibilidad registral -panorama favorable."),
+      medium: T("Moderate availability -some conflicts to manage.", "Disponibilidad moderada -algunos conflictos por gestionar."),
+      low: T("Low availability -significant registry obstacles.", "Baja disponibilidad -obstaculos registrales significativos."),
     },
-    Traduccion: {
+    "Translation": {
       high: T("No problematic translations or transliterations detected.", "Sin traducciones o transliteraciones problematicas."),
       medium: T("Some translation risks identified.", "Algunos riesgos de traduccion identificados."),
       low: T("Significant translation conflicts detected.", "Conflictos de traduccion significativos detectados."),
     },
   };
-  return map[label]?.[level] ?? "";
+  return map[key]?.[level] ?? "";
 }
 
 // ─── PDF Builder ──────────────────────────────────────────────────────────────
@@ -776,7 +810,7 @@ async function buildPdf(
 
   const newPage = (sectionName = "") => {
     const p = pdfDoc.addPage([PAGE_W, PAGE_H]);
-    // Pure white background — no beige, no tint
+    // Pure white background -no beige, no tint
     p.drawRectangle({ x: 0, y: 0, width: PAGE_W, height: PAGE_H, color: C.white });
     pages.push(p);
     sectionNames.push(sectionName);
@@ -784,210 +818,11 @@ async function buildPdf(
   };
 
   // ══════════════════════════════════════════════════════════════════════
-  // PAGE 1 — COVER PAGE
+  // Cover pages are rendered by renderCover() below -see Render section
   // ══════════════════════════════════════════════════════════════════════
-  {
-    const p = newPage("Cover");
 
-    // ── Header bar: wordmark only, clean ──
-    const headerH = 52;
-    p.drawRectangle({ x: 0, y: PAGE_H - headerH, width: PAGE_W, height: headerH, color: C.white });
-    p.drawRectangle({ x: 0, y: PAGE_H - headerH, width: PAGE_W, height: 0.8, color: C.border });
-
-    // Wordmark — left aligned, teal
-    p.drawText("MEXICO TRADEMARK CENTER", { x: MARGIN_X, y: PAGE_H - 28, size: 13, font: bold, color: C.primary });
-    p.drawText("MexicoTrademarkCenter.com", { x: MARGIN_X, y: PAGE_H - 42, size: 8, font: regular, color: C.textMuted });
-
-    // Report type — right aligned
-    const rtLabel = "TRADEMARK CLEARANCE REPORT";
-    const rtW = regular.widthOfTextAtSize(rtLabel, 8);
-    p.drawText(rtLabel, { x: PAGE_W - MARGIN_X - rtW, y: PAGE_H - 28, size: 8, font: regular, color: C.textMuted });
-    const rt2 = "Dictamen de Viabilidad Marcaria";
-    const rt2W = italic.widthOfTextAtSize(rt2, 8);
-    p.drawText(rt2, { x: PAGE_W - MARGIN_X - rt2W, y: PAGE_H - 40, size: 8, font: italic, color: C.textMuted });
-
-    // ── Mark name — large display ──
-    const markY = PAGE_H - headerH - 50;
-    const mnStr = safeText(markName).toUpperCase();
-    const mnSize = mnStr.length > 16 ? 36 : mnStr.length > 10 ? 44 : 52;
-    const mnW = bold.widthOfTextAtSize(mnStr, mnSize);
-    p.drawText(mnStr, { x: (PAGE_W - mnW) / 2, y: markY, size: mnSize, font: bold, color: C.textPrimary });
-
-    // Class chips
-    const classChipY = markY - 22;
-    if (niceClasses.length > 0) {
-      const chipParts = niceClasses.map(nc => `Clase ${nc.classNumber}`);
-      const chipStr = chipParts.join("  ·  ");
-      const chipW = bold.widthOfTextAtSize(chipStr, 9);
-      p.drawText(chipStr, { x: (PAGE_W - chipW) / 2, y: classChipY, size: 9, font: bold, color: C.primary });
-    }
-
-    // Goods/services — wrapped, centered
-    if (goodsServices) {
-      const gsLines = wrapText(safeText(goodsServices), regular, 9, CONTENT_W - 40).slice(0, 3);
-      let gsY = classChipY - 18;
-      for (const line of gsLines) {
-        const gW = regular.widthOfTextAtSize(line, 9);
-        p.drawText(line, { x: (PAGE_W - gW) / 2, y: gsY, size: 9, font: regular, color: C.textSecond });
-        gsY -= 14;
-      }
-    }
-
-    // ── Divider ──
-    const divY = PAGE_H - headerH - 160;
-    p.drawRectangle({ x: MARGIN_X, y: divY, width: CONTENT_W, height: 0.8, color: C.border });
-
-    // ── Score gauge ──
-    const gaugeSection = divY - 10;
-    const gaugeCX = PAGE_W / 2;
-    const gaugeCY = gaugeSection - 72;
-    const gaugeR = 48;
-
-    // Outer track
-    drawArc(p, gaugeCX, gaugeCY, gaugeR, 10, 1, C.border);
-    // Score arc in verdict color
-    drawArc(p, gaugeCX, gaugeCY, gaugeR, 10, score / 100, vc);
-    // Inner white fill
-    p.drawCircle({ x: gaugeCX, y: gaugeCY, size: gaugeR - 7, color: C.white });
-
-    // Score number
-    const scoreStr = String(score);
-    const scoreSz = 34;
-    const scoreW = bold.widthOfTextAtSize(scoreStr, scoreSz);
-    p.drawText(scoreStr, { x: gaugeCX - scoreW / 2, y: gaugeCY + 8, size: scoreSz, font: bold, color: C.textPrimary });
-    const outOfStr = "/ 100";
-    const outOfW = regular.widthOfTextAtSize(outOfStr, 11);
-    p.drawText(outOfStr, { x: gaugeCX - outOfW / 2, y: gaugeCY - 14, size: 11, font: regular, color: C.textMuted });
-
-    // Verdict label below gauge
-    const vLabel = verdictLabel(verdict, searchLang);
-    const vLabelW = bold.widthOfTextAtSize(vLabel, 11) + 20;
-    const vBadgeX = gaugeCX - vLabelW / 2;
-    const vBadgeY = gaugeCY - gaugeR - 16;
-    p.drawRectangle({ x: vBadgeX, y: vBadgeY - 16, width: vLabelW, height: 18, color: vc });
-    p.drawText(vLabel, { x: vBadgeX + 10, y: vBadgeY - 9, size: 11, font: bold, color: C.white });
-
-    // One-liner verdict explanation
-    const vOneliner = verdictOneLiner(verdict, searchLang);
-    const vOneLinerLines = wrapText(vOneliner, regular, 9, CONTENT_W - 80);
-    let vlY = vBadgeY - 28;
-    for (const vl of vOneLinerLines.slice(0, 2)) {
-      const vlW = regular.widthOfTextAtSize(vl, 9);
-      p.drawText(vl, { x: (PAGE_W - vlW) / 2, y: vlY, size: 9, font: regular, color: C.textSecond });
-      vlY -= 13;
-    }
-
-    // ── Score meaning legend — 5 rows ──
-    const legendY = gaugeCY - gaugeR - 76;
-    const legendTitleEn = "WHAT THIS SCORE MEANS";
-    const legendTitleEs = "QUE SIGNIFICA ESTE PUNTAJE";
-    const legendTitle = isBilingual ? legendTitleEs : legendTitleEn;
-    const ltW = bold.widthOfTextAtSize(legendTitle, 8);
-    p.drawText(legendTitle, { x: (PAGE_W - ltW) / 2, y: legendY, size: 8, font: bold, color: C.textMuted });
-    p.drawRectangle({ x: MARGIN_X + 40, y: legendY - 4, width: CONTENT_W - 80, height: 0.5, color: C.border });
-
-    const legendRows: Array<{ range: string; label: string; desc_en: string; desc_es: string; v: Verdict }> = [
-      { range: "90-100", label: "CLEAR / SIN OBSTACULOS", desc_en: "No material obstacles", desc_es: "Sin obstaculos materiales", v: "CLEAR" },
-      { range: "75-89",  label: "LOW / BAJO",             desc_en: "Few obstacles — registrable", desc_es: "Pocos obstaculos — registrable", v: "LOW" },
-      { range: "55-74",  label: "MODERATE / MODERADO",    desc_en: "Registrable with strategy", desc_es: "Registrable con estrategia", v: "MODERATE" },
-      { range: "30-54",  label: "HIGH / ALTO",            desc_en: "Multiple significant obstacles", desc_es: "Multiples obstaculos significativos", v: "HIGH" },
-      { range: "0-29",   label: "CRITICAL / CRITICO",     desc_en: "Registration highly unlikely", desc_es: "Registro altamente improbable", v: "CRITICAL" },
-    ];
-
-    let lRowY = legendY - 14;
-    for (const row of legendRows) {
-      const isThis = row.v === verdict;
-      const rowColor = verdictColor(row.v);
-      // Color dot
-      p.drawCircle({ x: MARGIN_X + 44, y: lRowY - 4, size: 5, color: rowColor });
-      // Range
-      p.drawText(row.range, { x: MARGIN_X + 54, y: lRowY - 8, size: 8, font: regular, color: C.textMuted });
-      // Label
-      p.drawText(row.label, { x: MARGIN_X + 90, y: lRowY - 8, size: 8, font: isThis ? bold : regular, color: isThis ? rowColor : C.textSecond });
-      // Description
-      const desc = isBilingual ? row.desc_es : row.desc_en;
-      p.drawText(desc, { x: MARGIN_X + 240, y: lRowY - 8, size: 8, font: regular, color: C.textMuted });
-      // Marker triangle for current verdict
-      if (isThis) {
-        p.drawText("<", { x: PAGE_W - MARGIN_X - 20, y: lRowY - 8, size: 9, font: bold, color: rowColor });
-      }
-      lRowY -= 14;
-    }
-
-    // ── Quick-stats tiles — 4 equal columns ──
-    const tilesY = lRowY - 12;
-    p.drawRectangle({ x: MARGIN_X, y: tilesY - 1, width: CONTENT_W, height: 0.5, color: C.border });
-    const tilesStartY = tilesY - 10;
-    const tileW = (CONTENT_W - 12) / 4;
-    const tileH = 62;
-    const keyFindings = buildKeyFindings(result);
-    const dist = result.distinctiveness;
-    const rawDistScore = dist ? (dist.score <= 5 ? dist.score * 20 : dist.score) : 0;
-    const tierEs: Record<string, string> = { generic: "Generica", descriptive: "Descriptiva", suggestive: "Sugestiva", arbitrary: "Arbitraria", fanciful: "De Fantasia" };
-
-    const tiles = [
-      {
-        value: String(marciaFindings_count(result)),
-        label_en: "Critical conflicts",
-        label_es: "Conflictos criticos",
-        color: keyFindings[0]?.color ?? C.textMuted,
-      },
-      {
-        value: `${(result.registrabilityFlags ?? []).length}`,
-        label_en: "LFPPI grounds raised",
-        label_es: "Causales LFPPI",
-        color: (result.registrabilityFlags ?? []).length > 0 ? C.warning : C.success,
-      },
-      {
-        value: dist ? `${tierEs[dist.tier] ?? dist.tier} ${dist.score <= 5 ? dist.score + "/5" : rawDistScore + "/100"}` : "N/A",
-        label_en: "Distinctiveness",
-        label_es: "Distintividad",
-        color: rawDistScore >= 60 ? C.success : rawDistScore >= 40 ? C.warning : C.critical,
-      },
-      {
-        value: `${result.marciaTotalCount ?? (result.marciaFindings ?? []).length}`,
-        label_en: "Marks in IMPI search",
-        label_es: "Marcas en busqueda IMPI",
-        color: (result.marciaTotalCount ?? 0) > 5 ? C.critical : C.warning,
-      },
-    ];
-
-    for (let ti = 0; ti < tiles.length; ti++) {
-      const tx = MARGIN_X + ti * (tileW + 4);
-      const tile = tiles[ti];
-      drawCard(p, tx, tilesStartY, tileW, tileH);
-      const tileLabel = isBilingual ? tile.label_es : tile.label_en;
-      // Label at top
-      const tlLines = wrapText(tileLabel.toUpperCase(), regular, 7, tileW - 12);
-      let tly = tilesStartY - 10;
-      for (const tll of tlLines.slice(0, 2)) {
-        p.drawText(tll, { x: tx + 6, y: tly, size: 7, font: regular, color: C.textMuted });
-        tly -= 9;
-      }
-      // Value
-      const tvLines = wrapText(safeText(tile.value), bold, 13, tileW - 12);
-      let tvY = tilesStartY - tileH + 24;
-      for (const tvl of tvLines.slice(0, 2)) {
-        p.drawText(tvl, { x: tx + 6, y: tvY, size: 13, font: bold, color: tile.color });
-        tvY += 14;
-      }
-      // Color stripe at bottom
-      p.drawRectangle({ x: tx, y: tilesStartY - tileH, width: tileW, height: 3, color: tile.color });
-    }
-
-    // ── Footer ──
-    const footerY = tilesStartY - tileH - 20;
-    p.drawRectangle({ x: MARGIN_X, y: footerY, width: CONTENT_W, height: 0.5, color: C.border });
-    const footerParts = [
-      "Mexico — IMPI Registry",
-      dateDisplay,
-      `Report ID: ${shortId}`,
-      "Preliminary analysis. Not legal advice.",
-    ];
-    const footerStr = footerParts.join("  ·  ");
-    const footerW = regular.widthOfTextAtSize(footerStr, 7.5);
-    p.drawText(footerStr, { x: (PAGE_W - footerW) / 2, y: footerY - 14, size: 7.5, font: regular, color: C.textMuted });
-  }
+  // Silence unused-variable lint -vc and pentagonScores used inside renderCover/renderAllSections
+  void vc; void pentagonScores;
 
   // ══════════════════════════════════════════════════════════════════════
   // Helper: render all analysis sections
@@ -1009,12 +844,12 @@ async function buildPdf(
       let y = PAGE_H - 34;
       y = addSectionHeader(p, bold,
         T("EXECUTIVE SUMMARY", "RESUMEN EJECUTIVO"),
-        T(`Registrability assessment — ${safeText(markName)}`, `Evaluacion de registrabilidad — ${safeText(markName)}`),
+        T(`Registrability assessment -${safeText(markName)}`, `Evaluacion de registrabilidad -${safeText(markName)}`),
         y,
       );
       y -= 8;
 
-      // Verdict card — white with colored left stripe and tinted background (small element)
+      // Verdict card -white with colored left stripe and tinted background (small element)
       const verdictH = 60;
       const vt = verdictOneLiner(verdict, lang);
       const vtLabelStr = verdictLabel(verdict, lang);
@@ -1027,7 +862,7 @@ async function buildPdf(
         p.drawText(vtl, { x: MARGIN_X + 14, y: vtY, size: 9, font: regular, color: C.textSecond });
         vtY -= 13;
       }
-      // Score pill — top right
+      // Score pill -top right
       const spStr = `${score}/100`;
       const spW = bold.widthOfTextAtSize(spStr, 12) + 16;
       p.drawRectangle({ x: MARGIN_X + CONTENT_W - spW - 6, y: y - 38, width: spW, height: 26, color: vc });
@@ -1067,7 +902,7 @@ async function buildPdf(
         y -= Math.min(cmH, 160) + 12;
       }
 
-      // Key findings — 3 tiles
+      // Key findings -3 tiles
       if (y > MARGIN_BOT + 80) {
         const findings = buildKeyFindings(result);
         if (findings.length > 0) {
@@ -1089,7 +924,7 @@ async function buildPdf(
               p.drawText(dl, { x: fx + 8, y: fy, size: 7.5, font: regular, color: C.textSecond });
               fy -= 11;
             }
-            // DataPoint at bottom — full text, wrapped
+            // DataPoint at bottom -full text, wrapped
             const dpLines = wrapText(safeText(finding.dataPoint), bold, 7, colW3 - 16);
             let dpY = y - cardH3 + 12;
             for (const dl of dpLines.slice(0, 2)) {
@@ -1103,21 +938,22 @@ async function buildPdf(
 
       // 5-axis pentagon
       if (y > MARGIN_BOT + 120) {
-        p.drawText(T("5-AXIS RISK PROFILE", "PERFIL DE RIESGO — 5 EJES"), { x: MARGIN_X, y, size: 7.5, font: bold, color: C.textMuted });
+        p.drawText(T("5-AXIS RISK PROFILE", "PERFIL DE RIESGO -5 EJES"), { x: MARGIN_X, y, size: 7.5, font: bold, color: C.textMuted });
         y -= 10;
         const pCardH = 130;
         drawCard(p, MARGIN_X, y, CONTENT_W, pCardH);
 
         const pentCX = MARGIN_X + 88;
         const pentCY = y - pCardH / 2;
-        drawPentagon(p, pentCX, pentCY, 120, pentagonScores, regular, bold, vc);
+        drawPentagon(p, pentCX, pentCY, 120, pentagonScores.map(ps => ({ label: getAxisLabel(ps.key, useEnglish), score: ps.score })), regular, bold, vc);
 
         const barsX = MARGIN_X + 180;
         const barsW = CONTENT_W - 180 - 10;
         let by = y - 14;
         for (const ps of pentagonScores) {
           const barColor = ps.score >= 70 ? C.success : ps.score >= 40 ? C.warning : C.critical;
-          const labelLines = wrapText(safeText(ps.label), bold, 7.5, barsW - 28);
+          const axisLabel = getAxisLabel(ps.key, useEnglish);
+          const labelLines = wrapText(safeText(axisLabel), bold, 7.5, barsW - 28);
           for (const ll of labelLines.slice(0, 1)) {
             p.drawText(ll, { x: barsX, y: by, size: 7.5, font: bold, color: C.textPrimary });
           }
@@ -1126,7 +962,7 @@ async function buildPdf(
           p.drawRectangle({ x: barsX, y: by - 3, width: barsW - 24, height: 6, color: C.border });
           p.drawRectangle({ x: barsX, y: by - 3, width: (barsW - 24) * ps.score / 100, height: 6, color: barColor });
           by -= 14;
-          const interp = getAxisInterpretation(ps.label, ps.score, useEnglish);
+          const interp = getAxisInterpretation(ps.key, ps.score, useEnglish);
           const interpLines = wrapText(safeText(interp), italic, 6.5, barsW);
           for (const il of interpLines.slice(0, 1)) {
             p.drawText(il, { x: barsX, y: by, size: 6.5, font: italic, color: C.textMuted });
@@ -1151,7 +987,7 @@ async function buildPdf(
       let y = PAGE_H - 34;
       const subTitle = `${critical.length} ${T("critical", "criticas")}  |  ${significant.length} ${T("significant", "significativas")}  |  ${background.length} ${T("background", "ruido de fondo")}`;
       y = addSectionHeader(p, bold,
-        T("CONFLICTING MARKS — IMPI MARCIA RESULTS", "MARCAS EN CONFLICTO — RESULTADOS IMPI MARCIA"),
+        T("CONFLICTING MARKS -IMPI MARCIA RESULTS", "MARCAS EN CONFLICTO -RESULTADOS IMPI MARCIA"),
         subTitle,
         y,
       );
@@ -1188,8 +1024,8 @@ async function buildPdf(
       if (critical.length > 0) {
         p.drawRectangle({ x: MARGIN_X, y: y - 24, width: CONTENT_W, height: 26, color: C.criticalTint });
         p.drawRectangle({ x: MARGIN_X, y: y - 24, width: 4, height: 26, color: C.critical });
-        p.drawText(T("CRITICAL — Direct obstacles to registration", "CRITICO — Obstaculos directos al registro"), { x: MARGIN_X + 12, y: y - 12, size: 8.5, font: bold, color: C.critical });
-        p.drawText(T("Art. 173 Fr. XVIII LFPPI — high phonetic/visual/conceptual similarity", "Art. 173 Fr. XVIII LFPPI — alta similitud fonetica/visual/conceptual"), { x: MARGIN_X + 12, y: y - 21, size: 7, font: regular, color: C.textSecond });
+        p.drawText(T("CRITICAL -Direct obstacles to registration", "CRITICO -Obstaculos directos al registro"), { x: MARGIN_X + 12, y: y - 12, size: 8.5, font: bold, color: C.critical });
+        p.drawText(T("Art. 173 Fr. XVIII LFPPI -high phonetic/visual/conceptual similarity", "Art. 173 Fr. XVIII LFPPI -alta similitud fonetica/visual/conceptual"), { x: MARGIN_X + 12, y: y - 21, size: 7, font: regular, color: C.textSecond });
         y -= 34;
 
         for (let i = 0; i < critical.length; i++) {
@@ -1222,7 +1058,7 @@ async function buildPdf(
           const nameW = CONTENT_W - 62 - 100;
           const nameLines = wrapText(safeText(f.name).toUpperCase(), bold, 11, nameW);
           p.drawText(nameLines[0] ?? "", { x: infoX, y: y - 14, size: 11, font: bold, color: C.textPrimary });
-          drawStatusPill(p, bold, f.status, MARGIN_X + CONTENT_W - 98, y - 14);
+          drawStatusPill(p, bold, f.status, MARGIN_X + CONTENT_W - 98, y - 14, useEnglish);
 
           let hY = y - 28;
           for (const hl of holderLines.slice(0, 2)) {
@@ -1230,7 +1066,7 @@ async function buildPdf(
             hY -= 11;
           }
 
-          // Expediente — full format, monospaced style
+          // Expediente -full format, monospaced style
           const expParts = [
             f.expediente ? `Exp. ${f.expediente}` : "",
             `${T("Class", "Clase")} ${f.classNum}`,
@@ -1240,7 +1076,7 @@ async function buildPdf(
 
           p.drawRectangle({ x: MARGIN_X + 8, y: y - 56, width: CONTENT_W - 16, height: 0.5, color: C.border });
 
-          // Analysis text — in report language only
+          // Analysis text -in report language only
           const analysisText = useEnglish
             ? `This mark "${safeText(f.name)}" in ${T("Class", "Clase")} ${f.classNum} presents a conflict under Art. 173 Fr. XVIII LFPPI due to phonetic and visual similarity with the applied-for mark. The dominant element creates a likelihood of confusion among consumers. Registration is at risk without mark modifications.`
             : `Esta marca "${safeText(f.name)}" en Clase ${f.classNum} presenta un conflicto bajo Art. 173 Fr. XVIII LFPPI por similitud fonetica y visual con la marca solicitante. El elemento dominante genera riesgo de confusion entre consumidores. El registro esta en riesgo sin modificaciones.`;
@@ -1266,7 +1102,7 @@ async function buildPdf(
         }
         p.drawRectangle({ x: MARGIN_X, y: y - 24, width: CONTENT_W, height: 26, color: C.warningTint });
         p.drawRectangle({ x: MARGIN_X, y: y - 24, width: 4, height: 26, color: C.warning });
-        p.drawText(T("SIGNIFICANT — Moderate obstacles", "SIGNIFICATIVO — Obstaculos moderados"), { x: MARGIN_X + 12, y: y - 14, size: 8.5, font: bold, color: C.warning });
+        p.drawText(T("SIGNIFICANT -Moderate obstacles", "SIGNIFICATIVO -Obstaculos moderados"), { x: MARGIN_X + 12, y: y - 14, size: 8.5, font: bold, color: C.warning });
         y -= 34;
 
         for (let i = 0; i < Math.min(significant.length, 6); i++) {
@@ -1276,19 +1112,31 @@ async function buildPdf(
             addPageHeader(p, regular, bold, markName, niceClasses, T("Conflicting Marks", "Marcas en Conflicto"));
             y = PAGE_H - 44;
           }
-          const sigHolder = wrapText(T("Holder: ", "Titular: ") + safeText(f.holder), regular, 8, CONTENT_W - 20);
-          const cardH2 = 18 + sigHolder.length * 11 + 20;
+          const simScore2 = f.similarityScore ?? 55;
+          const simColor2 = simScore2 >= 80 ? C.critical : simScore2 >= 60 ? C.warning : C.primary;
+          const sigHolder = wrapText(T("Holder: ", "Titular: ") + safeText(f.holder), regular, 8, CONTENT_W - 72);
+          const cardH2 = 28 + Math.max(sigHolder.length * 11, 16) + 24;
           drawCard(p, MARGIN_X, y, CONTENT_W, cardH2);
+          // Similarity arc (left) -same pattern as critical cards
+          const dotCX2 = MARGIN_X + 30;
+          const dotCY2 = y - 32;
+          drawArc(p, dotCX2, dotCY2, 20, 5, 1, C.border);
+          drawArc(p, dotCX2, dotCY2, 20, 5, simScore2 / 100, simColor2);
+          p.drawCircle({ x: dotCX2, y: dotCY2, size: 14, color: C.white });
+          const simStr2 = `${simScore2}`;
+          const simW2 = bold.widthOfTextAtSize(simStr2, 9);
+          p.drawText(simStr2, { x: dotCX2 - simW2 / 2, y: dotCY2 - 4, size: 9, font: bold, color: simColor2 });
+          const infoX2 = MARGIN_X + 62;
           const sigNameLines = wrapText(safeText(f.name).toUpperCase(), bold, 10, CONTENT_W - 110);
-          p.drawText(sigNameLines[0] ?? "", { x: MARGIN_X + 10, y: y - 14, size: 10, font: bold, color: C.textPrimary });
-          drawStatusPill(p, bold, f.status, MARGIN_X + CONTENT_W - 98, y - 14);
+          p.drawText(sigNameLines[0] ?? "", { x: infoX2, y: y - 14, size: 10, font: bold, color: C.textPrimary });
+          drawStatusPill(p, bold, f.status, MARGIN_X + CONTENT_W - 98, y - 14, useEnglish);
           let shY = y - 28;
           for (const hl of sigHolder.slice(0, 2)) {
-            p.drawText(hl, { x: MARGIN_X + 10, y: shY, size: 8, font: regular, color: C.textSecond });
+            p.drawText(hl, { x: infoX2, y: shY, size: 8, font: regular, color: C.textSecond });
             shY -= 11;
           }
           const expParts2 = [f.expediente ? `Exp. ${f.expediente}` : "", `${T("Class", "Clase")} ${f.classNum}`, "Mexico IMPI"].filter(Boolean);
-          p.drawText(expParts2.join("  ·  "), { x: MARGIN_X + 10, y: shY - 2, size: 7.5, font: regular, color: C.textMuted });
+          p.drawText(expParts2.join("  ·  "), { x: infoX2, y: shY - 2, size: 7.5, font: regular, color: C.textMuted });
           y -= cardH2 + 4;
         }
       }
@@ -1343,14 +1191,15 @@ async function buildPdf(
       let y = PAGE_H - 34;
       y = addSectionHeader(p, bold,
         T("LFPPI REGISTRABILITY ANALYSIS", "ANALISIS DE REGISTRABILIDAD LFPPI"),
-        T("Evaluation against Mexico's Ley Federal de Proteccion a la Propiedad Industrial", "Evaluacion bajo la LFPPI — legislacion mexicana de propiedad industrial"),
+        T("Evaluation against Mexico's Ley Federal de Proteccion a la Propiedad Industrial", "Evaluacion bajo la LFPPI -legislacion mexicana de propiedad industrial"),
         y,
       );
       y -= 8;
 
-      // Summary callout
-      const failed = flags.filter(f => f.severity === "high" || f.severity === "medium").length;
-      const summaryStr = `${failed} ${T("grounds raised", "causales identificadas")}  ·  ${LFPPI_PASSED_GROUNDS.length} ${T("fracciones passed", "fracciones aprobadas")}`;
+      // Summary callout -raised = all flags; passed = LFPPI_PASSED_GROUNDS not overlapping raised
+      const groundsRaised = flags.length;
+      const groundsPassed = LFPPI_PASSED_GROUNDS.filter(g => !flags.find(f => g.fraccion.includes(f.category))).length;
+      const summaryStr = `${groundsRaised} ${T("grounds raised", "causales identificadas")}  ·  ${groundsPassed} ${T("fracciones passed", "fracciones aprobadas")}`;
       p.drawRectangle({ x: MARGIN_X, y: y - 26, width: CONTENT_W, height: 30, color: C.white, borderColor: C.primary, borderWidth: 1 });
       p.drawRectangle({ x: MARGIN_X, y: y - 26, width: 4, height: 30, color: C.primary });
       const sumW = bold.widthOfTextAtSize(summaryStr, 9);
@@ -1379,11 +1228,11 @@ async function buildPdf(
           const cardH = 28 + explainLines.length * 13 + 12;
           drawCard(p, MARGIN_X, y, CONTENT_W, cardH);
 
-          // Header — colored left bar + text on white (no full-width colored bar)
+          // Header -colored left bar + text on white (no full-width colored bar)
           p.drawRectangle({ x: MARGIN_X, y: y - cardH, width: 5, height: cardH, color: sColor });
           const failedLabel = flag.severity === "high"
-            ? T("RAISED — HIGH SEVERITY", "IDENTIFICADA — ALTA SEVERIDAD")
-            : T("RAISED — MEDIUM SEVERITY", "IDENTIFICADA — SEVERIDAD MEDIA");
+            ? T("RAISED -HIGH SEVERITY", "IDENTIFICADA -ALTA SEVERIDAD")
+            : T("RAISED -MEDIUM SEVERITY", "IDENTIFICADA -SEVERIDAD MEDIA");
           p.drawText(failedLabel, { x: MARGIN_X + 14, y: y - 14, size: 8, font: bold, color: sColor });
           const catW = bold.widthOfTextAtSize(catLabel, 9);
           // Wrap category label
@@ -1409,10 +1258,10 @@ async function buildPdf(
         }
       }
 
-      // Passed grounds — LFPPI fracciones only (no USPTO boilerplate)
+      // Passed grounds -LFPPI fracciones only (no USPTO boilerplate)
       if (y > MARGIN_BOT + 60) {
         y -= 4;
-        p.drawText(T("LFPPI FRACCIONES — PASSED", "FRACCIONES LFPPI — APROBADAS"), { x: MARGIN_X, y, size: 7.5, font: bold, color: C.textMuted });
+        p.drawText(T("LFPPI FRACCIONES -PASSED", "FRACCIONES LFPPI -APROBADAS"), { x: MARGIN_X, y, size: 7.5, font: bold, color: C.textMuted });
         y -= 12;
         const passedList = LFPPI_PASSED_GROUNDS.filter(g => !flags.find(f => g.fraccion.includes(f.category)));
         for (let i = 0; i < Math.min(passedList.length, 10) && y > MARGIN_BOT; i++) {
@@ -1449,8 +1298,8 @@ async function buildPdf(
 
       let y = PAGE_H - 34;
       y = addSectionHeader(p, bold,
-        T("CONFUSION LIKELIHOOD ANALYSIS — LFPPI Art. 173 Fr. XVIII", "ANALISIS DE CONFUNDIBILIDAD — LFPPI Art. 173 Fr. XVIII"),
-        T("Triple-similarity doctrine: phonetic, visual and conceptual — dominant element analysis", "Doctrina de triple similitud: fonetica, visual y conceptual — analisis del elemento dominante"),
+        T("CONFUSION LIKELIHOOD ANALYSIS -LFPPI Art. 173 Fr. XVIII", "ANALISIS DE CONFUNDIBILIDAD -LFPPI Art. 173 Fr. XVIII"),
+        T("Triple-similarity doctrine: phonetic, visual and conceptual -dominant element analysis", "Doctrina de triple similitud: fonetica, visual y conceptual -analisis del elemento dominante"),
         y,
       );
       y -= 8;
@@ -1548,7 +1397,7 @@ async function buildPdf(
       p.drawText(T("DISTINCTIVENESS / DISTINTIVIDAD", "DISTINTIVIDAD / DISTINCTIVENESS"), { x: leftX, y, size: 7.5, font: bold, color: C.primary });
       y -= 14;
 
-      // Tier spectrum — full tier names, no abbreviation
+      // Tier spectrum -full tier names, no abbreviation
       const tiers = ["Generic", "Descriptive", "Suggestive", "Arbitrary", "Fanciful"];
       const tiersEs = ["Generica", "Descriptiva", "Sugestiva", "Arbitraria", "De Fantasia"];
       const tierColors = [C.critical, C.warning, rgb(0.8, 0.65, 0.1), C.success, C.primary];
@@ -1561,7 +1410,7 @@ async function buildPdf(
         const tx = leftX + ti * tierW;
         p.drawRectangle({ x: tx, y: y - 22, width: tierW - 1, height: 22, color: isActive ? tierColors[ti] : C.border });
         const tierName = useEnglish ? tiers[ti] : tiersEs[ti];
-        // Full tier name — wrap inside cell
+        // Full tier name -wrap inside cell
         const tierNameLines = wrapText(tierName, isActive ? bold : regular, 6.5, tierW - 4);
         let tny = y - 10;
         for (const tnl of tierNameLines.slice(0, 2)) {
@@ -1574,7 +1423,7 @@ async function buildPdf(
 
       if (dist) {
         const rawScore2 = dist.score <= 5 ? dist.score * 20 : dist.score;
-        const badgeLabel = `${tierLabel(dist.tier)} — ${rawScore2}/100`;
+        const badgeLabel = `${tierLabel(dist.tier)} -${rawScore2}/100`;
         const bdW = bold.widthOfTextAtSize(badgeLabel, 9) + 16;
         p.drawRectangle({ x: leftX, y: y - 18, width: bdW, height: 20, color: activeIdx >= 0 ? tierColors[Math.min(activeIdx, tierColors.length - 1)] : C.textMuted });
         p.drawText(badgeLabel, { x: leftX + 8, y: y - 10, size: 9, font: bold, color: C.white });
@@ -1600,7 +1449,7 @@ async function buildPdf(
         y -= 24;
       }
 
-      // Translation analysis — stacked cards (no narrow columns)
+      // Translation analysis -stacked cards (no narrow columns)
       let ry = PAGE_H - 34 - 30;
       p.drawText(T("TRANSLATION ANALYSIS", "ANALISIS DE TRADUCCION"), { x: rightX, y: ry, size: 7.5, font: bold, color: C.primary });
       ry -= 14;
@@ -1638,7 +1487,7 @@ async function buildPdf(
             rfY -= 11;
           }
 
-          // Full detail text — no truncation
+          // Full detail text -no truncation
           for (const dl of detailLines) {
             if (rfY < MARGIN_BOT + 8) break;
             p.drawText(dl, { x: rightX + 10, y: rfY, size: 7.5, font: regular, color: C.textSecond });
@@ -1675,19 +1524,17 @@ async function buildPdf(
         if (y < MARGIN_BOT + 20) break;
         const avail = d.status === "available";
         const pillColor = avail ? C.success : C.critical;
-        const symbol = avail ? "+" : "x";
-        const text = `${symbol}  ${safeText(d.domain)}`;
-        const pillLines = wrapText(text, avail ? bold : regular, 8.5, colW3 - 20);
-        const pillH = Math.max(20, pillLines.length * 12 + 8);
+        // Use ASCII symbols -pdf-lib standard fonts don't support Unicode check/cross
+        const icon = avail ? "OK" : "X";
+        const domainText = safeText(d.domain);
+        const pillH = 24;
         p.drawRectangle({ x: leftX2, y: y - pillH, width: colW3, height: pillH, color: avail ? C.successTint : C.criticalTint, borderColor: pillColor, borderWidth: 0.8 });
-        let plY = y - 10;
-        for (const pl of pillLines.slice(0, 2)) {
-          p.drawText(pl, { x: leftX2 + 10, y: plY, size: 8.5, font: avail ? bold : regular, color: pillColor });
-          plY -= 12;
-        }
+        p.drawText(icon, { x: leftX2 + 8, y: y - 16, size: 10, font: avail ? bold : regular, color: pillColor });
+        const domLines = wrapText(domainText, avail ? bold : regular, 8.5, colW3 - 52);
+        p.drawText(domLines[0] ?? domainText, { x: leftX2 + 22, y: y - 15, size: 8.5, font: avail ? bold : regular, color: pillColor });
         const statusStr = avail ? T("Available", "Disponible") : T("Registered", "Registrado");
         const stW = regular.widthOfTextAtSize(statusStr, 7.5);
-        p.drawText(statusStr, { x: leftX2 + colW3 - stW - 8, y: y - 10, size: 7.5, font: regular, color: pillColor });
+        p.drawText(statusStr, { x: leftX2 + colW3 - stW - 8, y: y - 15, size: 7.5, font: regular, color: pillColor });
         y -= pillH + 4;
       }
 
@@ -1723,14 +1570,14 @@ async function buildPdf(
       }
     }
 
-    // ── STRATEGY RECOMMENDATIONS — exactly 5 paths ────────────────────
+    // ── STRATEGY RECOMMENDATIONS -exactly 5 paths ────────────────────
     {
       const p = newPage(T("Strategy Recommendations", "Recomendaciones Estrategicas"));
       addPageHeader(p, regular, bold, markName, niceClasses, T("Strategy Recommendations", "Recomendaciones Estrategicas"));
 
       let y = PAGE_H - 34;
       y = addSectionHeader(p, bold,
-        T("STRATEGY RECOMMENDATIONS — 5 PATHS", "RECOMENDACIONES ESTRATEGICAS — 5 CAMINOS"),
+        T("STRATEGY RECOMMENDATIONS -5 PATHS", "RECOMENDACIONES ESTRATEGICAS -5 CAMINOS"),
         T("All paths numbered 1-5. Recommended path marked.", "Todos los caminos numerados 1-5. Camino recomendado marcado."),
         y,
       );
@@ -1750,7 +1597,7 @@ async function buildPdf(
         const nw = bold.widthOfTextAtSize(numStr, 10);
         p.drawText(numStr, { x: MARGIN_X + 6 + (22 - nw) / 2, y: y - 20, size: 10, font: bold, color: strat.recommended ? C.white : C.textMuted });
 
-        // Title — full text, wrapped
+        // Title -full text, wrapped
         const titleLines = wrapText(strat.title, bold, 9.5, CONTENT_W - 90);
         let tly = y - 15;
         for (const tl of titleLines.slice(0, 2)) {
@@ -1777,7 +1624,7 @@ async function buildPdf(
         const metaW = regular.widthOfTextAtSize(meta, 7.5);
         p.drawText(meta, { x: MARGIN_X + CONTENT_W - metaW - 8, y: y - 34, size: 7.5, font: regular, color: C.textMuted });
 
-        // Description — full text, no truncation
+        // Description -full text, no truncation
         let dy2 = y - 46;
         for (const dl of descLines) {
           if (dy2 < MARGIN_BOT + 8) break;
@@ -1788,13 +1635,13 @@ async function buildPdf(
         y -= cardH + 8;
       }
 
-      // Filing cost breakdown — USD $299 all-in
+      // Filing cost breakdown -USD $299 all-in
       if (y > MARGIN_BOT + 80) {
         y -= 4;
         const costH = 88;
         drawCard(p, MARGIN_X, y, CONTENT_W, costH);
         p.drawRectangle({ x: MARGIN_X, y: y - costH, width: 4, height: costH, color: C.primary });
-        p.drawText(T("FILING COST BREAKDOWN — USD $299 ALL-IN", "DESGLOSE DE COSTOS — USD $299 TODO INCLUIDO"), { x: MARGIN_X + 14, y: y - 16, size: 9.5, font: bold, color: C.textPrimary });
+        p.drawText(T("FILING COST BREAKDOWN -USD $299 ALL-IN", "DESGLOSE DE COSTOS -USD $299 TODO INCLUIDO"), { x: MARGIN_X + 14, y: y - 16, size: 9.5, font: bold, color: C.textPrimary });
         p.drawRectangle({ x: MARGIN_X + 14, y: y - 22, width: CONTENT_W - 28, height: 0.5, color: C.border });
         const costItems = [
           T("IMPI government filing fee (paid directly to IMPI on your behalf):  USD $170", "Cuota oficial IMPI (pagada directamente al IMPI en tu nombre):  USD $170"),
@@ -1837,7 +1684,7 @@ async function buildPdf(
         const officialHeading = useEnglish ? (nc.officialHeading_en || nc.officialHeading) : nc.officialHeading;
         const items = useEnglish ? (nc.relevantItems_en?.length ? nc.relevantItems_en : nc.relevantItems) : nc.relevantItems;
 
-        // Class badge — outlined
+        // Class badge -outlined
         p.drawRectangle({ x: MARGIN_X, y: y - 34, width: 44, height: 36, color: C.white, borderColor: C.primary, borderWidth: 1.5 });
         const cnStr = String(nc.classNumber);
         const cnW = bold.widthOfTextAtSize(cnStr, 16);
@@ -1867,28 +1714,179 @@ async function buildPdf(
   // ══════════════════════════════════════════════════════════════════════
   // Render
   // ══════════════════════════════════════════════════════════════════════
+  // Helper: render a cover page in a given language
+  const renderCover = (coverLang: Lang, coverVerdict: Verdict, coverScore: number) => {
+    const isEN = coverLang === "en";
+    const cvt = verdictColor(coverVerdict);
+    const p = newPage("Cover");
+
+    const headerH = 52;
+    p.drawRectangle({ x: 0, y: PAGE_H - headerH, width: PAGE_W, height: headerH, color: C.white });
+    p.drawRectangle({ x: 0, y: PAGE_H - headerH, width: PAGE_W, height: 0.8, color: C.border });
+    p.drawText("MEXICO TRADEMARK CENTER", { x: MARGIN_X, y: PAGE_H - 28, size: 13, font: bold, color: C.primary });
+    p.drawText("MexicoTrademarkCenter.com", { x: MARGIN_X, y: PAGE_H - 42, size: 8, font: regular, color: C.textMuted });
+    const rtLabel2 = isEN ? "TRADEMARK CLEARANCE REPORT" : "DICTAMEN DE VIABILIDAD MARCARIA";
+    const rtW2 = regular.widthOfTextAtSize(rtLabel2, 8);
+    p.drawText(rtLabel2, { x: PAGE_W - MARGIN_X - rtW2, y: PAGE_H - 28, size: 8, font: regular, color: C.textMuted });
+    const rt2b = isEN ? "Dictamen de Viabilidad Marcaria" : "Trademark Clearance Report";
+    const rt2bW = italic.widthOfTextAtSize(rt2b, 8);
+    p.drawText(rt2b, { x: PAGE_W - MARGIN_X - rt2bW, y: PAGE_H - 40, size: 8, font: italic, color: C.textMuted });
+
+    const markY2 = PAGE_H - headerH - 50;
+    const mnStr2 = safeText(markName).toUpperCase();
+    const mnSize2 = mnStr2.length > 16 ? 36 : mnStr2.length > 10 ? 44 : 52;
+    const mnW2 = bold.widthOfTextAtSize(mnStr2, mnSize2);
+    p.drawText(mnStr2, { x: (PAGE_W - mnW2) / 2, y: markY2, size: mnSize2, font: bold, color: C.textPrimary });
+
+    const classChipY2 = markY2 - 22;
+    if (niceClasses.length > 0) {
+      const chipStr2 = niceClasses.map(nc => (isEN ? `Class ${nc.classNumber}` : `Clase ${nc.classNumber}`)).join("  ·  ");
+      const chipW2 = bold.widthOfTextAtSize(chipStr2, 9);
+      p.drawText(chipStr2, { x: (PAGE_W - chipW2) / 2, y: classChipY2, size: 9, font: bold, color: C.primary });
+    }
+
+    if (goodsServices) {
+      const gsLines2 = wrapText(safeText(goodsServices), regular, 9, CONTENT_W - 40).slice(0, 3);
+      let gsY2 = classChipY2 - 18;
+      for (const line of gsLines2) {
+        const gW2 = regular.widthOfTextAtSize(line, 9);
+        p.drawText(line, { x: (PAGE_W - gW2) / 2, y: gsY2, size: 9, font: regular, color: C.textSecond });
+        gsY2 -= 14;
+      }
+    }
+
+    const divY2 = PAGE_H - headerH - 160;
+    p.drawRectangle({ x: MARGIN_X, y: divY2, width: CONTENT_W, height: 0.8, color: C.border });
+
+    const gaugeSection2 = divY2 - 10;
+    const gaugeCX2 = PAGE_W / 2;
+    const gaugeCY2 = gaugeSection2 - 72;
+    const gaugeR2 = 48;
+    drawArc(p, gaugeCX2, gaugeCY2, gaugeR2, 10, 1, C.border);
+    drawArc(p, gaugeCX2, gaugeCY2, gaugeR2, 10, coverScore / 100, cvt);
+    p.drawCircle({ x: gaugeCX2, y: gaugeCY2, size: gaugeR2 - 7, color: C.white });
+    const scoreStr2 = String(coverScore);
+    const scoreSz2 = 34;
+    const scoreW2 = bold.widthOfTextAtSize(scoreStr2, scoreSz2);
+    p.drawText(scoreStr2, { x: gaugeCX2 - scoreW2 / 2, y: gaugeCY2 + 8, size: scoreSz2, font: bold, color: C.textPrimary });
+    const outOfStr2 = "/ 100";
+    const outOfW2 = regular.widthOfTextAtSize(outOfStr2, 11);
+    p.drawText(outOfStr2, { x: gaugeCX2 - outOfW2 / 2, y: gaugeCY2 - 14, size: 11, font: regular, color: C.textMuted });
+
+    const vLabel2 = verdictLabel(coverVerdict, coverLang);
+    const vLabelW2 = bold.widthOfTextAtSize(vLabel2, 11) + 20;
+    const vBadgeX2 = gaugeCX2 - vLabelW2 / 2;
+    const vBadgeY2 = gaugeCY2 - gaugeR2 - 16;
+    p.drawRectangle({ x: vBadgeX2, y: vBadgeY2 - 16, width: vLabelW2, height: 18, color: cvt });
+    p.drawText(vLabel2, { x: vBadgeX2 + 10, y: vBadgeY2 - 9, size: 11, font: bold, color: C.white });
+
+    const vOneliner2 = verdictOneLiner(coverVerdict, coverLang);
+    const vOneLinerLines2 = wrapText(vOneliner2, regular, 9, CONTENT_W - 80);
+    let vlY2 = vBadgeY2 - 28;
+    for (const vl of vOneLinerLines2.slice(0, 2)) {
+      const vlW2 = regular.widthOfTextAtSize(vl, 9);
+      p.drawText(vl, { x: (PAGE_W - vlW2) / 2, y: vlY2, size: 9, font: regular, color: C.textSecond });
+      vlY2 -= 13;
+    }
+
+    const legendY2 = gaugeCY2 - gaugeR2 - 76;
+    const legendTitle2 = isEN ? "WHAT THIS SCORE MEANS" : "QUE SIGNIFICA ESTE PUNTAJE";
+    const ltW2 = bold.widthOfTextAtSize(legendTitle2, 8);
+    p.drawText(legendTitle2, { x: (PAGE_W - ltW2) / 2, y: legendY2, size: 8, font: bold, color: C.textMuted });
+    p.drawRectangle({ x: MARGIN_X + 40, y: legendY2 - 4, width: CONTENT_W - 80, height: 0.5, color: C.border });
+
+    const legendRows2: Array<{ range: string; label_en: string; label_es: string; desc_en: string; desc_es: string; v: Verdict }> = [
+      { range: "90-100", label_en: "CLEAR",     label_es: "SIN OBSTACULOS", desc_en: "No material obstacles",         desc_es: "Sin obstaculos materiales",           v: "CLEAR" },
+      { range: "75-89",  label_en: "LOW RISK",  label_es: "RIESGO BAJO",    desc_en: "Few obstacles, registrable",    desc_es: "Pocos obstaculos, registrable",        v: "LOW" },
+      { range: "55-74",  label_en: "MODERATE",  label_es: "MODERADO",       desc_en: "Registrable with strategy",     desc_es: "Registrable con estrategia",           v: "MODERATE" },
+      { range: "30-54",  label_en: "HIGH RISK", label_es: "RIESGO ALTO",    desc_en: "Multiple significant obstacles",desc_es: "Multiples obstaculos significativos",  v: "HIGH" },
+      { range: "0-29",   label_en: "CRITICAL",  label_es: "CRITICO",        desc_en: "Registration highly unlikely",  desc_es: "Registro altamente improbable",        v: "CRITICAL" },
+    ];
+
+    let lRowY2 = legendY2 - 14;
+    for (const row of legendRows2) {
+      const isThis2 = row.v === coverVerdict;
+      const rowColor2 = verdictColor(row.v);
+      p.drawCircle({ x: MARGIN_X + 44, y: lRowY2 - 4, size: 5, color: rowColor2 });
+      p.drawText(row.range, { x: MARGIN_X + 54, y: lRowY2 - 8, size: 8, font: regular, color: C.textMuted });
+      const rowLabel2 = isEN ? row.label_en : row.label_es;
+      p.drawText(rowLabel2, { x: MARGIN_X + 90, y: lRowY2 - 8, size: 8, font: isThis2 ? bold : regular, color: isThis2 ? rowColor2 : C.textSecond });
+      const desc2 = isEN ? row.desc_en : row.desc_es;
+      const descLines2 = wrapText(desc2, regular, 7.5, CONTENT_W - 160);
+      let descY2 = lRowY2 - 8;
+      for (const dl of descLines2.slice(0, 1)) {
+        p.drawText(dl, { x: MARGIN_X + 180, y: descY2, size: 7.5, font: regular, color: C.textMuted });
+        descY2 -= 10;
+      }
+      if (isThis2) {
+        p.drawText("<<", { x: PAGE_W - MARGIN_X - 16, y: lRowY2 - 8, size: 9, font: bold, color: rowColor2 });
+      }
+      lRowY2 -= 14;
+    }
+
+    // Quick-stats tiles
+    const tilesY2 = lRowY2 - 12;
+    p.drawRectangle({ x: MARGIN_X, y: tilesY2 - 1, width: CONTENT_W, height: 0.5, color: C.border });
+    const tilesStartY2 = tilesY2 - 10;
+    const tileW2 = (CONTENT_W - 12) / 4;
+    const tileH2 = 62;
+    const distCover = result.distinctiveness;
+    const rawDistCover = distCover ? (distCover.score <= 5 ? distCover.score * 20 : distCover.score) : 0;
+    const tierEsCover: Record<string, string> = { generic: "Generica", descriptive: "Descriptiva", suggestive: "Sugestiva", arbitrary: "Arbitraria", fanciful: "De Fantasia" };
+    const flagsCover = result.registrabilityFlags ?? [];
+    const tiles2 = [
+      { value: String((result.marciaFindings ?? []).filter(f => (f.similarityScore ?? 0) >= 80).length), label_en: "Critical conflicts", label_es: "Conflictos criticos", color: (result.marciaFindings ?? []).some(f => (f.similarityScore ?? 0) >= 80) ? C.critical : C.success },
+      { value: String(flagsCover.length), label_en: "LFPPI grounds raised", label_es: "Causales LFPPI", color: flagsCover.length > 0 ? C.warning : C.success },
+      { value: distCover ? `${tierEsCover[distCover.tier] ?? distCover.tier} ${rawDistCover}/100` : "N/A", label_en: "Distinctiveness", label_es: "Distintividad", color: rawDistCover >= 60 ? C.success : rawDistCover >= 40 ? C.warning : C.critical },
+      { value: String(result.marciaTotalCount ?? (result.marciaFindings ?? []).length), label_en: "Marks in IMPI search", label_es: "Marcas en busqueda IMPI", color: (result.marciaTotalCount ?? 0) > 5 ? C.critical : C.warning },
+    ];
+
+    for (let ti = 0; ti < tiles2.length; ti++) {
+      const tx2 = MARGIN_X + ti * (tileW2 + 4);
+      const tile2 = tiles2[ti];
+      drawCard(p, tx2, tilesStartY2, tileW2, tileH2);
+      const tileLabel2 = isEN ? tile2.label_en : tile2.label_es;
+      const tlLines2 = wrapText(tileLabel2.toUpperCase(), regular, 7, tileW2 - 12);
+      let tly2 = tilesStartY2 - 10;
+      for (const tll of tlLines2.slice(0, 2)) {
+        p.drawText(tll, { x: tx2 + 6, y: tly2, size: 7, font: regular, color: C.textMuted });
+        tly2 -= 9;
+      }
+      const tvLines2 = wrapText(safeText(tile2.value), bold, 13, tileW2 - 12);
+      let tvY2 = tilesStartY2 - tileH2 + 24;
+      for (const tvl of tvLines2.slice(0, 2)) {
+        p.drawText(tvl, { x: tx2 + 6, y: tvY2, size: 13, font: bold, color: tile2.color });
+        tvY2 += 14;
+      }
+      p.drawRectangle({ x: tx2, y: tilesStartY2 - tileH2, width: tileW2, height: 3, color: tile2.color });
+    }
+
+    const footerY2 = tilesStartY2 - tileH2 - 20;
+    p.drawRectangle({ x: MARGIN_X, y: footerY2, width: CONTENT_W, height: 0.5, color: C.border });
+    const footerStr2 = [
+      "Mexico -IMPI Registry",
+      dateDisplay,
+      `Report ID: ${shortId}`,
+      isEN ? "Preliminary analysis. Not legal advice." : "Analisis preliminar. No es asesoria legal.",
+    ].join("  ·  ");
+    const footerW2 = regular.widthOfTextAtSize(footerStr2, 7.5);
+    p.drawText(footerStr2, { x: (PAGE_W - footerW2) / 2, y: footerY2 - 14, size: 7.5, font: regular, color: C.textMuted });
+  };
+
   if (isBilingual) {
+    // Spanish cover + Spanish sections
+    renderCover(searchLang, verdict, score);
     renderAllSections(searchLang, false);
-
-    // Language divider page — pure white, no sidebar
-    const dp = newPage("Language Divider");
-    dp.drawRectangle({ x: 0, y: 0, width: PAGE_W, height: PAGE_H, color: C.white });
-    dp.drawRectangle({ x: MARGIN_X, y: PAGE_H / 2 + 24, width: CONTENT_W, height: 1, color: C.border });
-    dp.drawRectangle({ x: MARGIN_X, y: PAGE_H / 2 - 28, width: CONTENT_W, height: 1, color: C.border });
-    const divLabel = "ENGLISH VERSION";
-    const divW = bold.widthOfTextAtSize(divLabel, 22);
-    dp.drawText(divLabel, { x: (PAGE_W - divW) / 2, y: PAGE_H / 2 + 4, size: 22, font: bold, color: C.textPrimary });
-    const subLabel = "MexicoTrademarkCenter.com";
-    const subW = regular.widthOfTextAtSize(subLabel, 10);
-    dp.drawText(subLabel, { x: (PAGE_W - subW) / 2, y: PAGE_H / 2 - 22, size: 10, font: regular, color: C.textMuted });
-
+    // English cover + English sections (no divider page)
+    renderCover("en", verdict, score);
     renderAllSections("en", true);
   } else {
+    renderCover("en", verdict, score);
     renderAllSections("en", true);
   }
 
   // ══════════════════════════════════════════════════════════════════════
-  // FINAL PAGE — DISCLAIMER
+  // FINAL PAGE -DISCLAIMER
   // ══════════════════════════════════════════════════════════════════════
   {
     const p = newPage("Disclaimer");
@@ -1953,7 +1951,7 @@ async function buildPdf(
       dy -= 13;
     }
 
-    const metaStr = `Report generated: ${timestamp}${purchaserEmail ? ` | Prepared for: ${purchaserEmail}` : ""}`;
+    const metaStr = `Report generated: ${timestamp}  |  Report ID: ${shortId}`;
     p.drawText(safeText(metaStr).slice(0, 90), { x: dX, y: 52, size: 7.5, font: regular, color: C.textMuted });
     p.drawText("MexicoTrademarkCenter.com  |  Independent Trademark Filing Services for Mexico", { x: dX, y: 38, size: 7.5, font: bold, color: C.primary });
   }
