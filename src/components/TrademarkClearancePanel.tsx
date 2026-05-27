@@ -1362,6 +1362,33 @@ export default function TrademarkClearancePanel({
         </div>
       )}
 
+      {/* ── Composite Registrability Score ─────────────────────────────────── */}
+      <div className="border-t border-gray-100 bg-white/60 px-4 py-3">
+        <div className="flex items-center gap-3">
+          <RegistrabilityGauge score={regScore} />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <Zap size={11} className="text-[#c9a84c] flex-shrink-0" />
+              <span className="text-[10px] font-bold text-gray-700 uppercase tracking-wide">
+                {lang === 'es' ? 'Puntuación de Registrabilidad' : lang === 'zh' ? '注册可能性评分' : lang === 'de' ? 'Registrierbarkeitsscore' : lang === 'fr' ? 'Score de registrabilité' : lang === 'pt' ? 'Pontuação de Registrabilidade' : 'Registrability Score'}
+              </span>
+            </div>
+            <div className="w-full bg-gray-100 rounded-full h-2 mb-1 overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-700"
+                style={{ width: `${regScore}%`, backgroundColor: regScore >= 70 ? '#10b981' : regScore >= 45 ? '#f59e0b' : '#ef4444' }}
+              />
+            </div>
+            <p className="text-[9px] text-gray-400 leading-snug">
+              {lang === 'es'
+                ? `Puntuación compuesta basada en distintividad, motivos LFPPI y conflictos MARCia.`
+                : lang === 'zh' ? `基于显著性、LFPPI动因和MARCia冲突的综合评分。`
+                : `Composite score based on distinctiveness, LFPPI grounds, and MARCia conflicts.`}
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* ── Risk Summary ───────────────────────────────────────────────────── */}
       {result.riskSummary && (
         <div className={`border-t border-gray-100 ${cfg.summaryBg} px-4 py-3 border-l-4 ${cfg.summaryBorder}`}>
@@ -1446,33 +1473,6 @@ export default function TrademarkClearancePanel({
           </div>
         </div>
       )}
-
-      {/* ── Composite Registrability Score (Improvement 6) ─────────────────── */}
-      <div className="border-t border-gray-100 bg-white/60 px-4 py-3">
-        <div className="flex items-center gap-3">
-          <RegistrabilityGauge score={regScore} />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5 mb-0.5">
-              <Zap size={11} className="text-[#c9a84c] flex-shrink-0" />
-              <span className="text-[10px] font-bold text-gray-700 uppercase tracking-wide">
-                {lang === 'es' ? 'Puntuación de Registrabilidad' : lang === 'zh' ? '注册可能性评分' : lang === 'de' ? 'Registrierbarkeitsscore' : lang === 'fr' ? 'Score de registrabilité' : lang === 'pt' ? 'Pontuação de Registrabilidade' : 'Registrability Score'}
-              </span>
-            </div>
-            <div className="w-full bg-gray-100 rounded-full h-2 mb-1 overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-700"
-                style={{ width: `${regScore}%`, backgroundColor: regScore >= 70 ? '#10b981' : regScore >= 45 ? '#f59e0b' : '#ef4444' }}
-              />
-            </div>
-            <p className="text-[9px] text-gray-400 leading-snug">
-              {lang === 'es'
-                ? `Puntuación compuesta basada en distintividad, factores DuPont, motivos LFPPI y conflictos MARCia.`
-                : lang === 'zh' ? `基于显著性、杜邦因素、LFPPI动因和MARCia冲突的综合评分。`
-                : `Composite score based on distinctiveness, DuPont factors, LFPPI grounds, and MARCia conflicts.`}
-            </p>
-          </div>
-        </div>
-      </div>
 
       {/* ── Feature 3: Pentagon Risk Profile Chart ─────────────────────────── */}
       {(() => {
@@ -2665,7 +2665,7 @@ export default function TrademarkClearancePanel({
                 viability: 80,
                 pros: [{ en: 'Fast — no reformulation needed.', es: 'Rápido — sin reformulación.' }, { en: 'Preserves brand equity already built.', es: 'Preserva el capital de marca ya construido.' }],
                 cons: [{ en: 'Some opposition risk remains.', es: 'Subsiste riesgo de oposición.' }],
-                fee: 'USD $2,958 (IMPI) + professional fees',
+                fee: 'USD $170 (IMPI official fee) + professional fees',
                 timeline: { en: '12–18 months to registration', es: '12–18 meses al registro' },
                 probability: { en: 'High (70–85%)', es: 'Alta (70–85%)' },
               });
@@ -2677,7 +2677,7 @@ export default function TrademarkClearancePanel({
                 viability: 60,
                 pros: [{ en: 'Reduces descriptiveness objection under Fr. II.', es: 'Reduce objeción por descriptividad bajo Fr. II.' }, { en: 'Visually differentiates from conflicting marks.', es: 'Diferencia visualmente de marcas conflictivas.' }],
                 cons: [{ en: 'Protects only the composite, not the word alone.', es: 'Protege solo el conjunto, no la palabra sola.' }, { en: 'Requires additional design cost.', es: 'Requiere costo adicional de diseño.' }],
-                fee: 'USD $2,958 (IMPI) + professional fees',
+                fee: 'USD $170 (IMPI official fee) + professional fees',
                 timeline: { en: '14–20 months', es: '14–20 meses' },
                 probability: { en: 'Moderate (50–65%)', es: 'Moderada (50–65%)' },
               });
@@ -2689,7 +2689,7 @@ export default function TrademarkClearancePanel({
                 viability: 85,
                 pros: [{ en: 'Eliminates the Fr. XVIII confusing similarity problem.', es: 'Elimina el problema de similitud confusoria bajo Fr. XVIII.' }, { en: 'Strongest possible distinctiveness score.', es: 'Mayor puntuación posible de distintividad.' }],
                 cons: [{ en: 'Requires abandoning existing brand investment.', es: 'Requiere abandonar la inversión en marca existente.' }, { en: 'New mark needs its own clearance search.', es: 'La nueva marca necesita su propio estudio.' }],
-                fee: 'USD $2,958 (IMPI) + professional fees',
+                fee: 'USD $170 (IMPI official fee) + professional fees',
                 timeline: { en: '12–18 months (new mark)', es: '12–18 meses (nueva marca)' },
                 probability: { en: 'Very high (80–90%) if coined', es: 'Muy alta (80–90%) si es de fantasía' },
               });
@@ -2777,7 +2777,7 @@ export default function TrademarkClearancePanel({
           {/* 4e — Cost & Timeline Panel */}
           {(() => {
             const steps: Array<{ label: { en: string; es: string }; duration: { en: string; es: string }; cost: string; note: { en: string; es: string } }> = [
-              { label: { en: 'Filing', es: 'Presentación' }, duration: { en: 'Day 0', es: 'Día 0' }, cost: 'USD $2,958 (IMPI official fee, 1 class)', note: { en: 'Application submitted to IMPI. Filing date establishes priority.', es: 'Solicitud presentada ante el IMPI. La fecha establece prioridad.' } },
+              { label: { en: 'Filing', es: 'Presentación' }, duration: { en: 'Day 0', es: 'Día 0' }, cost: 'USD $170 (IMPI official fee, 1 class)', note: { en: 'Application submitted to IMPI. Filing date establishes priority.', es: 'Solicitud presentada ante el IMPI. La fecha establece prioridad.' } },
               { label: { en: 'Formal examination', es: 'Examen formal' }, duration: { en: '1–3 months', es: '1–3 meses' }, cost: 'No additional fee', note: { en: 'IMPI checks that all required documents are in order.', es: 'El IMPI verifica que la documentación esté en orden.' } },
               { label: { en: 'Substantive examination', es: 'Examen de fondo' }, duration: { en: '4–10 months', es: '4–10 meses' }, cost: 'No additional fee', note: { en: 'IMPI evaluates the mark for absolute and relative grounds.', es: 'El IMPI evalúa la marca por motivos absolutos y relativos.' } },
               { label: { en: 'Publication in Gazette', es: 'Publicación en Gaceta' }, duration: { en: '10–14 months', es: '10–14 meses' }, cost: 'No additional fee', note: { en: 'Mark published for 1-month opposition window.', es: 'Marca publicada por ventana de oposición de 1 mes.' } },
@@ -2795,7 +2795,7 @@ export default function TrademarkClearancePanel({
                       {lang === 'es' ? 'Costo y Cronograma IMPI' : 'IMPI Cost & Timeline'}
                     </span>
                     <span className="text-[9px] text-gray-400 font-normal pl-5">
-                      {lang === 'es' ? '12–18 meses · USD $2,958 cuota oficial IMPI · Ventana de oposición: 1 mes' : '12–18 months · USD $2,958 IMPI official fee · 1-month opposition window'}
+                      {lang === 'es' ? '12–18 meses · USD $170 cuota oficial IMPI por clase · Ventana de oposición: 1 mes' : '12–18 months · USD $170 IMPI official fee per class · 1-month opposition window'}
                     </span>
                   </span>
                   {timelineExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}

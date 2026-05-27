@@ -1282,9 +1282,17 @@ async function generateConsistentRiskSummary(
     ? `Motivos absolutos identificados: ${registrabilityFlags.map(f => f.category).join(", ")}.`
     : "No se identificaron motivos absolutos de rechazo.";
 
-  const dupontContext = dupontAgainst > 0
-    ? `${dupontAgainst} de los 13 factores DuPont pesan en contra del registro.`
-    : "Ningún factor DuPont pesa en contra del registro.";
+  const lfppiGroundsContext = registrabilityFlags.length > 0
+    ? `Motivos LFPPI identificados: ${registrabilityFlags.map(f => f.category).join(", ")}.`
+    : "No se identificaron motivos absolutos LFPPI de rechazo.";
+
+  // Build a list of the top 2-3 conflicting marks by name for the prompt
+  const topConflicts = marciaFindings
+    .filter(f => f.classOverlap === "same" || f.classOverlap === "related")
+    .slice(0, 3);
+  const conflictList = topConflicts.length > 0
+    ? topConflicts.map(f => `"${f.name}" (clase ${f.classNum}${(f as { expediente?: string }).expediente ? `, exp. ${(f as { expediente?: string }).expediente}` : ""})`).join(", ")
+    : "";
 
   const translationInstruction = isUserLang
     ? `Escribe el resumen principal ("riskSummary") en ESPAÑOL. Proporciona también "riskSummary_en" en inglés y "riskSummary_user" en ${langName}. En la versión ${langName}, cuando uses terminología legal española sin equivalente directo (p.ej. "marcas notorias", "LFPPI", "clases Niza"), mantenla en español entre paréntesis con una breve aclaración.`
@@ -1292,20 +1300,26 @@ async function generateConsistentRiskSummary(
     ? `Escribe el resumen principal ("riskSummary") en ESPAÑOL. Proporciona también "riskSummary_en" en inglés.`
     : `Escribe el resumen en ESPAÑOL únicamente. El campo "riskSummary_en" debe ser idéntico a "riskSummary".`;
 
-  const prompt = `Eres un abogado experto en marcas mexicanas redactando un resumen de riesgo en lenguaje claro para un empresario.
+  const prompt = `Eres un abogado experto en marcas mexicanas (LFPPI) redactando un resumen de riesgo en lenguaje claro para un empresario.
 
 Marca: "${markName}"
 Productos/Servicios: "${goodsServices}"
-Evaluación final de registrabilidad: ${riskLabelEs} (color Playbook: ${finalRiskColor})
+Clases Niza solicitadas: ${applicantClasses.join(", ")}
+Evaluación final de registrabilidad: ${riskLabelEs} (color: ${finalRiskColor})
 
-Hallazgos clave que DEBEN reflejarse con precisión en el resumen:
+Hallazgos clave:
 - ${marciaContext}
-- ${flagContext}
-- ${dupontContext}
+${conflictList ? `- Marcas conflictivas principales en MARCia: ${conflictList}.` : ""}
+- ${lfppiGroundsContext}
 
-Redacta 3–4 oraciones: (1) estado de la registrabilidad conforme a la evaluación anterior, (2) obstáculos primarios específicos basados en los hallazgos, (3) pasos prácticos recomendados.
-CRÍTICO: El resumen DEBE ser consistente con la evaluación final de "${riskLabelEs}". No la contradigas.
-CRÍTICO: Menciona explícitamente el nivel de distintividad de la marca (genérica/descriptiva/sugestiva/arbitraria/de fantasía) y lo que significa para el registro.
+INSTRUCCIONES OBLIGATORIAS para el resumen (3–4 oraciones):
+1. Indica el nivel de riesgo y la causa principal de registrabilidad.
+2. Nombra las 2–3 marcas conflictivas de mayor puntuación POR NOMBRE (p.ej. "NEXPRO", "NEXPLANT") e incluye su número de expediente IMPI entre paréntesis si está disponible. Identifica el elemento dominante que genera el conflicto (p.ej. "el elemento dominante NEX- entra en conflicto con…"). Cita el artículo y fracción LFPPI aplicable (p.ej. "Art. 173 Fr. XVIII LFPPI").
+3. Menciona el nivel de distintividad de la marca propuesta (genérica/descriptiva/sugestiva/arbitraria/de fantasía).
+4. Termina con UNA recomendación concreta y accionable (p.ej. "Considera reemplazar el prefijo NEX- por un elemento acuñado más distintivo").
+
+CRÍTICO: El resumen DEBE ser consistente con "${riskLabelEs}". No la contradigas.
+CRÍTICO: Usa ÚNICAMENTE terminología LFPPI (Arts. 171–174, 173 Fr. IV, Fr. XVIII, etc.). No menciones el test DuPont.
 
 ${translationInstruction}
 

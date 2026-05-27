@@ -625,7 +625,7 @@ const VITAFIT_DATA: ReportData = {
       title: { en: 'A. Modify the Mark (Coined Alternatives)', es: 'A. Modificar la Marca (Alternativas Acuñadas)' },
       viability: 88,
       description: { en: 'Replace VITAFIT with a coined (fanciful) mark that occupies the same brand space without triggering descriptiveness or conflict bars. The alternatives below were generated against the same MARCia corpus and show substantially higher quick-clearance scores.', es: 'Reemplazar VITAFIT por una marca acuñada (de fantasía) que ocupe el mismo espacio de marca sin activar los impedimentos de descriptividad o conflicto. Las alternativas a continuación fueron generadas contra el mismo corpus de MARCia y muestran puntuaciones de claridad rápida sustancialmente más altas.' },
-      feesMxn: 'MXN 3,055 (filing, 1 class)',
+      feesMxn: 'USD $170 (IMPI official fee, 1 class)',
       timeline: { en: '12–18 months (uncontested)', es: '12–18 meses (sin oposición)' },
       successRange: '75–90%',
       pros: [
@@ -651,7 +651,7 @@ const VITAFIT_DATA: ReportData = {
       title: { en: 'B. File as Mixed Mark with Distinctive Logo', es: 'B. Presentar como Marca Mixta con Logotipo Distintivo' },
       viability: 45,
       description: { en: 'Add a strong distinctive graphic element (logo/device) to create a mixed mark. The design element may reduce Fr. IV descriptiveness risk by adding non-descriptive visual distinctiveness. However, it does NOT cure the Fr. XVIII identity conflict with LIDL\'s registered VITAFIT word mark.', es: 'Agregar un elemento gráfico distintivo fuerte (logo/diseño) para crear una marca mixta. El elemento de diseño puede reducir el riesgo de descriptividad Fr. IV al agregar distintividad visual no descriptiva. Sin embargo, NO subsana el conflicto de identidad Fr. XVIII con la marca denominativa VITAFIT registrada de LIDL.' },
-      feesMxn: 'MXN 3,055 (filing, 1 class)',
+      feesMxn: 'USD $170 (IMPI official fee, 1 class)',
       timeline: { en: '12–24 months (contested likely)', es: '12–24 meses (probable oposición)' },
       successRange: '20–35%',
       pros: [
@@ -670,7 +670,7 @@ const VITAFIT_DATA: ReportData = {
       title: { en: 'C. Reclassify to Adjacent Class', es: 'C. Reclasificar a Clase Adyacente' },
       viability: 38,
       description: { en: 'Dietary supplement product specifications can sometimes accommodate filing in class 29 (protein foods, dairy), class 30 (food preparations), or class 32 (beverages with health claims). However, LIDL\'s VITAFIT registration and the Villanueva cluster are concentrated in class 5 — which is exactly where dietary supplements belong. Adjacent-class filing would provide incomplete protection.', es: 'Las especificaciones de productos de suplementos alimenticios a veces pueden acomodar la presentación en la clase 29 (alimentos proteicos, lácteos), clase 30 (preparaciones alimenticias) o clase 32 (bebidas con declaraciones de salud). Sin embargo, el registro VITAFIT de LIDL y el clúster Villanueva están concentrados en la clase 5 — que es exactamente donde pertenecen los suplementos alimenticios. La presentación en clase adyacente proporcionaría protección incompleta.' },
-      feesMxn: 'MXN 3,055 per class filed',
+      feesMxn: 'USD $170 (IMPI official fee) per class filed',
       timeline: { en: '12–18 months (lower opposition risk)', es: '12–18 meses (menor riesgo de oposición)' },
       successRange: '40–60%',
       pros: [
@@ -689,7 +689,7 @@ const VITAFIT_DATA: ReportData = {
       title: { en: 'D. Prove Acquired Distinctiveness (Secondary Meaning)', es: 'D. Acreditar Distintividad Adquirida (Secondary Meaning)' },
       viability: 25,
       description: { en: 'Under LFPPI Art. 173 Fr. IV, if the applicant can demonstrate that the mark has acquired secondary meaning in Mexico through intensive prior use (sales data, advertising spend, consumer surveys, press coverage), IMPI may register an otherwise descriptive mark. This path requires substantial prior use evidence and is typically only viable for marks with years of commercial presence.', es: 'Bajo el Art. 173 Fr. IV LFPPI, si el solicitante puede demostrar que la marca ha adquirido distintividad secundaria en México mediante uso previo intensivo (datos de ventas, inversión en publicidad, encuestas de consumidores, cobertura de prensa), el IMPI puede registrar una marca de otro modo descriptiva. Esta vía requiere evidencia sustancial de uso previo y generalmente solo es viable para marcas con años de presencia comercial.' },
-      feesMxn: 'MXN 3,055 (filing) + evidence preparation costs',
+      feesMxn: 'USD $170 (IMPI official fee) + evidence preparation costs',
       timeline: { en: '18–36 months (evidence-intensive)', es: '18–36 meses (intensivo en evidencia)' },
       successRange: '10–25%',
       pros: [
@@ -707,7 +707,7 @@ const VITAFIT_DATA: ReportData = {
       title: { en: 'E. Abandon & Rebrand with Fanciful Mark (Recommended)', es: 'E. Desistir y Rebrandear con Marca Acuñada (Recomendado)' },
       viability: 92,
       description: { en: 'The safest and most commercially sound path. Abandon the VITAFIT mark entirely and invest brand resources in a fanciful (coined) mark with no descriptiveness risk and no prior conflicts. This strategy avoids years of contested prosecution, LIDL opposition costs, and the risk of a final refusal after significant brand investment. Use strategy A\'s alternatives as starting points.', es: 'La vía más segura y comercialmente sólida. Abandonar la marca VITAFIT por completo e invertir los recursos de marca en una marca acuñada (de fantasía) sin riesgo de descriptividad y sin conflictos previos. Esta estrategia evita años de tramitación contestada, costos de oposición de LIDL y el riesgo de una negativa final después de una inversión significativa en marca. Utilizar las alternativas de la estrategia A como punto de partida.' },
-      feesMxn: 'MXN 3,055 (new filing, 1 class)',
+      feesMxn: 'USD $170 (IMPI official fee, 1 class)',
       timeline: { en: '12–18 months (uncontested scenario)', es: '12–18 meses (escenario sin oposición)' },
       successRange: '80–95%',
       pros: [
@@ -730,14 +730,14 @@ const VITAFIT_DATA: ReportData = {
     },
   ],
   impiSteps: [
-    { step: 1, label: { en: 'Filing of application', es: 'Presentación de solicitud' }, duration: { en: 'Day 1', es: 'Día 1' }, note: { en: 'MXN 3,055 filing fee (1 class). Applicant receives an expediente number.', es: 'Cuota de presentación MXN 3,055 (1 clase). El solicitante recibe un número de expediente.' } },
+    { step: 1, label: { en: 'Filing of application', es: 'Presentación de solicitud' }, duration: { en: 'Day 1', es: 'Día 1' }, note: { en: 'USD $170 IMPI official filing fee (1 class). Applicant receives an expediente number.', es: 'Cuota oficial IMPI USD $170 por clase. El solicitante recibe un número de expediente.' } },
     { step: 2, label: { en: 'IMPI formal examination', es: 'Examen formal IMPI' }, duration: { en: '1–2 months', es: '1–2 meses' }, note: { en: 'Formal completeness check. Deficiencies generate an Office Action (requerimiento).', es: 'Verificación de completud formal. Las deficiencias generan un requerimiento.' } },
     { step: 3, label: { en: 'Publication in Gaceta de la Propiedad Industrial', es: 'Publicación en Gaceta de la Propiedad Industrial' }, duration: { en: '3–6 months post-filing', es: '3–6 meses post-presentación' }, note: { en: 'Third parties notified. Opposition window opens on publication date.', es: 'Terceros notificados. La ventana de oposición se abre en la fecha de publicación.' } },
     { step: 4, label: { en: 'Opposition window', es: 'Período de oposición' }, duration: { en: '1 month (30 calendar days)', es: '1 mes (30 días calendario)' }, note: { en: 'Any interested third party (e.g., LIDL) may file opposition. VITAFIT is at HIGH risk of opposition from LIDL STIFTUNG.', es: 'Cualquier tercero interesado (ej., LIDL) puede presentar oposición. VITAFIT está en ALTO riesgo de oposición de LIDL STIFTUNG.' } },
     { step: 5, label: { en: 'IMPI substantive examination', es: 'Examen sustantivo IMPI' }, duration: { en: '6–12 months', es: '6–12 meses' }, note: { en: 'IMPI examiner reviews absolute grounds (Fr. IV, Fr. I) and relative grounds (Fr. XVIII). Office Actions possible.', es: 'El examinador del IMPI revisa impedimentos absolutos (Fr. IV, Fr. I) y relativos (Fr. XVIII). Posibles requerimientos.' } },
     { step: 6, label: { en: 'Resolution (grant or refusal)', es: 'Resolución (otorgamiento o negativa)' }, duration: { en: '12–18 months total (uncontested) / 24–36 months (contested)', es: '12–18 meses totales (sin oposición) / 24–36 meses (con oposición)' }, note: { en: 'For VITAFIT: refusal expected citing Fr. IV and Fr. XVIII. Appeal possible to TFJA within 15 business days.', es: 'Para VITAFIT: se espera negativa citando Fr. IV y Fr. XVIII. Apelación posible al TFJA dentro de 15 días hábiles.' } },
   ],
-  totalFeesMxn: 3055,
+  totalFeesMxn: 170,
 };
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
@@ -1925,7 +1925,7 @@ export default function ClearanceReportV2Page() {
         ───────────────────────────────────────────────────────────────── */}
         <CollapsibleSection
           title={lang === 'es' ? '§15. Costos y Plazos IMPI' : '§15. IMPI Cost & Timeline'}
-          subtitle={lang === 'es' ? '6 etapas del proceso de registro — escenarios sin oposición vs. con oposición.' : '6-step registration process — uncontested vs. contested scenarios.'}
+          subtitle={lang === 'es' ? '6 etapas · USD $170 cuota oficial IMPI por clase · Ventana de oposición: 1 mes.' : '6 steps · USD $170 IMPI official fee per class · 1-month opposition window.'}
         >
           <div className="px-5 py-5 space-y-5">
             {/* Steps */}
@@ -1954,13 +1954,13 @@ export default function ClearanceReportV2Page() {
             <div className="grid sm:grid-cols-2 gap-3">
               <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
                 <p className="text-[9px] font-black text-emerald-700 uppercase tracking-wide mb-1">{lang === 'es' ? 'Escenario Sin Oposición' : 'Uncontested Scenario'}</p>
-                <p className="text-2xl font-black text-emerald-800">MXN {data.totalFeesMxn.toLocaleString()}</p>
+                <p className="text-2xl font-black text-emerald-800">USD $170</p>
                 <p className="text-[10px] text-emerald-600 mt-0.5">{lang === 'es' ? '1 clase · 12–18 meses' : '1 class · 12–18 months'}</p>
-                <p className="text-[9px] text-emerald-600 mt-2">{lang === 'es' ? 'Cuota de presentación oficial IMPI (sujeta a actualización anual).' : 'Official IMPI filing fee (subject to annual adjustment).'}</p>
+                <p className="text-[9px] text-emerald-600 mt-2">{lang === 'es' ? 'Cuota oficial IMPI por clase (sujeta a actualización anual).' : 'IMPI official fee per class (subject to annual adjustment).'}</p>
               </div>
               <div className="rounded-xl border border-red-200 bg-red-50 p-4">
                 <p className="text-[9px] font-black text-red-700 uppercase tracking-wide mb-1">{lang === 'es' ? 'Escenario Con Oposición (LIDL)' : 'Contested Scenario (LIDL)'}</p>
-                <p className="text-2xl font-black text-red-800">MXN {(data.totalFeesMxn + 45000).toLocaleString()}+</p>
+                <p className="text-2xl font-black text-red-800">USD $170+</p>
                 <p className="text-[10px] text-red-600 mt-0.5">{lang === 'es' ? '1 clase · 24–36+ meses' : '1 class · 24–36+ months'}</p>
                 <p className="text-[9px] text-red-600 mt-2">{lang === 'es' ? 'Incluye honorarios de defensa de oposición estimados. Alta probabilidad de negativa final.' : 'Includes estimated opposition defense fees. High probability of final refusal.'}</p>
               </div>
