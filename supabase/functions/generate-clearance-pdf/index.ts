@@ -39,7 +39,7 @@ const MARGIN_BOT = 60;
 const CONTENT_W = PAGE_W - MARGIN_X * 2;
 
 // ─── Types ───────────────────────────────────────────────────────────────────
-interface DupontFactor {
+interface ConfusionFactor {
   factor: string;
   verdict: string;
   reasoning: string;
@@ -90,7 +90,7 @@ interface ClearanceResult {
   riskSummary_en?: string;
   searchLanguage?: string;
   distinctiveness?: DistinctivenessAssessment;
-  dupont?: DupontFactor[];
+  dupont?: ConfusionFactor[];
   registrabilityFlags?: RegistrabilityFlag[];
   marciaFindings?: MarciaFinding[];
   marciaTotalCount?: number;
@@ -192,8 +192,6 @@ function computeScore(result: ClearanceResult): number {
   let score = 80;
   if (result.risk === "high") score = Math.min(score, 40);
   else if (result.risk === "medium") score = Math.min(score, 65);
-  const against = (result.dupont ?? []).filter(f => f.verdict === "against_registration").length;
-  score -= against * 3;
   const highFlags = (result.registrabilityFlags ?? []).filter(f => f.severity === "high").length;
   score -= highFlags * 8;
   const medFlags = (result.registrabilityFlags ?? []).filter(f => f.severity === "medium").length;
@@ -211,11 +209,6 @@ function computePentagonScores(result: ClearanceResult): Array<{ label: string; 
   const dist = result.distinctiveness;
   const distScore = dist ? Math.round((dist.score / 5) * 100) : 50;
 
-  const dupont = result.dupont ?? [];
-  const favor = dupont.filter(f => f.verdict === "favors_registration").length;
-  const against = dupont.filter(f => f.verdict === "against_registration").length;
-  const dupontScore = dupont.length > 0 ? Math.round(((favor - against * 1.5) / dupont.length + 1) * 50) : 50;
-
   const flags = result.registrabilityFlags ?? [];
   const highFlags = flags.filter(f => f.severity === "high").length;
   const medFlags = flags.filter(f => f.severity === "medium").length;
@@ -227,12 +220,17 @@ function computePentagonScores(result: ClearanceResult): Array<{ label: string; 
   const conflictFlags = (result.translationAnalysis ?? []).filter(f => f.risk !== "none").length;
   const transScore = Math.max(20, 100 - conflictFlags * 20);
 
+  // Registry availability: inverse of conflict count and severity
+  const regAvailScore = Math.max(10, Math.round(
+    (marciaScore * 0.6 + lfppiScore * 0.4)
+  ));
+
   return [
-    { label: "Distinctiveness", score: Math.max(5, Math.min(95, distScore)) },
-    { label: "DuPont Factors", score: Math.max(5, Math.min(95, dupontScore)) },
-    { label: "LFPPI Grounds", score: Math.max(5, Math.min(95, lfppiScore)) },
-    { label: "MARCia Registry", score: Math.max(5, Math.min(95, marciaScore)) },
-    { label: "Trans. Analysis", score: Math.max(5, Math.min(95, transScore)) },
+    { label: "Distintividad", score: Math.max(5, Math.min(95, distScore)) },
+    { label: "LFPPI", score: Math.max(5, Math.min(95, lfppiScore)) },
+    { label: "Registro IMPI", score: Math.max(5, Math.min(95, marciaScore)) },
+    { label: "Disp. Registral", score: Math.max(5, Math.min(95, regAvailScore)) },
+    { label: "Traduccion", score: Math.max(5, Math.min(95, transScore)) },
   ];
 }
 
@@ -411,8 +409,6 @@ async function generateAttorneyCommentary(
   const highFlags = flags.filter(f => f.severity === "high").map(f => f.category).join(", ");
   const niceClasses = (result.niceClassification ?? []).map(nc => `Class ${nc.classNumber} (${nc.className_en || nc.className})`).join(", ");
   const tier = result.distinctiveness?.tier ?? "unknown";
-  const dupontAgainst = (result.dupont ?? []).filter(f => f.verdict === "against_registration").length;
-  const dupontFavor = (result.dupont ?? []).filter(f => f.verdict === "favors_registration").length;
 
   const contextSummary = [
     `Mark: "${markName}"`,
@@ -420,7 +416,6 @@ async function generateAttorneyCommentary(
     niceClasses ? `Nice Classes: ${niceClasses}` : "",
     `Overall Risk: ${result.risk}`,
     `Distinctiveness: ${tier} (score ${result.distinctiveness?.score ?? "N/A"}/5)`,
-    `DuPont factors: ${dupontFavor} favoring registration, ${dupontAgainst} against`,
     flags.length > 0 ? `LFPPI grounds flagged: ${flags.length} (high severity: ${highFlags || "none"})` : "LFPPI: No grounds flagged",
     `IMPI MARCia conflicts: ${result.marciaTotalCount ?? marciaFindings.length} marks found`,
     topConflicts.length > 0 ? `Top conflicts: ${conflictList}` : "",
@@ -429,7 +424,7 @@ async function generateAttorneyCommentary(
 
   const englishPrompt = `You are a senior Mexican intellectual property attorney with 20+ years of experience in trademark prosecution before IMPI.
 
-Based on the following trademark clearance search results, write a professional registrability opinion paragraph of 120-180 words.
+Based on the following trademark clearance search results, write a professional registrability opinion paragraph of 120-180 words. Mexican trademark law uses LFPPI Art. 173 Fr. XVIII and the triple-similarity doctrine (fonética, visual, conceptual) combined with the dominant-element doctrine — do NOT reference DuPont or US doctrine.
 
 SEARCH RESULTS:
 ${contextSummary}
@@ -758,7 +753,12 @@ async function buildPdf(
               p.drawText(dl, { x: fx + 8, y: fy, size: 7.5, font: regular, color: C.textSecond });
               fy -= 12;
             }
-            p.drawText(safeText(finding.dataPoint).slice(0, 28), { x: fx + 8, y: y - cardH3 + 10, size: 7, font: bold, color: C.gold });
+            const dpLines = wrapText(safeText(finding.dataPoint), bold, 7, colW3 - 16);
+            let dpY = y - cardH3 + 10;
+            for (const dl of dpLines.slice(0, 2)) {
+              p.drawText(dl, { x: fx + 8, y: dpY, size: 7, font: bold, color: C.gold });
+              dpY += 9;
+            }
           }
           y -= cardH3 + 14;
         }
@@ -766,7 +766,7 @@ async function buildPdf(
 
       // ── Pentagon + Axis Bars (two column) ──
       if (y > MARGIN_BOT + 130) {
-        p.drawText(T("5-AXIS RISK PROFILE", "PERFIL DE RIESGO — 5 EJES"), { x: MARGIN_X, y, size: 7.5, font: bold, color: C.textMuted });
+        p.drawText(T("5-AXIS RISK PROFILE / PERFIL DE RIESGO 5 EJES", "PERFIL DE RIESGO — 5 EJES (LFPPI)"), { x: MARGIN_X, y, size: 7.5, font: bold, color: C.textMuted });
         y -= 10;
         const pCardH = 130;
         drawCard(p, MARGIN_X, y, CONTENT_W, pCardH);
@@ -885,12 +885,19 @@ async function buildPdf(
 
           // Mark info (right of donut)
           const infoX = MARGIN_X + 58;
-          p.drawText(safeText(f.name).slice(0, 28).toUpperCase(), { x: infoX, y: y - 14, size: 11, font: bold, color: C.textPrimary });
+          const nameLine = wrapText(safeText(f.name).toUpperCase(), bold, 11, CONTENT_W - 58 - 100);
+          p.drawText(nameLine[0] ?? "", { x: infoX, y: y - 14, size: 11, font: bold, color: C.textPrimary });
           drawStatusBadge(p, bold, f.status, MARGIN_X + CONTENT_W - 90, y - 14);
-          p.drawText(T("Owner: ", "Titular: ") + safeText(f.holder).slice(0, 35), { x: infoX, y: y - 28, size: 8, font: regular, color: C.textSecond });
+          // Holder: full name, wrapped
+          const holderLines = wrapText(T("Owner: ", "Titular: ") + safeText(f.holder), regular, 8, CONTENT_W - 58 - 10);
+          let holderY = y - 28;
+          for (const hl of holderLines.slice(0, 2)) {
+            p.drawText(hl, { x: infoX, y: holderY, size: 8, font: regular, color: C.textSecond });
+            holderY -= 11;
+          }
           const expLine = [
             f.expediente ? `Exp. ${f.expediente}` : "",
-            `Class ${f.classNum}`,
+            `Clase ${f.classNum}`,
             "Mexico",
           ].filter(Boolean).join("  ·  ");
           p.drawText(expLine, { x: infoX, y: y - 40, size: 8, font: regular, color: C.textMuted });
@@ -941,13 +948,20 @@ async function buildPdf(
             y = PAGE_H - 26 - MARGIN_TOP + 26;
           }
           const bg = i % 2 === 0 ? C.cardWhite : C.offWhite;
-          const cardH2 = 52;
+          // Compute dynamic card height based on holder name wrapping
+          const sigHolderLines = wrapText(T("Owner: ", "Titular: ") + safeText(f.holder), regular, 8, CONTENT_W - 20);
+          const cardH2 = 20 + Math.min(sigHolderLines.length, 2) * 11 + 20;
           drawCard(p, MARGIN_X, y, CONTENT_W, cardH2, bg);
-          p.drawText(safeText(f.name).slice(0, 28).toUpperCase(), { x: MARGIN_X + 10, y: y - 14, size: 10, font: bold, color: C.textPrimary });
+          const sigNameLines = wrapText(safeText(f.name).toUpperCase(), bold, 10, CONTENT_W - 100);
+          p.drawText(sigNameLines[0] ?? "", { x: MARGIN_X + 10, y: y - 14, size: 10, font: bold, color: C.textPrimary });
           drawStatusBadge(p, bold, f.status, MARGIN_X + CONTENT_W - 90, y - 14);
-          p.drawText(T("Owner: ", "Titular: ") + safeText(f.holder).slice(0, 40), { x: MARGIN_X + 10, y: y - 28, size: 8, font: regular, color: C.textSecond });
-          const expLine2 = [f.expediente ? `Exp. ${f.expediente}` : "", `Class ${f.classNum}`, "Mexico"].filter(Boolean).join("  ·  ");
-          p.drawText(expLine2, { x: MARGIN_X + 10, y: y - 40, size: 7.5, font: regular, color: C.textMuted });
+          let sigHY = y - 28;
+          for (const hl of sigHolderLines.slice(0, 2)) {
+            p.drawText(hl, { x: MARGIN_X + 10, y: sigHY, size: 8, font: regular, color: C.textSecond });
+            sigHY -= 11;
+          }
+          const expLine2 = [f.expediente ? `Exp. ${f.expediente}` : "", `Clase ${f.classNum}`, "Mexico"].filter(Boolean).join("  ·  ");
+          p.drawText(expLine2, { x: MARGIN_X + 10, y: sigHY, size: 7.5, font: regular, color: C.textMuted });
           y -= cardH2 + 4;
         }
       }
@@ -973,12 +987,25 @@ async function buildPdf(
         for (let i = 0; i < Math.min(background.length, 15) && y > MARGIN_BOT; i++) {
           const f = background[i];
           const rowBg = i % 2 === 0 ? C.offWhite : C.cardWhite;
-          p.drawRectangle({ x: MARGIN_X, y: y - 14, width: CONTENT_W, height: 16, color: rowBg });
-          p.drawText(safeText(f.name).slice(0, 20), { x: cols[0].x, y: y - 8, size: 8, font: regular, color: C.textPrimary });
-          p.drawText(safeText(f.holder).slice(0, 18), { x: cols[1].x, y: y - 8, size: 8, font: regular, color: C.textSecond });
+          // Measure how many lines name and holder need
+          const bgNameLines = wrapText(safeText(f.name), regular, 8, cols[0].w - 4);
+          const bgHolderLines = wrapText(safeText(f.holder), regular, 8, cols[1].w - 4);
+          const rowLines = Math.max(bgNameLines.length, bgHolderLines.length, 1);
+          const rowH = rowLines * 11 + 7;
+          p.drawRectangle({ x: MARGIN_X, y: y - rowH, width: CONTENT_W, height: rowH, color: rowBg });
+          let bnY = y - 8;
+          for (const nl of bgNameLines.slice(0, rowLines)) {
+            p.drawText(nl, { x: cols[0].x, y: bnY, size: 8, font: regular, color: C.textPrimary });
+            bnY -= 11;
+          }
+          let bhY = y - 8;
+          for (const hl of bgHolderLines.slice(0, rowLines)) {
+            p.drawText(hl, { x: cols[1].x, y: bhY, size: 8, font: regular, color: C.textSecond });
+            bhY -= 11;
+          }
           p.drawText(safeText(f.classNum), { x: cols[2].x, y: y - 8, size: 8, font: regular, color: C.textSecond });
-          p.drawText(safeText(f.status).slice(0, 14), { x: cols[3].x, y: y - 8, size: 8, font: regular, color: C.textSecond });
-          y -= 18;
+          p.drawText(safeText(f.status), { x: cols[3].x, y: y - 8, size: 8, font: regular, color: C.textSecond });
+          y -= rowH + 2;
         }
       }
     }
@@ -1031,14 +1058,22 @@ async function buildPdf(
           const cardH = 28 + enLines.length * 13 + esLines.length * 12 + 16;
           drawCard(p, MARGIN_X, y, CONTENT_W, cardH);
 
-          // Header bar
+          // Header bar — wrap category label to prevent truncation
           p.drawRectangle({ x: MARGIN_X, y: y - 26, width: CONTENT_W, height: 26, color: sColor });
-          const failLabel = T("FAILED", "FALLIDO");
-          p.drawText(`${failLabel} — ${safeText(catLabel).slice(0, 35)}`, { x: MARGIN_X + 12, y: y - 12, size: 9.5, font: bold, color: C.white });
+          const failLabel = T("FALLIDO", "FAILED");
           const lfppiRef = getLfppiRef(flag.category);
-          p.drawText(lfppiRef, { x: MARGIN_X + CONTENT_W - regular.widthOfTextAtSize(lfppiRef, 8) - 10, y: y - 12, size: 8, font: regular, color: rgb(1, 1, 0.7) });
+          const lfppiRefW = regular.widthOfTextAtSize(lfppiRef, 8) + 8;
           const sevLabel = flag.severity.toUpperCase();
-          p.drawText(sevLabel, { x: MARGIN_X + CONTENT_W - regular.widthOfTextAtSize(lfppiRef, 8) - 60, y: y - 12, size: 7.5, font: bold, color: C.white });
+          const sevW = bold.widthOfTextAtSize(sevLabel, 7.5) + 12;
+          const headerTextMaxW = CONTENT_W - lfppiRefW - sevW - 24;
+          const headerLines = wrapText(`${failLabel} — ${safeText(catLabel)}`, bold, 9, headerTextMaxW);
+          let hly = y - 10;
+          for (const hl of headerLines.slice(0, 2)) {
+            p.drawText(hl, { x: MARGIN_X + 12, y: hly, size: 9, font: bold, color: C.white });
+            hly -= 11;
+          }
+          p.drawText(sevLabel, { x: MARGIN_X + CONTENT_W - lfppiRefW - sevW - 4, y: y - 12, size: 7.5, font: bold, color: C.white });
+          p.drawText(lfppiRef, { x: MARGIN_X + CONTENT_W - lfppiRefW, y: y - 12, size: 8, font: regular, color: rgb(1, 1, 0.7) });
 
           let fy = y - 40;
           for (const line of enLines) {
@@ -1072,31 +1107,31 @@ async function buildPdf(
       }
     }
 
-    // ── PAGE: DUPONT ANALYSIS ──────────────────────────────────────────
+    // ── PAGE: ANÁLISIS DE CONFUNDIBILIDAD ─────────────────────────────
     if (result.dupont && result.dupont.length > 0) {
       const factors = result.dupont;
-      const favor = factors.filter(f => f.verdict === "favors_registration").length;
-      const against = factors.filter(f => f.verdict === "against_registration").length;
+      const favor = factors.filter(f => f.verdict === "favors_registration" || f.verdict === "Favorable").length;
+      const against = factors.filter(f => f.verdict === "against_registration" || f.verdict === "Desfavorable").length;
       const neutral = factors.length - favor - against;
 
-      let p = newPage("DuPont Analysis");
+      let p = newPage("Analisis de Confundibilidad");
       drawPageBackground(p);
       addRunningHeader(p, regular, bold, markName, niceClasses);
 
       let y = PAGE_H - 26 - 8;
       y = addSectionHeader(p, bold,
-        T("DUPONT LIKELIHOOD-OF-CONFUSION ANALYSIS (13 FACTORS)", "ANALISIS DUPONT DE CONFUSION (13 FACTORES)"),
-        T("Adapted for Mexican trademark law under the LFPPI framework", "Adaptado al derecho de marcas mexicano bajo el marco LFPPI"),
+        T("ANÁLISIS DE CONFUNDIBILIDAD (LFPPI Art. 173 Fr. XVIII)", "CONFUSION LIKELIHOOD ANALYSIS (LFPPI Art. 173 Fr. XVIII)"),
+        T("Triple-similarity doctrine: phonetic, visual & conceptual — dominant element analysis", "Doctrina de triple similitud: fonetica, visual y conceptual — analisis del elemento dominante"),
         y,
       );
       y -= 8;
 
-      // Summary bar — outlined boxes, no heavy fill
+      // Summary bar — outlined boxes
       const boxW = (CONTENT_W - 8) / 3;
       const summaryBoxes = [
-        { label: T(`${favor} Favoring Registration`, `${favor} A Favor del Registro`), color: C.accentGreen },
+        { label: T(`${favor} Favorable`, `${favor} Favorable`), color: C.accentGreen },
         { label: T(`${neutral} Neutral`, `${neutral} Neutral`), color: C.textMuted },
-        { label: T(`${against} Against Registration`, `${against} En Contra del Registro`), color: C.accentRed },
+        { label: T(`${against} Desfavorable`, `${against} Desfavorable`), color: C.accentRed },
       ];
       for (let i = 0; i < summaryBoxes.length; i++) {
         const bx = MARGIN_X + i * (boxW + 4);
@@ -1114,11 +1149,14 @@ async function buildPdf(
 
       for (let i = 0; i < factors.length; i++) {
         const f = factors[i];
-        const vc = f.verdict === "favors_registration" ? C.accentGreen : f.verdict === "against_registration" ? C.accentRed : C.textMuted;
-        const verdLabel = f.verdict === "favors_registration" ? T("FAVORS", "FAVORECE") : f.verdict === "against_registration" ? T("AGAINST", "EN CONTRA") : T("NEUTRAL", "NEUTRAL");
-        const label = DUPONT_EN[f.factor] ?? f.factor;
+        const isFavor = f.verdict === "favors_registration" || f.verdict === "Favorable";
+        const isAgainst = f.verdict === "against_registration" || f.verdict === "Desfavorable";
+        const vc = isFavor ? C.accentGreen : isAgainst ? C.accentRed : C.textMuted;
+        const verdLabel = isFavor ? T("FAVORABLE", "FAVORABLE") : isAgainst ? T("DESFAVORABLE", "DESFAVORABLE") : T("NEUTRAL", "NEUTRAL");
+        const label = CONFUSION_FACTORS_EN[f.factor] ?? f.factor;
         const reasonText = useEnglish ? (f.reasoning_en ?? f.reasoning) : f.reasoning;
-        const reasonLines = wrapText(reasonText, regular, 8, COL_W - 22).slice(0, 3);
+        // Use full wrap — no arbitrary slice
+        const reasonLines = wrapText(reasonText, regular, 8, COL_W - 22);
         const cardH = 28 + reasonLines.length * 12 + 16;
 
         const isLeft = col % 2 === 0;
@@ -1126,7 +1164,7 @@ async function buildPdf(
         const currentY = isLeft ? colY : colYRight;
 
         if (currentY - cardH < MARGIN_BOT) {
-          p = newPage("DuPont Analysis (cont.)");
+          p = newPage("Confundibilidad (cont.)");
           drawPageBackground(p);
           addRunningHeader(p, regular, bold, markName, niceClasses);
           colY = PAGE_H - 26 - MARGIN_TOP + 26;
@@ -1136,18 +1174,24 @@ async function buildPdf(
 
         const useY = isLeft ? colY : colYRight;
         drawCard(p, cx, useY, COL_W, cardH);
-        if (f.verdict === "against_registration") {
+        if (isAgainst) {
           p.drawRectangle({ x: cx, y: useY - cardH, width: 4, height: cardH, color: C.accentRed });
         }
 
-        // Factor header
-        p.drawText(`${i + 1}. ${safeText(label).slice(0, 30)}`, { x: cx + 10, y: useY - 12, size: 8.5, font: bold, color: C.deepGreen });
+        // Factor header — full label, wrapped if needed
+        const factorLines = wrapText(`${i + 1}. ${safeText(label)}`, bold, 8.5, COL_W - 60);
+        let fLy = useY - 12;
+        for (const fl of factorLines.slice(0, 2)) {
+          p.drawText(fl, { x: cx + 10, y: fLy, size: 8.5, font: bold, color: C.deepGreen });
+          fLy -= 12;
+        }
         const vl = bold.widthOfTextAtSize(verdLabel, 7);
         p.drawRectangle({ x: cx + COL_W - vl - 14, y: useY - 22, width: vl + 12, height: 14, color: vc });
         p.drawText(verdLabel, { x: cx + COL_W - vl - 8, y: useY - 14, size: 7, font: bold, color: C.white });
 
-        let ry = useY - 28;
+        let ry = useY - (factorLines.length > 1 ? 36 : 28);
         for (const rl of reasonLines) {
+          if (ry < MARGIN_BOT + 8) break;
           p.drawText(rl, { x: cx + 10, y: ry, size: 8, font: regular, color: C.textPrimary });
           ry -= 12;
         }
@@ -1240,11 +1284,12 @@ async function buildPdf(
 
       const translationFlags = result.translationAnalysis ?? [];
 
-      // Table header
-      p.drawRectangle({ x: rightX, y: ry - 16, width: colW2, height: 18, color: C.deepGreen });
-      p.drawText(T("Language", "Idioma"), { x: rightX + 6, y: ry - 10, size: 7.5, font: bold, color: C.white });
-      p.drawText(T("Form", "Forma"), { x: rightX + 85, y: ry - 10, size: 7.5, font: bold, color: C.white });
-      p.drawText(T("Risk", "Riesgo"), { x: rightX + colW2 - 36, y: ry - 10, size: 7.5, font: bold, color: C.white });
+      // Table header — light tint, no heavy ink fill
+      p.drawRectangle({ x: rightX, y: ry - 16, width: colW2, height: 18, color: rgb(0.922, 0.937, 0.922) });
+      p.drawRectangle({ x: rightX, y: ry - 16, width: colW2, height: 0.8, color: C.deepGreen });
+      p.drawText(T("Language", "Idioma"), { x: rightX + 6, y: ry - 10, size: 7.5, font: bold, color: C.deepGreen });
+      p.drawText(T("Form", "Forma"), { x: rightX + 85, y: ry - 10, size: 7.5, font: bold, color: C.deepGreen });
+      p.drawText(T("Risk", "Riesgo"), { x: rightX + colW2 - 36, y: ry - 10, size: 7.5, font: bold, color: C.deepGreen });
       ry -= 22;
 
       if (translationFlags.length === 0) {
@@ -1681,20 +1726,28 @@ async function buildPdf(
 
 // ─── Static Data ─────────────────────────────────────────────────────────────
 
-const DUPONT_EN: Record<string, string> = {
-  similarity_of_marks: "Similarity of the Marks",
-  strength_of_marks: "Strength / Fame of the Marks",
-  similarity_of_goods: "Similarity of Goods/Services",
-  channels_of_trade: "Channels of Trade",
-  conditions_of_purchase: "Conditions of Purchase",
-  actual_confusion: "Evidence of Actual Confusion",
-  concurrent_use: "Length of Concurrent Use Without Confusion",
-  variety_of_goods: "Variety of Goods on which Mark is Used",
-  market_interface: "Market Interface / Nature of Prior Mark's Use",
-  applicant_bad_faith: "Applicant's Bad Faith Intent",
-  sophistication_of_buyers: "Sophistication of Buyers / Consumers",
-  number_of_similar_marks: "Number of Similar Marks in Field",
-  extent_of_potential_confusion: "Extent / Nature of Potential Confusion",
+const CONFUSION_FACTORS_EN: Record<string, string> = {
+  // LFPPI Art. 173 Fr. XVIII triple-similarity factors
+  similarity_of_marks: "Similitud de las Marcas (Fonetica, Visual, Conceptual)",
+  strength_of_marks: "Fortaleza / Notoriedad de las Marcas",
+  similarity_of_goods: "Similitud de Productos / Servicios",
+  channels_of_trade: "Canales de Distribucion / Comercializacion",
+  conditions_of_purchase: "Condiciones de Compra / Consumidor Destinatario",
+  actual_confusion: "Evidencia de Confusion Real en el Mercado",
+  concurrent_use: "Uso Simultaneo Prolongado Sin Confusion",
+  variety_of_goods: "Variedad de Productos en que se Usa la Marca",
+  market_interface: "Interfaz de Mercado / Naturaleza del Uso Previo",
+  applicant_bad_faith: "Mala Fe del Solicitante",
+  sophistication_of_buyers: "Sofisticacion del Consumidor Destinatario",
+  number_of_similar_marks: "Numero de Marcas Similares en el Sector",
+  extent_of_potential_confusion: "Magnitud del Riesgo de Confusion",
+  // pass-through for Spanish keys already in the data
+  "Similitud de las Marcas": "Similitud de las Marcas (Fonetica, Visual, Conceptual)",
+  "Similitud de los Bienes/Servicios": "Similitud de Productos / Servicios",
+  "Canales de Distribucion": "Canales de Distribucion / Comercializacion",
+  "Consumidores / Compradores": "Consumidor Destinatario",
+  "Marcas Famosas o Notoriamente Conocidas": "Marcas Notoriamente Conocidas (Art. 173 Fr. XV LFPPI)",
+  "Numero de Registros Similares en el Mercado": "Numero de Registros Similares en el Sector",
 };
 
 const CATEGORY_EN: Record<string, string> = {
@@ -1766,7 +1819,7 @@ function buildKeyFindings(result: ClearanceResult, useEnglish: boolean): Array<{
     findings.push({
       title: T("Registry Conflict", "Conflicto Registral"),
       desc: T(`Mark "${topConflict.name}" found in IMPI MARCia Class ${topConflict.classNum}. Direct registration obstacle.`, `Marca "${topConflict.name}" encontrada en IMPI MARCia Clase ${topConflict.classNum}. Obstaculo directo al registro.`),
-      dataPoint: `${sim}% — ${safeText(topConflict.name).slice(0, 16)}${topConflict.expediente ? ` Exp.${topConflict.expediente}` : ""}`,
+      dataPoint: `${sim}% — ${safeText(topConflict.name)}${topConflict.expediente ? ` Exp.${topConflict.expediente}` : ""}`,
       color: C.accentRed,
     });
   }
@@ -1798,7 +1851,7 @@ function buildKeyFindings(result: ClearanceResult, useEnglish: boolean): Array<{
         `Mark classified as ${dist.tier} (${dist.score}/5). ${tierOk ? "Strong distinctiveness supports registration." : "Low distinctiveness increases refusal risk."}`,
         `Marca clasificada como ${dist.tier} (${dist.score}/5). ${tierOk ? "Alta distintividad favorece el registro." : "Baja distintividad aumenta el riesgo de rechazo."}`,
       ),
-      dataPoint: T(`Score: ${dist.score}/5 — ${dist.tier}`, `Puntuacion: ${dist.score}/5 — ${dist.tier}`),
+      dataPoint: T(`Score: ${dist.score}/5 — ${dist.tier}`, `Indicador de Registrabilidad: ${dist.score}/5 — ${dist.tier}`),
       color: tierOk ? C.accentGreen : C.accentOrange,
     });
   }
@@ -1877,27 +1930,27 @@ function getAxisInterpretation(label: string, score: number, useEnglish: boolean
   const T = (en: string, es: string) => useEnglish ? en : es;
   const level = score >= 70 ? "high" : score >= 40 ? "medium" : "low";
   const map: Record<string, Record<string, string>> = {
-    Distinctiveness: {
+    Distintividad: {
       high: T("Strong mark — favorable for registration.", "Marca fuerte — favorable para el registro."),
       medium: T("Moderate strength — consider strengthening the mark.", "Fortaleza moderada — considere reforzar la marca."),
       low: T("Weak mark — high refusal risk under Art. 173 LFPPI.", "Marca debil — alto riesgo de rechazo bajo Art. 173 LFPPI."),
     },
-    "DuPont Factors": {
-      high: T("Most confusion factors favor registration.", "La mayoria de factores de confusion favorecen el registro."),
-      medium: T("Mixed DuPont outlook — strategic filing recommended.", "Panorama DuPont mixto — se recomienda estrategia de presentacion."),
-      low: T("Significant confusion factors weigh against registration.", "Factores de confusion significativos pesan en contra del registro."),
-    },
-    "LFPPI Grounds": {
+    LFPPI: {
       high: T("No significant absolute grounds for refusal detected.", "No se detectaron motivos absolutos significativos de rechazo."),
       medium: T("Some LFPPI grounds flagged — review recommended.", "Algunos motivos LFPPI detectados — se recomienda revision."),
       low: T("Multiple absolute grounds for refusal identified.", "Multiples motivos absolutos de rechazo identificados."),
     },
-    "MARCia Registry": {
+    "Registro IMPI": {
       high: T("Few conflicting marks found in IMPI registry.", "Pocas marcas conflictivas encontradas en el registro IMPI."),
       medium: T("Moderate number of potentially conflicting marks.", "Numero moderado de marcas potencialmente conflictivas."),
       low: T("High number of conflicting marks in IMPI registry.", "Alto numero de marcas conflictivas en el registro IMPI."),
     },
-    "Trans. Analysis": {
+    "Disp. Registral": {
+      high: T("High registry availability — favorable filing outlook.", "Alta disponibilidad registral — panorama favorable para el registro."),
+      medium: T("Moderate availability — some conflicts to manage.", "Disponibilidad moderada — algunos conflictos a gestionar."),
+      low: T("Low availability — significant registry obstacles.", "Baja disponibilidad — obstaculos registrales significativos."),
+    },
+    Traduccion: {
       high: T("No problematic translations or transliterations detected.", "Sin traducciones o transliteraciones problematicas detectadas."),
       medium: T("Some translation risks identified across languages.", "Algunos riesgos de traduccion identificados en varios idiomas."),
       low: T("Significant translation conflicts detected.", "Conflictos de traduccion significativos detectados."),
