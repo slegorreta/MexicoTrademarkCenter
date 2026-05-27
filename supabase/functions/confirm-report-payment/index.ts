@@ -57,7 +57,28 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({ error: "Report order not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
     if (order.status === "paid") {
-      // Already processed — idempotent response
+      // Already paid — but if PDF is missing, re-trigger generation
+      if (!order.pdf_storage_path) {
+        EdgeRuntime.waitUntil(
+          (async () => {
+            try {
+              const pdfRes = await fetch(`${supabaseUrl}/functions/v1/generate-clearance-pdf`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${supabaseServiceKey}`,
+                },
+                body: JSON.stringify({ reportOrderId }),
+              });
+              if (!pdfRes.ok) {
+                console.error("generate-clearance-pdf (retry) failed:", await pdfRes.text());
+              }
+            } catch (e) {
+              console.error("Background PDF generation retry error:", e);
+            }
+          })()
+        );
+      }
       return new Response(JSON.stringify({ success: true, reportOrderId, alreadyProcessed: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
