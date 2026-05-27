@@ -6,6 +6,48 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
+// ─── Famous & Notorious Marks List (Art. 173 Fr. XV LFPPI) ───────────────────
+// Top global brands + IMPI-recognized notorious marks across all classes
+const FAMOUS_MARKS: string[] = [
+  // Technology
+  "Apple","Google","Microsoft","Samsung","Sony","Intel","IBM","Oracle","Cisco","Adobe",
+  "Amazon","Meta","Facebook","Instagram","WhatsApp","YouTube","Twitter","TikTok","Spotify","Netflix",
+  "Uber","Airbnb","Tesla","PayPal","Visa","Mastercard","American Express","LinkedIn","Zoom","Slack",
+  "Salesforce","SAP","HP","Dell","Lenovo","Huawei","Xiaomi","LG","Panasonic","Philips",
+  // Fashion & Luxury
+  "Nike","Adidas","Puma","Reebok","Under Armour","New Balance","Converse","Vans","Supreme","Gucci",
+  "Louis Vuitton","Chanel","Hermes","Prada","Versace","Armani","Burberry","Zara","H&M","Uniqlo",
+  "Levi's","Ralph Lauren","Calvin Klein","Tommy Hilfiger","Hugo Boss","Valentino","Rolex","Omega","Cartier","Tiffany",
+  // Food & Beverage
+  "Coca-Cola","Pepsi","McDonald's","Starbucks","KFC","Subway","Burger King","Pizza Hut","Dominos","Dunkin",
+  "Nestle","Heinz","Kellogg","Kraft","Unilever","Danone","Red Bull","Monster","Gatorade","Minute Maid",
+  "Corona","Heineken","Budweiser","Jack Daniels","Johnnie Walker","Absolut","Bacardi","Jose Cuervo","Patron","Havana Club",
+  // Automotive
+  "Toyota","Honda","Ford","Chevrolet","BMW","Mercedes-Benz","Mercedes","Audi","Volkswagen","Porsche",
+  "Ferrari","Lamborghini","Maserati","Bugatti","Rolls-Royce","Bentley","Volvo","Kia","Hyundai","Nissan",
+  "Jeep","Ram","Dodge","Chrysler","Cadillac","Lexus","Acura","Infiniti","Mitsubishi","Subaru",
+  // Healthcare & Pharma
+  "Johnson & Johnson","Bayer","Pfizer","Novartis","Roche","AstraZeneca","Sanofi","Abbott","Merck","3M",
+  "Colgate","Oral-B","Crest","Listerine","Gillette","Dove","Nivea","L'Oreal","Loreal","Pantene",
+  // Finance & Insurance
+  "HSBC","Citibank","JPMorgan","Goldman Sachs","Morgan Stanley","Wells Fargo","Santander","BBVA","Banamex","Bancomer",
+  // Retail & Media
+  "Walmart","Target","Costco","IKEA","Home Depot","Lowe's","Best Buy","7-Eleven","Sears","Liverpool",
+  "Disney","Warner","Universal","Paramount","Fox","ESPN","CNN","BBC","Televisa","TV Azteca",
+  // Sports
+  "FIFA","UEFA","NBA","NFL","MLB","Olympics","Adidas","Puma","Wilson","Spalding",
+  // Telecom
+  "AT&T","Verizon","T-Mobile","Claro","Telcel","Movistar","Telmex","Sprint","Vodafone","Orange",
+  // Airlines & Travel
+  "Aeromexico","Delta","American Airlines","United","Southwest","Lufthansa","British Airways","Air France","Marriott","Hilton",
+  // Mexican famous marks
+  "Cemex","Bimbo","Grupo Bimbo","Lala","Alpura","Maseca","Gruma","FEMSA","Oxxo","Liverpool",
+  "Elektra","Bodega Aurrera","Chedraui","Soriana","La Costeña","Sabritas","Gamesa","Marinela","Ricolino","Gansito",
+  "Corona","Modelo","Tecate","Carta Blanca","Bohemia","Sol","Dos Equis","Victoria","Pacifico","Indio",
+  "Tequila Herradura","Don Julio","Cazadores","1800","Jimador","El Tesoro","Tres Generaciones","Siete Leguas",
+  "Grupo Salinas","Megacable","Axtel","Izzi","Dish","Sky","Cinepolis","Cinemex",
+];
+
 const DISCLAIMERS: Record<string, string> = {
   en: "This is an automated preliminary screening only. It does not constitute legal advice or a formal clearance opinion. Always consult a qualified trademark attorney before filing.",
   zh: "这仅是自动初步筛查，不构成法律建议或正式检索意见。在提交申请前，请务必咨询有资质的商标代理人。",
@@ -242,10 +284,56 @@ async function runMarciaQuery(
   return { items: resultData.resultPage ?? [], totalCount };
 }
 
-async function searchMarcia(markName: string, classes: number[]): Promise<{
+async function generatePhoneticVariants(apiKey: string, markName: string): Promise<string[]> {
+  if (!markName.trim() || markName.length < 2) return [];
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: "You are a phonetics and trademark expert. Return only valid JSON." },
+          {
+            role: "user",
+            content: `Generate 8–12 phonetic, orthographic, and visual variants of the trademark "${markName}" that a trademark examiner might consider confusingly similar. Include: common misspellings, alternate spellings (e.g. ph→f, ck→k, dropping double letters), phonetic equivalents in Spanish, abbreviations, concatenated/split forms, and partial word variations. Each variant should be a realistic alternate that could appear in a registry.
+Return JSON: { "variants": ["variant1", "variant2", ...] }
+Include the original mark as the first entry. Return 8–12 total unique strings.`
+          }
+        ],
+        temperature: 0.3,
+        max_tokens: 300,
+        response_format: { type: "json_object" },
+      }),
+    });
+    if (!response.ok) return [markName];
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) return [markName];
+    const parsed = JSON.parse(content);
+    const variants: string[] = Array.isArray(parsed.variants) ? parsed.variants : [];
+    // Ensure original is first, deduplicate, cap at 12
+    const seen = new Set<string>();
+    const result: string[] = [];
+    for (const v of [markName, ...variants]) {
+      const norm = v.trim();
+      if (norm && !seen.has(norm.toLowerCase())) {
+        seen.add(norm.toLowerCase());
+        result.push(norm);
+      }
+    }
+    return result.slice(0, 12);
+  } catch (err) {
+    console.error("generatePhoneticVariants error:", err);
+    return [markName];
+  }
+}
+
+async function searchMarcia(markName: string, classes: number[], phoneticVariants?: string[]): Promise<{
   findings: Array<{ name: string; status: string; classNum: string; holder: string; classOverlap: ClassOverlap; imageUrl?: string; goodsServices?: string; expediente?: string; registrationNumber?: string; filingDate?: string; registrationDate?: string; expiryDate?: string }>;
   marciaUrl: string;
   totalCount: number;
+  variantsSearched: string[];
 }> {
   const BASE = "https://marcia.impi.gob.mx/marcas";
   const encoded = encodeURIComponent(markName);
@@ -261,7 +349,7 @@ async function searchMarcia(markName: string, classes: number[]): Promise<{
       signal: AbortSignal.timeout(10000),
     });
 
-    if (!initRes.ok) { return { findings: [], marciaUrl, totalCount: 0 }; }
+    if (!initRes.ok) { return { findings: [], marciaUrl, totalCount: 0, variantsSearched: [] }; }
 
     const setCookieHeaders: string[] = [];
     initRes.headers.forEach((value, key) => {
@@ -300,6 +388,7 @@ async function searchMarcia(markName: string, classes: number[]): Promise<{
     // 1. Original mark name (e.g. "Wild Roots")
     // 2. Normalized no-space slug (e.g. "wildroots") — catches different spacing conventions
     // 3. Individual meaningful tokens (e.g. "wild", "roots") — catches partial-word conflicts
+    // 4. AI-generated phonetic variants (passed in from caller)
     const normalized = normalizeMark(markName);
     const queries = [markName.trim()];
     if (normalized && !queries.map(normalizeMark).includes(normalized)) {
@@ -310,6 +399,17 @@ async function searchMarcia(markName: string, classes: number[]): Promise<{
     for (const token of tokens) {
       if (!queries.map(normalizeMark).includes(normalizeMark(token))) {
         queries.push(token);
+      }
+    }
+    // Add phonetic variants from AI — skip duplicates already in queries
+    const variantsUsed: string[] = [];
+    if (phoneticVariants && phoneticVariants.length > 0) {
+      for (const v of phoneticVariants) {
+        const vn = normalizeMark(v);
+        if (vn && !queries.map(normalizeMark).includes(vn)) {
+          queries.push(v.trim());
+          variantsUsed.push(v.trim());
+        }
       }
     }
 
@@ -404,10 +504,10 @@ async function searchMarcia(markName: string, classes: number[]): Promise<{
       };
     }).filter(f => f.name);
 
-    return { findings, marciaUrl, totalCount: maxTotal };
+    return { findings, marciaUrl, totalCount: maxTotal, variantsSearched: variantsUsed };
   } catch (err) {
     console.error("MARCia fetch error:", err);
-    return { findings: [], marciaUrl, totalCount: 0 };
+    return { findings: [], marciaUrl, totalCount: 0, variantsSearched: [] };
   }
 }
 
@@ -975,6 +1075,137 @@ Return ONLY JSON array, no markdown. Be precise — only include classes where t
   }
 }
 
+interface FamousMarkConflict {
+  famousMark: string;
+  similarity: number;
+  lfppiArticle: string;
+}
+
+function checkFamousMarks(markName: string): FamousMarkConflict[] {
+  const normalizedApplicant = normalizeMark(markName);
+  if (!normalizedApplicant || normalizedApplicant.length < 2) return [];
+
+  const conflicts: FamousMarkConflict[] = [];
+  for (const famous of FAMOUS_MARKS) {
+    const normalizedFamous = normalizeMark(famous);
+    if (!normalizedFamous) continue;
+
+    // Exact normalized match
+    if (normalizedApplicant === normalizedFamous) {
+      conflicts.push({ famousMark: famous, similarity: 100, lfppiArticle: "Art. 173 Fr. XV LFPPI" });
+      continue;
+    }
+    // Substring containment (both ≥ 5 chars)
+    if (normalizedApplicant.length >= 5 && normalizedFamous.length >= 5) {
+      if (normalizedApplicant.includes(normalizedFamous) || normalizedFamous.includes(normalizedApplicant)) {
+        const longer = Math.max(normalizedApplicant.length, normalizedFamous.length);
+        const shorter = Math.min(normalizedApplicant.length, normalizedFamous.length);
+        const sim = Math.round((shorter / longer) * 100);
+        conflicts.push({ famousMark: famous, similarity: sim, lfppiArticle: "Art. 173 Fr. XV LFPPI" });
+        continue;
+      }
+    }
+    // Levenshtein fuzzy match
+    const maxLen = Math.max(normalizedApplicant.length, normalizedFamous.length);
+    const maxDist = maxLen <= 6 ? 1 : maxLen <= 10 ? 2 : 3;
+    const dist = levenshtein(normalizedApplicant, normalizedFamous, maxDist);
+    if (dist <= maxDist) {
+      const sim = Math.round(((maxLen - dist) / maxLen) * 100);
+      conflicts.push({ famousMark: famous, similarity: sim, lfppiArticle: "Art. 173 Fr. XV LFPPI" });
+    }
+  }
+
+  // Sort by descending similarity, deduplicate, cap at 10
+  conflicts.sort((a, b) => b.similarity - a.similarity);
+  const seen = new Set<string>();
+  return conflicts.filter(c => {
+    if (seen.has(c.famousMark)) return false;
+    seen.add(c.famousMark);
+    return true;
+  }).slice(0, 10);
+}
+
+interface MalaFeResult {
+  detected: boolean;
+  riskLevel: "none" | "low" | "medium" | "high";
+  explanation: string;
+  explanation_en: string;
+  indicators: string[];
+}
+
+async function analyzeMalaFe(
+  apiKey: string,
+  markName: string,
+  classes: number[],
+  goodsServices: string,
+  marciaFindings: Array<{ name: string; status: string; classNum: string; holder: string }>,
+  language: string,
+): Promise<MalaFeResult> {
+  const defaultResult: MalaFeResult = { detected: false, riskLevel: "none", explanation: "", explanation_en: "", indicators: [] };
+  if (marciaFindings.length === 0) return defaultResult;
+
+  const langName = LANGUAGE_NAMES[language] ?? "English";
+  const findingsContext = marciaFindings.slice(0, 10).map(f =>
+    `- "${f.name}" (Clase ${f.classNum}, Estado: ${f.status}, Titular: ${f.holder || "desconocido"})`
+  ).join("\n");
+
+  const prompt = `Eres un abogado experto en derecho de marcas mexicano especializado en mala fe registral (Art. 173 Fr. XVIII LFPPI).
+
+MARCA SOLICITANTE: "${markName}" para clase(s) ${classes.join(", ")} — ${goodsServices || "sin descripción de productos"}
+
+MARCAS ENCONTRADAS EN EL REGISTRO IMPI:
+${findingsContext}
+
+TAREA: Detecta si existe evidencia de mala fe registral que pudiera afectar la solicitud. Considera:
+1. ¿Existe un patrón de acaparamiento de marcas (trademark squatting) — un mismo titular con muchas marcas similares bloqueando clases?
+2. ¿Hay marcas registradas claramente con el propósito de bloquear a competidores (blocking registrations)?
+3. ¿Existe evidencia de que alguien registró esta marca antes que el legítimo usuario en el mercado?
+4. ¿Hay registros en múltiples clases innecesarias por el mismo titular (defensive filings without use)?
+
+Sé específico. Referencia los nombres de marcas y titulares encontrados.
+
+Devuelve SOLO JSON:
+{
+  "detected": true|false,
+  "riskLevel": "none"|"low"|"medium"|"high",
+  "explanation": "Análisis en español (2-3 oraciones)",
+  "explanation_en": "Same in English",
+  "indicators": ["Indicator 1 in ${langName}", "Indicator 2 in ${langName}"]
+}`;
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: "Eres un abogado mexicano de marcas. Devuelve únicamente JSON válido." },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.1,
+        max_tokens: 600,
+        response_format: { type: "json_object" },
+      }),
+    });
+    if (!response.ok) return defaultResult;
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) return defaultResult;
+    const parsed = JSON.parse(content);
+    return {
+      detected: !!parsed.detected,
+      riskLevel: (["none", "low", "medium", "high"].includes(parsed.riskLevel) ? parsed.riskLevel : "none") as MalaFeResult["riskLevel"],
+      explanation: parsed.explanation ?? "",
+      explanation_en: parsed.explanation_en ?? parsed.explanation ?? "",
+      indicators: Array.isArray(parsed.indicators) ? parsed.indicators : [],
+    };
+  } catch (err) {
+    console.error("analyzeMalaFe error:", err);
+    return defaultResult;
+  }
+}
+
 async function generateConsistentRiskSummary(
   apiKey: string,
   markName: string,
@@ -1141,15 +1372,20 @@ Deno.serve(async (req: Request) => {
       ? [goodsServices, `Design description: ${designDescription}`].filter(Boolean).join(". ")
       : goodsServices;
 
+    // Generate phonetic variants before MARCia search so they can be included in queries
+    const phoneticVariants = markName ? await generatePhoneticVariants(apiKey, searchName) : [];
+
     // Run MARCia first so conflicting class numbers can inform the registrability analysis
     // Skip text-based searches when pure design with no word element extracted
     const [webResult, marciaResult, domainResults, translationAnalysis, niceClassification] = await Promise.all([
       markName ? searchWeb(apiKey, searchName, classes, enhancedGoodsServices, lang) : Promise.resolve({ findings: [], risk: "low" as const }),
-      markName ? searchMarcia(searchName, classes) : Promise.resolve({ findings: [], marciaUrl: "https://marcia.impi.gob.mx/marcas/search/quick", totalCount: 0 }),
+      markName ? searchMarcia(searchName, classes, phoneticVariants) : Promise.resolve({ findings: [], marciaUrl: "https://marcia.impi.gob.mx/marcas/search/quick", totalCount: 0, variantsSearched: [] }),
       markName ? checkDomains(searchName) : Promise.resolve([]),
       markName ? analyzeTranslations(apiKey, searchName, classes, enhancedGoodsServices, lang) : Promise.resolve([]),
       classifyNiceClasses(apiKey, searchName, enhancedGoodsServices || (isDesignOnly ? "design mark" : ""), lang),
     ]);
+
+    const famousMarkConflicts = markName ? checkFamousMarks(searchName) : [];
 
     const conflictingClassNums = marciaResult.findings.map(f => f.classNum).filter(Boolean);
 
@@ -1211,6 +1447,10 @@ Deno.serve(async (req: Request) => {
     if (registrabilityResult.risk === "high") risk = "high";
     else if (registrabilityResult.risk === "medium" && risk === "low") risk = "medium";
 
+    // Escalate if exact famous mark hit
+    if (famousMarkConflicts.some(c => c.similarity >= 90) && risk !== "high") risk = "high";
+    else if (famousMarkConflicts.length > 0 && risk === "low") risk = "medium";
+
     const dupontAgainst = registrabilityResult.dupont.filter(f => f.verdict === "against_registration").length;
     if (dupontAgainst >= 5 && risk !== "high") risk = "high";
     else if (dupontAgainst >= 3 && risk === "low") risk = "medium";
@@ -1227,6 +1467,11 @@ Deno.serve(async (req: Request) => {
     else if (exactRelatedClass) riskColor = riskColor === "VERDE" ? "AMARILLO" : riskColor === "AMARILLO" ? "NARANJA" : riskColor;
     else if (risk === "high" && riskColor !== "ROJO") riskColor = "ROJO";
     else if (risk === "medium" && riskColor === "VERDE") riskColor = "AMARILLO";
+
+    // Mala Fe Registral analysis (uses MARCia findings already collected)
+    const malaFeResult = markName && marciaResult.findings.length > 0
+      ? await analyzeMalaFe(apiKey, searchName, classes, enhancedGoodsServices, marciaResult.findings, lang)
+      : { detected: false, riskLevel: "none" as const, explanation: "", explanation_en: "", indicators: [] };
 
     // Generate a risk summary that is guaranteed to match the final aggregated risk level
     const summaryMarkName = isDesignOnly
@@ -1268,6 +1513,9 @@ Deno.serve(async (req: Request) => {
       riskSummary_user: consistentSummary.riskSummary_user,
       translationAnalysis,
       niceClassification,
+      famousMarkConflicts,
+      malaFe: malaFeResult,
+      variantsSearched: marciaResult.variantsSearched,
       searchLanguage: lang,
       disclaimer: DISCLAIMERS[lang],
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });

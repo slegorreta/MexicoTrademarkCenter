@@ -14,6 +14,7 @@ import {
 
 interface MarciaFinding { name: string; status: string; classNum: string; holder: string; imageUrl?: string; goodsServices?: string; expediente?: string; registrationNumber?: string; filingDate?: string; registrationDate?: string; expiryDate?: string; }
 interface ElementDecomposition { element: string; distinctivenessTier: 'generic' | 'descriptive' | 'suggestive' | 'arbitrary' | 'fanciful'; role: 'dominant' | 'secondary' | 'descriptive_modifier' | 'filler'; note?: string; }
+interface FamousMarkConflict { famousMark: string; similarity: number; lfppiArticle: string; }
 interface DomainResult { domain: string; available: boolean | null; status: 'available' | 'taken' | 'unknown'; }
 export interface RegistrabilityFlag { category: string; severity: 'low' | 'medium' | 'high'; explanation: string; explanation_en?: string; explanation_user?: string; }
 export interface DupontFactor { factor: string; verdict: 'favors_registration' | 'neutral' | 'against_registration'; reasoning: string; reasoning_en?: string; reasoning_user?: string; }
@@ -37,6 +38,9 @@ interface ClearanceResult {
   riskSummary_user?: string;
   translationAnalysis?: TranslationFlag[];
   elementDecomposition?: ElementDecomposition[];
+  famousMarkConflicts?: FamousMarkConflict[];
+  malaFe?: { detected: boolean; riskLevel: 'none' | 'low' | 'medium' | 'high'; explanation: string; explanation_en: string; indicators: string[] };
+  variantsSearched?: string[];
   searchLanguage?: string;
   disclaimer: string;
 }
@@ -456,44 +460,97 @@ function ClearanceLoadingSteps({ lang }: { lang: Lang }) {
   const steps = LOADING_STEPS[lang] ?? LOADING_STEPS.en;
   const [activeIndex, setActiveIndex] = useState(0);
   const [completedCount, setCompletedCount] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
+
+  const durations = [1600, 1400, 1800, 1500, 1300, 1100, 1400, 999999];
+  const totalEstimated = durations.slice(0, -1).reduce((a, b) => a + b, 0);
 
   useEffect(() => {
-    const durations = [1600, 1400, 1800, 1500, 1300, 1100, 1400, 999999];
-    let elapsed = 0;
+    let elapsedMs = 0;
     const timers: ReturnType<typeof setTimeout>[] = [];
     for (let i = 0; i < steps.length - 1; i++) {
-      elapsed += durations[i] ?? 1500;
+      elapsedMs += durations[i] ?? 1500;
       const idx = i;
       timers.push(setTimeout(() => {
         setCompletedCount(idx + 1);
         setActiveIndex(idx + 1);
-      }, elapsed));
+      }, elapsedMs));
     }
     return () => timers.forEach(clearTimeout);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [steps.length]);
+
+  useEffect(() => {
+    const interval = setInterval(() => setElapsed(e => e + 1), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Circular progress gauge
+  const progress = Math.min(1, completedCount / (steps.length - 1));
+  const gaugeR = 28; const gaugeCx = 36; const gaugeCy = 36;
+  const gaugeCirc = 2 * Math.PI * gaugeR;
+  const gaugeDash = progress * gaugeCirc;
+  const gaugeColor = progress >= 0.8 ? '#10b981' : progress >= 0.4 ? '#c9a84c' : '#1a2e1a';
+
+  const elapsedLabel = elapsed < 60
+    ? `${elapsed}s`
+    : `${Math.floor(elapsed / 60)}m ${elapsed % 60}s`;
 
   return (
     <div className="mt-3 rounded-xl border border-gray-200 bg-white overflow-hidden">
-      <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
-        <Loader2 size={14} className="text-gold-600 animate-spin flex-shrink-0" />
-        <p className="text-xs font-semibold text-gray-700">
-          {lang === 'es' ? 'Análisis en curso…' : lang === 'zh' ? '分析进行中…' : lang === 'de' ? 'Analyse läuft…' : lang === 'fr' ? 'Analyse en cours…' : lang === 'hi' ? 'विश्लेषण जारी…' : lang === 'pt' ? 'Análise em andamento…' : lang === 'ja' ? '分析中…' : 'Running full clearance analysis…'}
-        </p>
+      {/* Header with circular gauge */}
+      <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
+        {/* Circular progress */}
+        <div className="relative flex-shrink-0">
+          <svg width="72" height="72" viewBox="0 0 72 72" className="-rotate-90">
+            <circle cx={gaugeCx} cy={gaugeCy} r={gaugeR} fill="none" stroke="#f0f0f0" strokeWidth={5} />
+            <circle
+              cx={gaugeCx} cy={gaugeCy} r={gaugeR} fill="none"
+              stroke={gaugeColor} strokeWidth={5}
+              strokeDasharray={`${gaugeDash} ${gaugeCirc}`}
+              strokeLinecap="round"
+              style={{ transition: 'stroke-dasharray 0.6s ease' }}
+            />
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center" style={{ transform: 'none' }}>
+            <span className="text-[11px] font-bold text-gray-800">{Math.round(progress * 100)}%</span>
+            <span className="text-[9px] text-gray-400">{elapsedLabel}</span>
+          </div>
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold text-gray-700">
+            {lang === 'es' ? 'Análisis en curso…' : lang === 'zh' ? '分析进行中…' : lang === 'de' ? 'Analyse läuft…' : lang === 'fr' ? 'Analyse en cours…' : lang === 'hi' ? 'विश्लेषण जारी…' : lang === 'pt' ? 'Análise em andamento…' : lang === 'ja' ? '分析中…' : 'Running full clearance analysis…'}
+          </p>
+          <p className="text-[10px] text-gray-400 mt-0.5">
+            {steps[activeIndex]?.label ?? ''}
+          </p>
+          {/* Linear progress bar */}
+          <div className="mt-1.5 w-full h-1 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-700"
+              style={{ width: `${progress * 100}%`, backgroundColor: gaugeColor }}
+            />
+          </div>
+          <p className="text-[9px] text-gray-400 mt-0.5">
+            {lang === 'es' ? `Est. ${Math.max(0, Math.round((totalEstimated / 1000) - elapsed))}s restantes` : `Est. ${Math.max(0, Math.round((totalEstimated / 1000) - elapsed))}s remaining`}
+          </p>
+        </div>
       </div>
-      <div className="px-4 py-3 space-y-2.5">
+      {/* Step list */}
+      <div className="px-4 py-3 space-y-2">
         {steps.map((step, i) => {
           const done = i < completedCount;
           const active = i === activeIndex && !done;
           return (
-            <div key={i} className={`flex items-start gap-3 transition-opacity duration-300 ${i > activeIndex ? 'opacity-30' : 'opacity-100'}`}>
+            <div key={i} className={`flex items-start gap-2.5 transition-all duration-300 ${i > activeIndex ? 'opacity-25' : 'opacity-100'}`}>
               <div className="flex-shrink-0 mt-0.5">
                 {done ? (
                   <div className="w-4 h-4 rounded-full bg-emerald-100 flex items-center justify-center">
-                    <CheckCircle2 size={11} className="text-emerald-600" />
+                    <CheckCircle2 size={10} className="text-emerald-600" />
                   </div>
                 ) : active ? (
-                  <div className="w-4 h-4 rounded-full bg-gold-100 flex items-center justify-center">
-                    <Loader2 size={10} className="text-gold-600 animate-spin" />
+                  <div className="w-4 h-4 rounded-full bg-[#c9a84c]/20 flex items-center justify-center">
+                    <Loader2 size={9} className="text-[#c9a84c] animate-spin" />
                   </div>
                 ) : (
                   <div className="w-4 h-4 rounded-full bg-gray-100 flex items-center justify-center">
@@ -502,11 +559,11 @@ function ClearanceLoadingSteps({ lang }: { lang: Lang }) {
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className={`text-xs font-medium leading-tight ${done ? 'text-emerald-700' : active ? 'text-gray-800' : 'text-gray-400'}`}>
+                <p className={`text-[11px] font-medium leading-tight ${done ? 'text-emerald-700' : active ? 'text-gray-800' : 'text-gray-400'}`}>
                   {step.label}
                 </p>
                 {active && (
-                  <p className="text-[10px] text-gray-400 mt-0.5 leading-relaxed">{step.detail}</p>
+                  <p className="text-[9px] text-gray-400 mt-0.5 leading-relaxed">{step.detail}</p>
                 )}
               </div>
             </div>
@@ -642,6 +699,98 @@ function RegistrabilityGauge({ score }: { score: number }) {
       <span className="text-[9px] font-semibold mt-0.5" style={{ color }}>{label}</span>
     </div>
   );
+}
+
+// ─── Pentagon Radar Chart (Feature 3) ────────────────────────────────────────
+
+interface PentagonData { label: string; value: number; }
+
+function PentagonChart({ data }: { data: PentagonData[] }) {
+  const cx = 80; const cy = 80; const r = 60;
+  const n = data.length;
+  const angleOffset = -Math.PI / 2;
+  const toPoint = (i: number, radius: number) => {
+    const angle = angleOffset + (2 * Math.PI * i) / n;
+    return { x: cx + radius * Math.cos(angle), y: cy + radius * Math.sin(angle) };
+  };
+  // Grid rings
+  const rings = [0.25, 0.5, 0.75, 1.0];
+  // Filled area points
+  const filledPts = data.map((d, i) => toPoint(i, (d.value / 100) * r));
+  const filledPath = filledPts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ') + ' Z';
+
+  return (
+    <svg width="160" height="160" viewBox="0 0 160 160" className="overflow-visible">
+      {/* Grid rings */}
+      {rings.map((ring, ri) => {
+        const pts = data.map((_, i) => toPoint(i, ring * r));
+        const path = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ') + ' Z';
+        return <path key={ri} d={path} fill="none" stroke="#e5e7eb" strokeWidth={0.75} />;
+      })}
+      {/* Axis lines */}
+      {data.map((_, i) => {
+        const outer = toPoint(i, r);
+        return <line key={i} x1={cx} y1={cy} x2={outer.x.toFixed(1)} y2={outer.y.toFixed(1)} stroke="#e5e7eb" strokeWidth={0.75} />;
+      })}
+      {/* Filled area */}
+      <path d={filledPath} fill="rgba(26,46,26,0.15)" stroke="#1a2e1a" strokeWidth={1.5} strokeLinejoin="round" />
+      {/* Data points */}
+      {filledPts.map((p, i) => (
+        <circle key={i} cx={p.x} cy={p.y} r={3} fill="#1a2e1a" />
+      ))}
+      {/* Labels */}
+      {data.map((d, i) => {
+        const labelPt = toPoint(i, r + 14);
+        return (
+          <text key={i} x={labelPt.x.toFixed(1)} y={labelPt.y.toFixed(1)}
+            textAnchor="middle" dominantBaseline="middle"
+            fontSize={8} fontWeight="600" fill="#374151">
+            {d.label}
+          </text>
+        );
+      })}
+    </svg>
+  );
+}
+
+function computePentagonScores(result: ClearanceResult): PentagonData[] {
+  const d = result.distinctiveness;
+  const dupont = result.dupont ?? [];
+  const flags = result.registrabilityFlags ?? [];
+  const marcia = result.marciaFindings ?? [];
+  const translations = result.translationAnalysis ?? [];
+
+  // Originalidad (distinctiveness): 0–100 based on tier score 1–5
+  const tierScore = d?.score ?? 3;
+  const originalidad = Math.round(((tierScore - 1) / 4) * 100);
+
+  // Dilución (dilution risk): inversely proportional to saturation
+  const total = result.marciaTotalCount ?? marcia.length;
+  const dilución = Math.max(0, 100 - Math.min(100, total * 5));
+
+  // Oposición (opposition risk): based on MARCia same/related class conflicts
+  const conflictCount = marcia.filter(f => (f as MarciaFinding & { classOverlap?: string }).classOverlap === 'same' || (f as MarciaFinding & { classOverlap?: string }).classOverlap === 'related').length;
+  const oposición = Math.max(0, 100 - Math.min(100, conflictCount * 20));
+
+  // Cumplimiento legal (legal compliance): based on LFPPI flags + translation risk
+  const highFlags = flags.filter(f => f.severity === 'high').length;
+  const medFlags = flags.filter(f => f.severity === 'medium').length;
+  const transHigh = translations.filter(t => t.risk === 'high').length;
+  const cumplimiento = Math.max(0, 100 - highFlags * 25 - medFlags * 10 - transHigh * 10);
+
+  // Distintividad (DuPont strength): based on DuPont factors
+  const favor = dupont.filter(f => f.verdict === 'favors_registration').length;
+  const against = dupont.filter(f => f.verdict === 'against_registration').length;
+  const total13 = dupont.length || 13;
+  const distintividad = Math.round(((favor - against + total13) / (2 * total13)) * 100);
+
+  return [
+    { label: 'Originalidad', value: Math.max(0, Math.min(100, originalidad)) },
+    { label: 'Distintividad', value: Math.max(0, Math.min(100, distintividad)) },
+    { label: 'Cumplimiento', value: Math.max(0, Math.min(100, cumplimiento)) },
+    { label: 'Oposición', value: Math.max(0, Math.min(100, oposición)) },
+    { label: 'Dilución', value: Math.max(0, Math.min(100, dilución)) },
+  ];
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -1166,6 +1315,25 @@ export default function TrademarkClearancePanel({
                   </div>
                 )}
               </div>
+              {/* Feature 2: Variants searched tag */}
+              {(result.variantsSearched ?? []).length > 0 && (
+                <div className="mb-1.5">
+                  <details className="group">
+                    <summary className="flex items-center gap-1 text-[9px] text-gray-400 hover:text-gray-600 cursor-pointer list-none select-none">
+                      <span className="inline-flex items-center gap-1 bg-blue-50 border border-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full font-semibold">
+                        <Sparkles size={8} />
+                        {lang === 'es' ? `${(result.variantsSearched ?? []).length} variantes fonéticas buscadas` : lang === 'zh' ? `已搜索${(result.variantsSearched ?? []).length}个语音变体` : `${(result.variantsSearched ?? []).length} phonetic variants searched`}
+                      </span>
+                      <ChevronDown size={9} className="group-open:rotate-180 transition-transform" />
+                    </summary>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {(result.variantsSearched ?? []).map((v, i) => (
+                        <span key={i} className="text-[8px] font-mono bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-100">{v}</span>
+                      ))}
+                    </div>
+                  </details>
+                </div>
+              )}
               {/* AI narrative (teaser) */}
               <p className={`text-[10px] leading-relaxed ${paid ? 'text-gray-600' : 'text-gray-400'}`}>
                 {paid
@@ -1290,6 +1458,96 @@ export default function TrademarkClearancePanel({
           </div>
         </div>
       </div>
+
+      {/* ── Feature 3: Pentagon Risk Profile Chart ─────────────────────────── */}
+      {(() => {
+        const pentagonData = computePentagonScores(result);
+        return (
+          <div className="border-t border-gray-100 bg-white/50 px-4 py-3">
+            <div className="flex items-center gap-1.5 mb-2">
+              <TrendingUp size={11} className="text-[#1a2e1a]" />
+              <span className="text-[10px] font-semibold text-gray-600 uppercase tracking-wide">
+                {lang === 'es' ? 'Perfil de Riesgo (5 Ejes)' : lang === 'zh' ? '风险雷达图（5轴）' : lang === 'de' ? 'Risikoprofil (5 Achsen)' : lang === 'fr' ? 'Profil de risque (5 axes)' : 'Risk Profile (5 Axes)'}
+              </span>
+            </div>
+            <div className="flex items-start gap-4 flex-wrap">
+              <div className="flex-shrink-0">
+                <PentagonChart data={pentagonData} />
+              </div>
+              <div className="flex-1 min-w-[140px] space-y-1.5 pt-2">
+                {pentagonData.map((d, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="text-[9px] font-semibold text-gray-500 w-20 flex-shrink-0">{d.label}</span>
+                    <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{ width: `${d.value}%`, backgroundColor: d.value >= 70 ? '#10b981' : d.value >= 40 ? '#f59e0b' : '#ef4444' }}
+                      />
+                    </div>
+                    <span className="text-[9px] font-bold w-6 text-right flex-shrink-0" style={{ color: d.value >= 70 ? '#10b981' : d.value >= 40 ? '#f59e0b' : '#ef4444' }}>{d.value}</span>
+                  </div>
+                ))}
+                {!paid && (
+                  <p className="text-[9px] text-gray-400 flex items-center gap-1 mt-2">
+                    <Lock size={8} className="flex-shrink-0" />
+                    {lang === 'es' ? 'Análisis por eje en el Reporte Completo.' : 'Per-axis analysis in the Full Report.'}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── Famous & Notorious Marks Check (Art. 173 Fr. XV LFPPI) ─────────── */}
+      {(() => {
+        const famousConflicts = result.famousMarkConflicts ?? [];
+        if (famousConflicts.length === 0) return null;
+        const topConflict = famousConflicts[0];
+        return (
+          <div className="border-t border-red-100 bg-red-50/60 px-4 py-3">
+            <div className="flex items-start gap-2 mb-2">
+              <AlertOctagon size={13} className="text-red-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] font-bold text-red-800 uppercase tracking-wide">
+                    {lang === 'es' ? 'Marcas Famosas y Notorias Detectadas' : lang === 'zh' ? '检测到知名商标冲突' : lang === 'de' ? 'Bekannte & berühmte Marken gefunden' : lang === 'fr' ? 'Marques notoires détectées' : lang === 'pt' ? 'Marcas Famosas Detectadas' : 'Famous & Notorious Marks Detected'}
+                  </span>
+                  <span className="text-[9px] font-bold bg-red-100 text-red-700 px-2 py-0.5 rounded-full border border-red-200">
+                    {topConflict.lfppiArticle}
+                  </span>
+                </div>
+                <p className="text-[9px] text-red-700 mt-0.5 leading-snug">
+                  {lang === 'es'
+                    ? `Tu marca presenta similitud con ${famousConflicts.length} marca(s) famosa(s) o notoria(s). Las marcas famosas tienen protección transclase bajo la LFPPI.`
+                    : lang === 'zh' ? `您的商标与${famousConflicts.length}个知名商标存在相似性。知名商标在LFPPI下享有跨类保护。`
+                    : `Your mark shows similarity to ${famousConflicts.length} famous/notorious mark(s). Famous marks have cross-class protection under LFPPI.`}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-1.5 mb-1.5">
+              {famousConflicts.slice(0, paid ? famousConflicts.length : 3).map((c, i) => (
+                <div key={i} className={`flex items-center gap-1 text-[9px] font-semibold px-2 py-1 rounded-lg border ${c.similarity >= 90 ? 'bg-red-100 text-red-800 border-red-200' : c.similarity >= 70 ? 'bg-orange-100 text-orange-800 border-orange-200' : 'bg-amber-100 text-amber-800 border-amber-200'}`}>
+                  <span>{c.famousMark}</span>
+                  <span className="opacity-60 text-[8px]">{c.similarity}%</span>
+                </div>
+              ))}
+              {!paid && famousConflicts.length > 3 && (
+                <div className="flex items-center gap-1 text-[9px] text-gray-400 px-2 py-1 rounded-lg border border-gray-200 bg-gray-50">
+                  <Lock size={8} />
+                  <span>+{famousConflicts.length - 3} {lang === 'es' ? 'más' : 'more'}</span>
+                </div>
+              )}
+            </div>
+            {!paid && (
+              <p className="text-[9px] text-red-600 flex items-center gap-1">
+                <Lock size={8} className="flex-shrink-0" />
+                {lang === 'es' ? 'Lista completa de marcas famosas conflictivas en el Reporte Completo.' : 'Full famous marks conflict list available in the Full Report.'}
+              </p>
+            )}
+          </div>
+        );
+      })()}
 
       {/* ── Quick scorecard ─────────────────────────────────────────────────── */}
       <div className="border-t border-gray-100 bg-white/60 px-4 py-3">
@@ -1451,6 +1709,47 @@ export default function TrademarkClearancePanel({
               )}
             </div>
           )}
+
+          {/* Feature 5: Similarity Distribution Bar Chart */}
+          {result.marciaFindings.length > 0 && (() => {
+            const identical = result.marciaFindings.filter(f => getSimilarityScore(f.name) >= 90).length;
+            const verySimilar = result.marciaFindings.filter(f => { const s = getSimilarityScore(f.name); return s >= 70 && s < 90; }).length;
+            const similar = result.marciaFindings.filter(f => { const s = getSimilarityScore(f.name); return s >= 60 && s < 70; }).length;
+            const total = result.marciaFindings.length;
+            if (total === 0) return null;
+            const bars = [
+              { label: lang === 'es' ? 'Idénticas' : 'Identical', labelSub: '≥90%', count: identical, color: 'bg-red-500' },
+              { label: lang === 'es' ? 'Muy similares' : 'Very similar', labelSub: '70–89%', count: verySimilar, color: 'bg-orange-400' },
+              { label: lang === 'es' ? 'Similares' : 'Similar', labelSub: '60–69%', count: similar, color: 'bg-amber-400' },
+            ];
+            return (
+              <div className="bg-white border border-gray-100 rounded-xl px-3 py-2.5">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <BarChart2 size={11} className="text-[#1a2e1a]" />
+                  <span className="text-[10px] font-semibold text-gray-600 uppercase tracking-wide">
+                    {lang === 'es' ? 'Distribución de Similitud' : lang === 'zh' ? '相似度分布' : 'Similarity Distribution'}
+                  </span>
+                </div>
+                <div className="space-y-1.5">
+                  {bars.map((b, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <div className="w-20 flex-shrink-0">
+                        <p className="text-[9px] font-semibold text-gray-600 leading-tight">{b.label}</p>
+                        <p className="text-[8px] text-gray-400">{b.labelSub}</p>
+                      </div>
+                      <div className="flex-1 h-4 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${b.color}`}
+                          style={{ width: total > 0 ? `${Math.max(b.count > 0 ? 8 : 0, (b.count / total) * 100)}%` : '0%' }}
+                        />
+                      </div>
+                      <span className={`text-[10px] font-bold w-4 text-right flex-shrink-0 ${b.count > 0 ? 'text-gray-700' : 'text-gray-300'}`}>{b.count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* 1 — MARCia teaser (Part 2: enhanced cards) */}
           <div>
@@ -1939,6 +2238,30 @@ export default function TrademarkClearancePanel({
               </div>
             )}
           </div>
+
+          {/* Mala Fe Registral row (Feature 4) */}
+          {result.malaFe && result.malaFe.detected && (
+            <div className={`mx-4 mb-3 rounded-lg border px-3 py-2.5 ${result.malaFe.riskLevel === 'high' ? 'border-red-200 bg-red-50' : result.malaFe.riskLevel === 'medium' ? 'border-orange-200 bg-orange-50' : 'border-amber-200 bg-amber-50'}`}>
+              <div className="flex items-center gap-2 mb-1">
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide ${result.malaFe.riskLevel === 'high' ? 'bg-red-100 text-red-700' : result.malaFe.riskLevel === 'medium' ? 'bg-orange-100 text-orange-700' : 'bg-amber-100 text-amber-700'}`}>{result.malaFe.riskLevel.toUpperCase()}</span>
+                <span className="text-xs font-semibold text-gray-700">
+                  {lang === 'es' ? 'Mala Fe Registral' : 'Bad-Faith Registration'} — Art. 173 Fr. XVIII LFPPI
+                </span>
+              </div>
+              <p className="text-xs leading-relaxed text-gray-700">
+                {lang === 'en' ? result.malaFe.explanation_en : result.malaFe.explanation}
+              </p>
+              {result.malaFe.indicators.length > 0 && (
+                <ul className="mt-1.5 space-y-0.5">
+                  {result.malaFe.indicators.map((ind, i) => (
+                    <li key={i} className="text-[10px] text-gray-500 flex items-start gap-1">
+                      <span className="text-gray-400 flex-shrink-0 mt-0.5">•</span>{ind}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
 
           {/* 3 — DuPont full */}
           {dupont.length > 0 && (
