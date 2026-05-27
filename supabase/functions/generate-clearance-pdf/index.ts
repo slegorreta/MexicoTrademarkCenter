@@ -182,7 +182,26 @@ function verdictOneLiner(v: Verdict, lang: Lang): string {
     HIGH:     "Obstaculos significativos -el registro requiere modificaciones",
     CRITICAL: "Registro altamente improbable sin rediseno mayor de la marca",
   };
-  return lang === "es" ? es[v] : en[v];
+  const fr: Record<Verdict, string> = {
+    CLEAR:    "Aucun obstacle materiel -perspective favorable pour l''enregistrement",
+    LOW:      "Peu d''obstacles -enregistrable avec une strategie standard",
+    MODERATE: "Enregistrable avec une strategie de depot adaptee",
+    HIGH:     "Obstacles significatifs -l''enregistrement necessite des modifications",
+    CRITICAL: "Enregistrement tres improbable sans refonte majeure de la marque",
+  };
+  const de: Record<Verdict, string> = {
+    CLEAR: "Keine wesentlichen Hindernisse -gunstige Aussichten", LOW: "Wenige Hindernisse -registrierbar",
+    MODERATE: "Registrierbar mit geeigneter Strategie", HIGH: "Erhebliche Hindernisse", CRITICAL: "Registrierung sehr unwahrscheinlich",
+  };
+  const pt: Record<Verdict, string> = {
+    CLEAR: "Sem obstaculos materiais -perspetiva favoravel", LOW: "Poucos obstaculos -registavel",
+    MODERATE: "Registavel com estrategia", HIGH: "Obstaculos significativos", CRITICAL: "Registo improvavel",
+  };
+  if (lang === "es") return es[v];
+  if (lang === "fr") return fr[v];
+  if (lang === "de") return de[v];
+  if (lang === "pt") return pt[v];
+  return en[v];
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -648,10 +667,14 @@ function buildKeyFindings(result: ClearanceResult): Array<{ title_en: string; ti
 }
 
 // ─── 5 Strategy Paths ─────────────────────────────────────────────────────────
-function buildStrategies(result: ClearanceResult, markName: string, useEnglish: boolean): Array<{
+function buildStrategies(result: ClearanceResult, markName: string, useEnglish: boolean, lang?: string): Array<{
   num: number; title: string; desc: string; viability: number; timeline: string; fee: string; recommended: boolean;
 }> {
-  const T = (en: string, es: string) => useEnglish ? en : es;
+  const T = (en: string, es: string, fr?: string): string => {
+    if (useEnglish) return en;
+    if (lang === "fr") return fr ?? en;
+    return es;
+  };
   const risk = result.risk;
   const dist = result.distinctiveness;
   const tier = dist?.tier ?? "suggestive";
@@ -665,61 +688,66 @@ function buildStrategies(result: ClearanceResult, markName: string, useEnglish: 
   const paths = [
     {
       num: 1,
-      title: T("File the mark as submitted", "Presentar la marca tal como se solicita"),
+      title: T("File the mark as submitted", "Presentar la marca tal como se solicita", "Deposer la marque telle que soumise"),
       desc: T(
         `File the mark "${safeText(markName)}" before IMPI as currently defined. Acknowledge the identified risks and prepare contingency responses for potential office actions. Most cost-effective path if risk tolerance is moderate.`,
         `Presentar la marca "${safeText(markName)}" ante el IMPI tal como esta definida. Reconocer los riesgos identificados y preparar respuestas para posibles prevenciones. La opcion mas economica si la tolerancia al riesgo es moderada.`,
+        `Deposer la marque "${safeText(markName)}" devant l'IMPI telle que definie. Prendre en compte les risques identifies et preparer des reponses aux eventuels offices actions. Option la plus economique si la tolerance au risque est moderee.`,
       ),
       viability: path1Viability,
-      timeline: T("12-18 months", "12-18 meses"),
+      timeline: T("12-18 months", "12-18 meses", "12-18 mois"),
       fee: "USD $299",
       recommended: false,
     },
     {
       num: 2,
-      title: T("File as a mixed mark with a distinctive design element", "Presentar como marca mixta con elemento grafico distintivo"),
+      title: T("File as a mixed mark with a distinctive design element", "Presentar como marca mixta con elemento grafico distintivo", "Deposer comme marque mixte avec element figuratif distinctif"),
       desc: T(
         "Add a distinctive figurative element (logo, stylized typography, or device) to the word mark. Mixed marks enjoy broader protection and the graphic element reduces phonetic-similarity objections under Art. 173 Fr. XVIII LFPPI.",
         "Agregar un elemento figurativo distintivo (logotipo, tipografia estilizada o dispositivo) a la marca denominativa. Las marcas mixtas tienen mayor proteccion y el elemento grafico reduce objeciones de similitud fonetica bajo Art. 173 Fr. XVIII LFPPI.",
+        "Ajouter un element figuratif distinctif (logo, typographie stylisee ou dispositif) a la marque verbale. Les marques mixtes beneficient d'une protection elargie et l'element graphique reduit les objections de similarite phonetique sous Art. 173 Fr. XVIII LFPPI.",
       ),
       viability: path2Viability,
-      timeline: T("12-18 months", "12-18 meses"),
+      timeline: T("12-18 months", "12-18 meses", "12-18 mois"),
       fee: "USD $299",
       recommended: false,
     },
     {
       num: 3,
-      title: T("Refile in an adjacent Nice class", "Re-presentar en una clase Niza adyacente"),
+      title: T("Refile in an adjacent Nice class", "Re-presentar en una clase Niza adyacente", "Redeposer dans une classe Nice adjacente"),
       desc: T(
         "If the primary class faces direct registration conflicts, file in an adjacent class covering related but different goods/services. This can establish brand presence while the primary class strategy is developed.",
         "Si la clase principal enfrenta conflictos directos de registro, presentar en una clase adyacente que cubra productos/servicios relacionados pero distintos. Esto permite establecer presencia de marca mientras se desarrolla la estrategia para la clase principal.",
+        "Si la classe principale fait face a des conflits d'enregistrement directs, deposer dans une classe adjacente couvrant des produits/services connexes mais distincts. Cela permet d'etablir une presence de marque pendant que la strategie pour la classe principale est developpee.",
       ),
       viability: path3Viability,
-      timeline: T("12-18 months", "12-18 meses"),
+      timeline: T("12-18 months", "12-18 meses", "12-18 mois"),
       fee: "USD $299",
       recommended: false,
     },
     {
       num: 4,
-      title: T("Claim acquired distinctiveness with prior-use evidence", "Alegar distintividad adquirida con evidencia de uso previo"),
+      title: T("Claim acquired distinctiveness with prior-use evidence", "Alegar distintividad adquirida con evidencia de uso previo", "Invoquer la distinctivite acquise par usage anterieur"),
       desc: T(
         "Submit evidence of prior commercial use in Mexico (invoices, advertising, social media, contracts) to demonstrate acquired secondary meaning. Art. 171 LFPPI recognizes distinctiveness acquired through use, which can overcome descriptiveness objections.",
         "Presentar evidencia de uso comercial previo en Mexico (facturas, publicidad, redes sociales, contratos) para demostrar significado secundario adquirido. El Art. 171 LFPPI reconoce la distintividad adquirida mediante el uso, lo que puede superar objeciones de descriptividad.",
+        "Soumettre des preuves d'usage commercial anterieur au Mexique (factures, publicite, reseaux sociaux, contrats) pour demontrer un sens secondaire acquis. L'Art. 171 LFPPI reconnait la distinctivite acquise par l'usage, ce qui peut surmonter les objections de descriptivite.",
       ),
       viability: path4Viability,
-      timeline: T("14-22 months", "14-22 meses"),
+      timeline: T("14-22 months", "14-22 meses", "14-22 mois"),
       fee: "USD $299",
       recommended: false,
     },
     {
       num: 5,
-      title: T("Adopt a suggested alternative mark", "Adoptar una marca alternativa sugerida"),
+      title: T("Adopt a suggested alternative mark", "Adoptar una marca alternativa sugerida", "Adopter une marque alternative suggeree"),
       desc: T(
         `Create a more distinctive mark by modifying "${safeText(markName)}" with a coined suffix or prefix. Alternatives such as "${safeText(markName)}IX", "NEO${safeText(markName).slice(0, 4).toUpperCase()}", or "${safeText(markName).slice(0, 4).toUpperCase()}NOVA eliminate Art. 173 Fr. XVIII confusing-similarity risk and maximize registrability.`,
         `Crear una marca mas distintiva modificando "${safeText(markName)}" con un sufijo o prefijo acunado. Alternativas como "${safeText(markName)}IX", "NEO${safeText(markName).slice(0, 4).toUpperCase()}" o "${safeText(markName).slice(0, 4).toUpperCase()}NOVA" eliminan el riesgo de similitud confusoria bajo Art. 173 Fr. XVIII y maximizan la registrabilidad.`,
+        `Creer une marque plus distinctive en modifiant "${safeText(markName)}" avec un suffixe ou prefixe invente. Des alternatives telles que "${safeText(markName)}IX", "NEO${safeText(markName).slice(0, 4).toUpperCase()}" ou "${safeText(markName).slice(0, 4).toUpperCase()}NOVA" eliminent le risque de similarite confusoire sous Art. 173 Fr. XVIII et maximisent la registrabilite.`,
       ),
       viability: path5Viability,
-      timeline: T("12-18 months", "12-18 meses"),
+      timeline: T("12-18 months", "12-18 meses", "12-18 mois"),
       fee: "USD $299",
       recommended: false,
     },
@@ -829,22 +857,30 @@ async function buildPdf(
   // ══════════════════════════════════════════════════════════════════════
 
   const renderAllSections = (lang: Lang, useEnglish: boolean) => {
-    const T = (en: string, es: string) => useEnglish ? en : es;
+    // T(en, es, fr?) — returns the right string for the current render language
+    const T = (en: string, es: string, fr?: string): string => {
+      if (useEnglish) return en;
+      if (lang === "fr") return fr ?? en;
+      return es;
+    };
     const tierLabel = (tier: string) => {
       const en: Record<string, string> = { generic: "Generic", descriptive: "Descriptive", suggestive: "Suggestive", arbitrary: "Arbitrary", fanciful: "Fanciful" };
       const es: Record<string, string> = { generic: "Generica", descriptive: "Descriptiva", suggestive: "Sugestiva", arbitrary: "Arbitraria", fanciful: "De Fantasia" };
-      return useEnglish ? (en[tier] ?? tier) : (es[tier] ?? tier);
+      const fr: Record<string, string> = { generic: "Generique", descriptive: "Descriptive", suggestive: "Evocatrice", arbitrary: "Arbitraire", fanciful: "De Fantaisie" };
+      if (useEnglish) return en[tier] ?? tier;
+      if (lang === "fr") return fr[tier] ?? tier;
+      return es[tier] ?? tier;
     };
 
     // ── EXECUTIVE SUMMARY ────────────────────────────────────────────
     {
-      const p = newPage(T("Executive Summary", "Resumen Ejecutivo"));
-      addPageHeader(p, regular, bold, markName, niceClasses, T("Executive Summary", "Resumen Ejecutivo"));
+      const p = newPage(T("Executive Summary", "Resumen Ejecutivo", "Resume Executif"));
+      addPageHeader(p, regular, bold, markName, niceClasses, T("Executive Summary", "Resumen Ejecutivo", "Resume Executif"));
 
       let y = PAGE_H - 34;
       y = addSectionHeader(p, bold,
-        T("EXECUTIVE SUMMARY", "RESUMEN EJECUTIVO"),
-        T(`Registrability assessment -${safeText(markName)}`, `Evaluacion de registrabilidad -${safeText(markName)}`),
+        T("EXECUTIVE SUMMARY", "RESUMEN EJECUTIVO", "RESUME EXECUTIF"),
+        T(`Registrability assessment -${safeText(markName)}`, `Evaluacion de registrabilidad -${safeText(markName)}`, `Evaluation de registrabilite -${safeText(markName)}`),
         y,
       );
       y -= 8;
@@ -888,7 +924,7 @@ async function buildPdf(
       // Attorney notes
       const commentText = useEnglish ? commentary.english : commentary.native;
       if (commentText) {
-        p.drawText(T("ATTORNEY NOTES", "NOTAS DE ANALISIS"), { x: MARGIN_X, y, size: 7.5, font: bold, color: C.primary });
+        p.drawText(T("ATTORNEY NOTES", "NOTAS DE ANALISIS", "NOTES D'ANALYSE"), { x: MARGIN_X, y, size: 7.5, font: bold, color: C.primary });
         y -= 10;
         const cmLines = wrapText(commentText, regular, 9, CONTENT_W - 24);
         const cmH = cmLines.length * 13.5 + 20;
@@ -906,7 +942,7 @@ async function buildPdf(
       if (y > MARGIN_BOT + 80) {
         const findings = buildKeyFindings(result);
         if (findings.length > 0) {
-          p.drawText(T("KEY FINDINGS", "HALLAZGOS CLAVE"), { x: MARGIN_X, y, size: 7.5, font: bold, color: C.textMuted });
+          p.drawText(T("KEY FINDINGS", "HALLAZGOS CLAVE", "PRINCIPAUX RESULTATS"), { x: MARGIN_X, y, size: 7.5, font: bold, color: C.textMuted });
           y -= 10;
           const colW3 = (CONTENT_W - 8) / 3;
           const cardH3 = 80;
@@ -938,7 +974,7 @@ async function buildPdf(
 
       // 5-axis pentagon
       if (y > MARGIN_BOT + 120) {
-        p.drawText(T("5-AXIS RISK PROFILE", "PERFIL DE RIESGO -5 EJES"), { x: MARGIN_X, y, size: 7.5, font: bold, color: C.textMuted });
+        p.drawText(T("5-AXIS RISK PROFILE", "PERFIL DE RIESGO -5 EJES", "PROFIL DE RISQUE - 5 AXES"), { x: MARGIN_X, y, size: 7.5, font: bold, color: C.textMuted });
         y -= 10;
         const pCardH = 130;
         drawCard(p, MARGIN_X, y, CONTENT_W, pCardH);
@@ -981,13 +1017,13 @@ async function buildPdf(
       const significant = findings.filter(f => !isHighSimilarity(f, markName) && isMedSimilarity(f, markName));
       const background = findings.filter(f => !isHighSimilarity(f, markName) && !isMedSimilarity(f, markName));
 
-      let p = newPage(T("Conflicting Marks", "Marcas en Conflicto"));
-      addPageHeader(p, regular, bold, markName, niceClasses, T("Conflicting Marks", "Marcas en Conflicto"));
+      let p = newPage(T("Conflicting Marks", "Marcas en Conflicto", "Marques en Conflit"));
+      addPageHeader(p, regular, bold, markName, niceClasses, T("Conflicting Marks", "Marcas en Conflicto", "Marques en Conflit"));
 
       let y = PAGE_H - 34;
-      const subTitle = `${critical.length} ${T("critical", "criticas")}  |  ${significant.length} ${T("significant", "significativas")}  |  ${background.length} ${T("background", "ruido de fondo")}`;
+      const subTitle = `${critical.length} ${T("critical", "criticas", "critiques")}  |  ${significant.length} ${T("significant", "significativas", "significatives")}  |  ${background.length} ${T("background", "ruido de fondo", "bruit de fond")}`;
       y = addSectionHeader(p, bold,
-        T("CONFLICTING MARKS -IMPI MARCIA RESULTS", "MARCAS EN CONFLICTO -RESULTADOS IMPI MARCIA"),
+        T("CONFLICTING MARKS -IMPI MARCIA RESULTS", "MARCAS EN CONFLICTO -RESULTADOS IMPI MARCIA", "MARQUES EN CONFLIT - RESULTATS IMPI MARCIA"),
         subTitle,
         y,
       );
@@ -998,9 +1034,9 @@ async function buildPdf(
         drawCard(p, MARGIN_X, y, CONTENT_W, barH + 14);
         let bx = MARGIN_X + 1;
         const segments = [
-          { label: `${T("Critical", "Criticas")} (${critical.length})`, count: critical.length, color: C.critical },
-          { label: `${T("Significant", "Significativas")} (${significant.length})`, count: significant.length, color: C.warning },
-          { label: `${T("Background", "Fondo")} (${background.length})`, count: background.length, color: C.textMuted },
+          { label: `${T("Critical", "Criticas", "Critiques")} (${critical.length})`, count: critical.length, color: C.critical },
+          { label: `${T("Significant", "Significativas", "Significatives")} (${significant.length})`, count: significant.length, color: C.warning },
+          { label: `${T("Background", "Fondo", "Fond")} (${background.length})`, count: background.length, color: C.textMuted },
         ];
         const totalSeg = segments.reduce((a, s) => a + s.count, 0) || 1;
         for (const seg of segments) {
@@ -1015,7 +1051,7 @@ async function buildPdf(
           }
         }
         y -= barH + 20;
-        const analyzed = T(`Analyzed ${totalCount} marks from IMPI MARCia database`, `Se analizaron ${totalCount} marcas del registro IMPI MARCia`);
+        const analyzed = T(`Analyzed ${totalCount} marks from IMPI MARCia database`, `Se analizaron ${totalCount} marcas del registro IMPI MARCia`, `${totalCount} marques analysees dans la base de donnees IMPI MARCia`);
         p.drawText(analyzed, { x: MARGIN_X, y, size: 7.5, font: regular, color: C.textMuted });
         y -= 18;
       }
@@ -1024,20 +1060,20 @@ async function buildPdf(
       if (critical.length > 0) {
         p.drawRectangle({ x: MARGIN_X, y: y - 24, width: CONTENT_W, height: 26, color: C.criticalTint });
         p.drawRectangle({ x: MARGIN_X, y: y - 24, width: 4, height: 26, color: C.critical });
-        p.drawText(T("CRITICAL -Direct obstacles to registration", "CRITICO -Obstaculos directos al registro"), { x: MARGIN_X + 12, y: y - 12, size: 8.5, font: bold, color: C.critical });
-        p.drawText(T("Art. 173 Fr. XVIII LFPPI -high phonetic/visual/conceptual similarity", "Art. 173 Fr. XVIII LFPPI -alta similitud fonetica/visual/conceptual"), { x: MARGIN_X + 12, y: y - 21, size: 7, font: regular, color: C.textSecond });
+        p.drawText(T("CRITICAL -Direct obstacles to registration", "CRITICO -Obstaculos directos al registro", "CRITIQUE - Obstacles directs a l'enregistrement"), { x: MARGIN_X + 12, y: y - 12, size: 8.5, font: bold, color: C.critical });
+        p.drawText(T("Art. 173 Fr. XVIII LFPPI -high phonetic/visual/conceptual similarity", "Art. 173 Fr. XVIII LFPPI -alta similitud fonetica/visual/conceptual", "Art. 173 Fr. XVIII LFPPI - forte similarite phonetique/visuelle/conceptuelle"), { x: MARGIN_X + 12, y: y - 21, size: 7, font: regular, color: C.textSecond });
         y -= 34;
 
         for (let i = 0; i < critical.length; i++) {
           const f = critical[i];
           if (y < MARGIN_BOT + 80) {
-            p = newPage(T("Conflicting Marks (cont.)", "Marcas en Conflicto (cont.)"));
-            addPageHeader(p, regular, bold, markName, niceClasses, T("Conflicting Marks", "Marcas en Conflicto"));
+            p = newPage(T("Conflicting Marks (cont.)", "Marcas en Conflicto (cont.)", "Marques en Conflit (suite)"));
+            addPageHeader(p, regular, bold, markName, niceClasses, T("Conflicting Marks", "Marcas en Conflicto", "Marques en Conflit"));
             y = PAGE_H - 44;
           }
 
           // Dynamic card height
-          const holderLines = wrapText(T("Holder: ", "Titular: ") + safeText(f.holder), regular, 8, CONTENT_W - 72);
+          const holderLines = wrapText(T("Holder: ", "Titular: ", "Titulaire: ") + safeText(f.holder), regular, 8, CONTENT_W - 72);
           const cardH = 28 + Math.max(holderLines.length * 11, 16) + 48;
           drawCard(p, MARGIN_X, y, CONTENT_W, cardH);
 
@@ -1069,7 +1105,7 @@ async function buildPdf(
           // Expediente -full format, monospaced style
           const expParts = [
             f.expediente ? `Exp. ${f.expediente}` : "",
-            `${T("Class", "Clase")} ${f.classNum}`,
+            `${T("Class", "Clase", "Classe")} ${f.classNum}`,
             "Mexico IMPI",
           ].filter(Boolean);
           p.drawText(expParts.join("  ·  "), { x: infoX, y: hY - 2, size: 8, font: regular, color: C.textMuted });
@@ -1078,7 +1114,9 @@ async function buildPdf(
 
           // Analysis text -in report language only
           const analysisText = useEnglish
-            ? `This mark "${safeText(f.name)}" in ${T("Class", "Clase")} ${f.classNum} presents a conflict under Art. 173 Fr. XVIII LFPPI due to phonetic and visual similarity with the applied-for mark. The dominant element creates a likelihood of confusion among consumers. Registration is at risk without mark modifications.`
+            ? `This mark "${safeText(f.name)}" in ${T("Class", "Clase", "Classe")} ${f.classNum} presents a conflict under Art. 173 Fr. XVIII LFPPI due to phonetic and visual similarity with the applied-for mark. The dominant element creates a likelihood of confusion among consumers. Registration is at risk without mark modifications.`
+            : lang === "fr"
+            ? `Cette marque "${safeText(f.name)}" en Classe ${f.classNum} presente un conflit sous Art. 173 Fr. XVIII LFPPI en raison de la similarite phonetique et visuelle avec la marque demandee. L'element dominant cree un risque de confusion parmi les consommateurs. L'enregistrement est en peril sans modifications de la marque.`
             : `Esta marca "${safeText(f.name)}" en Clase ${f.classNum} presenta un conflicto bajo Art. 173 Fr. XVIII LFPPI por similitud fonetica y visual con la marca solicitante. El elemento dominante genera riesgo de confusion entre consumidores. El registro esta en riesgo sin modificaciones.`;
 
           const anLines = wrapText(analysisText, regular, 7.5, CONTENT_W - 20);
@@ -1096,25 +1134,25 @@ async function buildPdf(
       // Significant tier
       if (significant.length > 0) {
         if (y < MARGIN_BOT + 60) {
-          p = newPage(T("Conflicting Marks (cont.)", "Marcas en Conflicto (cont.)"));
-          addPageHeader(p, regular, bold, markName, niceClasses, T("Conflicting Marks", "Marcas en Conflicto"));
+          p = newPage(T("Conflicting Marks (cont.)", "Marcas en Conflicto (cont.)", "Marques en Conflit (suite)"));
+          addPageHeader(p, regular, bold, markName, niceClasses, T("Conflicting Marks", "Marcas en Conflicto", "Marques en Conflit"));
           y = PAGE_H - 44;
         }
         p.drawRectangle({ x: MARGIN_X, y: y - 24, width: CONTENT_W, height: 26, color: C.warningTint });
         p.drawRectangle({ x: MARGIN_X, y: y - 24, width: 4, height: 26, color: C.warning });
-        p.drawText(T("SIGNIFICANT -Moderate obstacles", "SIGNIFICATIVO -Obstaculos moderados"), { x: MARGIN_X + 12, y: y - 14, size: 8.5, font: bold, color: C.warning });
+        p.drawText(T("SIGNIFICANT -Moderate obstacles", "SIGNIFICATIVO -Obstaculos moderados", "SIGNIFICATIF - Obstacles moderes"), { x: MARGIN_X + 12, y: y - 14, size: 8.5, font: bold, color: C.warning });
         y -= 34;
 
         for (let i = 0; i < Math.min(significant.length, 6); i++) {
           const f = significant[i];
           if (y < MARGIN_BOT + 60) {
-            p = newPage(T("Conflicting Marks (cont.)", "Marcas en Conflicto (cont.)"));
-            addPageHeader(p, regular, bold, markName, niceClasses, T("Conflicting Marks", "Marcas en Conflicto"));
+            p = newPage(T("Conflicting Marks (cont.)", "Marcas en Conflicto (cont.)", "Marques en Conflit (suite)"));
+            addPageHeader(p, regular, bold, markName, niceClasses, T("Conflicting Marks", "Marcas en Conflicto", "Marques en Conflit"));
             y = PAGE_H - 44;
           }
           const simScore2 = f.similarityScore ?? 55;
           const simColor2 = simScore2 >= 80 ? C.critical : simScore2 >= 60 ? C.warning : C.primary;
-          const sigHolder = wrapText(T("Holder: ", "Titular: ") + safeText(f.holder), regular, 8, CONTENT_W - 72);
+          const sigHolder = wrapText(T("Holder: ", "Titular: ", "Titulaire: ") + safeText(f.holder), regular, 8, CONTENT_W - 72);
           const cardH2 = 28 + Math.max(sigHolder.length * 11, 16) + 24;
           drawCard(p, MARGIN_X, y, CONTENT_W, cardH2);
           // Similarity arc (left) -same pattern as critical cards
@@ -1135,7 +1173,7 @@ async function buildPdf(
             p.drawText(hl, { x: infoX2, y: shY, size: 8, font: regular, color: C.textSecond });
             shY -= 11;
           }
-          const expParts2 = [f.expediente ? `Exp. ${f.expediente}` : "", `${T("Class", "Clase")} ${f.classNum}`, "Mexico IMPI"].filter(Boolean);
+          const expParts2 = [f.expediente ? `Exp. ${f.expediente}` : "", `${T("Class", "Clase", "Classe")} ${f.classNum}`, "Mexico IMPI"].filter(Boolean);
           p.drawText(expParts2.join("  ·  "), { x: infoX2, y: shY - 2, size: 7.5, font: regular, color: C.textMuted });
           y -= cardH2 + 4;
         }
@@ -1144,22 +1182,23 @@ async function buildPdf(
       // Background noise
       if (background.length > 0) {
         if (y < MARGIN_BOT + 80) {
-          p = newPage(T("Conflicting Marks (cont.)", "Marcas en Conflicto (cont.)"));
-          addPageHeader(p, regular, bold, markName, niceClasses, T("Conflicting Marks", "Marcas en Conflicto"));
+          p = newPage(T("Conflicting Marks (cont.)", "Marcas en Conflicto (cont.)", "Marques en Conflit (suite)"));
+          addPageHeader(p, regular, bold, markName, niceClasses, T("Conflicting Marks", "Marcas en Conflicto", "Marques en Conflit"));
           y = PAGE_H - 44;
         }
-        p.drawText(T("BACKGROUND NOISE", "RUIDO DE FONDO"), { x: MARGIN_X, y, size: 7.5, font: bold, color: C.textMuted });
+        p.drawText(T("BACKGROUND NOISE", "RUIDO DE FONDO", "BRUIT DE FOND"), { x: MARGIN_X, y, size: 7.5, font: bold, color: C.textMuted });
         y -= 14;
         p.drawRectangle({ x: MARGIN_X, y: y - 16, width: CONTENT_W, height: 18, color: C.divider });
         p.drawRectangle({ x: MARGIN_X, y: y - 16, width: CONTENT_W, height: 0.6, color: C.border });
         const cols = [
-          { x: MARGIN_X + 6, w: 130, label_en: "Mark", label_es: "Marca" },
-          { x: MARGIN_X + 144, w: 130, label_en: "Holder", label_es: "Titular" },
-          { x: MARGIN_X + 282, w: 50, label_en: "Class", label_es: "Clase" },
-          { x: MARGIN_X + 340, w: 100, label_en: "Status", label_es: "Estado" },
+          { x: MARGIN_X + 6, w: 130, label_en: "Mark", label_es: "Marca", label_fr: "Marque" },
+          { x: MARGIN_X + 144, w: 130, label_en: "Holder", label_es: "Titular", label_fr: "Titulaire" },
+          { x: MARGIN_X + 282, w: 50, label_en: "Class", label_es: "Clase", label_fr: "Classe" },
+          { x: MARGIN_X + 340, w: 100, label_en: "Status", label_es: "Estado", label_fr: "Etat" },
         ];
         for (const col of cols) {
-          p.drawText(useEnglish ? col.label_en : col.label_es, { x: col.x, y: y - 10, size: 7.5, font: bold, color: C.textPrimary });
+          const colLabel = useEnglish ? col.label_en : lang === "fr" ? col.label_fr : col.label_es;
+          p.drawText(colLabel, { x: col.x, y: y - 10, size: 7.5, font: bold, color: C.textPrimary });
         }
         y -= 22;
 
@@ -1185,13 +1224,13 @@ async function buildPdf(
     // ── LFPPI ANALYSIS ────────────────────────────────────────────────
     {
       const flags = result.registrabilityFlags ?? [];
-      const p = newPage(T("LFPPI Analysis", "Analisis LFPPI"));
-      addPageHeader(p, regular, bold, markName, niceClasses, T("LFPPI Registrability Analysis", "Analisis de Registrabilidad LFPPI"));
+      const p = newPage(T("LFPPI Analysis", "Analisis LFPPI", "Analyse LFPPI"));
+      addPageHeader(p, regular, bold, markName, niceClasses, T("LFPPI Registrability Analysis", "Analisis de Registrabilidad LFPPI", "Analyse de Registrabilite LFPPI"));
 
       let y = PAGE_H - 34;
       y = addSectionHeader(p, bold,
-        T("LFPPI REGISTRABILITY ANALYSIS", "ANALISIS DE REGISTRABILIDAD LFPPI"),
-        T("Evaluation against Mexico's Ley Federal de Proteccion a la Propiedad Industrial", "Evaluacion bajo la LFPPI -legislacion mexicana de propiedad industrial"),
+        T("LFPPI REGISTRABILITY ANALYSIS", "ANALISIS DE REGISTRABILIDAD LFPPI", "ANALYSE DE REGISTRABILITE LFPPI"),
+        T("Evaluation against Mexico's Ley Federal de Proteccion a la Propiedad Industrial", "Evaluacion bajo la LFPPI -legislacion mexicana de propiedad industrial", "Evaluation selon la LFPPI mexicaine"),
         y,
       );
       y -= 8;
@@ -1199,7 +1238,7 @@ async function buildPdf(
       // Summary callout -raised = all flags; passed = LFPPI_PASSED_GROUNDS not overlapping raised
       const groundsRaised = flags.length;
       const groundsPassed = LFPPI_PASSED_GROUNDS.filter(g => !flags.find(f => g.fraccion.includes(f.category))).length;
-      const summaryStr = `${groundsRaised} ${T("grounds raised", "causales identificadas")}  ·  ${groundsPassed} ${T("fracciones passed", "fracciones aprobadas")}`;
+      const summaryStr = `${groundsRaised} ${T("grounds raised", "causales identificadas", "motifs identifies")}  ·  ${groundsPassed} ${T("fracciones passed", "fracciones aprobadas", "fracciones approuvees")}`;
       p.drawRectangle({ x: MARGIN_X, y: y - 26, width: CONTENT_W, height: 30, color: C.white, borderColor: C.primary, borderWidth: 1 });
       p.drawRectangle({ x: MARGIN_X, y: y - 26, width: 4, height: 30, color: C.primary });
       const sumW = bold.widthOfTextAtSize(summaryStr, 9);
@@ -1209,7 +1248,7 @@ async function buildPdf(
       if (flags.length === 0) {
         drawCard(p, MARGIN_X, y, CONTENT_W, 44, C.successTint);
         p.drawRectangle({ x: MARGIN_X, y: y - 44, width: 4, height: 44, color: C.success });
-        const noGrounds = T("No absolute grounds for refusal detected under the LFPPI.", "No se detectaron causales absolutas de negativa bajo la LFPPI.");
+        const noGrounds = T("No absolute grounds for refusal detected under the LFPPI.", "No se detectaron causales absolutas de negativa bajo la LFPPI.", "Aucun motif absolu de refus detecte sous la LFPPI.");
         p.drawText(noGrounds, { x: MARGIN_X + 14, y: y - 20, size: 10, font: bold, color: C.success });
         y -= 56;
       } else {
@@ -1231,8 +1270,8 @@ async function buildPdf(
           // Header -colored left bar + text on white (no full-width colored bar)
           p.drawRectangle({ x: MARGIN_X, y: y - cardH, width: 5, height: cardH, color: sColor });
           const failedLabel = flag.severity === "high"
-            ? T("RAISED -HIGH SEVERITY", "IDENTIFICADA -ALTA SEVERIDAD")
-            : T("RAISED -MEDIUM SEVERITY", "IDENTIFICADA -SEVERIDAD MEDIA");
+            ? T("RAISED -HIGH SEVERITY", "IDENTIFICADA -ALTA SEVERIDAD", "IDENTIFIEE - HAUTE SEVERITE")
+            : T("RAISED -MEDIUM SEVERITY", "IDENTIFICADA -SEVERIDAD MEDIA", "IDENTIFIEE - SEVERITE MOYENNE");
           p.drawText(failedLabel, { x: MARGIN_X + 14, y: y - 14, size: 8, font: bold, color: sColor });
           const catW = bold.widthOfTextAtSize(catLabel, 9);
           // Wrap category label
@@ -1261,7 +1300,7 @@ async function buildPdf(
       // Passed grounds -LFPPI fracciones only (no USPTO boilerplate)
       if (y > MARGIN_BOT + 60) {
         y -= 4;
-        p.drawText(T("LFPPI FRACCIONES -PASSED", "FRACCIONES LFPPI -APROBADAS"), { x: MARGIN_X, y, size: 7.5, font: bold, color: C.textMuted });
+        p.drawText(T("LFPPI FRACCIONES -PASSED", "FRACCIONES LFPPI -APROBADAS", "FRACCIONES LFPPI - APPROUVEES"), { x: MARGIN_X, y, size: 7.5, font: bold, color: C.textMuted });
         y -= 12;
         const passedList = LFPPI_PASSED_GROUNDS.filter(g => !flags.find(f => g.fraccion.includes(f.category)));
         for (let i = 0; i < Math.min(passedList.length, 10) && y > MARGIN_BOT; i++) {
@@ -1278,7 +1317,7 @@ async function buildPdf(
             p.drawText(ql, { x: MARGIN_X + fracW + 20, y: qY, size: 8, font: regular, color: C.textPrimary });
             qY -= 11;
           }
-          const okStr = T("Passed", "Aprobada");
+          const okStr = T("Passed", "Aprobada", "Approuvee");
           const okW = bold.widthOfTextAtSize(okStr, 8);
           p.drawText(okStr, { x: MARGIN_X + CONTENT_W - okW - 8, y: y - 8, size: 8, font: bold, color: C.success });
           y -= rowH + 2;
@@ -1293,13 +1332,13 @@ async function buildPdf(
       const against = factors.filter(f => f.verdict === "against_registration" || f.verdict === "Desfavorable").length;
       const neutral = factors.length - favor - against;
 
-      let p = newPage(T("Confusion Likelihood Analysis", "Analisis de Confundibilidad"));
-      addPageHeader(p, regular, bold, markName, niceClasses, T("Confusion Likelihood Analysis", "Analisis de Confundibilidad"));
+      let p = newPage(T("Confusion Likelihood Analysis", "Analisis de Confundibilidad", "Analyse de Risque de Confusion"));
+      addPageHeader(p, regular, bold, markName, niceClasses, T("Confusion Likelihood Analysis", "Analisis de Confundibilidad", "Analyse de Risque de Confusion"));
 
       let y = PAGE_H - 34;
       y = addSectionHeader(p, bold,
-        T("CONFUSION LIKELIHOOD ANALYSIS -LFPPI Art. 173 Fr. XVIII", "ANALISIS DE CONFUNDIBILIDAD -LFPPI Art. 173 Fr. XVIII"),
-        T("Triple-similarity doctrine: phonetic, visual and conceptual -dominant element analysis", "Doctrina de triple similitud: fonetica, visual y conceptual -analisis del elemento dominante"),
+        T("CONFUSION LIKELIHOOD ANALYSIS -LFPPI Art. 173 Fr. XVIII", "ANALISIS DE CONFUNDIBILIDAD -LFPPI Art. 173 Fr. XVIII", "ANALYSE DE RISQUE DE CONFUSION - LFPPI Art. 173 Fr. XVIII"),
+        T("Triple-similarity doctrine: phonetic, visual and conceptual -dominant element analysis", "Doctrina de triple similitud: fonetica, visual y conceptual -analisis del elemento dominante", "Doctrine de triple similarite: phonetique, visuelle et conceptuelle"),
         y,
       );
       y -= 8;
@@ -1307,9 +1346,9 @@ async function buildPdf(
       // Summary
       const boxW2 = (CONTENT_W - 8) / 3;
       const summaryBoxes = [
-        { label: T(`${favor} Favorable`, `${favor} Favorable`), color: C.success },
-        { label: T(`${neutral} Neutral`, `${neutral} Neutral`), color: C.textMuted },
-        { label: T(`${against} Unfavorable`, `${against} Desfavorable`), color: C.critical },
+        { label: T(`${favor} Favorable`, `${favor} Favorable`, `${favor} Favorable`), color: C.success },
+        { label: T(`${neutral} Neutral`, `${neutral} Neutral`, `${neutral} Neutre`), color: C.textMuted },
+        { label: T(`${against} Unfavorable`, `${against} Desfavorable`, `${against} Defavorable`), color: C.critical },
       ];
       for (let i = 0; i < summaryBoxes.length; i++) {
         const bx = MARGIN_X + i * (boxW2 + 4);
@@ -1330,7 +1369,7 @@ async function buildPdf(
         const isFavor = f.verdict === "favors_registration" || f.verdict === "Favorable";
         const isAgainst = f.verdict === "against_registration" || f.verdict === "Desfavorable";
         const fc = isFavor ? C.success : isAgainst ? C.critical : C.textMuted;
-        const verdLabel = isFavor ? T("FAVORABLE", "FAVORABLE") : isAgainst ? T("UNFAVORABLE", "DESFAVORABLE") : T("NEUTRAL", "NEUTRAL");
+        const verdLabel = isFavor ? T("FAVORABLE", "FAVORABLE", "FAVORABLE") : isAgainst ? T("UNFAVORABLE", "DESFAVORABLE", "DEFAVORABLE") : T("NEUTRAL", "NEUTRAL", "NEUTRE");
         const factorLabel = CONFUSION_FACTORS_EN[f.factor] ?? safeText(f.factor);
         const reasonText = useEnglish ? (f.reasoning_en ?? f.reasoning) : f.reasoning;
         const reasonLines = wrapText(reasonText, regular, 8, COL_W - 22);
@@ -1341,8 +1380,8 @@ async function buildPdf(
         const cx = isLeft ? MARGIN_X : MARGIN_X + COL_W + 8;
 
         if ((isLeft ? colY : colYRight) - cardH < MARGIN_BOT) {
-          p = newPage(T("Confusion Analysis (cont.)", "Confundibilidad (cont.)"));
-          addPageHeader(p, regular, bold, markName, niceClasses, T("Confusion Likelihood", "Confundibilidad"));
+          p = newPage(T("Confusion Analysis (cont.)", "Confundibilidad (cont.)", "Confusion (suite)"));
+          addPageHeader(p, regular, bold, markName, niceClasses, T("Confusion Likelihood", "Confundibilidad", "Risque de Confusion"));
           colY = PAGE_H - 44;
           colYRight = colY;
           y = colY;
@@ -1378,13 +1417,13 @@ async function buildPdf(
 
     // ── DISTINCTIVENESS ───────────────────────────────────────────────
     {
-      const p = newPage(T("Distinctiveness & Translation", "Distintividad y Traduccion"));
-      addPageHeader(p, regular, bold, markName, niceClasses, T("Distinctiveness & Translation", "Distintividad y Traduccion"));
+      const p = newPage(T("Distinctiveness & Translation", "Distintividad y Traduccion", "Distinctivite et Traduction"));
+      addPageHeader(p, regular, bold, markName, niceClasses, T("Distinctiveness & Translation", "Distintividad y Traduccion", "Distinctivite et Traduction"));
 
       let y = PAGE_H - 34;
       y = addSectionHeader(p, bold,
-        T("DISTINCTIVENESS & TRANSLATION ANALYSIS", "ANALISIS DE DISTINTIVIDAD Y TRADUCCION"),
-        T("Mark strength evaluation and multi-language conflict screening", "Evaluacion de fortaleza de marca y revision de conflictos multilingue"),
+        T("DISTINCTIVENESS & TRANSLATION ANALYSIS", "ANALISIS DE DISTINTIVIDAD Y TRADUCCION", "ANALYSE DE DISTINCTIVITE ET TRADUCTION"),
+        T("Mark strength evaluation and multi-language conflict screening", "Evaluacion de fortaleza de marca y revision de conflictos multilingue", "Evaluation de la force de la marque"),
         y,
       );
       y -= 8;
@@ -1394,7 +1433,7 @@ async function buildPdf(
       const rightX = MARGIN_X + colW2 + 16;
 
       const dist = result.distinctiveness;
-      p.drawText(T("DISTINCTIVENESS / DISTINTIVIDAD", "DISTINTIVIDAD / DISTINCTIVENESS"), { x: leftX, y, size: 7.5, font: bold, color: C.primary });
+      p.drawText(T("DISTINCTIVENESS / DISTINTIVIDAD", "DISTINTIVIDAD / DISTINCTIVENESS", "DISTINCTIVITE"), { x: leftX, y, size: 7.5, font: bold, color: C.primary });
       y -= 14;
 
       // Tier spectrum -full tier names, no abbreviation
@@ -1438,7 +1477,7 @@ async function buildPdf(
         y -= 8;
 
         // Strength meter
-        p.drawText(T("Distinctiveness Strength (LFPPI Art. 173)", "Fortaleza de Distintividad (LFPPI Art. 173)"), { x: leftX, y, size: 7.5, font: bold, color: C.textMuted });
+        p.drawText(T("Distinctiveness Strength (LFPPI Art. 173)", "Fortaleza de Distintividad (LFPPI Art. 173)", "Force Distinctive (LFPPI Art. 173)"), { x: leftX, y, size: 7.5, font: bold, color: C.textMuted });
         y -= 14;
         p.drawRectangle({ x: leftX, y: y - 10, width: colW2, height: 10, color: C.border });
         const meterW = (colW2 * rawScore2) / 100;
@@ -1451,14 +1490,14 @@ async function buildPdf(
 
       // Translation analysis -stacked cards (no narrow columns)
       let ry = PAGE_H - 34 - 30;
-      p.drawText(T("TRANSLATION ANALYSIS", "ANALISIS DE TRADUCCION"), { x: rightX, y: ry, size: 7.5, font: bold, color: C.primary });
+      p.drawText(T("TRANSLATION ANALYSIS", "ANALISIS DE TRADUCCION", "ANALYSE DE TRADUCTION"), { x: rightX, y: ry, size: 7.5, font: bold, color: C.primary });
       ry -= 14;
 
       const translationFlags = result.translationAnalysis ?? [];
       if (translationFlags.length === 0) {
         drawCard(p, rightX, ry, colW2, 44, C.successTint);
         p.drawRectangle({ x: rightX, y: ry - 44, width: 3, height: 44, color: C.success });
-        p.drawText(T("No conflicting meanings detected", "Sin significados conflictivos detectados"), { x: rightX + 12, y: ry - 22, size: 8.5, font: bold, color: C.success });
+        p.drawText(T("No conflicting meanings detected", "Sin significados conflictivos detectados", "Aucun sens conflictuel detecte"), { x: rightX + 12, y: ry - 22, size: 8.5, font: bold, color: C.success });
         ry -= 54;
       } else {
         for (let i = 0; i < translationFlags.length && ry > MARGIN_BOT; i++) {
@@ -1501,13 +1540,13 @@ async function buildPdf(
 
     // ── DOMAIN & WEB PRESENCE ─────────────────────────────────────────
     {
-      const p = newPage(T("Domain & Web Presence", "Dominio y Presencia Web"));
-      addPageHeader(p, regular, bold, markName, niceClasses, T("Domain & Web Presence", "Dominio y Presencia Web"));
+      const p = newPage(T("Domain & Web Presence", "Dominio y Presencia Web", "Domaine et Presence Web"));
+      addPageHeader(p, regular, bold, markName, niceClasses, T("Domain & Web Presence", "Dominio y Presencia Web", "Domaine et Presence Web"));
 
       let y = PAGE_H - 34;
       y = addSectionHeader(p, bold,
-        T("DOMAIN AVAILABILITY & WEB PRESENCE", "DISPONIBILIDAD DE DOMINIO Y PRESENCIA WEB"),
-        T("Digital brand footprint assessment", "Evaluacion de huella digital de la marca"),
+        T("DOMAIN AVAILABILITY & WEB PRESENCE", "DISPONIBILIDAD DE DOMINIO Y PRESENCIA WEB", "DISPONIBILITE DE DOMAINE ET PRESENCE WEB"),
+        T("Digital brand footprint assessment", "Evaluacion de huella digital de la marca", "Evaluation de l'empreinte numerique de la marque"),
         y,
       );
       y -= 8;
@@ -1517,7 +1556,7 @@ async function buildPdf(
       const rightX2 = MARGIN_X + colW3 + 16;
       const domains = result.domainResults ?? [];
 
-      p.drawText(T("DOMAIN AVAILABILITY", "DISPONIBILIDAD DE DOMINIO"), { x: leftX2, y, size: 7.5, font: bold, color: C.primary });
+      p.drawText(T("DOMAIN AVAILABILITY", "DISPONIBILIDAD DE DOMINIO", "DISPONIBILITE DE DOMAINE"), { x: leftX2, y, size: 7.5, font: bold, color: C.primary });
       y -= 12;
 
       for (const d of domains) {
@@ -1532,26 +1571,26 @@ async function buildPdf(
         p.drawText(icon, { x: leftX2 + 8, y: y - 16, size: 10, font: avail ? bold : regular, color: pillColor });
         const domLines = wrapText(domainText, avail ? bold : regular, 8.5, colW3 - 52);
         p.drawText(domLines[0] ?? domainText, { x: leftX2 + 22, y: y - 15, size: 8.5, font: avail ? bold : regular, color: pillColor });
-        const statusStr = avail ? T("Available", "Disponible") : T("Registered", "Registrado");
+        const statusStr = avail ? T("Available", "Disponible", "Disponible") : T("Registered", "Registrado", "Enregistre");
         const stW = regular.widthOfTextAtSize(statusStr, 7.5);
         p.drawText(statusStr, { x: leftX2 + colW3 - stW - 8, y: y - 15, size: 7.5, font: regular, color: pillColor });
         y -= pillH + 4;
       }
 
       if (domains.length === 0) {
-        p.drawText(T("Domain availability not checked.", "Disponibilidad de dominio no verificada."), { x: leftX2, y, size: 8, font: italic, color: C.textMuted });
+        p.drawText(T("Domain availability not checked.", "Disponibilidad de dominio no verificada.", "Disponibilite du domaine non verifiee."), { x: leftX2, y, size: 8, font: italic, color: C.textMuted });
         y -= 16;
       }
 
       // Web findings
       let ry3 = PAGE_H - 34 - 30;
-      p.drawText(T("WEB PRESENCE", "PRESENCIA WEB"), { x: rightX2, y: ry3, size: 7.5, font: bold, color: C.primary });
+      p.drawText(T("WEB PRESENCE", "PRESENCIA WEB", "PRESENCE WEB"), { x: rightX2, y: ry3, size: 7.5, font: bold, color: C.primary });
       ry3 -= 14;
       const webFindings = result.webFindings ?? [];
       if (webFindings.length === 0) {
         drawCard(p, rightX2, ry3, colW3, 44, C.successTint);
         p.drawRectangle({ x: rightX2, y: ry3 - 44, width: 3, height: 44, color: C.success });
-        p.drawText(T("No significant web presence conflicts detected", "Sin conflictos significativos de presencia web"), { x: rightX2 + 12, y: ry3 - 22, size: 8, font: bold, color: C.success });
+        p.drawText(T("No significant web presence conflicts detected", "Sin conflictos significativos de presencia web", "Aucun conflit significatif de presence web detecte"), { x: rightX2 + 12, y: ry3 - 22, size: 8, font: bold, color: C.success });
         ry3 -= 54;
       } else {
         for (let i = 0; i < Math.min(webFindings.length, 8) && ry3 > MARGIN_BOT; i++) {
@@ -1572,18 +1611,18 @@ async function buildPdf(
 
     // ── STRATEGY RECOMMENDATIONS -exactly 5 paths ────────────────────
     {
-      const p = newPage(T("Strategy Recommendations", "Recomendaciones Estrategicas"));
-      addPageHeader(p, regular, bold, markName, niceClasses, T("Strategy Recommendations", "Recomendaciones Estrategicas"));
+      const p = newPage(T("Strategy Recommendations", "Recomendaciones Estrategicas", "Recommandations Strategiques"));
+      addPageHeader(p, regular, bold, markName, niceClasses, T("Strategy Recommendations", "Recomendaciones Estrategicas", "Recommandations Strategiques"));
 
       let y = PAGE_H - 34;
       y = addSectionHeader(p, bold,
-        T("STRATEGY RECOMMENDATIONS -5 PATHS", "RECOMENDACIONES ESTRATEGICAS -5 CAMINOS"),
-        T("All paths numbered 1-5. Recommended path marked.", "Todos los caminos numerados 1-5. Camino recomendado marcado."),
+        T("STRATEGY RECOMMENDATIONS -5 PATHS", "RECOMENDACIONES ESTRATEGICAS -5 CAMINOS", "RECOMMANDATIONS STRATEGIQUES - 5 CHEMINS"),
+        T("All paths numbered 1-5. Recommended path marked.", "Todos los caminos numerados 1-5. Camino recomendado marcado.", "Tous les chemins numerotes 1-5. Chemin recommande marque."),
         y,
       );
       y -= 8;
 
-      const strategies = buildStrategies(result, markName, useEnglish);
+      const strategies = buildStrategies(result, markName, useEnglish, lang);
 
       for (const strat of strategies) {
         if (y < MARGIN_BOT + 80) break;
@@ -1605,14 +1644,14 @@ async function buildPdf(
           tly -= 12;
         }
         if (strat.recommended) {
-          const recStr = T("RECOMMENDED", "RECOMENDADO");
+          const recStr = T("RECOMMENDED", "RECOMENDADO", "RECOMMANDE");
           const recW = bold.widthOfTextAtSize(recStr, 7) + 12;
           p.drawRectangle({ x: MARGIN_X + CONTENT_W - recW - 6, y: y - 22, width: recW, height: 16, color: vc });
           p.drawText(recStr, { x: MARGIN_X + CONTENT_W - recW, y: y - 15, size: 7, font: bold, color: C.white });
         }
 
         // Viability bar
-        p.drawText(T("Viability:", "Viabilidad:"), { x: MARGIN_X + 36, y: y - 30, size: 7.5, font: bold, color: C.textMuted });
+        p.drawText(T("Viability:", "Viabilidad:", "Viabilite:"), { x: MARGIN_X + 36, y: y - 30, size: 7.5, font: bold, color: C.textMuted });
         const barMaxW = 100;
         p.drawRectangle({ x: MARGIN_X + 86, y: y - 35, width: barMaxW, height: 7, color: C.border });
         const vBarColor = strat.viability >= 7 ? C.success : strat.viability >= 5 ? C.warning : C.critical;
@@ -1620,7 +1659,7 @@ async function buildPdf(
         p.drawText(`${strat.viability}/10`, { x: MARGIN_X + 192, y: y - 34, size: 7.5, font: bold, color: vBarColor });
 
         // Meta info
-        const meta = `${T("Timeline:", "Plazo:")} ${strat.timeline}  ·  ${T("MTC fee:", "Tarifa MTC:")} ${strat.fee}`;
+        const meta = `${T("Timeline:", "Plazo:", "Delai:")} ${strat.timeline}  ·  ${T("MTC fee:", "Tarifa MTC:", "Honoraires MTC:")} ${strat.fee}`;
         const metaW = regular.widthOfTextAtSize(meta, 7.5);
         p.drawText(meta, { x: MARGIN_X + CONTENT_W - metaW - 8, y: y - 34, size: 7.5, font: regular, color: C.textMuted });
 
@@ -1641,13 +1680,13 @@ async function buildPdf(
         const costH = 88;
         drawCard(p, MARGIN_X, y, CONTENT_W, costH);
         p.drawRectangle({ x: MARGIN_X, y: y - costH, width: 4, height: costH, color: C.primary });
-        p.drawText(T("FILING COST BREAKDOWN -USD $299 ALL-IN", "DESGLOSE DE COSTOS -USD $299 TODO INCLUIDO"), { x: MARGIN_X + 14, y: y - 16, size: 9.5, font: bold, color: C.textPrimary });
+        p.drawText(T("FILING COST BREAKDOWN -USD $299 ALL-IN", "DESGLOSE DE COSTOS -USD $299 TODO INCLUIDO", "DETAIL DES COUTS - USD $299 TOUT INCLUS"), { x: MARGIN_X + 14, y: y - 16, size: 9.5, font: bold, color: C.textPrimary });
         p.drawRectangle({ x: MARGIN_X + 14, y: y - 22, width: CONTENT_W - 28, height: 0.5, color: C.border });
         const costItems = [
-          T("IMPI government filing fee (paid directly to IMPI on your behalf):  USD $170", "Cuota oficial IMPI (pagada directamente al IMPI en tu nombre):  USD $170"),
-          T("MTC professional service fee (preparation, filing, prosecution, reporting):  USD $129", "Tarifa profesional MTC (preparacion, presentacion, gestion, reportes):  USD $129"),
-          T("Total all-in:  USD $299", "Total todo incluido:  USD $299"),
-          T("Money-back: If IMPI raises a substantive objection on first office action, the $129 MTC fee is refunded.", "Garantia: Si el IMPI emite una prevencion sustantiva en el primer oficio, se reembolsa la tarifa MTC de $129."),
+          T("IMPI government filing fee (paid directly to IMPI on your behalf):  USD $170", "Cuota oficial IMPI (pagada directamente al IMPI en tu nombre):  USD $170", "Taxe officielle IMPI (payee directement a l'IMPI en votre nom):  USD $170"),
+          T("MTC professional service fee (preparation, filing, prosecution, reporting):  USD $129", "Tarifa profesional MTC (preparacion, presentacion, gestion, reportes):  USD $129", "Honoraires professionnels MTC (preparation, depot, suivi, rapports):  USD $129"),
+          T("Total all-in:  USD $299", "Total todo incluido:  USD $299", "Total tout inclus:  USD $299"),
+          T("Money-back: If IMPI raises a substantive objection on first office action, the $129 MTC fee is refunded.", "Garantia: Si el IMPI emite una prevencion sustantiva en el primer oficio, se reembolsa la tarifa MTC de $129.", "Garantie: Si l'IMPI emet une prevention substantielle lors du premier office action, les $129 d'honoraires MTC sont rembourses."),
         ];
         let cy3 = y - 34;
         for (const ci of costItems) {
@@ -1664,20 +1703,20 @@ async function buildPdf(
 
     // ── NICE CLASSIFICATION ────────────────────────────────────────────
     if (niceClasses.length > 0) {
-      let p = newPage(T("Nice Classification", "Clasificacion Niza"));
-      addPageHeader(p, regular, bold, markName, niceClasses, T("Nice Classification", "Clasificacion Niza"));
+      let p = newPage(T("Nice Classification", "Clasificacion Niza", "Classification Nice"));
+      addPageHeader(p, regular, bold, markName, niceClasses, T("Nice Classification", "Clasificacion Niza", "Classification Nice"));
       let y = PAGE_H - 34;
       y = addSectionHeader(p, bold,
-        T("NICE CLASSIFICATION", "CLASIFICACION NIZA"),
-        T("International trademark classification", "Clasificacion internacional de marcas"),
+        T("NICE CLASSIFICATION", "CLASIFICACION NIZA", "CLASSIFICATION NICE"),
+        T("International trademark classification", "Clasificacion internacional de marcas", "Classification internationale des marques"),
         y,
       );
       y -= 10;
 
       for (const nc of niceClasses) {
         if (y < MARGIN_BOT + 60) {
-          p = newPage(T("Nice Classification (cont.)", "Clasificacion Niza (cont.)"));
-          addPageHeader(p, regular, bold, markName, niceClasses, T("Nice Classification", "Clasificacion Niza"));
+          p = newPage(T("Nice Classification (cont.)", "Clasificacion Niza (cont.)", "Classification Nice (suite)"));
+          addPageHeader(p, regular, bold, markName, niceClasses, T("Nice Classification", "Clasificacion Niza", "Classification Nice"));
           y = PAGE_H - 44;
         }
         const className = useEnglish ? (nc.className_en || nc.className) : nc.className;
@@ -1717,6 +1756,9 @@ async function buildPdf(
   // Helper: render a cover page in a given language
   const renderCover = (coverLang: Lang, coverVerdict: Verdict, coverScore: number) => {
     const isEN = coverLang === "en";
+    const isFR = coverLang === "fr";
+    // TC: language selector for cover — 3-way
+    const TC = (en: string, es: string, fr: string): string => isEN ? en : isFR ? fr : es;
     const cvt = verdictColor(coverVerdict);
     const p = newPage("Cover");
 
@@ -1725,10 +1767,10 @@ async function buildPdf(
     p.drawRectangle({ x: 0, y: PAGE_H - headerH, width: PAGE_W, height: 0.8, color: C.border });
     p.drawText("MEXICO TRADEMARK CENTER", { x: MARGIN_X, y: PAGE_H - 28, size: 13, font: bold, color: C.primary });
     p.drawText("MexicoTrademarkCenter.com", { x: MARGIN_X, y: PAGE_H - 42, size: 8, font: regular, color: C.textMuted });
-    const rtLabel2 = isEN ? "TRADEMARK CLEARANCE REPORT" : "DICTAMEN DE VIABILIDAD MARCARIA";
+    const rtLabel2 = TC("TRADEMARK CLEARANCE REPORT", "DICTAMEN DE VIABILIDAD MARCARIA", "RAPPORT DE DISPONIBILITE DE MARQUE");
     const rtW2 = regular.widthOfTextAtSize(rtLabel2, 8);
     p.drawText(rtLabel2, { x: PAGE_W - MARGIN_X - rtW2, y: PAGE_H - 28, size: 8, font: regular, color: C.textMuted });
-    const rt2b = isEN ? "Dictamen de Viabilidad Marcaria" : "Trademark Clearance Report";
+    const rt2b = TC("Dictamen de Viabilidad Marcaria", "Trademark Clearance Report", "Trademark Clearance Report");
     const rt2bW = italic.widthOfTextAtSize(rt2b, 8);
     p.drawText(rt2b, { x: PAGE_W - MARGIN_X - rt2bW, y: PAGE_H - 40, size: 8, font: italic, color: C.textMuted });
 
@@ -1740,7 +1782,7 @@ async function buildPdf(
 
     const classChipY2 = markY2 - 22;
     if (niceClasses.length > 0) {
-      const chipStr2 = niceClasses.map(nc => (isEN ? `Class ${nc.classNumber}` : `Clase ${nc.classNumber}`)).join("  ·  ");
+      const chipStr2 = niceClasses.map(nc => TC(`Class ${nc.classNumber}`, `Clase ${nc.classNumber}`, `Classe ${nc.classNumber}`)).join("  ·  ");
       const chipW2 = bold.widthOfTextAtSize(chipStr2, 9);
       p.drawText(chipStr2, { x: (PAGE_W - chipW2) / 2, y: classChipY2, size: 9, font: bold, color: C.primary });
     }
@@ -1790,17 +1832,17 @@ async function buildPdf(
     }
 
     const legendY2 = gaugeCY2 - gaugeR2 - 76;
-    const legendTitle2 = isEN ? "WHAT THIS SCORE MEANS" : "QUE SIGNIFICA ESTE PUNTAJE";
+    const legendTitle2 = TC("WHAT THIS SCORE MEANS", "QUE SIGNIFICA ESTE PUNTAJE", "SIGNIFICATION DE CE SCORE");
     const ltW2 = bold.widthOfTextAtSize(legendTitle2, 8);
     p.drawText(legendTitle2, { x: (PAGE_W - ltW2) / 2, y: legendY2, size: 8, font: bold, color: C.textMuted });
     p.drawRectangle({ x: MARGIN_X + 40, y: legendY2 - 4, width: CONTENT_W - 80, height: 0.5, color: C.border });
 
-    const legendRows2: Array<{ range: string; label_en: string; label_es: string; desc_en: string; desc_es: string; v: Verdict }> = [
-      { range: "90-100", label_en: "CLEAR",     label_es: "SIN OBSTACULOS", desc_en: "No material obstacles",         desc_es: "Sin obstaculos materiales",           v: "CLEAR" },
-      { range: "75-89",  label_en: "LOW RISK",  label_es: "RIESGO BAJO",    desc_en: "Few obstacles, registrable",    desc_es: "Pocos obstaculos, registrable",        v: "LOW" },
-      { range: "55-74",  label_en: "MODERATE",  label_es: "MODERADO",       desc_en: "Registrable with strategy",     desc_es: "Registrable con estrategia",           v: "MODERATE" },
-      { range: "30-54",  label_en: "HIGH RISK", label_es: "RIESGO ALTO",    desc_en: "Multiple significant obstacles",desc_es: "Multiples obstaculos significativos",  v: "HIGH" },
-      { range: "0-29",   label_en: "CRITICAL",  label_es: "CRITICO",        desc_en: "Registration highly unlikely",  desc_es: "Registro altamente improbable",        v: "CRITICAL" },
+    const legendRows2: Array<{ range: string; label_en: string; label_es: string; label_fr: string; desc_en: string; desc_es: string; desc_fr: string; v: Verdict }> = [
+      { range: "90-100", label_en: "CLEAR",     label_es: "SIN OBSTACULOS", label_fr: "LIBRE",          desc_en: "No material obstacles",          desc_es: "Sin obstaculos materiales",          desc_fr: "Aucun obstacle materiel",           v: "CLEAR" },
+      { range: "75-89",  label_en: "LOW RISK",  label_es: "RIESGO BAJO",    label_fr: "FAIBLE RISQUE",  desc_en: "Few obstacles, registrable",     desc_es: "Pocos obstaculos, registrable",       desc_fr: "Peu d'obstacles, enregistrable",    v: "LOW" },
+      { range: "55-74",  label_en: "MODERATE",  label_es: "MODERADO",       label_fr: "MODERE",         desc_en: "Registrable with strategy",      desc_es: "Registrable con estrategia",          desc_fr: "Enregistrable avec strategie",      v: "MODERATE" },
+      { range: "30-54",  label_en: "HIGH RISK", label_es: "RIESGO ALTO",    label_fr: "RISQUE ELEVE",   desc_en: "Multiple significant obstacles", desc_es: "Multiples obstaculos significativos", desc_fr: "Obstacles significatifs multiples", v: "HIGH" },
+      { range: "0-29",   label_en: "CRITICAL",  label_es: "CRITICO",        label_fr: "CRITIQUE",       desc_en: "Registration highly unlikely",   desc_es: "Registro altamente improbable",       desc_fr: "Enregistrement tres improbable",    v: "CRITICAL" },
     ];
 
     let lRowY2 = legendY2 - 14;
@@ -1809,9 +1851,9 @@ async function buildPdf(
       const rowColor2 = verdictColor(row.v);
       p.drawCircle({ x: MARGIN_X + 44, y: lRowY2 - 4, size: 5, color: rowColor2 });
       p.drawText(row.range, { x: MARGIN_X + 54, y: lRowY2 - 8, size: 8, font: regular, color: C.textMuted });
-      const rowLabel2 = isEN ? row.label_en : row.label_es;
+      const rowLabel2 = TC(row.label_en, row.label_es, row.label_fr);
       p.drawText(rowLabel2, { x: MARGIN_X + 90, y: lRowY2 - 8, size: 8, font: isThis2 ? bold : regular, color: isThis2 ? rowColor2 : C.textSecond });
-      const desc2 = isEN ? row.desc_en : row.desc_es;
+      const desc2 = TC(row.desc_en, row.desc_es, row.desc_fr);
       const descLines2 = wrapText(desc2, regular, 7.5, CONTENT_W - 160);
       let descY2 = lRowY2 - 8;
       for (const dl of descLines2.slice(0, 1)) {
@@ -1833,19 +1875,21 @@ async function buildPdf(
     const distCover = result.distinctiveness;
     const rawDistCover = distCover ? (distCover.score <= 5 ? distCover.score * 20 : distCover.score) : 0;
     const tierEsCover: Record<string, string> = { generic: "Generica", descriptive: "Descriptiva", suggestive: "Sugestiva", arbitrary: "Arbitraria", fanciful: "De Fantasia" };
+    const tierFrCover: Record<string, string> = { generic: "Generique", descriptive: "Descriptive", suggestive: "Evocatrice", arbitrary: "Arbitraire", fanciful: "De Fantaisie" };
     const flagsCover = result.registrabilityFlags ?? [];
+    const distTierLabel = distCover ? (isFR ? (tierFrCover[distCover.tier] ?? distCover.tier) : isEN ? distCover.tier : (tierEsCover[distCover.tier] ?? distCover.tier)) : "N/A";
     const tiles2 = [
-      { value: String((result.marciaFindings ?? []).filter(f => (f.similarityScore ?? 0) >= 80).length), label_en: "Critical conflicts", label_es: "Conflictos criticos", color: (result.marciaFindings ?? []).some(f => (f.similarityScore ?? 0) >= 80) ? C.critical : C.success },
-      { value: String(flagsCover.length), label_en: "LFPPI grounds raised", label_es: "Causales LFPPI", color: flagsCover.length > 0 ? C.warning : C.success },
-      { value: distCover ? `${tierEsCover[distCover.tier] ?? distCover.tier} ${rawDistCover}/100` : "N/A", label_en: "Distinctiveness", label_es: "Distintividad", color: rawDistCover >= 60 ? C.success : rawDistCover >= 40 ? C.warning : C.critical },
-      { value: String(result.marciaTotalCount ?? (result.marciaFindings ?? []).length), label_en: "Marks in IMPI search", label_es: "Marcas en busqueda IMPI", color: (result.marciaTotalCount ?? 0) > 5 ? C.critical : C.warning },
+      { value: String((result.marciaFindings ?? []).filter(f => (f.similarityScore ?? 0) >= 80).length), label_en: "Critical conflicts", label_es: "Conflictos criticos", label_fr: "Conflits critiques", color: (result.marciaFindings ?? []).some(f => (f.similarityScore ?? 0) >= 80) ? C.critical : C.success },
+      { value: String(flagsCover.length), label_en: "LFPPI grounds raised", label_es: "Causales LFPPI", label_fr: "Motifs LFPPI", color: flagsCover.length > 0 ? C.warning : C.success },
+      { value: distCover ? `${distTierLabel} ${rawDistCover}/100` : "N/A", label_en: "Distinctiveness", label_es: "Distintividad", label_fr: "Distinctivite", color: rawDistCover >= 60 ? C.success : rawDistCover >= 40 ? C.warning : C.critical },
+      { value: String(result.marciaTotalCount ?? (result.marciaFindings ?? []).length), label_en: "Marks in IMPI search", label_es: "Marcas en busqueda IMPI", label_fr: "Marques en recherche IMPI", color: (result.marciaTotalCount ?? 0) > 5 ? C.critical : C.warning },
     ];
 
     for (let ti = 0; ti < tiles2.length; ti++) {
       const tx2 = MARGIN_X + ti * (tileW2 + 4);
       const tile2 = tiles2[ti];
       drawCard(p, tx2, tilesStartY2, tileW2, tileH2);
-      const tileLabel2 = isEN ? tile2.label_en : tile2.label_es;
+      const tileLabel2 = TC(tile2.label_en, tile2.label_es, tile2.label_fr);
       const tlLines2 = wrapText(tileLabel2.toUpperCase(), regular, 7, tileW2 - 12);
       let tly2 = tilesStartY2 - 10;
       for (const tll of tlLines2.slice(0, 2)) {
@@ -1867,7 +1911,7 @@ async function buildPdf(
       "Mexico -IMPI Registry",
       dateDisplay,
       `Report ID: ${shortId}`,
-      isEN ? "Preliminary analysis. Not legal advice." : "Analisis preliminar. No es asesoria legal.",
+      TC("Preliminary analysis. Not legal advice.", "Analisis preliminar. No es asesoria legal.", "Analyse preliminaire. Pas un avis juridique."),
     ].join("  ·  ");
     const footerW2 = regular.widthOfTextAtSize(footerStr2, 7.5);
     p.drawText(footerStr2, { x: (PAGE_W - footerW2) / 2, y: footerY2 - 14, size: 7.5, font: regular, color: C.textMuted });
