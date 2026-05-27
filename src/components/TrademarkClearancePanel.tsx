@@ -318,7 +318,7 @@ interface CheckoutProps {
   onBack: () => void;
 }
 
-function InlineCheckout({ lang, finalAmount, clientSecret, paymentIntentId, reportOrderId, userId, onSuccess, onBack }: CheckoutProps) {
+function InlineCheckout({ lang, finalAmount, clientSecret: _clientSecret, paymentIntentId, reportOrderId, userId, onSuccess, onBack }: CheckoutProps) {
   const stripe = useStripe();
   const elements = useElements();
   const [paying, setPaying] = useState(false);
@@ -576,7 +576,7 @@ function ClearanceLoadingSteps({ lang }: { lang: Lang }) {
 
 // ─── Locked teaser row ────────────────────────────────────────────────────────
 
-function LockedRow({ lang }: { lang: Lang }) {
+function LockedRow({ lang: _lang }: { lang: Lang }) {
   return (
     <div className="flex items-center gap-2 py-1.5 px-2 rounded-lg bg-gray-50 border border-gray-100">
       <Lock size={10} className="text-gray-300 flex-shrink-0" />
@@ -672,7 +672,6 @@ function RegistrabilityGauge({ score }: { score: number }) {
   const r = 32;
   const cx = 40;
   const cy = 40;
-  const circ = 2 * Math.PI * r;
   // Half-circle gauge: sweep from 180° to 360° (bottom left to bottom right via top)
   // We use a full circle arc trick: show 50% of circumference as track, fill proportionally
   const trackAngle = Math.PI; // 180 degrees
@@ -958,6 +957,35 @@ export default function TrademarkClearancePanel({
     (classFilter === null || String(f.classNum) === String(classFilter))
   );
 
+  // ── Composite Registrability Score ──────────────────────────────────────
+  const computeRegistrabilityScore = (res: ClearanceResult): number => {
+    let score = 100;
+    const d = res.distinctiveness;
+    if (d) {
+      if (d.tier === 'generic') score -= 40;
+      else if (d.tier === 'descriptive') score -= 25;
+      else if (d.tier === 'suggestive') score -= 10;
+    }
+    const flags = res.registrabilityFlags ?? [];
+    for (const f of flags) {
+      if (f.severity === 'high') score -= 20;
+      else if (f.severity === 'medium') score -= 10;
+      else score -= 5;
+    }
+    const against = (res.dupont ?? []).filter(f => f.verdict === 'against_registration').length;
+    score -= against * 4;
+    const total = res.marciaTotalCount ?? res.marciaFindings.length;
+    const exactSame = res.marciaFindings.some(f => f.name.toLowerCase().trim() === markName.toLowerCase().trim() && (f as MarciaFinding & { classOverlap?: string }).classOverlap === 'same');
+    if (exactSame) score -= 30;
+    else if (total >= 5) score -= 15;
+    else if (total > 0) score -= 8;
+    const transHigh = (res.translationAnalysis ?? []).some(t => t.risk === 'high');
+    const transMed = (res.translationAnalysis ?? []).some(t => t.risk === 'medium');
+    if (transHigh) score -= 10;
+    else if (transMed) score -= 5;
+    return Math.max(0, Math.min(100, Math.round(score)));
+  };
+
   const topConflicts = [...result.marciaFindings]
     .sort((a, b) => {
       const aA = /registrada|vigente|registered|active/i.test(a.status) ? 0 : 1;
@@ -1084,35 +1112,6 @@ export default function TrademarkClearancePanel({
     if (reportOrderId) {
       sessionStorage.setItem('tcpOrderId', reportOrderId);
     }
-  };
-
-  // ── Composite Registrability Score (Improvement 6) ───────────────────────
-  const computeRegistrabilityScore = (res: ClearanceResult): number => {
-    let score = 100;
-    const d = res.distinctiveness;
-    if (d) {
-      if (d.tier === 'generic') score -= 40;
-      else if (d.tier === 'descriptive') score -= 25;
-      else if (d.tier === 'suggestive') score -= 10;
-    }
-    const flags = res.registrabilityFlags ?? [];
-    for (const f of flags) {
-      if (f.severity === 'high') score -= 20;
-      else if (f.severity === 'medium') score -= 10;
-      else score -= 5;
-    }
-    const against = (res.dupont ?? []).filter(f => f.verdict === 'against_registration').length;
-    score -= against * 4;
-    const total = res.marciaTotalCount ?? res.marciaFindings.length;
-    const exactSame = res.marciaFindings.some(f => f.name.toLowerCase().trim() === markName.toLowerCase().trim() && (f as MarciaFinding & { classOverlap?: string }).classOverlap === 'same');
-    if (exactSame) score -= 30;
-    else if (total >= 5) score -= 15;
-    else if (total > 0) score -= 8;
-    const transHigh = (res.translationAnalysis ?? []).some(t => t.risk === 'high');
-    const transMed = (res.translationAnalysis ?? []).some(t => t.risk === 'medium');
-    if (transHigh) score -= 10;
-    else if (transMed) score -= 5;
-    return Math.max(0, Math.min(100, Math.round(score)));
   };
 
   // ── Per-mark lazy AI analysis fetch (Improvement 1) ──────────────────────
