@@ -442,7 +442,8 @@ Deno.serve(async (req: Request) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    const { reportOrderId } = await req.json() as { reportOrderId: string };
+    const body = await req.json() as { reportOrderId: string; resendTo?: string };
+    const { reportOrderId, resendTo } = body;
     if (!reportOrderId) {
       return new Response(JSON.stringify({ error: "reportOrderId is required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
@@ -487,9 +488,12 @@ Deno.serve(async (req: Request) => {
     const safeMarkName = order.mark_name.replace(/[^a-zA-Z0-9_\-]/g, "_").slice(0, 60);
     const attachmentFilename = `${safeMarkName}_Trademark_Clearance_Report.pdf`;
 
+    // If resendTo is provided, only send to that address (no staff notification)
+    const recipients = resendTo ? [resendTo] : [order.email];
+
     const clientPayload: Record<string, unknown> = {
       from: "Mexico Trademark Center <tm@mexicotrademarkcenter.com>",
-      to: [order.email],
+      to: recipients,
       subject,
       html,
       text,
@@ -509,6 +513,31 @@ Deno.serve(async (req: Request) => {
       ];
     }
 
+    // If resendTo override, skip staff notification and return immediately
+    if (resendTo) {
+      const resendResult = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify(clientPayload),
+      }).then(r => r.json().then(d => ({ ok: r.ok, data: d })));
+
+      await supabase.from("email_log").insert({
+        application_id: null,
+        recipient_email: resendTo,
+        template_key: "clearance_report_resend",
+        subject,
+        status: resendResult.ok ? "sent" : "failed",
+        resend_message_id: resendResult.data?.id ?? null,
+        error_message: resendResult.ok ? null : JSON.stringify(resendResult.data),
+      });
+
+      if (!resendResult.ok) {
+        console.error("Resend to override address failed:", resendResult.data);
+        return new Response(JSON.stringify({ error: "Failed to resend email" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      return new Response(JSON.stringify({ success: true, sentTo: resendTo }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     const risk = order.clearance_result?.risk ?? "low";
     const staffHtml = buildStaffNotificationHtml(
       order.id,
@@ -525,6 +554,23 @@ Deno.serve(async (req: Request) => {
 
     const staffSubject = `[TM Report Purchased] ${order.mark_name} — Order ${order.id.slice(0, 8).toUpperCase()}`;
 
+    const staffPayload: Record<string, unknown> = {
+      from: "Mexico Trademark Center <tm@mexicotrademarkcenter.com>",
+      to: STAFF_EMAILS,
+      cc: STAFF_CC_EMAILS,
+      subject: staffSubject,
+      html: staffHtml,
+    };
+    if (pdfBase64) {
+      staffPayload.attachments = [
+        {
+          filename: attachmentFilename,
+          content: pdfBase64,
+          content_type: "application/pdf",
+        },
+      ];
+    }
+
     // Send both emails independently
     const [clientResult, staffResult] = await Promise.allSettled([
       fetch("https://api.resend.com/emails", {
@@ -535,13 +581,7 @@ Deno.serve(async (req: Request) => {
       fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          from: "Mexico Trademark Center <tm@mexicotrademarkcenter.com>",
-          to: STAFF_EMAILS,
-          cc: STAFF_CC_EMAILS,
-          subject: staffSubject,
-          html: staffHtml,
-        }),
+        body: JSON.stringify(staffPayload),
       }).then(r => r.json().then(d => ({ ok: r.ok, data: d }))),
     ]);
 
