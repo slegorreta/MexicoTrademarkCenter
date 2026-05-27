@@ -243,7 +243,7 @@ async function runMarciaQuery(
 }
 
 async function searchMarcia(markName: string, classes: number[]): Promise<{
-  findings: Array<{ name: string; status: string; classNum: string; holder: string; classOverlap: ClassOverlap; imageUrl?: string; goodsServices?: string }>;
+  findings: Array<{ name: string; status: string; classNum: string; holder: string; classOverlap: ClassOverlap; imageUrl?: string; goodsServices?: string; expediente?: string; registrationNumber?: string; filingDate?: string; registrationDate?: string; expiryDate?: string }>;
   marciaUrl: string;
   totalCount: number;
 }> {
@@ -356,6 +356,38 @@ async function searchMarcia(markName: string, classes: number[]): Promise<{
         : typeof item.productos === "string" ? item.productos
         : undefined;
 
+      // Expediente (application number) — MARCia may use expediente, applicationNumber, folio, solicitud
+      const expediente = typeof item.expediente === "string" ? item.expediente
+        : typeof item.applicationNumber === "string" ? item.applicationNumber
+        : typeof item.folio === "string" ? item.folio
+        : typeof item.solicitud === "string" ? item.solicitud
+        : typeof item.id === "string" ? item.id
+        : undefined;
+
+      // Registration number
+      const registrationNumber = typeof item.registrationNumber === "string" ? item.registrationNumber
+        : typeof item.registro === "string" ? item.registro
+        : typeof item.certificado === "string" ? item.certificado
+        : undefined;
+
+      // Dates — MARCia may use various field names
+      const filingDate = typeof item.filingDate === "string" ? item.filingDate
+        : typeof item.applicationDate === "string" ? item.applicationDate
+        : typeof item.fechaSolicitud === "string" ? item.fechaSolicitud
+        : typeof item.presentacion === "string" ? item.presentacion
+        : undefined;
+
+      const registrationDate = typeof item.registrationDate === "string" ? item.registrationDate
+        : typeof item.fechaRegistro === "string" ? item.fechaRegistro
+        : typeof item.registro_fecha === "string" ? item.registro_fecha
+        : undefined;
+
+      const expiryDate = typeof item.expiryDate === "string" ? item.expiryDate
+        : typeof item.expirationDate === "string" ? item.expirationDate
+        : typeof item.fechaVencimiento === "string" ? item.fechaVencimiento
+        : typeof item.vigencia === "string" ? item.vigencia
+        : undefined;
+
       return {
         name,
         status: String(item.status ?? ""),
@@ -364,6 +396,11 @@ async function searchMarcia(markName: string, classes: number[]): Promise<{
         classOverlap,
         imageUrl,
         goodsServices,
+        expediente,
+        registrationNumber,
+        filingDate,
+        registrationDate,
+        expiryDate,
       };
     }).filter(f => f.name);
 
@@ -398,10 +435,18 @@ interface DistinctivenessAssessment {
   explanation_user?: string;
 }
 
+interface ElementDecomposition {
+  element: string;
+  distinctivenessTier: "generic" | "descriptive" | "suggestive" | "arbitrary" | "fanciful";
+  role: "dominant" | "secondary" | "descriptive_modifier" | "filler";
+  note?: string;
+}
+
 export interface TranslationFlag {
   languageCode: string;
   languageName: string;
   translatedForm: string;
+  romanization?: string;
   risk: "none" | "low" | "medium" | "high";
   issueCategory: string | null;
   details: string;
@@ -423,6 +468,7 @@ async function analyzeRegistrability(
   riskColor: "VERDE" | "AMARILLO" | "NARANJA" | "ROJO";
   dupont: DupontFactor[];
   distinctiveness: DistinctivenessAssessment;
+  elementDecomposition: ElementDecomposition[];
   riskSummary: string;
   riskSummary_en: string;
 }> {
@@ -551,6 +597,13 @@ Asigna riskColor según la combinación de distintividad + conflictos encontrado
 - "ROJO": marca genérica, o cualquier marca con conflicto exacto en la misma clase
 Si hay conflictos graves (marcas idénticas en la misma clase), escala el riskColor a "ROJO" independientemente de la distintividad.
 
+PARTE 6 — DESCOMPOSICIÓN DE ELEMENTOS DE LA MARCA
+Descompone la marca "${markName}" en sus elementos constitutivos (palabras, prefijos, sufijos, términos):
+- Para cada elemento indica: su rol ("dominant" = elemento más recordado/protegible, "secondary" = elemento de apoyo, "descriptive_modifier" = describe productos, "filler" = partícula sin valor distintivo).
+- Indica el tier de distintividad de ese elemento individual (puede diferir del tier global).
+- Proporciona una nota breve (máximo 1 oración) explicando el rol del elemento.
+Si la marca es una sola palabra sin partes discernibles, devuelve un solo elemento con la marca completa.
+
 Devuelve exactamente:
 {
   "flags": [{"category": "...", "severity": "low"|"medium"|"high", "explanation": "...(en español)"${isUserLang ? ', "explanation_en": "...", "explanation_user": "..."' : isEnglish ? ', "explanation_en": "..."' : ""}}],
@@ -558,6 +611,7 @@ Devuelve exactamente:
   "riskColor": "VERDE"|"AMARILLO"|"NARANJA"|"ROJO",
   "distinctiveness": {"tier": "...", "score": 1-5, "explanation": "...(en español)"${isUserLang ? ', "explanation_en": "...", "explanation_user": "..."' : isEnglish ? ', "explanation_en": "..."' : ""}},
   "dupont": [{"factor": "...", "verdict": "...", "reasoning": "...(en español)"${isUserLang ? ', "reasoning_en": "...", "reasoning_user": "..."' : isEnglish ? ', "reasoning_en": "..."' : ""}}],
+  "elementDecomposition": [{"element": "...", "distinctivenessTier": "generic"|"descriptive"|"suggestive"|"arbitrary"|"fanciful", "role": "dominant"|"secondary"|"descriptive_modifier"|"filler", "note": "..."}],
   "riskSummary": "...(en español)"${isUserLang ? ',\n  "riskSummary_en": "...",\n  "riskSummary_user": "..."' : isEnglish ? ',\n  "riskSummary_en": "..."' : ""}
 }`;
 
@@ -579,18 +633,18 @@ Devuelve exactamente:
           { role: "user", content: prompt },
         ],
         temperature: 0.1,
-        max_tokens: isUserLang ? 6000 : 4000,
+        max_tokens: isUserLang ? 7000 : 5000,
         response_format: { type: "json_object" },
       }),
     });
 
-    if (!response.ok) {
-      return { flags: [], risk: "low", riskColor: "VERDE", dupont: defaultDupont, distinctiveness: defaultDistinctiveness, riskSummary: "", riskSummary_en: "" };
-    }
+    const defaultReturn = { flags: [] as RegistrabilityFlag[], risk: "low" as const, riskColor: "VERDE" as const, dupont: defaultDupont, distinctiveness: defaultDistinctiveness, elementDecomposition: [] as ElementDecomposition[], riskSummary: "", riskSummary_en: "" };
+
+    if (!response.ok) return defaultReturn;
 
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content;
-    if (!content) return { flags: [], risk: "low", riskColor: "VERDE", dupont: defaultDupont, distinctiveness: defaultDistinctiveness, riskSummary: "", riskSummary_en: "" };
+    if (!content) return defaultReturn;
 
     const parsed = JSON.parse(content);
     const flags: RegistrabilityFlag[] = (parsed.flags ?? []).filter(
@@ -611,18 +665,29 @@ Devuelve exactamente:
       explanation_en: rawD.explanation_en ?? rawD.explanation ?? "",
       explanation_user: rawD.explanation_user ?? rawD.explanation_en ?? rawD.explanation ?? "",
     };
+    const validRoles = new Set(["dominant", "secondary", "descriptive_modifier", "filler"]);
+    const validTiers = new Set(["generic", "descriptive", "suggestive", "arbitrary", "fanciful"]);
+    const elementDecomposition: ElementDecomposition[] = (parsed.elementDecomposition ?? [])
+      .filter((e: Record<string, unknown>) => e.element && validRoles.has(e.role as string) && validTiers.has(e.distinctivenessTier as string))
+      .map((e: Record<string, unknown>) => ({
+        element: String(e.element),
+        distinctivenessTier: e.distinctivenessTier as ElementDecomposition["distinctivenessTier"],
+        role: e.role as ElementDecomposition["role"],
+        note: typeof e.note === "string" ? e.note : undefined,
+      }));
     return {
       flags,
       risk,
       riskColor,
       dupont,
       distinctiveness,
+      elementDecomposition,
       riskSummary: parsed.riskSummary ?? "",
       riskSummary_en: parsed.riskSummary_en ?? parsed.riskSummary ?? "",
     };
   } catch (err) {
     console.error("Registrability analysis error:", err);
-    return { flags: [], risk: "low", riskColor: "VERDE", dupont: defaultDupont, distinctiveness: defaultDistinctiveness, riskSummary: "", riskSummary_en: "" };
+    return { flags: [] as RegistrabilityFlag[], risk: "low" as const, riskColor: "VERDE" as const, dupont: defaultDupont, distinctiveness: defaultDistinctiveness, elementDecomposition: [] as ElementDecomposition[], riskSummary: "", riskSummary_en: "" };
   }
 }
 
@@ -670,6 +735,7 @@ Return a JSON array. For each language, include an entry even if risk is "none":
     "languageCode": "es",
     "languageName": "Spanish",
     "translatedForm": "translated or transliterated form here",
+    "romanization": "Latin-script romanization (only for non-Latin script languages like Chinese, Hindi, Japanese; omit or set null for Latin-script languages)",
     "risk": "none"|"low"|"medium"|"high",
     "issueCategory": null or one of: "confusingly_similar"|"generic_descriptive"|"deceptive"|"immoral_offensive"|"famous_mark"|"phonetic_conflict"|"geographic_indication",
     "details": "Explanation in ${LANGUAGE_NAMES[searchLanguage] ?? "English"} of what the translation means and what risk was found (2-3 sentences)",
@@ -704,10 +770,17 @@ Be thorough and specific. If "${markName}" is already in English and has no mean
     const parsed = JSON.parse(content);
     // Model may return { translations: [...] } or just [...]
     const arr: unknown[] = Array.isArray(parsed) ? parsed : (parsed.translations ?? parsed.results ?? []);
-    return arr.filter((e): e is TranslationFlag =>
-      typeof e === "object" && e !== null &&
-      "languageCode" in e && "translatedForm" in e && "risk" in e && "details" in e
-    );
+    return arr
+      .filter((e): e is TranslationFlag =>
+        typeof e === "object" && e !== null &&
+        "languageCode" in e && "translatedForm" in e && "risk" in e && "details" in e
+      )
+      .map((e) => ({
+        ...e,
+        romanization: (e as Record<string, unknown>).romanization
+          ? String((e as Record<string, unknown>).romanization)
+          : undefined,
+      }));
   } catch (err) {
     console.error("Translation analysis error:", err);
     return [];
@@ -1189,6 +1262,7 @@ Deno.serve(async (req: Request) => {
       registrabilityRisk: registrabilityResult.risk,
       dupont: registrabilityResult.dupont,
       distinctiveness: registrabilityResult.distinctiveness,
+      elementDecomposition: registrabilityResult.elementDecomposition,
       riskSummary: consistentSummary.riskSummary,
       riskSummary_en: consistentSummary.riskSummary_en,
       riskSummary_user: consistentSummary.riskSummary_user,

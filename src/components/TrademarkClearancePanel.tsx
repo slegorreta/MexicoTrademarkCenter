@@ -7,17 +7,18 @@ import {
   AlertTriangle, CheckCircle2, AlertCircle, Info, Globe,
   Scale, ArrowRight, TrendingUp, FileSearch, Minus, Lock,
   FileText, Mail, Tag, Download, Sparkles, Eye, Printer, HelpCircle, X,
-  Filter, BarChart2, List,
+  Filter, BarChart2, List, Zap, AlertOctagon,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-interface MarciaFinding { name: string; status: string; classNum: string; holder: string; imageUrl?: string; goodsServices?: string; }
+interface MarciaFinding { name: string; status: string; classNum: string; holder: string; imageUrl?: string; goodsServices?: string; expediente?: string; registrationNumber?: string; filingDate?: string; registrationDate?: string; expiryDate?: string; }
+interface ElementDecomposition { element: string; distinctivenessTier: 'generic' | 'descriptive' | 'suggestive' | 'arbitrary' | 'fanciful'; role: 'dominant' | 'secondary' | 'descriptive_modifier' | 'filler'; note?: string; }
 interface DomainResult { domain: string; available: boolean | null; status: 'available' | 'taken' | 'unknown'; }
 export interface RegistrabilityFlag { category: string; severity: 'low' | 'medium' | 'high'; explanation: string; explanation_en?: string; explanation_user?: string; }
 export interface DupontFactor { factor: string; verdict: 'favors_registration' | 'neutral' | 'against_registration'; reasoning: string; reasoning_en?: string; reasoning_user?: string; }
 export interface DistinctivenessAssessment { tier: 'generic' | 'descriptive' | 'suggestive' | 'arbitrary' | 'fanciful'; score: number; explanation: string; explanation_en?: string; explanation_user?: string; }
-export interface TranslationFlag { languageCode: string; languageName: string; translatedForm: string; risk: 'none' | 'low' | 'medium' | 'high'; issueCategory: string | null; details: string; details_en: string; }
+export interface TranslationFlag { languageCode: string; languageName: string; translatedForm: string; romanization?: string; risk: 'none' | 'low' | 'medium' | 'high'; issueCategory: string | null; details: string; details_en: string; }
 
 interface ClearanceResult {
   risk: 'low' | 'medium' | 'high';
@@ -35,6 +36,7 @@ interface ClearanceResult {
   riskSummary_en?: string;
   riskSummary_user?: string;
   translationAnalysis?: TranslationFlag[];
+  elementDecomposition?: ElementDecomposition[];
   searchLanguage?: string;
   disclaimer: string;
 }
@@ -605,6 +607,43 @@ function SimilarityGauge({ score, size = 48 }: { score: number; size?: number })
   );
 }
 
+// ─── Composite Registrability Score Gauge ────────────────────────────────────
+
+function RegistrabilityGauge({ score }: { score: number }) {
+  const color = score >= 70 ? '#10b981' : score >= 45 ? '#f59e0b' : '#ef4444';
+  const label = score >= 70 ? 'Strong' : score >= 45 ? 'Moderate' : 'Weak';
+  const r = 32;
+  const cx = 40;
+  const cy = 40;
+  const circ = 2 * Math.PI * r;
+  // Half-circle gauge: sweep from 180° to 360° (bottom left to bottom right via top)
+  // We use a full circle arc trick: show 50% of circumference as track, fill proportionally
+  const trackAngle = Math.PI; // 180 degrees
+  const fillAngle = (score / 100) * Math.PI;
+  const toCoord = (angle: number) => ({
+    x: cx + r * Math.cos(Math.PI + angle),
+    y: cy + r * Math.sin(Math.PI + angle),
+  });
+  const start = toCoord(0);
+  const trackEnd = toCoord(trackAngle);
+  const fillEnd = toCoord(fillAngle);
+  const trackD = `M ${start.x} ${start.y} A ${r} ${r} 0 1 1 ${trackEnd.x} ${trackEnd.y}`;
+  const fillD = fillAngle > 0
+    ? `M ${start.x} ${start.y} A ${r} ${r} 0 ${fillAngle > Math.PI / 2 ? 1 : 0} 1 ${fillEnd.x} ${fillEnd.y}`
+    : '';
+
+  return (
+    <div className="flex flex-col items-center">
+      <svg width="80" height="48" viewBox="0 0 80 48">
+        <path d={trackD} fill="none" stroke="#f0f0f0" strokeWidth={7} strokeLinecap="round" />
+        {fillD && <path d={fillD} fill="none" stroke={color} strokeWidth={7} strokeLinecap="round" style={{ transition: 'all 0.6s ease' }} />}
+        <text x={cx} y={cy + 4} textAnchor="middle" fontSize={13} fontWeight="800" fill={color}>{score}</text>
+      </svg>
+      <span className="text-[9px] font-semibold mt-0.5" style={{ color }}>{label}</span>
+    </div>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function TrademarkClearancePanel({
@@ -656,6 +695,9 @@ export default function TrademarkClearancePanel({
   const [resultsTab, setResultsTab] = useState<'analysis' | 'raw'>('analysis');
   const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set());
   const [showFilters, setShowFilters] = useState(false);
+
+  // Per-mark lazy AI analysis cache: key = cardKey, value = { analysis, riskVerdict, loading }
+  const [markAnalysisCache, setMarkAnalysisCache] = useState<Record<number, { analysis: string; riskVerdict: string; loading: boolean }>>({});
 
   const runCheck = async () => {
     if (runningRef.current || (!markName.trim() && !imageBase64)) return;
@@ -778,6 +820,11 @@ export default function TrademarkClearancePanel({
   const totalMarcia = result.marciaTotalCount ?? result.marciaFindings.length;
   const comDomain = domainResults.find(d => d.domain.endsWith('.com'));
   const comMxDomain = domainResults.find(d => d.domain.endsWith('.com.mx'));
+  const regScore = computeRegistrabilityScore(result);
+  const elementDecomp = result.elementDecomposition ?? [];
+  const weakElements = elementDecomp.filter(e => e.role === 'descriptive_modifier' || e.distinctivenessTier === 'generic' || e.distinctivenessTier === 'descriptive');
+  const distinctScore = result.distinctiveness?.score ?? 4;
+  const showDontUseWarning = distinctScore <= 2 && weakElements.length > 0;
 
   // Derive similarity score heuristic (0-100) for a finding vs search mark
   const getSimilarityScore = (findingName: string): number => {
@@ -887,6 +934,63 @@ export default function TrademarkClearancePanel({
     setPaid(true);
     if (reportOrderId) {
       sessionStorage.setItem('tcpOrderId', reportOrderId);
+    }
+  };
+
+  // ── Composite Registrability Score (Improvement 6) ───────────────────────
+  const computeRegistrabilityScore = (res: ClearanceResult): number => {
+    let score = 100;
+    const d = res.distinctiveness;
+    if (d) {
+      if (d.tier === 'generic') score -= 40;
+      else if (d.tier === 'descriptive') score -= 25;
+      else if (d.tier === 'suggestive') score -= 10;
+    }
+    const flags = res.registrabilityFlags ?? [];
+    for (const f of flags) {
+      if (f.severity === 'high') score -= 20;
+      else if (f.severity === 'medium') score -= 10;
+      else score -= 5;
+    }
+    const against = (res.dupont ?? []).filter(f => f.verdict === 'against_registration').length;
+    score -= against * 4;
+    const total = res.marciaTotalCount ?? res.marciaFindings.length;
+    const exactSame = res.marciaFindings.some(f => f.name.toLowerCase().trim() === markName.toLowerCase().trim() && (f as MarciaFinding & { classOverlap?: string }).classOverlap === 'same');
+    if (exactSame) score -= 30;
+    else if (total >= 5) score -= 15;
+    else if (total > 0) score -= 8;
+    const transHigh = (res.translationAnalysis ?? []).some(t => t.risk === 'high');
+    const transMed = (res.translationAnalysis ?? []).some(t => t.risk === 'medium');
+    if (transHigh) score -= 10;
+    else if (transMed) score -= 5;
+    return Math.max(0, Math.min(100, Math.round(score)));
+  };
+
+  // ── Per-mark lazy AI analysis fetch (Improvement 1) ──────────────────────
+  const fetchMarkAnalysis = async (cardKey: number, finding: MarciaFinding) => {
+    if (markAnalysisCache[cardKey]) return;
+    setMarkAnalysisCache(prev => ({ ...prev, [cardKey]: { analysis: '', riskVerdict: 'medium', loading: true } }));
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/analyze-mark-conflict`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({
+          applicantMark: markName,
+          conflictMark: finding.name,
+          conflictHolder: finding.holder,
+          conflictStatus: finding.status,
+          conflictClass: finding.classNum,
+          conflictGoodsServices: finding.goodsServices,
+          applicantClasses: classes,
+          applicantGoodsServices: goodsServices,
+          language: lang,
+          similarityScore: getSimilarityScore(finding.name),
+        }),
+      });
+      const data = await res.json();
+      setMarkAnalysisCache(prev => ({ ...prev, [cardKey]: { analysis: data.analysis ?? '', riskVerdict: data.riskVerdict ?? 'medium', loading: false } }));
+    } catch {
+      setMarkAnalysisCache(prev => ({ ...prev, [cardKey]: { analysis: lang === 'es' ? 'Error al cargar el análisis.' : 'Failed to load analysis.', riskVerdict: 'medium', loading: false } }));
     }
   };
 
@@ -1033,20 +1137,34 @@ export default function TrademarkClearancePanel({
                   );
                 })}
               </div>
-              {/* Saturation bar (based on totalMarcia as proxy) */}
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-[9px] text-gray-400 flex-shrink-0">
-                  {lang === 'es' ? 'Saturación de clase' : lang === 'zh' ? '类别饱和度' : 'Class saturation'}:
-                </span>
-                <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all ${totalMarcia > 20 ? 'bg-red-400' : totalMarcia > 10 ? 'bg-amber-400' : 'bg-emerald-400'}`}
-                    style={{ width: `${Math.min(100, (totalMarcia / 30) * 100)}%` }}
-                  />
+              {/* Saturation bar (Improvement 3: count + example chips) */}
+              <div className="mb-1.5">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[9px] text-gray-400 flex-shrink-0">
+                    {lang === 'es' ? 'Saturación de clase' : lang === 'zh' ? '类别饱和度' : 'Class saturation'}:
+                  </span>
+                  <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${totalMarcia > 20 ? 'bg-red-400' : totalMarcia > 10 ? 'bg-amber-400' : 'bg-emerald-400'}`}
+                      style={{ width: `${Math.min(100, (totalMarcia / 30) * 100)}%` }}
+                    />
+                  </div>
+                  <span className={`text-[9px] font-semibold flex-shrink-0 ${totalMarcia > 20 ? 'text-red-600' : totalMarcia > 10 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                    {totalMarcia} {lang === 'es' ? 'marcas' : lang === 'zh' ? '个商标' : 'marks'}
+                  </span>
                 </div>
-                <span className={`text-[9px] font-semibold flex-shrink-0 ${totalMarcia > 20 ? 'text-red-600' : totalMarcia > 10 ? 'text-amber-600' : 'text-emerald-600'}`}>
-                  {totalMarcia > 20 ? (lang === 'es' ? 'Alta' : 'High') : totalMarcia > 10 ? (lang === 'es' ? 'Media' : 'Med') : (lang === 'es' ? 'Baja' : 'Low')}
-                </span>
+                {result.marciaFindings.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {result.marciaFindings.slice(0, 4).map((f, i) => (
+                      <span key={i} className="text-[8px] font-medium bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full border border-gray-200 truncate max-w-[80px]" title={f.name}>
+                        {f.name.length > 10 ? f.name.slice(0, 9) + '…' : f.name}
+                      </span>
+                    ))}
+                    {totalMarcia > 4 && (
+                      <span className="text-[8px] text-gray-400 px-1 py-0.5">+{totalMarcia - 4}</span>
+                    )}
+                  </div>
+                )}
               </div>
               {/* AI narrative (teaser) */}
               <p className={`text-[10px] leading-relaxed ${paid ? 'text-gray-600' : 'text-gray-400'}`}>
@@ -1078,6 +1196,100 @@ export default function TrademarkClearancePanel({
           </p>
         </div>
       )}
+
+      {/* ── Element Decomposition Badges (Improvement 2) ───────────────────── */}
+      {elementDecomp.length > 0 && (
+        <div className="border-t border-gray-100 bg-white/50 px-4 py-2.5">
+          <div className="flex items-center gap-1.5 mb-2">
+            <Tag size={11} className="text-[#1a2e1a] flex-shrink-0" />
+            <span className="text-[10px] font-semibold text-gray-600 uppercase tracking-wide">
+              {lang === 'es' ? 'Elementos de la Marca' : lang === 'zh' ? '商标元素分析' : lang === 'de' ? 'Markenelemente' : lang === 'fr' ? 'Éléments de la marque' : lang === 'pt' ? 'Elementos da Marca' : 'Mark Elements'}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {elementDecomp.map((el, i) => {
+              const tierColor = el.distinctivenessTier === 'fanciful' ? 'bg-[#1a2e1a] text-white border-[#1a2e1a]'
+                : el.distinctivenessTier === 'arbitrary' ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                : el.distinctivenessTier === 'suggestive' ? 'bg-amber-100 text-amber-800 border-amber-300'
+                : el.distinctivenessTier === 'descriptive' ? 'bg-orange-100 text-orange-800 border-orange-300'
+                : 'bg-red-100 text-red-800 border-red-300';
+              const roleDot = el.role === 'dominant' ? 'bg-[#c9a84c]'
+                : el.role === 'secondary' ? 'bg-blue-400'
+                : el.role === 'descriptive_modifier' ? 'bg-orange-400'
+                : 'bg-gray-300';
+              return (
+                <div key={i} title={el.note ?? el.role}
+                  className={`flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full border ${tierColor}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${roleDot}`} />
+                  {el.element}
+                  <span className="font-normal opacity-70 ml-0.5 text-[8px] uppercase tracking-wide">{el.distinctivenessTier.slice(0, 4)}</span>
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-[9px] text-gray-400 mt-1.5 flex items-center gap-1">
+            <span className="inline-flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded-full bg-[#c9a84c] inline-block" /> {lang === 'es' ? 'dominante' : 'dominant'}</span>
+            <span className="mx-1 text-gray-300">·</span>
+            <span className="inline-flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded-full bg-blue-400 inline-block" /> {lang === 'es' ? 'secundario' : 'secondary'}</span>
+            <span className="mx-1 text-gray-300">·</span>
+            <span className="inline-flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded-full bg-orange-400 inline-block" /> {lang === 'es' ? 'descriptivo' : 'descriptive'}</span>
+          </p>
+        </div>
+      )}
+
+      {/* ── "Don't Use These Words" warning (Improvement 5) ────────────────── */}
+      {showDontUseWarning && (
+        <div className="border-t border-orange-100 bg-orange-50 px-4 py-2.5">
+          <div className="flex items-start gap-2">
+            <AlertOctagon size={13} className="text-orange-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-bold text-orange-800 mb-1">
+                {lang === 'es' ? 'Advertencia: Palabras de Baja Distintividad' : lang === 'zh' ? '警告：低显著性词汇' : lang === 'de' ? 'Warnung: Schwach unterscheidungskräftige Wörter' : lang === 'fr' ? 'Avertissement : mots peu distinctifs' : lang === 'pt' ? 'Aviso: Palavras de Baixa Distintividade' : 'Warning: Low-Distinctiveness Words'}
+              </p>
+              <p className="text-[9px] text-orange-700 leading-relaxed mb-1.5">
+                {lang === 'es'
+                  ? 'Los siguientes elementos de tu marca tienen baja distintividad. Evita usarlos como elementos principales en futuras marcas ya que dificultan el registro:'
+                  : lang === 'zh' ? '以下商标元素显著性较低。避免将其作为未来商标的主要元素，因为这会增加注册难度：'
+                  : 'The following elements of your mark have low distinctiveness. Avoid relying on them as primary elements in future marks as they hinder registration:'}
+              </p>
+              <div className="flex flex-wrap gap-1">
+                {weakElements.map((el, i) => (
+                  <span key={i} className="text-[9px] font-bold bg-orange-200 text-orange-900 px-2 py-0.5 rounded-full border border-orange-300 line-through decoration-orange-500">
+                    {el.element}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Composite Registrability Score (Improvement 6) ─────────────────── */}
+      <div className="border-t border-gray-100 bg-white/60 px-4 py-3">
+        <div className="flex items-center gap-3">
+          <RegistrabilityGauge score={regScore} />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <Zap size={11} className="text-[#c9a84c] flex-shrink-0" />
+              <span className="text-[10px] font-bold text-gray-700 uppercase tracking-wide">
+                {lang === 'es' ? 'Puntuación de Registrabilidad' : lang === 'zh' ? '注册可能性评分' : lang === 'de' ? 'Registrierbarkeitsscore' : lang === 'fr' ? 'Score de registrabilité' : lang === 'pt' ? 'Pontuação de Registrabilidade' : 'Registrability Score'}
+              </span>
+            </div>
+            <div className="w-full bg-gray-100 rounded-full h-2 mb-1 overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-700"
+                style={{ width: `${regScore}%`, backgroundColor: regScore >= 70 ? '#10b981' : regScore >= 45 ? '#f59e0b' : '#ef4444' }}
+              />
+            </div>
+            <p className="text-[9px] text-gray-400 leading-snug">
+              {lang === 'es'
+                ? `Puntuación compuesta basada en distintividad, factores DuPont, motivos LFPPI y conflictos MARCia.`
+                : lang === 'zh' ? `基于显著性、杜邦因素、LFPPI动因和MARCia冲突的综合评分。`
+                : `Composite score based on distinctiveness, DuPont factors, LFPPI grounds, and MARCia conflicts.`}
+            </p>
+          </div>
+        </div>
+      </div>
 
       {/* ── Quick scorecard ─────────────────────────────────────────────────── */}
       <div className="border-t border-gray-100 bg-white/60 px-4 py-3">
@@ -1258,6 +1470,7 @@ export default function TrademarkClearancePanel({
                   const isRegistered = /registrada|vigente|registered|active/i.test(statusLower) && !/tram|pend|proc/i.test(statusLower);
                   const isPending = /tram|pend|proc|solicitud/i.test(statusLower);
                   const isExpanded = expandedCards.has(i);
+                  const aiData = markAnalysisCache[i];
 
                   const statusBadge = isRegistered
                     ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
@@ -1311,17 +1524,45 @@ export default function TrademarkClearancePanel({
                           {f.goodsServices && (
                             <p className="text-[9px] text-gray-400 mt-0.5 line-clamp-1 leading-snug">{f.goodsServices}</p>
                           )}
+                          {/* Improvement 4: Expediente / Reg # / dates */}
+                          {(f.expediente || f.registrationNumber || f.filingDate) && (
+                            <div className="flex flex-wrap gap-x-2 gap-y-0.5 mt-1">
+                              {f.expediente && (
+                                <span className="text-[8px] text-gray-400 font-mono">
+                                  {lang === 'es' ? 'Exp.' : 'Exp.'} {f.expediente}
+                                </span>
+                              )}
+                              {f.registrationNumber && (
+                                <span className="text-[8px] text-gray-400 font-mono">
+                                  {lang === 'es' ? 'Reg.' : 'Reg.'} {f.registrationNumber}
+                                </span>
+                              )}
+                              {f.filingDate && (
+                                <span className="text-[8px] text-gray-400">
+                                  {lang === 'es' ? 'Solicitud:' : 'Filed:'} {f.filingDate}
+                                </span>
+                              )}
+                              {f.expiryDate && (
+                                <span className="text-[8px] text-gray-400">
+                                  {lang === 'es' ? 'Vence:' : 'Exp:'} {f.expiryDate}
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
-                      {/* Expandable AI analysis row */}
+                      {/* Expandable AI analysis row (Improvement 1: lazy load) */}
                       <div className="border-t border-gray-50">
                         <button
                           type="button"
-                          onClick={() => setExpandedCards(prev => {
-                            const next = new Set(prev);
-                            if (next.has(i)) next.delete(i); else next.add(i);
-                            return next;
-                          })}
+                          onClick={() => {
+                            setExpandedCards(prev => {
+                              const next = new Set(prev);
+                              if (next.has(i)) next.delete(i); else next.add(i);
+                              return next;
+                            });
+                            if (paid && !markAnalysisCache[i]) fetchMarkAnalysis(i, f);
+                          }}
                           className="w-full flex items-center justify-between px-3 py-1.5 text-[9px] font-medium text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors"
                         >
                           <span className="flex items-center gap-1">
@@ -1334,12 +1575,20 @@ export default function TrademarkClearancePanel({
                         {isExpanded && (
                           <div className="px-3 pb-2.5 pt-1 bg-gray-50/50">
                             {paid ? (
-                              <p className="text-[10px] text-gray-600 leading-relaxed">
-                                {lang === 'es'
-                                  ? `La marca "${f.name}" presenta ${isExact ? 'coincidencia exacta' : 'similitud'} con tu solicitud. Estado actual: ${f.status}.${f.classNum ? ` Registrada en clase ${f.classNum}.` : ''}`
-                                  : `"${f.name}" shows ${isExact ? 'exact' : 'notable'} similarity with your mark. Current status: ${f.status}.${f.classNum ? ` Registered in class ${f.classNum}.` : ''}`
-                                }
-                              </p>
+                              aiData?.loading ? (
+                                <div className="flex items-center gap-1.5 text-[9px] text-gray-400">
+                                  <Loader2 size={9} className="animate-spin flex-shrink-0" />
+                                  <span>{lang === 'es' ? 'Analizando…' : 'Analyzing…'}</span>
+                                </div>
+                              ) : aiData?.analysis ? (
+                                <p className="text-[10px] text-gray-600 leading-relaxed">{aiData.analysis}</p>
+                              ) : (
+                                <p className="text-[10px] text-gray-600 leading-relaxed">
+                                  {lang === 'es'
+                                    ? `La marca "${f.name}" presenta ${isExact ? 'coincidencia exacta' : 'similitud'} con tu solicitud. Estado: ${f.status}.${f.classNum ? ` Clase ${f.classNum}.` : ''}`
+                                    : `"${f.name}" shows ${isExact ? 'exact' : 'notable'} similarity. Status: ${f.status}.${f.classNum ? ` Class ${f.classNum}.` : ''}`}
+                                </p>
+                              )
                             ) : (
                               <div className="flex items-center gap-1.5 text-[9px] text-gray-400">
                                 <Lock size={9} className="flex-shrink-0" />
@@ -1512,7 +1761,9 @@ export default function TrademarkClearancePanel({
                       const isPending = /tram|pend|proc|solicitud/i.test(statusLower);
                       const isExact = f.name.toLowerCase().trim() === markName.toLowerCase().trim();
                       const simScore = getSimilarityScore(f.name);
-                      const isExpPaid = expandedCards.has(1000 + i);
+                      const cardKey = 1000 + i;
+                      const isExpPaid = expandedCards.has(cardKey);
+                      const aiDataPaid = markAnalysisCache[cardKey];
                       const statusBadge = isRegistered
                         ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
                         : isPending
@@ -1556,18 +1807,50 @@ export default function TrademarkClearancePanel({
                               {f.goodsServices && (
                                 <p className="text-[10px] text-gray-400 mt-0.5 line-clamp-2 leading-snug">{f.goodsServices}</p>
                               )}
+                              {/* Improvement 4: Expediente / Reg # / dates */}
+                              {(f.expediente || f.registrationNumber || f.filingDate || f.registrationDate || f.expiryDate) && (
+                                <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5 pt-1.5 border-t border-gray-50">
+                                  {f.expediente && (
+                                    <span className="text-[9px] text-gray-500 font-mono flex items-center gap-0.5">
+                                      <span className="font-semibold text-gray-400">{lang === 'es' ? 'Exp.' : 'App.'}</span> {f.expediente}
+                                    </span>
+                                  )}
+                                  {f.registrationNumber && (
+                                    <span className="text-[9px] text-gray-500 font-mono flex items-center gap-0.5">
+                                      <span className="font-semibold text-gray-400">Reg.</span> {f.registrationNumber}
+                                    </span>
+                                  )}
+                                  {f.filingDate && (
+                                    <span className="text-[9px] text-gray-500 flex items-center gap-0.5">
+                                      <span className="font-semibold text-gray-400">{lang === 'es' ? 'Solicitud:' : 'Filed:'}</span> {f.filingDate}
+                                    </span>
+                                  )}
+                                  {f.registrationDate && (
+                                    <span className="text-[9px] text-gray-500 flex items-center gap-0.5">
+                                      <span className="font-semibold text-gray-400">{lang === 'es' ? 'Registro:' : 'Reg. date:'}</span> {f.registrationDate}
+                                    </span>
+                                  )}
+                                  {f.expiryDate && (
+                                    <span className="text-[9px] text-gray-500 flex items-center gap-0.5">
+                                      <span className="font-semibold text-gray-400">{lang === 'es' ? 'Vencimiento:' : 'Expiry:'}</span> {f.expiryDate}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
-                          {/* Expandable AI analysis */}
+                          {/* Expandable AI analysis (Improvement 1: lazy load) */}
                           <div className="border-t border-gray-50">
                             <button
                               type="button"
-                              onClick={() => setExpandedCards(prev => {
-                                const next = new Set(prev);
-                                const key = 1000 + i;
-                                if (next.has(key)) next.delete(key); else next.add(key);
-                                return next;
-                              })}
+                              onClick={() => {
+                                setExpandedCards(prev => {
+                                  const next = new Set(prev);
+                                  if (next.has(cardKey)) next.delete(cardKey); else next.add(cardKey);
+                                  return next;
+                                });
+                                if (!markAnalysisCache[cardKey]) fetchMarkAnalysis(cardKey, f);
+                              }}
                               className="w-full flex items-center justify-between px-3 py-1.5 text-[9px] font-medium text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors"
                             >
                               <span className="flex items-center gap-1"><Sparkles size={9} className="text-[#c9a84c]" />{lang === 'es' ? 'Ver análisis IA' : 'View AI analysis'}</span>
@@ -1575,12 +1858,20 @@ export default function TrademarkClearancePanel({
                             </button>
                             {isExpPaid && (
                               <div className="px-3 pb-2.5 pt-1 bg-gray-50/50">
-                                <p className="text-[10px] text-gray-600 leading-relaxed">
-                                  {lang === 'es'
-                                    ? `"${f.name}" — ${isExact ? 'Coincidencia exacta con tu marca.' : `Similitud estimada ${simScore}%.`} Estado: ${f.status}.${f.classNum ? ` Clase ${f.classNum}.` : ''}${f.holder ? ` Titular: ${f.holder}.` : ''}`
-                                    : `"${f.name}" — ${isExact ? 'Exact match with your mark.' : `Estimated similarity ${simScore}%.`} Status: ${f.status}.${f.classNum ? ` Class ${f.classNum}.` : ''}${f.holder ? ` Holder: ${f.holder}.` : ''}`
-                                  }
-                                </p>
+                                {aiDataPaid?.loading ? (
+                                  <div className="flex items-center gap-1.5 text-[9px] text-gray-400">
+                                    <Loader2 size={9} className="animate-spin flex-shrink-0" />
+                                    <span>{lang === 'es' ? 'Analizando…' : 'Analyzing…'}</span>
+                                  </div>
+                                ) : aiDataPaid?.analysis ? (
+                                  <p className="text-[10px] text-gray-600 leading-relaxed">{aiDataPaid.analysis}</p>
+                                ) : (
+                                  <p className="text-[10px] text-gray-600 leading-relaxed">
+                                    {lang === 'es'
+                                      ? `"${f.name}" — ${isExact ? 'Coincidencia exacta.' : `Similitud estimada ${simScore}%.`} Estado: ${f.status}.${f.classNum ? ` Clase ${f.classNum}.` : ''}${f.holder ? ` Titular: ${f.holder}.` : ''}`
+                                      : `"${f.name}" — ${isExact ? 'Exact match.' : `Est. similarity ${simScore}%.`} Status: ${f.status}.${f.classNum ? ` Class ${f.classNum}.` : ''}${f.holder ? ` Holder: ${f.holder}.` : ''}`}
+                                  </p>
+                                )}
                               </div>
                             )}
                           </div>
@@ -1767,32 +2058,48 @@ export default function TrademarkClearancePanel({
                 </button>
                 {translationExpanded && (
                   <div className="px-4 pb-3">
-                    {!hasConflicts ? (
-                      <div className="flex items-center gap-2 text-xs text-emerald-700">
-                        <CheckCircle2 size={13} className="text-emerald-500" />
-                        <span>{tr('translationNoConflicts', lang)}</span>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {conflictFlags.map((f, i) => {
-                          const sc = { high: 'bg-red-50 border-red-200 text-red-800', medium: 'bg-amber-50 border-amber-200 text-amber-800', low: 'bg-blue-50 border-blue-200 text-blue-800', none: 'bg-gray-50 border-gray-200 text-gray-700' }[f.risk];
-                          const sb = { high: 'bg-red-100 text-red-700', medium: 'bg-amber-100 text-amber-700', low: 'bg-blue-100 text-blue-700', none: 'bg-gray-100 text-gray-500' }[f.risk];
-                          return (
-                            <div key={i} className={`border rounded-lg px-3 py-2.5 ${sc}`}>
-                              <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide ${sb}`}>{f.risk}</span>
-                                <span className="text-xs font-semibold">{f.languageName}</span>
-                                <span className="text-[10px] text-gray-500 font-mono bg-white/60 px-1.5 py-0.5 rounded border border-current/10">{tr('translatedAs', lang)}: &ldquo;{f.translatedForm}&rdquo;</span>
-                              </div>
-                              {f.issueCategory && <p className="text-[10px] font-medium opacity-70 mb-0.5 uppercase tracking-wide">{f.issueCategory}</p>}
-                              <p className="text-xs leading-relaxed opacity-90">{f.details}</p>
-                            </div>
-                          );
-                        })}
-                        <p className="text-[10px] text-gray-400 mt-1 flex items-center gap-1">
-                          <Info size={9} className="flex-shrink-0" />Full translation conflict details are included in the purchased PDF report.
-                        </p>
-                      </div>
+                    {/* Improvement 7: Always show all 8 languages in a table */}
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-[10px] border-collapse">
+                        <thead>
+                          <tr className="border-b border-gray-100">
+                            <th className="text-left py-1.5 pr-2 font-semibold text-gray-400 uppercase tracking-wide text-[9px] w-24">{lang === 'es' ? 'Idioma' : 'Language'}</th>
+                            <th className="text-left py-1.5 pr-2 font-semibold text-gray-400 uppercase tracking-wide text-[9px]">{lang === 'es' ? 'Forma' : 'Form'}</th>
+                            <th className="text-left py-1.5 pr-2 font-semibold text-gray-400 uppercase tracking-wide text-[9px] w-16">{lang === 'es' ? 'Riesgo' : 'Risk'}</th>
+                            <th className="text-left py-1.5 font-semibold text-gray-400 uppercase tracking-wide text-[9px]">{lang === 'es' ? 'Nota' : 'Note'}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {tflags.map((f, i) => {
+                            const riskBadge = { high: 'bg-red-100 text-red-700', medium: 'bg-amber-100 text-amber-700', low: 'bg-blue-100 text-blue-700', none: 'bg-emerald-50 text-emerald-600' }[f.risk];
+                            const riskLabel = { high: lang === 'es' ? 'Alto' : 'High', medium: lang === 'es' ? 'Medio' : 'Med', low: lang === 'es' ? 'Bajo' : 'Low', none: lang === 'es' ? 'Ninguno' : 'None' }[f.risk];
+                            return (
+                              <tr key={i} className={`border-b border-gray-50 last:border-0 ${f.risk !== 'none' ? 'bg-amber-50/30' : ''}`}>
+                                <td className="py-1.5 pr-2 font-semibold text-gray-700 align-top">{f.languageName}</td>
+                                <td className="py-1.5 pr-2 align-top">
+                                  <span className="font-mono text-gray-700">{f.translatedForm}</span>
+                                  {f.romanization && (
+                                    <span className="block text-[9px] text-gray-400 italic">{f.romanization}</span>
+                                  )}
+                                </td>
+                                <td className="py-1.5 pr-2 align-top">
+                                  <span className={`inline-block text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase ${riskBadge}`}>{riskLabel}</span>
+                                </td>
+                                <td className="py-1.5 text-gray-500 align-top leading-relaxed">
+                                  {f.risk !== 'none' ? f.details : (
+                                    <span className="text-emerald-600">{lang === 'es' ? 'Sin conflictos' : 'No conflicts'}</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                    {hasConflicts && (
+                      <p className="text-[10px] text-gray-400 mt-2 flex items-center gap-1">
+                        <Info size={9} className="flex-shrink-0" />{lang === 'es' ? 'Detalles completos incluidos en el PDF.' : 'Full conflict details are included in the purchased PDF report.'}
+                      </p>
                     )}
                   </div>
                 )}
