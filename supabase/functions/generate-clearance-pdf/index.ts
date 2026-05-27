@@ -361,15 +361,17 @@ function computePentagonScores(result: ClearanceResult): Array<{ key: string; sc
   ];
 }
 
-function getAxisLabel(key: string, useEnglish: boolean): string {
-  const map: Record<string, { en: string; es: string }> = {
-    "Distinctiveness":        { en: "Distinctiveness",       es: "Distintividad" },
-    "LFPPI":                  { en: "LFPPI",                 es: "LFPPI" },
-    "IMPI Registry":          { en: "IMPI Registry",         es: "Registro IMPI" },
-    "Registry Availability":  { en: "Registry Availability", es: "Disp. Registral" },
-    "Translation":            { en: "Translation",           es: "Traduccion" },
+function getAxisLabel(key: string, useEnglish: boolean, lang?: Lang): string {
+  const map: Record<string, Record<Lang, string>> = {
+    "Distinctiveness":       { en: "Distinctiveness", es: "Distintividad",  fr: "Distinctivite",         de: "Unterscheidungskraft", pt: "Distintividade",    zh: "Distinctiveness", ja: "Distinctiveness", hi: "Distinctiveness" },
+    "LFPPI":                 { en: "LFPPI",           es: "LFPPI",          fr: "LFPPI",                 de: "LFPPI",                pt: "LFPPI",             zh: "LFPPI",           ja: "LFPPI",           hi: "LFPPI"           },
+    "IMPI Registry":         { en: "IMPI Registry",   es: "Registro IMPI",  fr: "Registre IMPI",         de: "IMPI-Register",        pt: "Registro IMPI",     zh: "IMPI Registry",   ja: "IMPI Registry",   hi: "IMPI Registry"   },
+    "Registry Availability": { en: "Availability",    es: "Disp. Registral",fr: "Disponibilite",         de: "Verfugbarkeit",        pt: "Disponibilidade",   zh: "Availability",    ja: "Availability",    hi: "Availability"    },
+    "Translation":           { en: "Translation",     es: "Traduccion",     fr: "Traduction",            de: "Ubersetzung",          pt: "Traducao",          zh: "Translation",     ja: "Translation",     hi: "Translation"     },
   };
-  return useEnglish ? (map[key]?.en ?? key) : (map[key]?.es ?? key);
+  if (useEnglish) return map[key]?.["en"] ?? key;
+  const activeLang = lang ?? "es";
+  return map[key]?.[activeLang] ?? map[key]?.["en"] ?? key;
 }
 
 // ─── Page scaffolding ─────────────────────────────────────────────────────────
@@ -670,8 +672,9 @@ function buildKeyFindings(result: ClearanceResult): Array<{ title_en: string; ti
 function buildStrategies(result: ClearanceResult, markName: string, useEnglish: boolean, lang?: string): Array<{
   num: number; title: string; desc: string; viability: number; timeline: string; fee: string; recommended: boolean;
 }> {
+  // For strategy paths, native content is only available in EN/ES/FR; other langs fall back to EN
   const T = (en: string, es: string, fr?: string): string => {
-    if (useEnglish) return en;
+    if (useEnglish || (lang !== "es" && lang !== "fr")) return en;
     if (lang === "fr") return fr ?? en;
     return es;
   };
@@ -817,7 +820,8 @@ async function buildPdf(
 
   const niceClasses = result.niceClassification ?? [];
   const searchLang = (result.searchLanguage ?? "en") as Lang;
-  const isBilingual = searchLang !== "en";
+  // ES-only: single Spanish report. EN: single English report. All others: native + Spanish.
+  const isBilingual = searchLang !== "en" && searchLang !== "es";
 
   const score = computeScore(result);
   const verdict = scoreToVerdict(score);
@@ -857,30 +861,73 @@ async function buildPdf(
   // ══════════════════════════════════════════════════════════════════════
 
   const renderAllSections = (lang: Lang, useEnglish: boolean) => {
-    // T(en, es, fr?) — returns the right string for the current render language
-    const T = (en: string, es: string, fr?: string): string => {
-      if (useEnglish) return en;
-      if (lang === "fr") return fr ?? en;
-      return es;
+    // sectionStrings: all UI label translations for section bodies
+    const sectionStrings: Record<string, Record<Lang, string>> = {
+      execSummary:       { en: "Executive Summary",          es: "Resumen Ejecutivo",           fr: "Resume Executif",              de: "Zusammenfassung",              pt: "Resumo Executivo",              zh: "Executive Summary",          ja: "Executive Summary",          hi: "Executive Summary"          },
+      execSummaryTitle:  { en: "EXECUTIVE SUMMARY",          es: "RESUMEN EJECUTIVO",           fr: "RESUME EXECUTIF",              de: "ZUSAMMENFASSUNG",              pt: "RESUMO EXECUTIVO",              zh: "EXECUTIVE SUMMARY",          ja: "EXECUTIVE SUMMARY",          hi: "EXECUTIVE SUMMARY"          },
+      registrabilityEval:{ en: `Registrability assessment -${safeText(markName)}`, es: `Evaluacion de registrabilidad -${safeText(markName)}`, fr: `Evaluation de registrabilite -${safeText(markName)}`, de: `Registrierbarkeitsbewertung -${safeText(markName)}`, pt: `Avaliacao de registabilidade -${safeText(markName)}`, zh: `Registrability assessment -${safeText(markName)}`, ja: `Registrability assessment -${safeText(markName)}`, hi: `Registrability assessment -${safeText(markName)}` },
+      attorneyNotes:     { en: "ATTORNEY NOTES",             es: "NOTAS DE ANALISIS",           fr: "NOTES D'ANALYSE",              de: "ANWALTSNOTIZEN",               pt: "NOTAS DO ADVOGADO",             zh: "ATTORNEY NOTES",             ja: "ATTORNEY NOTES",             hi: "ATTORNEY NOTES"             },
+      keyFindings:       { en: "KEY FINDINGS",               es: "HALLAZGOS CLAVE",             fr: "PRINCIPAUX RESULTATS",         de: "HAUPTERKENNTNISSE",            pt: "CONCLUSOES PRINCIPAIS",         zh: "KEY FINDINGS",               ja: "KEY FINDINGS",               hi: "KEY FINDINGS"               },
+      distinctSection:   { en: "Distinctiveness Analysis",   es: "Analisis de Distintividad",   fr: "Analyse de Distinctivite",     de: "Unterscheidungskraftanalyse",  pt: "Analise de Distintividade",     zh: "Distinctiveness Analysis",   ja: "Distinctiveness Analysis",   hi: "Distinctiveness Analysis"   },
+      distinctTitle:     { en: "DISTINCTIVENESS ANALYSIS",   es: "ANALISIS DE DISTINTIVIDAD",   fr: "ANALYSE DE DISTINCTIVITE",     de: "UNTERSCHEIDUNGSKRAFTANALYSE",  pt: "ANALISE DE DISTINTIVIDADE",     zh: "DISTINCTIVENESS ANALYSIS",   ja: "DISTINCTIVENESS ANALYSIS",   hi: "DISTINCTIVENESS ANALYSIS"   },
+      whatThisMeans:     { en: "What This Means",            es: "Que Significa",               fr: "Ce que cela signifie",         de: "Was das bedeutet",             pt: "O que isto significa",          zh: "What This Means",            ja: "What This Means",            hi: "What This Means"            },
+      registrabilityImp: { en: "Registrability Implications",es: "Implicaciones de Registrabilidad", fr: "Implications pour l'enregistrement", de: "Registrierbarkeitsimplikationen", pt: "Implicacoes de Registabilidade", zh: "Registrability Implications", ja: "Registrability Implications", hi: "Registrability Implications" },
+      distinctScore:     { en: "Distinctiveness Score",      es: "Puntaje de Distintividad",    fr: "Score de Distinctivite",       de: "Unterscheidungskraft-Score",   pt: "Pontuacao de Distintividade",   zh: "Distinctiveness Score",      ja: "Distinctiveness Score",      hi: "Distinctiveness Score"      },
+      lfppiSection:      { en: "LFPPI Analysis",             es: "Analisis LFPPI",              fr: "Analyse LFPPI",                de: "LFPPI-Analyse",                pt: "Analise LFPPI",                 zh: "LFPPI Analysis",             ja: "LFPPI Analysis",             hi: "LFPPI Analysis"             },
+      lfppiTitle:        { en: "LFPPI REGISTRABILITY ANALYSIS", es: "ANALISIS DE REGISTRABILIDAD LFPPI", fr: "ANALYSE DE REGISTRABILITE LFPPI", de: "LFPPI-REGISTRIERBARKEITSANALYSE", pt: "ANALISE DE REGISTABILIDADE LFPPI", zh: "LFPPI REGISTRABILITY ANALYSIS", ja: "LFPPI REGISTRABILITY ANALYSIS", hi: "LFPPI REGISTRABILITY ANALYSIS" },
+      lfppiSub:          { en: "Federal Law for Protection of Industrial Property", es: "Ley Federal de Proteccion a la Propiedad Industrial", fr: "Loi federale de protection de la propriete industrielle", de: "Bundesgesetz zum Schutz des gewerblichen Eigentums", pt: "Lei federal de protecao da propriedade industrial", zh: "Federal Law for Protection of Industrial Property", ja: "Federal Law for Protection of Industrial Property", hi: "Federal Law for Protection of Industrial Property" },
+      groundsRaised:     { en: "grounds raised",             es: "causales identificadas",      fr: "motifs souleves",              de: "Grundlagen erhoben",           pt: "motivos identificados",         zh: "grounds raised",             ja: "grounds raised",             hi: "grounds raised"             },
+      fractionsPassed:   { en: "fracciones passed",          es: "fracciones aprobadas",        fr: "fractions approuvees",         de: "Fraktionen bestanden",         pt: "fracoes aprovadas",             zh: "fracciones passed",          ja: "fracciones passed",          hi: "fracciones passed"          },
+      impiSection:       { en: "IMPI Registry Search",       es: "Busqueda en Registro IMPI",   fr: "Recherche Registre IMPI",      de: "IMPI-Register-Suche",          pt: "Pesquisa Registro IMPI",        zh: "IMPI Registry Search",       ja: "IMPI Registry Search",       hi: "IMPI Registry Search"       },
+      impiTitle:         { en: "IMPI REGISTRY SEARCH",       es: "BUSQUEDA EN REGISTRO IMPI",   fr: "RECHERCHE REGISTRE IMPI",      de: "IMPI-REGISTER-SUCHE",          pt: "PESQUISA REGISTRO IMPI",        zh: "IMPI REGISTRY SEARCH",       ja: "IMPI REGISTRY SEARCH",       hi: "IMPI REGISTRY SEARCH"       },
+      impiSub:           { en: "Mexican Trademark Registry - IMPI", es: "Registro de Marcas Mexicano - IMPI", fr: "Registre des marques mexicain - IMPI", de: "Mexikanisches Markenregister - IMPI", pt: "Registro de Marcas Mexicano - IMPI", zh: "Mexican Trademark Registry - IMPI", ja: "Mexican Trademark Registry - IMPI", hi: "Mexican Trademark Registry - IMPI" },
+      conflictsFound:    { en: "conflicts found",            es: "conflictos encontrados",      fr: "conflits trouves",             de: "Konflikte gefunden",           pt: "conflitos encontrados",         zh: "conflicts found",            ja: "conflicts found",            hi: "conflicts found"            },
+      translSection:     { en: "Translation Analysis",       es: "Analisis de Traduccion",      fr: "Analyse de Traduction",        de: "Ubersetzungsanalyse",          pt: "Analise de Traducao",           zh: "Translation Analysis",       ja: "Translation Analysis",       hi: "Translation Analysis"       },
+      translTitle:       { en: "TRANSLATION ANALYSIS",       es: "ANALISIS DE TRADUCCION",      fr: "ANALYSE DE TRADUCTION",        de: "UBERSETZUNGSANALYSE",          pt: "ANALISE DE TRADUCAO",          zh: "TRANSLATION ANALYSIS",       ja: "TRANSLATION ANALYSIS",       hi: "TRANSLATION ANALYSIS"       },
+      translSub:         { en: "Meaning and connotation review", es: "Revision de significado y connotacion", fr: "Examen du sens et de la connotation", de: "Bedeutungs- und Konnotationsprufung", pt: "Revisao de significado e conotacao", zh: "Meaning and connotation review", ja: "Meaning and connotation review", hi: "Meaning and connotation review" },
+      domainSection:     { en: "Domain Availability",        es: "Disponibilidad de Dominio",   fr: "Disponibilite du Domaine",     de: "Domain-Verfugbarkeit",         pt: "Disponibilidade de Dominio",    zh: "Domain Availability",        ja: "Domain Availability",        hi: "Domain Availability"        },
+      domainTitle:       { en: "DOMAIN AVAILABILITY",        es: "DISPONIBILIDAD DE DOMINIO",   fr: "DISPONIBILITE DU DOMAINE",     de: "DOMAIN-VERFUGBARKEIT",         pt: "DISPONIBILIDADE DE DOMINIO",   zh: "DOMAIN AVAILABILITY",        ja: "DOMAIN AVAILABILITY",        hi: "DOMAIN AVAILABILITY"        },
+      domainSub:         { en: "Web domain registration check", es: "Verificacion de registro de dominio web", fr: "Verification d'enregistrement de domaine web", de: "Web-Domain-Registrierungsprufung", pt: "Verificacao de registo de dominio web", zh: "Web domain registration check", ja: "Web domain registration check", hi: "Web domain registration check" },
+      available:         { en: "AVAILABLE",                  es: "DISPONIBLE",                  fr: "DISPONIBLE",                   de: "VERFUGBAR",                    pt: "DISPONIVEL",                    zh: "AVAILABLE",                  ja: "AVAILABLE",                  hi: "AVAILABLE"                  },
+      taken:             { en: "TAKEN",                      es: "NO DISPONIBLE",               fr: "INDISPONIBLE",                 de: "VERGEBEN",                     pt: "INDISPONIVEL",                  zh: "TAKEN",                      ja: "TAKEN",                      hi: "TAKEN"                      },
+      similarityScore:   { en: "Similarity Score",           es: "Puntuacion de Similitud",     fr: "Score de Similarite",          de: "Ahnlichkeitspunktstand",       pt: "Pontuacao de Similaridade",     zh: "Similarity Score",           ja: "Similarity Score",           hi: "Similarity Score"           },
+      conflictingFactors:{ en: "Conflicting Factors",        es: "Factores de Conflicto",       fr: "Facteurs de Conflit",          de: "Konfliktfaktoren",             pt: "Fatores de Conflito",           zh: "Conflicting Factors",        ja: "Conflicting Factors",        hi: "Conflicting Factors"        },
+      pentagonSection:   { en: "Risk Assessment Pentagon",   es: "Pentagon de Evaluacion de Riesgo", fr: "Pentagone d'Evaluation des Risques", de: "Risikobewertungspentagons", pt: "Pentagono de Avaliacao de Risco", zh: "Risk Assessment Pentagon",  ja: "Risk Assessment Pentagon",   hi: "Risk Assessment Pentagon"   },
+      pentagonTitle:     { en: "RISK ASSESSMENT PENTAGON",   es: "PENTAGON DE EVALUACION DE RIESGO", fr: "PENTAGONE D'EVALUATION DES RISQUES", de: "RISIKOBEWERTUNGSPENTAGON",  pt: "PENTAGONO DE AVALIACAO DE RISCO", zh: "RISK ASSESSMENT PENTAGON",  ja: "RISK ASSESSMENT PENTAGON",   hi: "RISK ASSESSMENT PENTAGON"   },
+      pentagonSub:       { en: "Multi-dimensional registrability score", es: "Puntaje multidimensional de registrabilidad", fr: "Score multidimensionnel de registrabilite", de: "Mehrdimensionaler Registrierbarkeitsscore", pt: "Pontuacao multidimensional de registabilidade", zh: "Multi-dimensional registrability score", ja: "Multi-dimensional registrability score", hi: "Multi-dimensional registrability score" },
+      overallScore:      { en: "Overall Score",              es: "Puntaje General",             fr: "Score Global",                 de: "Gesamtpunktzahl",              pt: "Pontuacao Geral",               zh: "Overall Score",              ja: "Overall Score",              hi: "Overall Score"              },
     };
+    // T: resolve a sectionStrings key to the current render language
+    const T = (key: string): string => {
+      if (useEnglish) return sectionStrings[key]?.["en"] ?? key;
+      return sectionStrings[key]?.[lang] ?? sectionStrings[key]?.["en"] ?? key;
+    };
+    // TI: inline two-string helper (en, es) used throughout section bodies
+    const TI = (en: string, es: string): string => (useEnglish || lang === "en") ? en : es;
     const tierLabel = (tier: string) => {
-      const en: Record<string, string> = { generic: "Generic", descriptive: "Descriptive", suggestive: "Suggestive", arbitrary: "Arbitrary", fanciful: "Fanciful" };
-      const es: Record<string, string> = { generic: "Generica", descriptive: "Descriptiva", suggestive: "Sugestiva", arbitrary: "Arbitraria", fanciful: "De Fantasia" };
-      const fr: Record<string, string> = { generic: "Generique", descriptive: "Descriptive", suggestive: "Evocatrice", arbitrary: "Arbitraire", fanciful: "De Fantaisie" };
-      if (useEnglish) return en[tier] ?? tier;
-      if (lang === "fr") return fr[tier] ?? tier;
-      return es[tier] ?? tier;
+      const tiers: Record<Lang, Record<string, string>> = {
+        en: { generic: "Generic",   descriptive: "Descriptive", suggestive: "Suggestive", arbitrary: "Arbitrary",  fanciful: "Fanciful"     },
+        es: { generic: "Generica",  descriptive: "Descriptiva", suggestive: "Sugestiva",  arbitrary: "Arbitraria", fanciful: "De Fantasia"  },
+        fr: { generic: "Generique", descriptive: "Descriptive", suggestive: "Evocatrice", arbitrary: "Arbitraire", fanciful: "De Fantaisie" },
+        de: { generic: "Generisch", descriptive: "Beschreibend",suggestive: "Suggestiv",  arbitrary: "Willkurlich",fanciful: "Phantasie"    },
+        pt: { generic: "Generica",  descriptive: "Descritiva",  suggestive: "Sugestiva",  arbitrary: "Arbitraria", fanciful: "Fantasiosa"   },
+        zh: { generic: "Generic",   descriptive: "Descriptive", suggestive: "Suggestive", arbitrary: "Arbitrary",  fanciful: "Fanciful"     },
+        ja: { generic: "Generic",   descriptive: "Descriptive", suggestive: "Suggestive", arbitrary: "Arbitrary",  fanciful: "Fanciful"     },
+        hi: { generic: "Generic",   descriptive: "Descriptive", suggestive: "Suggestive", arbitrary: "Arbitrary",  fanciful: "Fanciful"     },
+      };
+      const activeLang = useEnglish ? "en" : lang;
+      return tiers[activeLang]?.[tier] ?? tier;
     };
 
     // ── EXECUTIVE SUMMARY ────────────────────────────────────────────
     {
-      const p = newPage(T("Executive Summary", "Resumen Ejecutivo", "Resume Executif"));
-      addPageHeader(p, regular, bold, markName, niceClasses, T("Executive Summary", "Resumen Ejecutivo", "Resume Executif"));
+      const p = newPage(T("execSummary"));
+      addPageHeader(p, regular, bold, markName, niceClasses, T("execSummary"));
 
       let y = PAGE_H - 34;
       y = addSectionHeader(p, bold,
-        T("EXECUTIVE SUMMARY", "RESUMEN EJECUTIVO", "RESUME EXECUTIF"),
-        T(`Registrability assessment -${safeText(markName)}`, `Evaluacion de registrabilidad -${safeText(markName)}`, `Evaluation de registrabilite -${safeText(markName)}`),
+        T("execSummaryTitle"),
+        T("registrabilityEval"),
         y,
       );
       y -= 8;
@@ -924,7 +971,7 @@ async function buildPdf(
       // Attorney notes
       const commentText = useEnglish ? commentary.english : commentary.native;
       if (commentText) {
-        p.drawText(T("ATTORNEY NOTES", "NOTAS DE ANALISIS", "NOTES D'ANALYSE"), { x: MARGIN_X, y, size: 7.5, font: bold, color: C.primary });
+        p.drawText(T("attorneyNotes"), { x: MARGIN_X, y, size: 7.5, font: bold, color: C.primary });
         y -= 10;
         const cmLines = wrapText(commentText, regular, 9, CONTENT_W - 24);
         const cmH = cmLines.length * 13.5 + 20;
@@ -942,7 +989,7 @@ async function buildPdf(
       if (y > MARGIN_BOT + 80) {
         const findings = buildKeyFindings(result);
         if (findings.length > 0) {
-          p.drawText(T("KEY FINDINGS", "HALLAZGOS CLAVE", "PRINCIPAUX RESULTATS"), { x: MARGIN_X, y, size: 7.5, font: bold, color: C.textMuted });
+          p.drawText(T("keyFindings"), { x: MARGIN_X, y, size: 7.5, font: bold, color: C.textMuted });
           y -= 10;
           const colW3 = (CONTENT_W - 8) / 3;
           const cardH3 = 80;
@@ -974,21 +1021,21 @@ async function buildPdf(
 
       // 5-axis pentagon
       if (y > MARGIN_BOT + 120) {
-        p.drawText(T("5-AXIS RISK PROFILE", "PERFIL DE RIESGO -5 EJES", "PROFIL DE RISQUE - 5 AXES"), { x: MARGIN_X, y, size: 7.5, font: bold, color: C.textMuted });
+        p.drawText(T("pentagonSection"), { x: MARGIN_X, y, size: 7.5, font: bold, color: C.textMuted });
         y -= 10;
         const pCardH = 130;
         drawCard(p, MARGIN_X, y, CONTENT_W, pCardH);
 
         const pentCX = MARGIN_X + 88;
         const pentCY = y - pCardH / 2;
-        drawPentagon(p, pentCX, pentCY, 120, pentagonScores.map(ps => ({ label: getAxisLabel(ps.key, useEnglish), score: ps.score })), regular, bold, vc);
+        drawPentagon(p, pentCX, pentCY, 120, pentagonScores.map(ps => ({ label: getAxisLabel(ps.key, useEnglish, lang), score: ps.score })), regular, bold, vc);
 
         const barsX = MARGIN_X + 180;
         const barsW = CONTENT_W - 180 - 10;
         let by = y - 14;
         for (const ps of pentagonScores) {
           const barColor = ps.score >= 70 ? C.success : ps.score >= 40 ? C.warning : C.critical;
-          const axisLabel = getAxisLabel(ps.key, useEnglish);
+          const axisLabel = getAxisLabel(ps.key, useEnglish, lang);
           const labelLines = wrapText(safeText(axisLabel), bold, 7.5, barsW - 28);
           for (const ll of labelLines.slice(0, 1)) {
             p.drawText(ll, { x: barsX, y: by, size: 7.5, font: bold, color: C.textPrimary });
@@ -1017,13 +1064,13 @@ async function buildPdf(
       const significant = findings.filter(f => !isHighSimilarity(f, markName) && isMedSimilarity(f, markName));
       const background = findings.filter(f => !isHighSimilarity(f, markName) && !isMedSimilarity(f, markName));
 
-      let p = newPage(T("Conflicting Marks", "Marcas en Conflicto", "Marques en Conflit"));
-      addPageHeader(p, regular, bold, markName, niceClasses, T("Conflicting Marks", "Marcas en Conflicto", "Marques en Conflit"));
+      let p = newPage(T("impiSection"));
+      addPageHeader(p, regular, bold, markName, niceClasses, T("impiSection"));
 
       let y = PAGE_H - 34;
-      const subTitle = `${critical.length} ${T("critical", "criticas", "critiques")}  |  ${significant.length} ${T("significant", "significativas", "significatives")}  |  ${background.length} ${T("background", "ruido de fondo", "bruit de fond")}`;
+      const subTitle = `${critical.length} ${TI("critical", "criticas")}  |  ${significant.length} ${TI("significant", "significativas")}  |  ${background.length} ${TI("background", "ruido de fondo")}`;
       y = addSectionHeader(p, bold,
-        T("CONFLICTING MARKS -IMPI MARCIA RESULTS", "MARCAS EN CONFLICTO -RESULTADOS IMPI MARCIA", "MARQUES EN CONFLIT - RESULTATS IMPI MARCIA"),
+        T("impiTitle"),
         subTitle,
         y,
       );
@@ -1034,9 +1081,9 @@ async function buildPdf(
         drawCard(p, MARGIN_X, y, CONTENT_W, barH + 14);
         let bx = MARGIN_X + 1;
         const segments = [
-          { label: `${T("Critical", "Criticas", "Critiques")} (${critical.length})`, count: critical.length, color: C.critical },
-          { label: `${T("Significant", "Significativas", "Significatives")} (${significant.length})`, count: significant.length, color: C.warning },
-          { label: `${T("Background", "Fondo", "Fond")} (${background.length})`, count: background.length, color: C.textMuted },
+          { label: `${TI("Critical", "Criticas")} (${critical.length})`, count: critical.length, color: C.critical },
+          { label: `${TI("Significant", "Significativas")} (${significant.length})`, count: significant.length, color: C.warning },
+          { label: `${TI("Background", "Fondo")} (${background.length})`, count: background.length, color: C.textMuted },
         ];
         const totalSeg = segments.reduce((a, s) => a + s.count, 0) || 1;
         for (const seg of segments) {
@@ -1051,7 +1098,7 @@ async function buildPdf(
           }
         }
         y -= barH + 20;
-        const analyzed = T(`Analyzed ${totalCount} marks from IMPI MARCia database`, `Se analizaron ${totalCount} marcas del registro IMPI MARCia`, `${totalCount} marques analysees dans la base de donnees IMPI MARCia`);
+        const analyzed = TI(`Analyzed ${totalCount} marks from IMPI MARCia database`, `Se analizaron ${totalCount} marcas del registro IMPI MARCia`);
         p.drawText(analyzed, { x: MARGIN_X, y, size: 7.5, font: regular, color: C.textMuted });
         y -= 18;
       }
@@ -1060,20 +1107,20 @@ async function buildPdf(
       if (critical.length > 0) {
         p.drawRectangle({ x: MARGIN_X, y: y - 24, width: CONTENT_W, height: 26, color: C.criticalTint });
         p.drawRectangle({ x: MARGIN_X, y: y - 24, width: 4, height: 26, color: C.critical });
-        p.drawText(T("CRITICAL -Direct obstacles to registration", "CRITICO -Obstaculos directos al registro", "CRITIQUE - Obstacles directs a l'enregistrement"), { x: MARGIN_X + 12, y: y - 12, size: 8.5, font: bold, color: C.critical });
-        p.drawText(T("Art. 173 Fr. XVIII LFPPI -high phonetic/visual/conceptual similarity", "Art. 173 Fr. XVIII LFPPI -alta similitud fonetica/visual/conceptual", "Art. 173 Fr. XVIII LFPPI - forte similarite phonetique/visuelle/conceptuelle"), { x: MARGIN_X + 12, y: y - 21, size: 7, font: regular, color: C.textSecond });
+        p.drawText(TI("CRITICAL -Direct obstacles to registration", "CRITICO -Obstaculos directos al registro"), { x: MARGIN_X + 12, y: y - 12, size: 8.5, font: bold, color: C.critical });
+        p.drawText(TI("Art. 173 Fr. XVIII LFPPI -high phonetic/visual/conceptual similarity", "Art. 173 Fr. XVIII LFPPI -alta similitud fonetica/visual/conceptual"), { x: MARGIN_X + 12, y: y - 21, size: 7, font: regular, color: C.textSecond });
         y -= 34;
 
         for (let i = 0; i < critical.length; i++) {
           const f = critical[i];
           if (y < MARGIN_BOT + 80) {
-            p = newPage(T("Conflicting Marks (cont.)", "Marcas en Conflicto (cont.)", "Marques en Conflit (suite)"));
-            addPageHeader(p, regular, bold, markName, niceClasses, T("Conflicting Marks", "Marcas en Conflicto", "Marques en Conflit"));
+            p = newPage(TI("Conflicting Marks (cont.)", "Marcas en Conflicto (cont.)"));
+            addPageHeader(p, regular, bold, markName, niceClasses, T("impiSection"));
             y = PAGE_H - 44;
           }
 
           // Dynamic card height
-          const holderLines = wrapText(T("Holder: ", "Titular: ", "Titulaire: ") + safeText(f.holder), regular, 8, CONTENT_W - 72);
+          const holderLines = wrapText(TI("Holder: ", "Titular: ") + safeText(f.holder), regular, 8, CONTENT_W - 72);
           const cardH = 28 + Math.max(holderLines.length * 11, 16) + 48;
           drawCard(p, MARGIN_X, y, CONTENT_W, cardH);
 
@@ -1105,7 +1152,7 @@ async function buildPdf(
           // Expediente -full format, monospaced style
           const expParts = [
             f.expediente ? `Exp. ${f.expediente}` : "",
-            `${T("Class", "Clase", "Classe")} ${f.classNum}`,
+            `${TI("Class", "Clase")} ${f.classNum}`,
             "Mexico IMPI",
           ].filter(Boolean);
           p.drawText(expParts.join("  ·  "), { x: infoX, y: hY - 2, size: 8, font: regular, color: C.textMuted });
@@ -1113,11 +1160,10 @@ async function buildPdf(
           p.drawRectangle({ x: MARGIN_X + 8, y: y - 56, width: CONTENT_W - 16, height: 0.5, color: C.border });
 
           // Analysis text -in report language only
-          const analysisText = useEnglish
-            ? `This mark "${safeText(f.name)}" in ${T("Class", "Clase", "Classe")} ${f.classNum} presents a conflict under Art. 173 Fr. XVIII LFPPI due to phonetic and visual similarity with the applied-for mark. The dominant element creates a likelihood of confusion among consumers. Registration is at risk without mark modifications.`
-            : lang === "fr"
-            ? `Cette marque "${safeText(f.name)}" en Classe ${f.classNum} presente un conflit sous Art. 173 Fr. XVIII LFPPI en raison de la similarite phonetique et visuelle avec la marque demandee. L'element dominant cree un risque de confusion parmi les consommateurs. L'enregistrement est en peril sans modifications de la marque.`
-            : `Esta marca "${safeText(f.name)}" en Clase ${f.classNum} presenta un conflicto bajo Art. 173 Fr. XVIII LFPPI por similitud fonetica y visual con la marca solicitante. El elemento dominante genera riesgo de confusion entre consumidores. El registro esta en riesgo sin modificaciones.`;
+          const analysisText = TI(
+            `This mark "${safeText(f.name)}" in Class ${f.classNum} presents a conflict under Art. 173 Fr. XVIII LFPPI due to phonetic and visual similarity with the applied-for mark. The dominant element creates a likelihood of confusion among consumers. Registration is at risk without mark modifications.`,
+            `Esta marca "${safeText(f.name)}" en Clase ${f.classNum} presenta un conflicto bajo Art. 173 Fr. XVIII LFPPI por similitud fonetica y visual con la marca solicitante. El elemento dominante genera riesgo de confusion entre consumidores. El registro esta en riesgo sin modificaciones.`,
+          );
 
           const anLines = wrapText(analysisText, regular, 7.5, CONTENT_W - 20);
           let aY = y - 66;
@@ -1134,25 +1180,25 @@ async function buildPdf(
       // Significant tier
       if (significant.length > 0) {
         if (y < MARGIN_BOT + 60) {
-          p = newPage(T("Conflicting Marks (cont.)", "Marcas en Conflicto (cont.)", "Marques en Conflit (suite)"));
-          addPageHeader(p, regular, bold, markName, niceClasses, T("Conflicting Marks", "Marcas en Conflicto", "Marques en Conflit"));
+          p = newPage(TI("Conflicting Marks (cont.)", "Marcas en Conflicto (cont.)"));
+          addPageHeader(p, regular, bold, markName, niceClasses, T("impiSection"));
           y = PAGE_H - 44;
         }
         p.drawRectangle({ x: MARGIN_X, y: y - 24, width: CONTENT_W, height: 26, color: C.warningTint });
         p.drawRectangle({ x: MARGIN_X, y: y - 24, width: 4, height: 26, color: C.warning });
-        p.drawText(T("SIGNIFICANT -Moderate obstacles", "SIGNIFICATIVO -Obstaculos moderados", "SIGNIFICATIF - Obstacles moderes"), { x: MARGIN_X + 12, y: y - 14, size: 8.5, font: bold, color: C.warning });
+        p.drawText(TI("SIGNIFICANT -Moderate obstacles", "SIGNIFICATIVO -Obstaculos moderados"), { x: MARGIN_X + 12, y: y - 14, size: 8.5, font: bold, color: C.warning });
         y -= 34;
 
         for (let i = 0; i < Math.min(significant.length, 6); i++) {
           const f = significant[i];
           if (y < MARGIN_BOT + 60) {
-            p = newPage(T("Conflicting Marks (cont.)", "Marcas en Conflicto (cont.)", "Marques en Conflit (suite)"));
-            addPageHeader(p, regular, bold, markName, niceClasses, T("Conflicting Marks", "Marcas en Conflicto", "Marques en Conflit"));
+            p = newPage(TI("Conflicting Marks (cont.)", "Marcas en Conflicto (cont.)"));
+            addPageHeader(p, regular, bold, markName, niceClasses, T("impiSection"));
             y = PAGE_H - 44;
           }
           const simScore2 = f.similarityScore ?? 55;
           const simColor2 = simScore2 >= 80 ? C.critical : simScore2 >= 60 ? C.warning : C.primary;
-          const sigHolder = wrapText(T("Holder: ", "Titular: ", "Titulaire: ") + safeText(f.holder), regular, 8, CONTENT_W - 72);
+          const sigHolder = wrapText(TI("Holder: ", "Titular: ") + safeText(f.holder), regular, 8, CONTENT_W - 72);
           const cardH2 = 28 + Math.max(sigHolder.length * 11, 16) + 24;
           drawCard(p, MARGIN_X, y, CONTENT_W, cardH2);
           // Similarity arc (left) -same pattern as critical cards
@@ -1173,7 +1219,7 @@ async function buildPdf(
             p.drawText(hl, { x: infoX2, y: shY, size: 8, font: regular, color: C.textSecond });
             shY -= 11;
           }
-          const expParts2 = [f.expediente ? `Exp. ${f.expediente}` : "", `${T("Class", "Clase", "Classe")} ${f.classNum}`, "Mexico IMPI"].filter(Boolean);
+          const expParts2 = [f.expediente ? `Exp. ${f.expediente}` : "", `${TI("Class", "Clase")} ${f.classNum}`, "Mexico IMPI"].filter(Boolean);
           p.drawText(expParts2.join("  ·  "), { x: infoX2, y: shY - 2, size: 7.5, font: regular, color: C.textMuted });
           y -= cardH2 + 4;
         }
@@ -1182,23 +1228,22 @@ async function buildPdf(
       // Background noise
       if (background.length > 0) {
         if (y < MARGIN_BOT + 80) {
-          p = newPage(T("Conflicting Marks (cont.)", "Marcas en Conflicto (cont.)", "Marques en Conflit (suite)"));
-          addPageHeader(p, regular, bold, markName, niceClasses, T("Conflicting Marks", "Marcas en Conflicto", "Marques en Conflit"));
+          p = newPage(TI("Conflicting Marks (cont.)", "Marcas en Conflicto (cont.)"));
+          addPageHeader(p, regular, bold, markName, niceClasses, T("impiSection"));
           y = PAGE_H - 44;
         }
-        p.drawText(T("BACKGROUND NOISE", "RUIDO DE FONDO", "BRUIT DE FOND"), { x: MARGIN_X, y, size: 7.5, font: bold, color: C.textMuted });
+        p.drawText(TI("BACKGROUND NOISE", "RUIDO DE FONDO"), { x: MARGIN_X, y, size: 7.5, font: bold, color: C.textMuted });
         y -= 14;
         p.drawRectangle({ x: MARGIN_X, y: y - 16, width: CONTENT_W, height: 18, color: C.divider });
         p.drawRectangle({ x: MARGIN_X, y: y - 16, width: CONTENT_W, height: 0.6, color: C.border });
         const cols = [
-          { x: MARGIN_X + 6, w: 130, label_en: "Mark", label_es: "Marca", label_fr: "Marque" },
-          { x: MARGIN_X + 144, w: 130, label_en: "Holder", label_es: "Titular", label_fr: "Titulaire" },
-          { x: MARGIN_X + 282, w: 50, label_en: "Class", label_es: "Clase", label_fr: "Classe" },
-          { x: MARGIN_X + 340, w: 100, label_en: "Status", label_es: "Estado", label_fr: "Etat" },
+          { x: MARGIN_X + 6,   w: 130, label: TI("Mark",   "Marca")   },
+          { x: MARGIN_X + 144, w: 130, label: TI("Holder",  "Titular") },
+          { x: MARGIN_X + 282, w: 50,  label: TI("Class",   "Clase")   },
+          { x: MARGIN_X + 340, w: 100, label: TI("Status",  "Estado")  },
         ];
         for (const col of cols) {
-          const colLabel = useEnglish ? col.label_en : lang === "fr" ? col.label_fr : col.label_es;
-          p.drawText(colLabel, { x: col.x, y: y - 10, size: 7.5, font: bold, color: C.textPrimary });
+          p.drawText(col.label, { x: col.x, y: y - 10, size: 7.5, font: bold, color: C.textPrimary });
         }
         y -= 22;
 
@@ -1224,13 +1269,13 @@ async function buildPdf(
     // ── LFPPI ANALYSIS ────────────────────────────────────────────────
     {
       const flags = result.registrabilityFlags ?? [];
-      const p = newPage(T("LFPPI Analysis", "Analisis LFPPI", "Analyse LFPPI"));
-      addPageHeader(p, regular, bold, markName, niceClasses, T("LFPPI Registrability Analysis", "Analisis de Registrabilidad LFPPI", "Analyse de Registrabilite LFPPI"));
+      const p = newPage(T("lfppiSection"));
+      addPageHeader(p, regular, bold, markName, niceClasses, T("lfppiSection"));
 
       let y = PAGE_H - 34;
       y = addSectionHeader(p, bold,
-        T("LFPPI REGISTRABILITY ANALYSIS", "ANALISIS DE REGISTRABILIDAD LFPPI", "ANALYSE DE REGISTRABILITE LFPPI"),
-        T("Evaluation against Mexico's Ley Federal de Proteccion a la Propiedad Industrial", "Evaluacion bajo la LFPPI -legislacion mexicana de propiedad industrial", "Evaluation selon la LFPPI mexicaine"),
+        T("lfppiTitle"),
+        T("lfppiSub"),
         y,
       );
       y -= 8;
@@ -1238,7 +1283,7 @@ async function buildPdf(
       // Summary callout -raised = all flags; passed = LFPPI_PASSED_GROUNDS not overlapping raised
       const groundsRaised = flags.length;
       const groundsPassed = LFPPI_PASSED_GROUNDS.filter(g => !flags.find(f => g.fraccion.includes(f.category))).length;
-      const summaryStr = `${groundsRaised} ${T("grounds raised", "causales identificadas", "motifs identifies")}  ·  ${groundsPassed} ${T("fracciones passed", "fracciones aprobadas", "fracciones approuvees")}`;
+      const summaryStr = `${groundsRaised} ${T("groundsRaised")}  ·  ${groundsPassed} ${T("fractionsPassed")}`;
       p.drawRectangle({ x: MARGIN_X, y: y - 26, width: CONTENT_W, height: 30, color: C.white, borderColor: C.primary, borderWidth: 1 });
       p.drawRectangle({ x: MARGIN_X, y: y - 26, width: 4, height: 30, color: C.primary });
       const sumW = bold.widthOfTextAtSize(summaryStr, 9);
@@ -1248,7 +1293,7 @@ async function buildPdf(
       if (flags.length === 0) {
         drawCard(p, MARGIN_X, y, CONTENT_W, 44, C.successTint);
         p.drawRectangle({ x: MARGIN_X, y: y - 44, width: 4, height: 44, color: C.success });
-        const noGrounds = T("No absolute grounds for refusal detected under the LFPPI.", "No se detectaron causales absolutas de negativa bajo la LFPPI.", "Aucun motif absolu de refus detecte sous la LFPPI.");
+        const noGrounds = TI("No absolute grounds for refusal detected under the LFPPI.", "No se detectaron causales absolutas de negativa bajo la LFPPI.");
         p.drawText(noGrounds, { x: MARGIN_X + 14, y: y - 20, size: 10, font: bold, color: C.success });
         y -= 56;
       } else {
@@ -1270,8 +1315,8 @@ async function buildPdf(
           // Header -colored left bar + text on white (no full-width colored bar)
           p.drawRectangle({ x: MARGIN_X, y: y - cardH, width: 5, height: cardH, color: sColor });
           const failedLabel = flag.severity === "high"
-            ? T("RAISED -HIGH SEVERITY", "IDENTIFICADA -ALTA SEVERIDAD", "IDENTIFIEE - HAUTE SEVERITE")
-            : T("RAISED -MEDIUM SEVERITY", "IDENTIFICADA -SEVERIDAD MEDIA", "IDENTIFIEE - SEVERITE MOYENNE");
+            ? TI("RAISED -HIGH SEVERITY", "IDENTIFICADA -ALTA SEVERIDAD")
+            : TI("RAISED -MEDIUM SEVERITY", "IDENTIFICADA -SEVERIDAD MEDIA");
           p.drawText(failedLabel, { x: MARGIN_X + 14, y: y - 14, size: 8, font: bold, color: sColor });
           const catW = bold.widthOfTextAtSize(catLabel, 9);
           // Wrap category label
@@ -1300,7 +1345,7 @@ async function buildPdf(
       // Passed grounds -LFPPI fracciones only (no USPTO boilerplate)
       if (y > MARGIN_BOT + 60) {
         y -= 4;
-        p.drawText(T("LFPPI FRACCIONES -PASSED", "FRACCIONES LFPPI -APROBADAS", "FRACCIONES LFPPI - APPROUVEES"), { x: MARGIN_X, y, size: 7.5, font: bold, color: C.textMuted });
+        p.drawText(TI("LFPPI FRACCIONES -PASSED", "FRACCIONES LFPPI -APROBADAS"), { x: MARGIN_X, y, size: 7.5, font: bold, color: C.textMuted });
         y -= 12;
         const passedList = LFPPI_PASSED_GROUNDS.filter(g => !flags.find(f => g.fraccion.includes(f.category)));
         for (let i = 0; i < Math.min(passedList.length, 10) && y > MARGIN_BOT; i++) {
@@ -1317,7 +1362,7 @@ async function buildPdf(
             p.drawText(ql, { x: MARGIN_X + fracW + 20, y: qY, size: 8, font: regular, color: C.textPrimary });
             qY -= 11;
           }
-          const okStr = T("Passed", "Aprobada", "Approuvee");
+          const okStr = TI("Passed", "Aprobada");
           const okW = bold.widthOfTextAtSize(okStr, 8);
           p.drawText(okStr, { x: MARGIN_X + CONTENT_W - okW - 8, y: y - 8, size: 8, font: bold, color: C.success });
           y -= rowH + 2;
@@ -1332,13 +1377,13 @@ async function buildPdf(
       const against = factors.filter(f => f.verdict === "against_registration" || f.verdict === "Desfavorable").length;
       const neutral = factors.length - favor - against;
 
-      let p = newPage(T("Confusion Likelihood Analysis", "Analisis de Confundibilidad", "Analyse de Risque de Confusion"));
-      addPageHeader(p, regular, bold, markName, niceClasses, T("Confusion Likelihood Analysis", "Analisis de Confundibilidad", "Analyse de Risque de Confusion"));
+      let p = newPage(TI("Confusion Likelihood Analysis", "Analisis de Confundibilidad"));
+      addPageHeader(p, regular, bold, markName, niceClasses, TI("Confusion Likelihood Analysis", "Analisis de Confundibilidad"));
 
       let y = PAGE_H - 34;
       y = addSectionHeader(p, bold,
-        T("CONFUSION LIKELIHOOD ANALYSIS -LFPPI Art. 173 Fr. XVIII", "ANALISIS DE CONFUNDIBILIDAD -LFPPI Art. 173 Fr. XVIII", "ANALYSE DE RISQUE DE CONFUSION - LFPPI Art. 173 Fr. XVIII"),
-        T("Triple-similarity doctrine: phonetic, visual and conceptual -dominant element analysis", "Doctrina de triple similitud: fonetica, visual y conceptual -analisis del elemento dominante", "Doctrine de triple similarite: phonetique, visuelle et conceptuelle"),
+        TI("CONFUSION LIKELIHOOD ANALYSIS -LFPPI Art. 173 Fr. XVIII", "ANALISIS DE CONFUNDIBILIDAD -LFPPI Art. 173 Fr. XVIII"),
+        TI("Triple-similarity doctrine: phonetic, visual and conceptual -dominant element analysis", "Doctrina de triple similitud: fonetica, visual y conceptual -analisis del elemento dominante"),
         y,
       );
       y -= 8;
@@ -1346,9 +1391,9 @@ async function buildPdf(
       // Summary
       const boxW2 = (CONTENT_W - 8) / 3;
       const summaryBoxes = [
-        { label: T(`${favor} Favorable`, `${favor} Favorable`, `${favor} Favorable`), color: C.success },
-        { label: T(`${neutral} Neutral`, `${neutral} Neutral`, `${neutral} Neutre`), color: C.textMuted },
-        { label: T(`${against} Unfavorable`, `${against} Desfavorable`, `${against} Defavorable`), color: C.critical },
+        { label: `${favor} ${TI("Favorable", "Favorable")}`, color: C.success },
+        { label: `${neutral} ${TI("Neutral", "Neutral")}`, color: C.textMuted },
+        { label: `${against} ${TI("Unfavorable", "Desfavorable")}`, color: C.critical },
       ];
       for (let i = 0; i < summaryBoxes.length; i++) {
         const bx = MARGIN_X + i * (boxW2 + 4);
@@ -1369,7 +1414,7 @@ async function buildPdf(
         const isFavor = f.verdict === "favors_registration" || f.verdict === "Favorable";
         const isAgainst = f.verdict === "against_registration" || f.verdict === "Desfavorable";
         const fc = isFavor ? C.success : isAgainst ? C.critical : C.textMuted;
-        const verdLabel = isFavor ? T("FAVORABLE", "FAVORABLE", "FAVORABLE") : isAgainst ? T("UNFAVORABLE", "DESFAVORABLE", "DEFAVORABLE") : T("NEUTRAL", "NEUTRAL", "NEUTRE");
+        const verdLabel = isFavor ? TI("FAVORABLE", "FAVORABLE") : isAgainst ? TI("UNFAVORABLE", "DESFAVORABLE") : TI("NEUTRAL", "NEUTRAL");
         const factorLabel = CONFUSION_FACTORS_EN[f.factor] ?? safeText(f.factor);
         const reasonText = useEnglish ? (f.reasoning_en ?? f.reasoning) : f.reasoning;
         const reasonLines = wrapText(reasonText, regular, 8, COL_W - 22);
@@ -1380,8 +1425,8 @@ async function buildPdf(
         const cx = isLeft ? MARGIN_X : MARGIN_X + COL_W + 8;
 
         if ((isLeft ? colY : colYRight) - cardH < MARGIN_BOT) {
-          p = newPage(T("Confusion Analysis (cont.)", "Confundibilidad (cont.)", "Confusion (suite)"));
-          addPageHeader(p, regular, bold, markName, niceClasses, T("Confusion Likelihood", "Confundibilidad", "Risque de Confusion"));
+          p = newPage(TI("Confusion Analysis (cont.)", "Confundibilidad (cont.)"));
+          addPageHeader(p, regular, bold, markName, niceClasses, TI("Confusion Likelihood", "Confundibilidad"));
           colY = PAGE_H - 44;
           colYRight = colY;
           y = colY;
@@ -1417,13 +1462,13 @@ async function buildPdf(
 
     // ── DISTINCTIVENESS ───────────────────────────────────────────────
     {
-      const p = newPage(T("Distinctiveness & Translation", "Distintividad y Traduccion", "Distinctivite et Traduction"));
-      addPageHeader(p, regular, bold, markName, niceClasses, T("Distinctiveness & Translation", "Distintividad y Traduccion", "Distinctivite et Traduction"));
+      const p = newPage(T("distinctSection"));
+      addPageHeader(p, regular, bold, markName, niceClasses, T("distinctSection"));
 
       let y = PAGE_H - 34;
       y = addSectionHeader(p, bold,
-        T("DISTINCTIVENESS & TRANSLATION ANALYSIS", "ANALISIS DE DISTINTIVIDAD Y TRADUCCION", "ANALYSE DE DISTINCTIVITE ET TRADUCTION"),
-        T("Mark strength evaluation and multi-language conflict screening", "Evaluacion de fortaleza de marca y revision de conflictos multilingue", "Evaluation de la force de la marque"),
+        T("distinctTitle"),
+        TI("Mark strength evaluation and multi-language conflict screening", "Evaluacion de fortaleza de marca y revision de conflictos multilingue"),
         y,
       );
       y -= 8;
@@ -1433,12 +1478,11 @@ async function buildPdf(
       const rightX = MARGIN_X + colW2 + 16;
 
       const dist = result.distinctiveness;
-      p.drawText(T("DISTINCTIVENESS / DISTINTIVIDAD", "DISTINTIVIDAD / DISTINCTIVENESS", "DISTINCTIVITE"), { x: leftX, y, size: 7.5, font: bold, color: C.primary });
+      p.drawText(T("distinctTitle"), { x: leftX, y, size: 7.5, font: bold, color: C.primary });
       y -= 14;
 
       // Tier spectrum -full tier names, no abbreviation
       const tiers = ["Generic", "Descriptive", "Suggestive", "Arbitrary", "Fanciful"];
-      const tiersEs = ["Generica", "Descriptiva", "Sugestiva", "Arbitraria", "De Fantasia"];
       const tierColors = [C.critical, C.warning, rgb(0.8, 0.65, 0.1), C.success, C.primary];
       const tierW = (colW2 - 2) / tiers.length;
       const activeTier = dist?.tier ?? "suggestive";
@@ -1448,7 +1492,7 @@ async function buildPdf(
         const isActive = ti === activeIdx;
         const tx = leftX + ti * tierW;
         p.drawRectangle({ x: tx, y: y - 22, width: tierW - 1, height: 22, color: isActive ? tierColors[ti] : C.border });
-        const tierName = useEnglish ? tiers[ti] : tiersEs[ti];
+        const tierName = tierLabel(tiers[ti].toLowerCase());
         // Full tier name -wrap inside cell
         const tierNameLines = wrapText(tierName, isActive ? bold : regular, 6.5, tierW - 4);
         let tny = y - 10;
@@ -1477,7 +1521,7 @@ async function buildPdf(
         y -= 8;
 
         // Strength meter
-        p.drawText(T("Distinctiveness Strength (LFPPI Art. 173)", "Fortaleza de Distintividad (LFPPI Art. 173)", "Force Distinctive (LFPPI Art. 173)"), { x: leftX, y, size: 7.5, font: bold, color: C.textMuted });
+        p.drawText(TI("Distinctiveness Strength (LFPPI Art. 173)", "Fortaleza de Distintividad (LFPPI Art. 173)"), { x: leftX, y, size: 7.5, font: bold, color: C.textMuted });
         y -= 14;
         p.drawRectangle({ x: leftX, y: y - 10, width: colW2, height: 10, color: C.border });
         const meterW = (colW2 * rawScore2) / 100;
@@ -1490,14 +1534,14 @@ async function buildPdf(
 
       // Translation analysis -stacked cards (no narrow columns)
       let ry = PAGE_H - 34 - 30;
-      p.drawText(T("TRANSLATION ANALYSIS", "ANALISIS DE TRADUCCION", "ANALYSE DE TRADUCTION"), { x: rightX, y: ry, size: 7.5, font: bold, color: C.primary });
+      p.drawText(T("translTitle"), { x: rightX, y: ry, size: 7.5, font: bold, color: C.primary });
       ry -= 14;
 
       const translationFlags = result.translationAnalysis ?? [];
       if (translationFlags.length === 0) {
         drawCard(p, rightX, ry, colW2, 44, C.successTint);
         p.drawRectangle({ x: rightX, y: ry - 44, width: 3, height: 44, color: C.success });
-        p.drawText(T("No conflicting meanings detected", "Sin significados conflictivos detectados", "Aucun sens conflictuel detecte"), { x: rightX + 12, y: ry - 22, size: 8.5, font: bold, color: C.success });
+        p.drawText(TI("No conflicting meanings detected", "Sin significados conflictivos detectados"), { x: rightX + 12, y: ry - 22, size: 8.5, font: bold, color: C.success });
         ry -= 54;
       } else {
         for (let i = 0; i < translationFlags.length && ry > MARGIN_BOT; i++) {
@@ -1540,13 +1584,13 @@ async function buildPdf(
 
     // ── DOMAIN & WEB PRESENCE ─────────────────────────────────────────
     {
-      const p = newPage(T("Domain & Web Presence", "Dominio y Presencia Web", "Domaine et Presence Web"));
-      addPageHeader(p, regular, bold, markName, niceClasses, T("Domain & Web Presence", "Dominio y Presencia Web", "Domaine et Presence Web"));
+      const p = newPage(T("domainSection"));
+      addPageHeader(p, regular, bold, markName, niceClasses, T("domainSection"));
 
       let y = PAGE_H - 34;
       y = addSectionHeader(p, bold,
-        T("DOMAIN AVAILABILITY & WEB PRESENCE", "DISPONIBILIDAD DE DOMINIO Y PRESENCIA WEB", "DISPONIBILITE DE DOMAINE ET PRESENCE WEB"),
-        T("Digital brand footprint assessment", "Evaluacion de huella digital de la marca", "Evaluation de l'empreinte numerique de la marque"),
+        T("domainTitle"),
+        TI("Digital brand footprint assessment", "Evaluacion de huella digital de la marca"),
         y,
       );
       y -= 8;
@@ -1556,7 +1600,7 @@ async function buildPdf(
       const rightX2 = MARGIN_X + colW3 + 16;
       const domains = result.domainResults ?? [];
 
-      p.drawText(T("DOMAIN AVAILABILITY", "DISPONIBILIDAD DE DOMINIO", "DISPONIBILITE DE DOMAINE"), { x: leftX2, y, size: 7.5, font: bold, color: C.primary });
+      p.drawText(T("domainTitle"), { x: leftX2, y, size: 7.5, font: bold, color: C.primary });
       y -= 12;
 
       for (const d of domains) {
@@ -1571,26 +1615,26 @@ async function buildPdf(
         p.drawText(icon, { x: leftX2 + 8, y: y - 16, size: 10, font: avail ? bold : regular, color: pillColor });
         const domLines = wrapText(domainText, avail ? bold : regular, 8.5, colW3 - 52);
         p.drawText(domLines[0] ?? domainText, { x: leftX2 + 22, y: y - 15, size: 8.5, font: avail ? bold : regular, color: pillColor });
-        const statusStr = avail ? T("Available", "Disponible", "Disponible") : T("Registered", "Registrado", "Enregistre");
+        const statusStr = avail ? T("available") : TI("Registered", "Registrado");
         const stW = regular.widthOfTextAtSize(statusStr, 7.5);
         p.drawText(statusStr, { x: leftX2 + colW3 - stW - 8, y: y - 15, size: 7.5, font: regular, color: pillColor });
         y -= pillH + 4;
       }
 
       if (domains.length === 0) {
-        p.drawText(T("Domain availability not checked.", "Disponibilidad de dominio no verificada.", "Disponibilite du domaine non verifiee."), { x: leftX2, y, size: 8, font: italic, color: C.textMuted });
+        p.drawText(TI("Domain availability not checked.", "Disponibilidad de dominio no verificada."), { x: leftX2, y, size: 8, font: italic, color: C.textMuted });
         y -= 16;
       }
 
       // Web findings
       let ry3 = PAGE_H - 34 - 30;
-      p.drawText(T("WEB PRESENCE", "PRESENCIA WEB", "PRESENCE WEB"), { x: rightX2, y: ry3, size: 7.5, font: bold, color: C.primary });
+      p.drawText(TI("WEB PRESENCE", "PRESENCIA WEB"), { x: rightX2, y: ry3, size: 7.5, font: bold, color: C.primary });
       ry3 -= 14;
       const webFindings = result.webFindings ?? [];
       if (webFindings.length === 0) {
         drawCard(p, rightX2, ry3, colW3, 44, C.successTint);
         p.drawRectangle({ x: rightX2, y: ry3 - 44, width: 3, height: 44, color: C.success });
-        p.drawText(T("No significant web presence conflicts detected", "Sin conflictos significativos de presencia web", "Aucun conflit significatif de presence web detecte"), { x: rightX2 + 12, y: ry3 - 22, size: 8, font: bold, color: C.success });
+        p.drawText(TI("No significant web presence conflicts detected", "Sin conflictos significativos de presencia web"), { x: rightX2 + 12, y: ry3 - 22, size: 8, font: bold, color: C.success });
         ry3 -= 54;
       } else {
         for (let i = 0; i < Math.min(webFindings.length, 8) && ry3 > MARGIN_BOT; i++) {
@@ -1611,13 +1655,13 @@ async function buildPdf(
 
     // ── STRATEGY RECOMMENDATIONS -exactly 5 paths ────────────────────
     {
-      const p = newPage(T("Strategy Recommendations", "Recomendaciones Estrategicas", "Recommandations Strategiques"));
-      addPageHeader(p, regular, bold, markName, niceClasses, T("Strategy Recommendations", "Recomendaciones Estrategicas", "Recommandations Strategiques"));
+      const p = newPage(TI("Strategy Recommendations", "Recomendaciones Estrategicas"));
+      addPageHeader(p, regular, bold, markName, niceClasses, TI("Strategy Recommendations", "Recomendaciones Estrategicas"));
 
       let y = PAGE_H - 34;
       y = addSectionHeader(p, bold,
-        T("STRATEGY RECOMMENDATIONS -5 PATHS", "RECOMENDACIONES ESTRATEGICAS -5 CAMINOS", "RECOMMANDATIONS STRATEGIQUES - 5 CHEMINS"),
-        T("All paths numbered 1-5. Recommended path marked.", "Todos los caminos numerados 1-5. Camino recomendado marcado.", "Tous les chemins numerotes 1-5. Chemin recommande marque."),
+        TI("STRATEGY RECOMMENDATIONS -5 PATHS", "RECOMENDACIONES ESTRATEGICAS -5 CAMINOS"),
+        TI("All paths numbered 1-5. Recommended path marked.", "Todos los caminos numerados 1-5. Camino recomendado marcado."),
         y,
       );
       y -= 8;
@@ -1644,14 +1688,14 @@ async function buildPdf(
           tly -= 12;
         }
         if (strat.recommended) {
-          const recStr = T("RECOMMENDED", "RECOMENDADO", "RECOMMANDE");
+          const recStr = TI("RECOMMENDED", "RECOMENDADO");
           const recW = bold.widthOfTextAtSize(recStr, 7) + 12;
           p.drawRectangle({ x: MARGIN_X + CONTENT_W - recW - 6, y: y - 22, width: recW, height: 16, color: vc });
           p.drawText(recStr, { x: MARGIN_X + CONTENT_W - recW, y: y - 15, size: 7, font: bold, color: C.white });
         }
 
         // Viability bar
-        p.drawText(T("Viability:", "Viabilidad:", "Viabilite:"), { x: MARGIN_X + 36, y: y - 30, size: 7.5, font: bold, color: C.textMuted });
+        p.drawText(TI("Viability:", "Viabilidad:"), { x: MARGIN_X + 36, y: y - 30, size: 7.5, font: bold, color: C.textMuted });
         const barMaxW = 100;
         p.drawRectangle({ x: MARGIN_X + 86, y: y - 35, width: barMaxW, height: 7, color: C.border });
         const vBarColor = strat.viability >= 7 ? C.success : strat.viability >= 5 ? C.warning : C.critical;
@@ -1659,7 +1703,7 @@ async function buildPdf(
         p.drawText(`${strat.viability}/10`, { x: MARGIN_X + 192, y: y - 34, size: 7.5, font: bold, color: vBarColor });
 
         // Meta info
-        const meta = `${T("Timeline:", "Plazo:", "Delai:")} ${strat.timeline}  ·  ${T("MTC fee:", "Tarifa MTC:", "Honoraires MTC:")} ${strat.fee}`;
+        const meta = `${TI("Timeline:", "Plazo:")} ${strat.timeline}  ·  ${TI("MTC fee:", "Tarifa MTC:")} ${strat.fee}`;
         const metaW = regular.widthOfTextAtSize(meta, 7.5);
         p.drawText(meta, { x: MARGIN_X + CONTENT_W - metaW - 8, y: y - 34, size: 7.5, font: regular, color: C.textMuted });
 
@@ -1680,13 +1724,13 @@ async function buildPdf(
         const costH = 88;
         drawCard(p, MARGIN_X, y, CONTENT_W, costH);
         p.drawRectangle({ x: MARGIN_X, y: y - costH, width: 4, height: costH, color: C.primary });
-        p.drawText(T("FILING COST BREAKDOWN -USD $299 ALL-IN", "DESGLOSE DE COSTOS -USD $299 TODO INCLUIDO", "DETAIL DES COUTS - USD $299 TOUT INCLUS"), { x: MARGIN_X + 14, y: y - 16, size: 9.5, font: bold, color: C.textPrimary });
+        p.drawText(TI("FILING COST BREAKDOWN -USD $299 ALL-IN", "DESGLOSE DE COSTOS -USD $299 TODO INCLUIDO"), { x: MARGIN_X + 14, y: y - 16, size: 9.5, font: bold, color: C.textPrimary });
         p.drawRectangle({ x: MARGIN_X + 14, y: y - 22, width: CONTENT_W - 28, height: 0.5, color: C.border });
         const costItems = [
-          T("IMPI government filing fee (paid directly to IMPI on your behalf):  USD $170", "Cuota oficial IMPI (pagada directamente al IMPI en tu nombre):  USD $170", "Taxe officielle IMPI (payee directement a l'IMPI en votre nom):  USD $170"),
-          T("MTC professional service fee (preparation, filing, prosecution, reporting):  USD $129", "Tarifa profesional MTC (preparacion, presentacion, gestion, reportes):  USD $129", "Honoraires professionnels MTC (preparation, depot, suivi, rapports):  USD $129"),
-          T("Total all-in:  USD $299", "Total todo incluido:  USD $299", "Total tout inclus:  USD $299"),
-          T("Money-back: If IMPI raises a substantive objection on first office action, the $129 MTC fee is refunded.", "Garantia: Si el IMPI emite una prevencion sustantiva en el primer oficio, se reembolsa la tarifa MTC de $129.", "Garantie: Si l'IMPI emet une prevention substantielle lors du premier office action, les $129 d'honoraires MTC sont rembourses."),
+          TI("IMPI government filing fee (paid directly to IMPI on your behalf):  USD $170", "Cuota oficial IMPI (pagada directamente al IMPI en tu nombre):  USD $170"),
+          TI("MTC professional service fee (preparation, filing, prosecution, reporting):  USD $129", "Tarifa profesional MTC (preparacion, presentacion, gestion, reportes):  USD $129"),
+          TI("Total all-in:  USD $299", "Total todo incluido:  USD $299"),
+          TI("Money-back: If IMPI raises a substantive objection on first office action, the $129 MTC fee is refunded.", "Garantia: Si el IMPI emite una prevencion sustantiva en el primer oficio, se reembolsa la tarifa MTC de $129."),
         ];
         let cy3 = y - 34;
         for (const ci of costItems) {
@@ -1703,20 +1747,20 @@ async function buildPdf(
 
     // ── NICE CLASSIFICATION ────────────────────────────────────────────
     if (niceClasses.length > 0) {
-      let p = newPage(T("Nice Classification", "Clasificacion Niza", "Classification Nice"));
-      addPageHeader(p, regular, bold, markName, niceClasses, T("Nice Classification", "Clasificacion Niza", "Classification Nice"));
+      let p = newPage(TI("Nice Classification", "Clasificacion Niza"));
+      addPageHeader(p, regular, bold, markName, niceClasses, TI("Nice Classification", "Clasificacion Niza"));
       let y = PAGE_H - 34;
       y = addSectionHeader(p, bold,
-        T("NICE CLASSIFICATION", "CLASIFICACION NIZA", "CLASSIFICATION NICE"),
-        T("International trademark classification", "Clasificacion internacional de marcas", "Classification internationale des marques"),
+        TI("NICE CLASSIFICATION", "CLASIFICACION NIZA"),
+        TI("International trademark classification", "Clasificacion internacional de marcas"),
         y,
       );
       y -= 10;
 
       for (const nc of niceClasses) {
         if (y < MARGIN_BOT + 60) {
-          p = newPage(T("Nice Classification (cont.)", "Clasificacion Niza (cont.)", "Classification Nice (suite)"));
-          addPageHeader(p, regular, bold, markName, niceClasses, T("Nice Classification", "Clasificacion Niza", "Classification Nice"));
+          p = newPage(TI("Nice Classification (cont.)", "Clasificacion Niza (cont.)"));
+          addPageHeader(p, regular, bold, markName, niceClasses, TI("Nice Classification", "Clasificacion Niza"));
           y = PAGE_H - 44;
         }
         const className = useEnglish ? (nc.className_en || nc.className) : nc.className;
@@ -1755,10 +1799,31 @@ async function buildPdf(
   // ══════════════════════════════════════════════════════════════════════
   // Helper: render a cover page in a given language
   const renderCover = (coverLang: Lang, coverVerdict: Verdict, coverScore: number) => {
-    const isEN = coverLang === "en";
-    const isFR = coverLang === "fr";
-    // TC: language selector for cover — 3-way
-    const TC = (en: string, es: string, fr: string): string => isEN ? en : isFR ? fr : es;
+    // Native strings for all 8 cover languages
+    const coverStrings: Record<string, Record<Lang, string>> = {
+      reportType:    { en: "TRADEMARK CLEARANCE REPORT", es: "DICTAMEN DE VIABILIDAD MARCARIA", fr: "RAPPORT DE DISPONIBILITE DE MARQUE", de: "MARKENRECHERCHE-BERICHT", pt: "RELATORIO DE DISPONIBILIDADE DE MARCA", zh: "TRADEMARK CLEARANCE REPORT", ja: "TRADEMARK CLEARANCE REPORT", hi: "TRADEMARK CLEARANCE REPORT" },
+      reportTypeSub: { en: "Dictamen de Viabilidad Marcaria", es: "Trademark Clearance Report", fr: "Trademark Clearance Report", de: "Trademark Clearance Report", pt: "Trademark Clearance Report", zh: "Trademark Clearance Report", ja: "Trademark Clearance Report", hi: "Trademark Clearance Report" },
+      classPrefix:   { en: "Class", es: "Clase", fr: "Classe", de: "Klasse", pt: "Classe", zh: "Class", ja: "Class", hi: "Class" },
+      legendTitle:   { en: "WHAT THIS SCORE MEANS", es: "QUE SIGNIFICA ESTE PUNTAJE", fr: "SIGNIFICATION DE CE SCORE", de: "BEDEUTUNG DES SCORES", pt: "O QUE SIGNIFICA ESTA PONTUACAO", zh: "WHAT THIS SCORE MEANS", ja: "WHAT THIS SCORE MEANS", hi: "WHAT THIS SCORE MEANS" },
+      preliminary:   { en: "Preliminary analysis. Not legal advice.", es: "Analisis preliminar. No es asesoria legal.", fr: "Analyse preliminaire. Pas un avis juridique.", de: "Vorlaufige Analyse. Keine Rechtsberatung.", pt: "Analise preliminar. Nao e aconselhamento juridico.", zh: "Preliminary analysis. Not legal advice.", ja: "Preliminary analysis. Not legal advice.", hi: "Preliminary analysis. Not legal advice." },
+    };
+    const TC = (key: string): string => coverStrings[key]?.[coverLang] ?? coverStrings[key]?.["en"] ?? key;
+    // Legend rows with all 8 languages
+    type LegendRow = { range: string; labels: Record<Lang, string>; descs: Record<Lang, string>; v: Verdict };
+    const legendRows2: LegendRow[] = [
+      { range: "90-100", v: "CLEAR",    labels: { en: "CLEAR",     es: "SIN OBSTACULOS", fr: "LIBRE",         de: "FREI",             pt: "LIVRE",            zh: "CLEAR",     ja: "CLEAR",     hi: "CLEAR"     }, descs: { en: "No material obstacles",          es: "Sin obstaculos materiales",          fr: "Aucun obstacle materiel",           de: "Keine wesentlichen Hindernisse",    pt: "Sem obstaculos materiais",          zh: "No material obstacles",          ja: "No material obstacles",          hi: "No material obstacles"          } },
+      { range: "75-89",  v: "LOW",      labels: { en: "LOW RISK",  es: "RIESGO BAJO",    fr: "FAIBLE RISQUE",  de: "GERINGES RISIKO",  pt: "BAIXO RISCO",      zh: "LOW RISK",  ja: "LOW RISK",  hi: "LOW RISK"  }, descs: { en: "Few obstacles, registrable",     es: "Pocos obstaculos, registrable",       fr: "Peu d'obstacles, enregistrable",    de: "Wenige Hindernisse, registrierbar", pt: "Poucos obstaculos, registavel",     zh: "Few obstacles, registrable",     ja: "Few obstacles, registrable",     hi: "Few obstacles, registrable"     } },
+      { range: "55-74",  v: "MODERATE", labels: { en: "MODERATE",  es: "MODERADO",       fr: "MODERE",         de: "MITTEL",           pt: "MODERADO",         zh: "MODERATE",  ja: "MODERATE",  hi: "MODERATE"  }, descs: { en: "Registrable with strategy",      es: "Registrable con estrategia",          fr: "Enregistrable avec strategie",      de: "Registrierbar mit Strategie",       pt: "Registavel com estrategia",         zh: "Registrable with strategy",      ja: "Registrable with strategy",      hi: "Registrable with strategy"      } },
+      { range: "30-54",  v: "HIGH",     labels: { en: "HIGH RISK", es: "RIESGO ALTO",    fr: "RISQUE ELEVE",   de: "HOHES RISIKO",     pt: "ALTO RISCO",       zh: "HIGH RISK", ja: "HIGH RISK", hi: "HIGH RISK" }, descs: { en: "Multiple significant obstacles", es: "Multiples obstaculos significativos", fr: "Obstacles significatifs multiples", de: "Erhebliche Hindernisse",            pt: "Obstaculos significativos multiplos", zh: "Multiple significant obstacles", ja: "Multiple significant obstacles", hi: "Multiple significant obstacles" } },
+      { range: "0-29",   v: "CRITICAL", labels: { en: "CRITICAL",  es: "CRITICO",        fr: "CRITIQUE",       de: "KRITISCH",         pt: "CRITICO",          zh: "CRITICAL",  ja: "CRITICAL",  hi: "CRITICAL"  }, descs: { en: "Registration highly unlikely",   es: "Registro altamente improbable",       fr: "Enregistrement tres improbable",    de: "Registrierung sehr unwahrscheinlich", pt: "Registo improvavel",              zh: "Registration highly unlikely",   ja: "Registration highly unlikely",   hi: "Registration highly unlikely"   } },
+    ];
+    // Tile label translations
+    const tileLabelMap: Record<string, Record<Lang, string>> = {
+      criticalConflicts: { en: "Critical conflicts", es: "Conflictos criticos", fr: "Conflits critiques", de: "Kritische Konflikte",  pt: "Conflitos criticos",         zh: "Critical conflicts", ja: "Critical conflicts", hi: "Critical conflicts" },
+      lfppiGrounds:      { en: "LFPPI grounds raised", es: "Causales LFPPI",   fr: "Motifs LFPPI",       de: "LFPPI-Grundlagen",     pt: "Motivos LFPPI",              zh: "LFPPI grounds raised", ja: "LFPPI grounds raised", hi: "LFPPI grounds raised" },
+      distinctiveness:   { en: "Distinctiveness",      es: "Distintividad",    fr: "Distinctivite",      de: "Unterscheidungskraft", pt: "Distintividade",             zh: "Distinctiveness", ja: "Distinctiveness", hi: "Distinctiveness" },
+      impiSearch:        { en: "Marks in IMPI search", es: "Marcas en busqueda IMPI", fr: "Marques en recherche IMPI", de: "Marken in IMPI-Suche", pt: "Marcas na pesquisa IMPI", zh: "Marks in IMPI search", ja: "Marks in IMPI search", hi: "Marks in IMPI search" },
+    };
     const cvt = verdictColor(coverVerdict);
     const p = newPage("Cover");
 
@@ -1767,10 +1832,10 @@ async function buildPdf(
     p.drawRectangle({ x: 0, y: PAGE_H - headerH, width: PAGE_W, height: 0.8, color: C.border });
     p.drawText("MEXICO TRADEMARK CENTER", { x: MARGIN_X, y: PAGE_H - 28, size: 13, font: bold, color: C.primary });
     p.drawText("MexicoTrademarkCenter.com", { x: MARGIN_X, y: PAGE_H - 42, size: 8, font: regular, color: C.textMuted });
-    const rtLabel2 = TC("TRADEMARK CLEARANCE REPORT", "DICTAMEN DE VIABILIDAD MARCARIA", "RAPPORT DE DISPONIBILITE DE MARQUE");
+    const rtLabel2 = TC("reportType");
     const rtW2 = regular.widthOfTextAtSize(rtLabel2, 8);
     p.drawText(rtLabel2, { x: PAGE_W - MARGIN_X - rtW2, y: PAGE_H - 28, size: 8, font: regular, color: C.textMuted });
-    const rt2b = TC("Dictamen de Viabilidad Marcaria", "Trademark Clearance Report", "Trademark Clearance Report");
+    const rt2b = TC("reportTypeSub");
     const rt2bW = italic.widthOfTextAtSize(rt2b, 8);
     p.drawText(rt2b, { x: PAGE_W - MARGIN_X - rt2bW, y: PAGE_H - 40, size: 8, font: italic, color: C.textMuted });
 
@@ -1782,7 +1847,7 @@ async function buildPdf(
 
     const classChipY2 = markY2 - 22;
     if (niceClasses.length > 0) {
-      const chipStr2 = niceClasses.map(nc => TC(`Class ${nc.classNumber}`, `Clase ${nc.classNumber}`, `Classe ${nc.classNumber}`)).join("  ·  ");
+      const chipStr2 = niceClasses.map(nc => `${TC("classPrefix")} ${nc.classNumber}`).join("  ·  ");
       const chipW2 = bold.widthOfTextAtSize(chipStr2, 9);
       p.drawText(chipStr2, { x: (PAGE_W - chipW2) / 2, y: classChipY2, size: 9, font: bold, color: C.primary });
     }
@@ -1832,18 +1897,10 @@ async function buildPdf(
     }
 
     const legendY2 = gaugeCY2 - gaugeR2 - 76;
-    const legendTitle2 = TC("WHAT THIS SCORE MEANS", "QUE SIGNIFICA ESTE PUNTAJE", "SIGNIFICATION DE CE SCORE");
+    const legendTitle2 = TC("legendTitle");
     const ltW2 = bold.widthOfTextAtSize(legendTitle2, 8);
     p.drawText(legendTitle2, { x: (PAGE_W - ltW2) / 2, y: legendY2, size: 8, font: bold, color: C.textMuted });
     p.drawRectangle({ x: MARGIN_X + 40, y: legendY2 - 4, width: CONTENT_W - 80, height: 0.5, color: C.border });
-
-    const legendRows2: Array<{ range: string; label_en: string; label_es: string; label_fr: string; desc_en: string; desc_es: string; desc_fr: string; v: Verdict }> = [
-      { range: "90-100", label_en: "CLEAR",     label_es: "SIN OBSTACULOS", label_fr: "LIBRE",          desc_en: "No material obstacles",          desc_es: "Sin obstaculos materiales",          desc_fr: "Aucun obstacle materiel",           v: "CLEAR" },
-      { range: "75-89",  label_en: "LOW RISK",  label_es: "RIESGO BAJO",    label_fr: "FAIBLE RISQUE",  desc_en: "Few obstacles, registrable",     desc_es: "Pocos obstaculos, registrable",       desc_fr: "Peu d'obstacles, enregistrable",    v: "LOW" },
-      { range: "55-74",  label_en: "MODERATE",  label_es: "MODERADO",       label_fr: "MODERE",         desc_en: "Registrable with strategy",      desc_es: "Registrable con estrategia",          desc_fr: "Enregistrable avec strategie",      v: "MODERATE" },
-      { range: "30-54",  label_en: "HIGH RISK", label_es: "RIESGO ALTO",    label_fr: "RISQUE ELEVE",   desc_en: "Multiple significant obstacles", desc_es: "Multiples obstaculos significativos", desc_fr: "Obstacles significatifs multiples", v: "HIGH" },
-      { range: "0-29",   label_en: "CRITICAL",  label_es: "CRITICO",        label_fr: "CRITIQUE",       desc_en: "Registration highly unlikely",   desc_es: "Registro altamente improbable",       desc_fr: "Enregistrement tres improbable",    v: "CRITICAL" },
-    ];
 
     let lRowY2 = legendY2 - 14;
     for (const row of legendRows2) {
@@ -1851,9 +1908,9 @@ async function buildPdf(
       const rowColor2 = verdictColor(row.v);
       p.drawCircle({ x: MARGIN_X + 44, y: lRowY2 - 4, size: 5, color: rowColor2 });
       p.drawText(row.range, { x: MARGIN_X + 54, y: lRowY2 - 8, size: 8, font: regular, color: C.textMuted });
-      const rowLabel2 = TC(row.label_en, row.label_es, row.label_fr);
+      const rowLabel2 = row.labels[coverLang] ?? row.labels["en"];
       p.drawText(rowLabel2, { x: MARGIN_X + 90, y: lRowY2 - 8, size: 8, font: isThis2 ? bold : regular, color: isThis2 ? rowColor2 : C.textSecond });
-      const desc2 = TC(row.desc_en, row.desc_es, row.desc_fr);
+      const desc2 = row.descs[coverLang] ?? row.descs["en"];
       const descLines2 = wrapText(desc2, regular, 7.5, CONTENT_W - 160);
       let descY2 = lRowY2 - 8;
       for (const dl of descLines2.slice(0, 1)) {
@@ -1874,22 +1931,30 @@ async function buildPdf(
     const tileH2 = 62;
     const distCover = result.distinctiveness;
     const rawDistCover = distCover ? (distCover.score <= 5 ? distCover.score * 20 : distCover.score) : 0;
-    const tierEsCover: Record<string, string> = { generic: "Generica", descriptive: "Descriptiva", suggestive: "Sugestiva", arbitrary: "Arbitraria", fanciful: "De Fantasia" };
-    const tierFrCover: Record<string, string> = { generic: "Generique", descriptive: "Descriptive", suggestive: "Evocatrice", arbitrary: "Arbitraire", fanciful: "De Fantaisie" };
+    const tierLabelsByCoverLang: Record<Lang, Record<string, string>> = {
+      en: { generic: "Generic",   descriptive: "Descriptive", suggestive: "Suggestive", arbitrary: "Arbitrary",  fanciful: "Fanciful"     },
+      es: { generic: "Generica",  descriptive: "Descriptiva", suggestive: "Sugestiva",  arbitrary: "Arbitraria", fanciful: "De Fantasia"  },
+      fr: { generic: "Generique", descriptive: "Descriptive", suggestive: "Evocatrice", arbitrary: "Arbitraire", fanciful: "De Fantaisie" },
+      de: { generic: "Generisch", descriptive: "Beschreibend",suggestive: "Suggestiv",  arbitrary: "Willkurlich",fanciful: "Phantasie"    },
+      pt: { generic: "Generica",  descriptive: "Descritiva",  suggestive: "Sugestiva",  arbitrary: "Arbitraria", fanciful: "Fantasiosa"   },
+      zh: { generic: "Generic",   descriptive: "Descriptive", suggestive: "Suggestive", arbitrary: "Arbitrary",  fanciful: "Fanciful"     },
+      ja: { generic: "Generic",   descriptive: "Descriptive", suggestive: "Suggestive", arbitrary: "Arbitrary",  fanciful: "Fanciful"     },
+      hi: { generic: "Generic",   descriptive: "Descriptive", suggestive: "Suggestive", arbitrary: "Arbitrary",  fanciful: "Fanciful"     },
+    };
     const flagsCover = result.registrabilityFlags ?? [];
-    const distTierLabel = distCover ? (isFR ? (tierFrCover[distCover.tier] ?? distCover.tier) : isEN ? distCover.tier : (tierEsCover[distCover.tier] ?? distCover.tier)) : "N/A";
+    const distTierLabel = distCover ? (tierLabelsByCoverLang[coverLang]?.[distCover.tier] ?? distCover.tier) : "N/A";
     const tiles2 = [
-      { value: String((result.marciaFindings ?? []).filter(f => (f.similarityScore ?? 0) >= 80).length), label_en: "Critical conflicts", label_es: "Conflictos criticos", label_fr: "Conflits critiques", color: (result.marciaFindings ?? []).some(f => (f.similarityScore ?? 0) >= 80) ? C.critical : C.success },
-      { value: String(flagsCover.length), label_en: "LFPPI grounds raised", label_es: "Causales LFPPI", label_fr: "Motifs LFPPI", color: flagsCover.length > 0 ? C.warning : C.success },
-      { value: distCover ? `${distTierLabel} ${rawDistCover}/100` : "N/A", label_en: "Distinctiveness", label_es: "Distintividad", label_fr: "Distinctivite", color: rawDistCover >= 60 ? C.success : rawDistCover >= 40 ? C.warning : C.critical },
-      { value: String(result.marciaTotalCount ?? (result.marciaFindings ?? []).length), label_en: "Marks in IMPI search", label_es: "Marcas en busqueda IMPI", label_fr: "Marques en recherche IMPI", color: (result.marciaTotalCount ?? 0) > 5 ? C.critical : C.warning },
+      { value: String((result.marciaFindings ?? []).filter(f => (f.similarityScore ?? 0) >= 80).length), labelKey: "criticalConflicts", color: (result.marciaFindings ?? []).some(f => (f.similarityScore ?? 0) >= 80) ? C.critical : C.success },
+      { value: String(flagsCover.length), labelKey: "lfppiGrounds", color: flagsCover.length > 0 ? C.warning : C.success },
+      { value: distCover ? `${distTierLabel} ${rawDistCover}/100` : "N/A", labelKey: "distinctiveness", color: rawDistCover >= 60 ? C.success : rawDistCover >= 40 ? C.warning : C.critical },
+      { value: String(result.marciaTotalCount ?? (result.marciaFindings ?? []).length), labelKey: "impiSearch", color: (result.marciaTotalCount ?? 0) > 5 ? C.critical : C.warning },
     ];
 
     for (let ti = 0; ti < tiles2.length; ti++) {
       const tx2 = MARGIN_X + ti * (tileW2 + 4);
       const tile2 = tiles2[ti];
       drawCard(p, tx2, tilesStartY2, tileW2, tileH2);
-      const tileLabel2 = TC(tile2.label_en, tile2.label_es, tile2.label_fr);
+      const tileLabel2 = tileLabelMap[tile2.labelKey]?.[coverLang] ?? tileLabelMap[tile2.labelKey]?.["en"] ?? tile2.labelKey;
       const tlLines2 = wrapText(tileLabel2.toUpperCase(), regular, 7, tileW2 - 12);
       let tly2 = tilesStartY2 - 10;
       for (const tll of tlLines2.slice(0, 2)) {
@@ -1911,19 +1976,22 @@ async function buildPdf(
       "Mexico -IMPI Registry",
       dateDisplay,
       `Report ID: ${shortId}`,
-      TC("Preliminary analysis. Not legal advice.", "Analisis preliminar. No es asesoria legal.", "Analyse preliminaire. Pas un avis juridique."),
+      TC("preliminary"),
     ].join("  ·  ");
     const footerW2 = regular.widthOfTextAtSize(footerStr2, 7.5);
     p.drawText(footerStr2, { x: (PAGE_W - footerW2) / 2, y: footerY2 - 14, size: 7.5, font: regular, color: C.textMuted });
   };
 
   if (isBilingual) {
-    // Spanish cover + Spanish sections
+    // Native-language cover + sections
     renderCover(searchLang, verdict, score);
     renderAllSections(searchLang, false);
-    // English cover + English sections (no divider page)
-    renderCover("en", verdict, score);
-    renderAllSections("en", true);
+    // Spanish cover + sections (for use by client's Mexican attorney)
+    renderCover("es", verdict, score);
+    renderAllSections("es", false);
+  } else if (searchLang === "es") {
+    renderCover("es", verdict, score);
+    renderAllSections("es", false);
   } else {
     renderCover("en", verdict, score);
     renderAllSections("en", true);
