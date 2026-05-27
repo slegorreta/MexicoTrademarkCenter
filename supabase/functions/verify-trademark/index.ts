@@ -593,7 +593,7 @@ async function analyzeRegistrability(
       const sameClass = similarConflictNames.filter(f => f.classOverlap === "same");
       const relatedClass = similarConflictNames.filter(f => f.classOverlap === "related");
       if (sameClass.length > 0) {
-        parts.push(`MARCAS CONFUSAMENTE SIMILARES EN LA MISMA CLASE: Se encontraron ${sameClass.length} marca(s) con nombre visualmente/fonéticamente similar a "${markName}" registradas en la MISMA clase Niza (${classes.join(", ")}): ${sameClass.map(f => `"${f.name}" (clase ${f.classNum})`).join(", ")}. INSTRUCCIÓN CRÍTICA: Esto constituye un conflicto directo bajo LFPPI Art. 173 Fr. VIII. El factor DuPont "similarity_of_marks" DEBE calificarse como "against_registration" y el riskColor DEBE ser "ROJO".`);
+        parts.push(`MARCAS CONFUSAMENTE SIMILARES EN LA MISMA CLASE: Se encontraron ${sameClass.length} marca(s) con nombre visualmente/fonéticamente similar a "${markName}" registradas en la MISMA clase Niza (${classes.join(", ")}): ${sameClass.map(f => `"${f.name}" (clase ${f.classNum})`).join(", ")}. INSTRUCCIÓN CRÍTICA: Esto constituye un conflicto directo bajo LFPPI Art. 173 Fr. XVIII. El factor DuPont "similarity_of_marks" DEBE calificarse como "against_registration" y el riskColor DEBE ser "ROJO".`);
       }
       if (relatedClass.length > 0) {
         parts.push(`MARCAS SIMILARES EN CLASES RELACIONADAS: ${relatedClass.map(f => `"${f.name}" (clase ${f.classNum})`).join(", ")}. Evalúa el riesgo de confusión teniendo en cuenta la proximidad comercial entre estas clases y la del solicitante (${classes.join(", ")}).`);
@@ -605,7 +605,7 @@ async function analyzeRegistrability(
         `CONFLICTOS POR PALABRAS COMPONENTES: La marca "${markName}" está formada por las palabras: [${tokens.join(", ")}]. ` +
         `Se encontraron ${componentConflicts.length} marca(s) en el registro IMPI que coinciden con una o más de estas palabras individuales en clases iguales o relacionadas: ` +
         componentConflicts.map(f => `"${f.name}" (clase ${f.classNum})`).join(", ") +
-        `. INSTRUCCIÓN CRÍTICA: Bajo la doctrina de marcas compuestas (LFPPI Art. 173 Fr. VIII y jurisprudencia IMPI), el registro de un componente dominante de la marca solicitada puede generar riesgo de confusión aunque la marca completa no coincida exactamente. ` +
+        `. INSTRUCCIÓN CRÍTICA: Bajo la doctrina de marcas compuestas (LFPPI Art. 173 Fr. XVIII y jurisprudencia IMPI), el registro de un componente dominante de la marca solicitada puede generar riesgo de confusión aunque la marca completa no coincida exactamente. ` +
         `Evalúa: (1) si alguna de estas palabras es el elemento dominante o más distintivo de "${markName}"; ` +
         `(2) si los consumidores podrían abreviar la marca a esa palabra (p.ej. llamar "WildRoots" simplemente "Wild" o "Roots"); ` +
         `(3) refleja este análisis en los factores DuPont "similarity_of_marks" y "number_of_similar_marks".`
@@ -676,14 +676,15 @@ Pregunta: ¿Es la marca un término inventado sin significado en ningún idioma?
 PARTE 2 — MOTIVOS ABSOLUTOS APLICABLES (LFPPI Art. 173)
 Solo incluye flags que genuinamente apliquen. Categorías disponibles:
 "generic" (Fr. I), "descriptive" (Fr. II), "functional_shape" (Fr. IV), "deceptive" (Fr. V),
-"official_emblems" (Fr. VI), "personal_identity" (Fr. VII), "confusingly_similar" (Fr. VIII),
+"official_emblems" (Fr. VI), "personal_identity" (Fr. VII),
 "famous_mark" (Fr. IX), "protected_characters" (Fr. X), "geographic_indication" (Fr. XI),
-"immoral_offensive" (Fr. XII), "isolated_color" (Fr. XIII), "non_distinctive_nontrad" (Fr. XIV), "bad_faith" (Fr. XV)
+"immoral_offensive" (Fr. XII), "isolated_color" (Fr. XIII), "non_distinctive_nontrad" (Fr. XIV),
+"confusingly_similar" (Fr. XVIII), "bad_faith" (Fr. XXII)
 NOTA: "generic" y "descriptive" son categorías independientes; nunca las combines.
 
 PARTE 3 — PERFIL DEL CONSUMIDOR Y CAMPO SATURADO
 - Identifica el perfil del consumidor típico para la clase solicitada y su nivel de atención (alto=comprador industrial/profesional; medio=consumidor general; bajo=compra impulsiva).
-- Si hay múltiples marcas similares en la misma clase (campo saturado), la protección de cada marca individual es más estrecha (doctrina del campo saturado, LFPPI Art. 173 Fr. VIII interpretado sistemáticamente). Refléjalo en el factor DuPont "number_of_similar_marks".
+- Si hay múltiples marcas similares en la misma clase (campo saturado), la protección de cada marca individual es más estrecha (doctrina del campo saturado, LFPPI Art. 173 Fr. XVIII interpretado sistemáticamente). Refléjalo en el factor DuPont "number_of_similar_marks".
 
 PARTE 4 — LOS 13 FACTORES DUPONT
 Nombres de factores (usar exactamente):

@@ -89,14 +89,19 @@ const DUPONT_LABELS: Record<string, string> = {
 const CATEGORY_LABELS: Record<string, string> = {
   generic: 'Generic (Art. 173 Fr. I LFPPI)',
   descriptive: 'Descriptive (Art. 173 Fr. II LFPPI)',
-  generic_descriptive: 'Generic or Descriptive',
-  functional_shape: 'Functional Shape',
-  deceptive: 'Deceptive or Misleading', official_emblems: 'Official Emblems / Flags',
-  personal_identity: 'Personal Identity Without Consent', confusingly_similar: 'Confusingly Similar to Existing Mark',
-  famous_mark: 'Famous or Notorious Mark', protected_characters: 'Protected Characters / Titles',
-  geographic_indication: 'Protected Geographic Indication', immoral_offensive: 'Contrary to Public Order / Morality',
-  isolated_color: 'Isolated Color (Not Distinctive)', non_distinctive_nontrad: 'Non-Distinctive Non-Traditional Mark',
-  bad_faith: 'Bad Faith Filing',
+  generic_descriptive: 'Generic or Descriptive (Art. 173 Fr. I–II LFPPI)',
+  functional_shape: 'Functional Shape (Art. 173 Fr. IV LFPPI)',
+  deceptive: 'Deceptive or Misleading (Art. 173 Fr. V LFPPI)',
+  official_emblems: 'Official Emblems / Flags (Art. 173 Fr. VI LFPPI)',
+  personal_identity: 'Personal Identity Without Consent (Art. 173 Fr. VII LFPPI)',
+  famous_mark: 'Famous or Notorious Mark (Art. 173 Fr. IX LFPPI)',
+  protected_characters: 'Protected Characters / Titles (Art. 173 Fr. X LFPPI)',
+  geographic_indication: 'Protected Geographic Indication (Art. 173 Fr. XI LFPPI)',
+  immoral_offensive: 'Contrary to Public Order / Morality (Art. 173 Fr. XII LFPPI)',
+  isolated_color: 'Isolated Color (Art. 173 Fr. XIII LFPPI)',
+  non_distinctive_nontrad: 'Non-Distinctive Non-Traditional Mark (Art. 173 Fr. XIV LFPPI)',
+  confusingly_similar: 'Confusingly Similar to Existing Mark (Art. 173 Fr. XVIII LFPPI)',
+  bad_faith: 'Bad Faith Filing (Art. 173 Fr. XXII LFPPI)',
 };
 
 const TIER_ORDER = ['generic', 'descriptive', 'suggestive', 'arbitrary', 'fanciful'] as const;
@@ -842,6 +847,10 @@ export default function TrademarkClearancePanel({
   const [marciaExpanded, setMarciaExpanded] = useState(false);
   const [webExpanded, setWebExpanded] = useState(false);
   const [domainExpanded, setDomainExpanded] = useState(false);
+  const [lfppiDashExpanded, setLfppiDashExpanded] = useState(false);
+  const [conflictTiersExpanded, setConflictTiersExpanded] = useState(true);
+  const [stratExpanded, setStratExpanded] = useState(false);
+  const [timelineExpanded, setTimelineExpanded] = useState(false);
 
   // Filter & tab state
   type StatusFilter = 'all' | 'active' | 'inactive' | 'registered' | 'pending';
@@ -2251,7 +2260,7 @@ export default function TrademarkClearancePanel({
               <div className="flex items-center gap-2 mb-1">
                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide ${result.malaFe.riskLevel === 'high' ? 'bg-red-100 text-red-700' : result.malaFe.riskLevel === 'medium' ? 'bg-orange-100 text-orange-700' : 'bg-amber-100 text-amber-700'}`}>{result.malaFe.riskLevel.toUpperCase()}</span>
                 <span className="text-xs font-semibold text-gray-700">
-                  {lang === 'es' ? 'Mala Fe Registral' : 'Bad-Faith Registration'} — Art. 173 Fr. XVIII LFPPI
+                  {lang === 'es' ? 'Mala Fe Registral' : 'Bad-Faith Registration'} — Art. 173 Fr. XXII LFPPI
                 </span>
               </div>
               <p className="text-xs leading-relaxed text-gray-700">
@@ -2360,6 +2369,468 @@ export default function TrademarkClearancePanel({
               </div>
             </div>
           )}
+
+          {/* 4b — LFPPI Art. 173 Full Dashboard (22 fracciones) */}
+          {(() => {
+
+            // Map each fracción to its plain-English question + what category covers it
+            const FRACCIONES: Array<{
+              num: string;
+              question: { en: string; es: string };
+              category?: string;
+              alwaysNA?: boolean;
+            }> = [
+              { num: 'I',    question: { en: 'Is the mark the common name for the product/service?', es: '¿Es el nombre común del producto o servicio?' }, category: 'generic' },
+              { num: 'II',   question: { en: 'Does it directly describe the product\'s characteristics?', es: '¿Describe directamente características del producto?' }, category: 'descriptive' },
+              { num: 'III',  question: { en: 'Is it a 3D shape that is the natural or technical form of the goods?', es: '¿Es una forma tridimensional natural o técnica del producto?' }, category: 'functional_shape' },
+              { num: 'IV',   question: { en: 'Is it a shape that gives a technical advantage to the product?', es: '¿Es una forma que da ventaja técnica al producto?' }, category: 'functional_shape' },
+              { num: 'V',    question: { en: 'Could it deceive consumers about the product\'s origin or quality?', es: '¿Puede engañar al consumidor sobre el origen o calidad?' }, category: 'deceptive' },
+              { num: 'VI',   question: { en: 'Does it reproduce official state symbols or emblems?', es: '¿Reproduce símbolos o emblemas oficiales del Estado?' }, category: 'official_emblems' },
+              { num: 'VII',  question: { en: 'Does it use a person\'s identity without their consent?', es: '¿Usa la identidad de una persona sin su consentimiento?' }, category: 'personal_identity' },
+              { num: 'VIII', question: { en: 'Is it identical or similar to a plant variety denomination?', es: '¿Es idéntica o similar a una denominación de variedad vegetal?' }, alwaysNA: true },
+              { num: 'IX',   question: { en: 'Is it identical or similar to a famous or notorious mark?', es: '¿Es idéntica o similar a una marca famosa o notoria?' }, category: 'famous_mark' },
+              { num: 'X',    question: { en: 'Does it reproduce a protected literary/artistic work title?', es: '¿Reproduce el título de una obra literaria o artística protegida?' }, category: 'protected_characters' },
+              { num: 'XI',   question: { en: 'Does it reproduce a protected geographical indication?', es: '¿Reproduce una denominación de origen o indicación geográfica protegida?' }, category: 'geographic_indication' },
+              { num: 'XII',  question: { en: 'Is it contrary to public order or accepted morality?', es: '¿Es contraria al orden público o a la moral aceptada?' }, category: 'immoral_offensive' },
+              { num: 'XIII', question: { en: 'Is it an isolated color without distinctive character?', es: '¿Es un color aislado sin carácter distintivo?' }, category: 'isolated_color' },
+              { num: 'XIV',  question: { en: 'Is it a non-traditional mark lacking distinctiveness?', es: '¿Es una marca no tradicional sin distintividad?' }, category: 'non_distinctive_nontrad' },
+              { num: 'XV',   question: { en: 'Is it a translation of a famous foreign mark?', es: '¿Es la traducción de una marca famosa extranjera?' }, category: 'famous_mark' },
+              { num: 'XVI',  question: { en: 'Does it reproduce a protected plant variety or animal breed?', es: '¿Reproduce una variedad vegetal o raza animal protegida?' }, alwaysNA: true },
+              { num: 'XVII', question: { en: 'Is it a geographical indication for wines/spirits from another region?', es: '¿Es una indicación geográfica para vinos/licores de otra región?' }, alwaysNA: true },
+              { num: 'XVIII',question: { en: 'Is it confusingly similar to an already-registered mark?', es: '¿Es confusamente similar a una marca ya registrada?' }, category: 'confusingly_similar' },
+              { num: 'XIX',  question: { en: 'Is it identical to a mark registered by someone else in the same class?', es: '¿Es idéntica a una marca registrada por otro en la misma clase?' }, category: 'confusingly_similar' },
+              { num: 'XX',   question: { en: 'Could it be confused with a trade name already in use?', es: '¿Puede confundirse con un nombre comercial ya en uso?' }, category: 'confusingly_similar' },
+              { num: 'XXI',  question: { en: 'Is it identical to a mark with a pending earlier application?', es: '¿Es idéntica a una marca con solicitud anterior en trámite?' }, category: 'confusingly_similar' },
+              { num: 'XXII', question: { en: 'Was the application filed in bad faith?', es: '¿Fue presentada la solicitud de mala fe?' }, category: 'bad_faith' },
+            ];
+
+            // Determine verdict per fracción from the result
+            const getVerdict = (frac: typeof FRACCIONES[0]): 'pass' | 'caution' | 'fail' | 'na' => {
+              if (frac.alwaysNA) return 'na';
+              if (!frac.category) return 'na';
+              const matchingFlag = regFlags.find(f => f.category === frac.category);
+              if (!matchingFlag) {
+                // Special: confusingly_similar — check marcia findings
+                if (frac.category === 'confusingly_similar') {
+                  const hasExact = result.marciaFindings.some(f =>
+                    (f as MarciaFinding & { classOverlap?: string }).classOverlap === 'same'
+                  );
+                  const hasRelated = result.marciaFindings.some(f =>
+                    (f as MarciaFinding & { classOverlap?: string }).classOverlap === 'related'
+                  );
+                  if (hasExact && (frac.num === 'XVIII' || frac.num === 'XIX' || frac.num === 'XXI')) return 'fail';
+                  if (hasRelated && frac.num === 'XVIII') return 'caution';
+                  return 'pass';
+                }
+                if (frac.category === 'famous_mark') {
+                  if ((result.famousMarkConflicts ?? []).length > 0) return 'caution';
+                }
+                if (frac.category === 'bad_faith') {
+                  const mf = result.malaFe;
+                  if (mf?.detected && mf.riskLevel === 'high') return 'fail';
+                  if (mf?.detected) return 'caution';
+                }
+                return 'pass';
+              }
+              if (matchingFlag.severity === 'high') return 'fail';
+              if (matchingFlag.severity === 'medium') return 'caution';
+              return 'caution';
+            };
+
+            const verdicts = FRACCIONES.map(f => ({ ...f, verdict: getVerdict(f) }));
+            const failCount = verdicts.filter(v => v.verdict === 'fail').length;
+            const cautionCount = verdicts.filter(v => v.verdict === 'caution').length;
+
+            return (
+              <div className="border-b border-gray-100">
+                <button type="button" onClick={() => setLfppiDashExpanded(v => !v)}
+                  className="w-full flex items-center justify-between px-4 py-2 text-xs font-medium text-gray-600 hover:bg-white/80 transition-colors">
+                  <span className="flex flex-col items-start text-left gap-0.5">
+                    <span className="flex items-center gap-1.5">
+                      <Scale size={12} className="text-[#1a2e1a]" />
+                      {lang === 'es' ? 'Art. 173 LFPPI — Las 22 Fracciones' : 'Art. 173 LFPPI — All 22 Grounds'}
+                      {failCount > 0 && <span className="text-[10px] font-bold text-red-600 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded-full">{failCount} {lang === 'es' ? 'fallido(s)' : 'failed'}</span>}
+                      {cautionCount > 0 && <span className="text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">{cautionCount} {lang === 'es' ? 'precaución' : 'caution'}</span>}
+                    </span>
+                    <span className="text-[9px] text-gray-400 font-normal pl-5">
+                      {lang === 'es' ? 'Revisión completa de todas las causales absolutas de negativa. Haz clic en cualquier casilla para ver el análisis.' : 'Full review of all absolute grounds for refusal. Click any card to expand analysis.'}
+                    </span>
+                  </span>
+                  {lfppiDashExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                </button>
+                {lfppiDashExpanded && (
+                  <div className="px-4 pb-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 mt-1">
+                      {verdicts.map((frac) => {
+                        const verdictStyles = {
+                          pass:    { ring: 'border-emerald-200 bg-emerald-50',   icon: '✓', iconColor: 'text-emerald-600', label: lang === 'es' ? 'OK' : 'Pass' },
+                          caution: { ring: 'border-amber-200 bg-amber-50',       icon: '!', iconColor: 'text-amber-600',   label: lang === 'es' ? 'Precaución' : 'Caution' },
+                          fail:    { ring: 'border-red-300 bg-red-50 ring-1 ring-red-300', icon: '✗', iconColor: 'text-red-600', label: lang === 'es' ? 'Falla' : 'Fail' },
+                          na:      { ring: 'border-gray-100 bg-gray-50',          icon: '—', iconColor: 'text-gray-300',   label: 'N/A' },
+                        }[frac.verdict];
+                        const matchingFlag = frac.category ? regFlags.find(f => f.category === frac.category) : undefined;
+                        return (
+                          <details key={frac.num} className={`rounded-lg border px-2.5 py-2 cursor-pointer ${verdictStyles.ring} transition-all`}>
+                            <summary className="list-none flex items-start gap-1.5 select-none">
+                              <span className={`text-[11px] font-bold flex-shrink-0 mt-0.5 w-4 text-center ${verdictStyles.iconColor}`}>{verdictStyles.icon}</span>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1 flex-wrap">
+                                  <span className="text-[9px] font-bold text-gray-500 flex-shrink-0">Fr. {frac.num}</span>
+                                  <span className={`text-[8px] font-semibold px-1 py-0.5 rounded uppercase tracking-wide flex-shrink-0 ${
+                                    frac.verdict === 'fail' ? 'bg-red-100 text-red-700' :
+                                    frac.verdict === 'caution' ? 'bg-amber-100 text-amber-700' :
+                                    frac.verdict === 'na' ? 'bg-gray-100 text-gray-400' :
+                                    'bg-emerald-100 text-emerald-700'
+                                  }`}>{verdictStyles.label}</span>
+                                </div>
+                                <p className="text-[9px] text-gray-600 mt-0.5 leading-tight">
+                                  {lang === 'es' ? frac.question.es : frac.question.en}
+                                </p>
+                              </div>
+                            </summary>
+                            <div className="mt-2 pt-2 border-t border-gray-100">
+                              {matchingFlag ? (
+                                <p className="text-[10px] text-gray-600 leading-relaxed">
+                                  {matchingFlag.explanation_user ?? (lang === 'en' ? matchingFlag.explanation_en : matchingFlag.explanation) ?? matchingFlag.explanation}
+                                </p>
+                              ) : frac.verdict === 'na' ? (
+                                <p className="text-[10px] text-gray-400 italic">{lang === 'es' ? 'No aplica a este tipo de marca.' : 'Does not apply to this type of mark.'}</p>
+                              ) : frac.verdict === 'pass' ? (
+                                <p className="text-[10px] text-emerald-700">{lang === 'es' ? 'Sin problemas identificados bajo esta fracción.' : 'No issues identified under this ground.'}</p>
+                              ) : (
+                                <p className="text-[10px] text-amber-700">{lang === 'es' ? 'Posible conflicto — revisa los hallazgos arriba.' : 'Possible conflict — review findings above.'}</p>
+                              )}
+                            </div>
+                          </details>
+                        );
+                      })}
+                    </div>
+                    <p className="text-[9px] text-gray-400 mt-2 flex items-center gap-1">
+                      <Info size={9} className="flex-shrink-0" />
+                      {lang === 'es' ? 'Basado en LFPPI Art. 173 (Decreto publicado DOF). Esta evaluación es orientativa y no constituye asesoría legal.' : 'Based on LFPPI Art. 173 as published in the DOF. This assessment is indicative and does not constitute legal advice.'}
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* 4c — Conflict Tiers: Critical / Significant / Background */}
+          {(() => {
+            const allFindings = result.marciaFindings;
+            const critical = allFindings.filter(f => {
+              const sim = getSimilarityScore(f.name);
+              const overlap = (f as MarciaFinding & { classOverlap?: string }).classOverlap;
+              return sim >= 80 || overlap === 'same';
+            });
+            const significant = allFindings.filter(f => {
+              const sim = getSimilarityScore(f.name);
+              const overlap = (f as MarciaFinding & { classOverlap?: string }).classOverlap;
+              return sim >= 50 && sim < 80 && overlap !== 'same';
+            });
+            const background = allFindings.filter(f => {
+              const sim = getSimilarityScore(f.name);
+              const overlap = (f as MarciaFinding & { classOverlap?: string }).classOverlap;
+              return sim < 50 && overlap !== 'same';
+            });
+            if (allFindings.length === 0) return null;
+
+            const ConflictCard = ({ f, tier }: { f: MarciaFinding & { classOverlap?: string }, tier: 'critical' | 'significant' | 'background' }) => {
+              const statusLower = f.status.toLowerCase();
+              const isRegistered = /registrada|vigente|registered|active/i.test(statusLower) && !/tram|pend|proc/i.test(statusLower);
+              const isPending = /tram|pend|proc|solicitud/i.test(statusLower);
+              const isExact = f.name.toLowerCase().trim() === markName.toLowerCase().trim();
+              const sim = getSimilarityScore(f.name);
+              const statusBadge = isRegistered ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : isPending ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-gray-100 text-gray-500 border-gray-200';
+              const statusLabel = isRegistered ? (lang === 'es' ? 'Registrada' : 'Registered') : isPending ? (lang === 'es' ? 'En Trámite' : 'Pending') : f.status;
+              const whyItMatters = tier === 'critical'
+                ? (lang === 'es' ? `Similitud ${sim}% con tu marca${f.classOverlap === 'same' ? ' en la misma clase' : ''}. Obstáculo directo al registro.` : `${sim}% similar to your mark${f.classOverlap === 'same' ? ' in the same class' : ''}. Direct obstacle to registration.`)
+                : tier === 'significant'
+                ? (lang === 'es' ? `Similitud ${sim}%. Riesgo moderado de confusión.` : `${sim}% similar. Moderate confusion risk.`)
+                : (lang === 'es' ? `Similitud ${sim}%. Ruido de fondo — riesgo bajo.` : `${sim}% similar. Background noise — low risk.`);
+
+              return (
+                <div className={`rounded-xl border p-3 bg-white shadow-sm ${tier === 'critical' ? 'border-red-200' : tier === 'significant' ? 'border-amber-200' : 'border-gray-100'}`}>
+                  <div className="flex items-start justify-between gap-2 mb-1.5">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <SimilarityGauge score={isExact ? 97 : sim} size={36} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-gray-800 leading-tight truncate">{f.name || '—'}</p>
+                        <p className="text-[9px] text-gray-500 truncate">{f.holder || ''}</p>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                      <span className={`text-[9px] font-bold border rounded-full px-1.5 py-0.5 ${statusBadge}`}>{statusLabel}</span>
+                      {isExact && <span className="text-[8px] font-bold bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full uppercase">{tr('exactMatch', lang)}</span>}
+                      {f.classNum && <span className="text-[9px] font-semibold bg-[#1a2e1a]/10 text-[#1a2e1a] px-1.5 py-0.5 rounded-full">Cl. {f.classNum}</span>}
+                    </div>
+                  </div>
+                  {f.goodsServices && <p className="text-[9px] text-gray-400 line-clamp-1 mb-1">{f.goodsServices}</p>}
+                  <div className={`text-[9px] px-2 py-1 rounded-lg ${tier === 'critical' ? 'bg-red-50 text-red-700' : tier === 'significant' ? 'bg-amber-50 text-amber-700' : 'bg-gray-50 text-gray-500'}`}>
+                    {whyItMatters}
+                  </div>
+                  {(f.expediente || f.filingDate) && (
+                    <div className="flex gap-2 mt-1.5 text-[8px] text-gray-400 font-mono">
+                      {f.expediente && <span>Exp. {f.expediente}</span>}
+                      {f.filingDate && <span>{lang === 'es' ? 'Solicitud:' : 'Filed:'} {f.filingDate}</span>}
+                    </div>
+                  )}
+                </div>
+              );
+            };
+
+            return (
+              <div className="border-b border-gray-100">
+                <button type="button" onClick={() => setConflictTiersExpanded(v => !v)}
+                  className="w-full flex items-center justify-between px-4 py-2 text-xs font-medium text-gray-600 hover:bg-white/80 transition-colors">
+                  <span className="flex flex-col items-start text-left gap-0.5">
+                    <span className="flex items-center gap-1.5">
+                      <AlertCircle size={12} className="text-[#1a2e1a]" />
+                      {lang === 'es' ? 'Conflictos por Nivel de Riesgo' : 'Conflicts by Risk Tier'}
+                      {critical.length > 0 && <span className="text-[10px] font-bold text-red-600 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded-full">{critical.length} {lang === 'es' ? 'críticos' : 'critical'}</span>}
+                      {significant.length > 0 && <span className="text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">{significant.length} {lang === 'es' ? 'significativos' : 'significant'}</span>}
+                    </span>
+                    <span className="text-[9px] text-gray-400 font-normal pl-5">
+                      {lang === 'es' ? 'Conflictos clasificados por nivel de amenaza para el registro.' : 'Conflicts ranked by threat level to your registration.'}
+                    </span>
+                  </span>
+                  {conflictTiersExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                </button>
+                {conflictTiersExpanded && (
+                  <div className="px-4 pb-4 space-y-4">
+                    {critical.length > 0 && (
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-[10px] font-bold text-red-700 uppercase tracking-wide">{lang === 'es' ? 'Críticos' : 'Critical'} — {lang === 'es' ? 'Similitud ≥80% o misma clase' : 'Similarity ≥80% or same class'}</span>
+                          <div className="flex-1 h-px bg-red-100" />
+                          <span className="text-[9px] text-red-500 font-semibold">{critical.length}</span>
+                        </div>
+                        <div className="space-y-2">
+                          {critical.map((f, i) => <ConflictCard key={i} f={f as MarciaFinding & { classOverlap?: string }} tier="critical" />)}
+                        </div>
+                      </div>
+                    )}
+                    {significant.length > 0 && (
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wide">{lang === 'es' ? 'Significativos' : 'Significant'} — {lang === 'es' ? 'Similitud 50–79%' : 'Similarity 50–79%'}</span>
+                          <div className="flex-1 h-px bg-amber-100" />
+                          <span className="text-[9px] text-amber-500 font-semibold">{significant.length}</span>
+                        </div>
+                        <div className="space-y-2">
+                          {significant.map((f, i) => <ConflictCard key={i} f={f as MarciaFinding & { classOverlap?: string }} tier="significant" />)}
+                        </div>
+                      </div>
+                    )}
+                    {background.length > 0 && (
+                      <details className="group">
+                        <summary className="flex items-center gap-2 cursor-pointer list-none select-none">
+                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">{lang === 'es' ? 'Ruido de Fondo' : 'Background Noise'} — {lang === 'es' ? 'Similitud &lt;50%' : 'Similarity <50%'}</span>
+                          <div className="flex-1 h-px bg-gray-100" />
+                          <span className="text-[9px] text-gray-400 font-semibold">{background.length}</span>
+                          <ChevronDown size={10} className="text-gray-400 group-open:rotate-180 transition-transform" />
+                        </summary>
+                        <div className="mt-2 space-y-1">
+                          {background.map((f, i) => (
+                            <div key={i} className="flex items-center gap-2 px-2 py-1.5 rounded-lg border border-gray-100 bg-gray-50/50 text-[10px]">
+                              <span className="font-semibold text-gray-600 flex-1 min-w-0 truncate">{f.name}</span>
+                              {f.classNum && <span className="text-[9px] text-gray-400 flex-shrink-0">Cl. {f.classNum}</span>}
+                              <span className="text-[9px] text-gray-400 flex-shrink-0">{getSimilarityScore(f.name)}%</span>
+                            </div>
+                          ))}
+                        </div>
+                      </details>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* 4d — Strategy Recommendations */}
+          {(() => {
+            const riskLevel = result.risk;
+            const distinctTier = result.distinctiveness?.tier ?? 'suggestive';
+            const hasExactSameClass = result.marciaFindings.some(f =>
+              (f as MarciaFinding & { classOverlap?: string }).classOverlap === 'same'
+            );
+
+            type Strategy = { title: { en: string; es: string }; viability: number; pros: { en: string; es: string }[]; cons: { en: string; es: string }[]; fee: string; timeline: { en: string; es: string }; probability: { en: string; es: string } };
+
+            const strategies: Strategy[] = [];
+
+            if (!hasExactSameClass && (distinctTier === 'arbitrary' || distinctTier === 'fanciful')) {
+              strategies.push({
+                title: { en: 'File as-is with supporting evidence', es: 'Presentar tal cual con evidencia de uso' },
+                viability: 80,
+                pros: [{ en: 'Fast — no reformulation needed.', es: 'Rápido — sin reformulación.' }, { en: 'Preserves brand equity already built.', es: 'Preserva el capital de marca ya construido.' }],
+                cons: [{ en: 'Some opposition risk remains.', es: 'Subsiste riesgo de oposición.' }],
+                fee: 'USD $2,958 (IMPI) + professional fees',
+                timeline: { en: '12–18 months to registration', es: '12–18 meses al registro' },
+                probability: { en: 'High (70–85%)', es: 'Alta (70–85%)' },
+              });
+            }
+
+            if (distinctTier === 'descriptive' || distinctTier === 'generic') {
+              strategies.push({
+                title: { en: 'Add a distinctive design element (logo)', es: 'Agregar elemento gráfico distintivo (logo)' },
+                viability: 60,
+                pros: [{ en: 'Reduces descriptiveness objection under Fr. II.', es: 'Reduce objeción por descriptividad bajo Fr. II.' }, { en: 'Visually differentiates from conflicting marks.', es: 'Diferencia visualmente de marcas conflictivas.' }],
+                cons: [{ en: 'Protects only the composite, not the word alone.', es: 'Protege solo el conjunto, no la palabra sola.' }, { en: 'Requires additional design cost.', es: 'Requiere costo adicional de diseño.' }],
+                fee: 'USD $2,958 (IMPI) + professional fees',
+                timeline: { en: '14–20 months', es: '14–20 meses' },
+                probability: { en: 'Moderate (50–65%)', es: 'Moderada (50–65%)' },
+              });
+            }
+
+            if (hasExactSameClass || riskLevel === 'high') {
+              strategies.push({
+                title: { en: 'Reformulate with a coined/fanciful element', es: 'Reformular con un elemento de fantasía' },
+                viability: 85,
+                pros: [{ en: 'Eliminates the Fr. XVIII confusing similarity problem.', es: 'Elimina el problema de similitud confusoria bajo Fr. XVIII.' }, { en: 'Strongest possible distinctiveness score.', es: 'Mayor puntuación posible de distintividad.' }],
+                cons: [{ en: 'Requires abandoning existing brand investment.', es: 'Requiere abandonar la inversión en marca existente.' }, { en: 'New mark needs its own clearance search.', es: 'La nueva marca necesita su propio estudio.' }],
+                fee: 'USD $2,958 (IMPI) + professional fees',
+                timeline: { en: '12–18 months (new mark)', es: '12–18 meses (nueva marca)' },
+                probability: { en: 'Very high (80–90%) if coined', es: 'Muy alta (80–90%) si es de fantasía' },
+              });
+              strategies.push({
+                title: { en: 'Seek coexistence agreement with the conflicting holder', es: 'Negociar acuerdo de coexistencia con el titular en conflicto' },
+                viability: 40,
+                pros: [{ en: 'Preserves your exact mark.', es: 'Conserva tu marca exacta.' }, { en: 'Removes the opposition risk from that specific party.', es: 'Elimina el riesgo de oposición de esa parte.' }],
+                cons: [{ en: 'Requires holder cooperation — may be refused.', es: 'Requiere cooperación del titular — puede ser rechazado.' }, { en: 'IMPI not bound by coexistence agreements.', es: 'El IMPI no está vinculado por acuerdos de coexistencia.' }],
+                fee: 'Negotiation costs vary',
+                timeline: { en: '3–12 months for negotiation', es: '3–12 meses de negociación' },
+                probability: { en: 'Variable (30–60%)', es: 'Variable (30–60%)' },
+              });
+            }
+
+            strategies.push({
+              title: { en: 'Consult a licensed Mexican trademark attorney', es: 'Consultar con un abogado de marcas mexicano certificado' },
+              viability: 95,
+              pros: [{ en: 'Personalized legal strategy based on full facts.', es: 'Estrategia legal personalizada basada en todos los hechos.' }, { en: 'Can negotiate oppositions and file responses.', es: 'Puede negociar oposiciones y presentar respuestas.' }],
+              cons: [{ en: 'Additional professional fees.', es: 'Honorarios profesionales adicionales.' }],
+              fee: 'USD $500–$2,000+ attorney fees',
+              timeline: { en: 'Consultation within days', es: 'Consulta en días' },
+              probability: { en: 'Best outcome possible', es: 'El mejor resultado posible' },
+            });
+
+            return (
+              <div className="border-b border-gray-100">
+                <button type="button" onClick={() => setStratExpanded(v => !v)}
+                  className="w-full flex items-center justify-between px-4 py-2 text-xs font-medium text-gray-600 hover:bg-white/80 transition-colors">
+                  <span className="flex flex-col items-start text-left gap-0.5">
+                    <span className="flex items-center gap-1.5">
+                      <Sparkles size={12} className="text-[#c9a84c]" />
+                      {lang === 'es' ? 'Estrategias Recomendadas' : 'Strategy Recommendations'}
+                    </span>
+                    <span className="text-[9px] text-gray-400 font-normal pl-5">
+                      {lang === 'es' ? `${strategies.length} caminos posibles, ordenados por viabilidad.` : `${strategies.length} possible paths, ranked by viability.`}
+                    </span>
+                  </span>
+                  {stratExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                </button>
+                {stratExpanded && (
+                  <div className="px-4 pb-4 space-y-3">
+                    {strategies.sort((a, b) => b.viability - a.viability).map((s, i) => (
+                      <div key={i} className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0 ${s.viability >= 80 ? 'bg-emerald-500' : s.viability >= 55 ? 'bg-amber-500' : 'bg-gray-400'}`}>{i + 1}</div>
+                            <p className="text-xs font-bold text-gray-800 leading-tight">{lang === 'es' ? s.title.es : s.title.en}</p>
+                          </div>
+                          <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
+                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${s.viability >= 80 ? 'bg-emerald-100 text-emerald-700' : s.viability >= 55 ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'}`}>
+                              {lang === 'es' ? 'Viabilidad' : 'Viability'}: {s.viability}%
+                            </span>
+                          </div>
+                        </div>
+                        <div className="w-full h-1 bg-gray-100 rounded-full overflow-hidden mb-2">
+                          <div className="h-full rounded-full" style={{ width: `${s.viability}%`, backgroundColor: s.viability >= 80 ? '#10b981' : s.viability >= 55 ? '#f59e0b' : '#9ca3af' }} />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 mb-2 text-[9px]">
+                          <div>
+                            <p className="font-semibold text-gray-400 uppercase tracking-wide mb-1">{lang === 'es' ? 'A favor' : 'Pros'}</p>
+                            {s.pros.map((p, j) => (
+                              <p key={j} className="text-emerald-700 flex items-start gap-1 mb-0.5"><span className="text-emerald-500 flex-shrink-0">+</span>{lang === 'es' ? p.es : p.en}</p>
+                            ))}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-gray-400 uppercase tracking-wide mb-1">{lang === 'es' ? 'En contra' : 'Cons'}</p>
+                            {s.cons.map((c, j) => (
+                              <p key={j} className="text-red-600 flex items-start gap-1 mb-0.5"><span className="flex-shrink-0">−</span>{lang === 'es' ? c.es : c.en}</p>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-gray-50 pt-2 text-[9px] text-gray-500">
+                          <span><span className="font-semibold text-gray-400">{lang === 'es' ? 'Costo est.:' : 'Est. cost:'}</span> {s.fee}</span>
+                          <span><span className="font-semibold text-gray-400">{lang === 'es' ? 'Plazo:' : 'Timeline:'}</span> {lang === 'es' ? s.timeline.es : s.timeline.en}</span>
+                          <span><span className="font-semibold text-gray-400">{lang === 'es' ? 'Prob. éxito:' : 'Success prob.:'}</span> {lang === 'es' ? s.probability.es : s.probability.en}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* 4e — Cost & Timeline Panel */}
+          {(() => {
+            const steps: Array<{ label: { en: string; es: string }; duration: { en: string; es: string }; cost: string; note: { en: string; es: string } }> = [
+              { label: { en: 'Filing', es: 'Presentación' }, duration: { en: 'Day 0', es: 'Día 0' }, cost: 'USD $2,958 (IMPI official fee, 1 class)', note: { en: 'Application submitted to IMPI. Filing date establishes priority.', es: 'Solicitud presentada ante el IMPI. La fecha establece prioridad.' } },
+              { label: { en: 'Formal examination', es: 'Examen formal' }, duration: { en: '1–3 months', es: '1–3 meses' }, cost: 'No additional fee', note: { en: 'IMPI checks that all required documents are in order.', es: 'El IMPI verifica que la documentación esté en orden.' } },
+              { label: { en: 'Substantive examination', es: 'Examen de fondo' }, duration: { en: '4–10 months', es: '4–10 meses' }, cost: 'No additional fee', note: { en: 'IMPI evaluates the mark for absolute and relative grounds.', es: 'El IMPI evalúa la marca por motivos absolutos y relativos.' } },
+              { label: { en: 'Publication in Gazette', es: 'Publicación en Gaceta' }, duration: { en: '10–14 months', es: '10–14 meses' }, cost: 'No additional fee', note: { en: 'Mark published for 1-month opposition window.', es: 'Marca publicada por ventana de oposición de 1 mes.' } },
+              { label: { en: 'Opposition window', es: 'Periodo de oposición' }, duration: { en: '1 month', es: '1 mes' }, cost: 'Defense costs if opposed', note: { en: 'Third parties may file oppositions. High-risk marks are more likely to be opposed.', es: 'Terceros pueden presentar oposiciones. Marcas de alto riesgo son más propensas.' } },
+              { label: { en: 'Registration & certificate', es: 'Registro y certificado' }, duration: { en: '12–18 months total', es: '12–18 meses total' }, cost: 'Included in initial fee', note: { en: 'Certificate issued. Registration valid for 10 years, renewable.', es: 'Se expide el certificado. Registro vigente por 10 años, renovable.' } },
+            ];
+
+            return (
+              <div className="border-b border-gray-100">
+                <button type="button" onClick={() => setTimelineExpanded(v => !v)}
+                  className="w-full flex items-center justify-between px-4 py-2 text-xs font-medium text-gray-600 hover:bg-white/80 transition-colors">
+                  <span className="flex flex-col items-start text-left gap-0.5">
+                    <span className="flex items-center gap-1.5">
+                      <Zap size={12} className="text-[#c9a84c]" />
+                      {lang === 'es' ? 'Costo y Cronograma IMPI' : 'IMPI Cost & Timeline'}
+                    </span>
+                    <span className="text-[9px] text-gray-400 font-normal pl-5">
+                      {lang === 'es' ? '12–18 meses · USD $2,958 cuota oficial IMPI · Ventana de oposición: 1 mes' : '12–18 months · USD $2,958 IMPI official fee · 1-month opposition window'}
+                    </span>
+                  </span>
+                  {timelineExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                </button>
+                {timelineExpanded && (
+                  <div className="px-4 pb-4">
+                    <div className="relative mt-2">
+                      {steps.map((step, i) => (
+                        <div key={i} className="flex gap-3 mb-3 last:mb-0">
+                          <div className="flex flex-col items-center">
+                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0 ${i === steps.length - 1 ? 'bg-emerald-500' : i === steps.length - 2 ? 'bg-amber-500' : 'bg-[#1a2e1a]'}`}>{i + 1}</div>
+                            {i < steps.length - 1 && <div className="w-px flex-1 bg-gray-200 my-1" style={{ minHeight: '16px' }} />}
+                          </div>
+                          <div className="flex-1 min-w-0 pb-1">
+                            <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                              <p className="text-[11px] font-bold text-gray-800">{lang === 'es' ? step.label.es : step.label.en}</p>
+                              <span className="text-[9px] font-semibold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">{lang === 'es' ? step.duration.es : step.duration.en}</span>
+                              {step.cost !== 'No additional fee' && step.cost !== 'Included in initial fee' && (
+                                <span className="text-[9px] font-semibold text-[#1a2e1a] bg-[#1a2e1a]/10 px-1.5 py-0.5 rounded-full">{step.cost}</span>
+                              )}
+                            </div>
+                            <p className="text-[9px] text-gray-500 leading-relaxed">{lang === 'es' ? step.note.es : step.note.en}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-3 p-2.5 rounded-xl bg-amber-50 border border-amber-200">
+                      <p className="text-[10px] text-amber-800 font-semibold mb-0.5">{lang === 'es' ? 'Nota sobre la tasa IMPI' : 'Note on IMPI fee'}</p>
+                      <p className="text-[9px] text-amber-700">{lang === 'es' ? 'Las cuotas del IMPI se actualizan anualmente conforme al UMA. El monto indicado es orientativo. Verifica la tarifa vigente en gob.mx antes de presentar.' : 'IMPI fees are updated annually based on the UMA unit. The amount shown is indicative. Verify the current fee at gob.mx before filing.'}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* 5 — Translation & Transliteration Analysis */}
           {result.translationAnalysis && result.translationAnalysis.length >= 0 && (() => {
