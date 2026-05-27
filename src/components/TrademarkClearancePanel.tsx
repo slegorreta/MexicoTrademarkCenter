@@ -7,6 +7,7 @@ import {
   AlertTriangle, CheckCircle2, AlertCircle, Info, Globe,
   Scale, ArrowRight, TrendingUp, FileSearch, Minus, Lock,
   FileText, Mail, Tag, Download, Sparkles, Eye, Printer, HelpCircle, X,
+  Filter, BarChart2, List,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -571,6 +572,39 @@ function FullReportNotice({ lang }: { lang: Lang }) {
   );
 }
 
+// ─── Similarity Gauge (SVG donut arc) ────────────────────────────────────────
+
+function SimilarityGauge({ score, size = 48 }: { score: number; size?: number }) {
+  const r = (size - 8) / 2;
+  const circ = 2 * Math.PI * r;
+  const pct = Math.min(1, Math.max(0, score / 100));
+  const dash = pct * circ;
+  const color = score >= 75 ? '#ef4444' : score >= 50 ? '#f59e0b' : '#10b981';
+  const cx = size / 2;
+  const cy = size / 2;
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="flex-shrink-0 -rotate-90">
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#f0f0f0" strokeWidth={5} />
+      <circle
+        cx={cx} cy={cy} r={r} fill="none"
+        stroke={color} strokeWidth={5}
+        strokeDasharray={`${dash} ${circ}`}
+        strokeLinecap="round"
+        style={{ transition: 'stroke-dasharray 0.5s ease' }}
+      />
+      <text
+        x={cx} y={cy}
+        textAnchor="middle" dominantBaseline="middle"
+        fontSize={size < 44 ? 9 : 11} fontWeight="700"
+        fill={color}
+        style={{ transform: `rotate(90deg)`, transformOrigin: `${cx}px ${cy}px` }}
+      >
+        {score}%
+      </text>
+    </svg>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function TrademarkClearancePanel({
@@ -614,6 +648,14 @@ export default function TrademarkClearancePanel({
   const [marciaExpanded, setMarciaExpanded] = useState(false);
   const [webExpanded, setWebExpanded] = useState(false);
   const [domainExpanded, setDomainExpanded] = useState(false);
+
+  // Filter & tab state
+  type StatusFilter = 'all' | 'active' | 'inactive' | 'registered' | 'pending';
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [classFilter, setClassFilter] = useState<number | null>(null);
+  const [resultsTab, setResultsTab] = useState<'analysis' | 'raw'>('analysis');
+  const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set());
+  const [showFilters, setShowFilters] = useState(false);
 
   const runCheck = async () => {
     if (runningRef.current || (!markName.trim() && !imageBase64)) return;
@@ -709,6 +751,22 @@ export default function TrademarkClearancePanel({
   const dupontAgainst = dupont.filter(f => f.verdict === 'against_registration').length;
   const regFlags = result.registrabilityFlags ?? [];
   const domainResults = result.domainResults ?? [];
+
+  // Filter helpers
+  const matchesStatusFilter = (status: string) => {
+    const s = status.toLowerCase();
+    if (statusFilter === 'all') return true;
+    if (statusFilter === 'active') return /registrada|vigente|registered|active/i.test(s);
+    if (statusFilter === 'inactive') return /cancelada|expirada|abandoned|expired|cancelled/i.test(s);
+    if (statusFilter === 'registered') return /registrada|vigente|registered/i.test(s) && !/tram|pend|proc/i.test(s);
+    if (statusFilter === 'pending') return /tram|pend|proc|solicitud/i.test(s);
+    return true;
+  };
+  const filteredFindings = result.marciaFindings.filter(f =>
+    matchesStatusFilter(f.status) &&
+    (classFilter === null || String(f.classNum) === String(classFilter))
+  );
+
   const topConflicts = [...result.marciaFindings]
     .sort((a, b) => {
       const aA = /registrada|vigente|registered|active/i.test(a.status) ? 0 : 1;
@@ -720,6 +778,27 @@ export default function TrademarkClearancePanel({
   const totalMarcia = result.marciaTotalCount ?? result.marciaFindings.length;
   const comDomain = domainResults.find(d => d.domain.endsWith('.com'));
   const comMxDomain = domainResults.find(d => d.domain.endsWith('.com.mx'));
+
+  // Derive similarity score heuristic (0-100) for a finding vs search mark
+  const getSimilarityScore = (findingName: string): number => {
+    if (!markName) return 0;
+    const n = findingName.toLowerCase().trim();
+    const m = markName.toLowerCase().trim();
+    if (n === m) return 97;
+    if (n.includes(m) || m.includes(n)) return 82;
+    // Levenshtein-style quick heuristic
+    const longer = n.length > m.length ? n : m;
+    const shorter = n.length > m.length ? m : n;
+    if (longer.length === 0) return 100;
+    let matches = 0;
+    for (let i = 0; i < shorter.length; i++) {
+      if (longer.includes(shorter[i])) matches++;
+    }
+    return Math.round((matches / longer.length) * 75);
+  };
+
+  // Unique class numbers present in findings
+  const presentClasses = Array.from(new Set(result.marciaFindings.map(f => f.classNum).filter(Boolean))).sort();
 
   // ── Email validation ──────────────────────────────────────────────────────
   const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
@@ -838,14 +917,62 @@ export default function TrademarkClearancePanel({
             )}
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => window.print()}
-          title={tr('printReport', lang)}
-          className={`flex-shrink-0 p-1.5 rounded-lg hover:bg-white/60 transition-colors ${cfg.text} opacity-60 hover:opacity-100 print:hidden`}
-        >
-          <Printer size={14} />
-        </button>
+        {/* Part 6: Action buttons */}
+        <div className="flex items-center gap-1.5 flex-shrink-0 print:hidden">
+          <button
+            type="button"
+            onClick={() => window.print()}
+            title={tr('printReport', lang)}
+            className={`p-1.5 rounded-lg hover:bg-white/60 transition-colors ${cfg.text} opacity-60 hover:opacity-100`}
+          >
+            <Printer size={14} />
+          </button>
+          <button
+            type="button"
+            disabled={!paid}
+            title={paid ? (lang === 'es' ? 'Exportar reporte' : 'Export report') : (lang === 'es' ? 'Disponible en reporte completo' : 'Available in full report')}
+            className={`flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-lg border transition-colors ${paid ? 'border-[#1a2e1a] text-[#1a2e1a] hover:bg-[#1a2e1a]/10' : 'border-gray-200 text-gray-300 cursor-not-allowed'}`}
+          >
+            <Download size={11} />
+            {lang === 'es' ? 'Exportar' : lang === 'zh' ? '导出' : lang === 'de' ? 'Export' : lang === 'fr' ? 'Exporter' : 'Export'}
+            {!paid && <Lock size={9} className="ml-0.5" />}
+          </button>
+        </div>
+      </div>
+
+      {/* ── Part 7: Search summary panel ──────────────────────────────────── */}
+      <div className="border-t border-gray-100 bg-white/70 px-4 py-2.5">
+        <div className="flex items-start gap-3 flex-wrap">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide flex-shrink-0">
+              {lang === 'es' ? 'Denominación' : lang === 'zh' ? '商标名' : lang === 'de' ? 'Bezeichnung' : lang === 'fr' ? 'Dénomination' : lang === 'pt' ? 'Denominação' : 'Mark'}:
+            </span>
+            <span className="text-xs font-bold text-gray-800 truncate max-w-[120px]">
+              {imageBase64 ? (lang === 'es' ? '[Marca Figurativa]' : '[Design Mark]') : markName}
+            </span>
+          </div>
+          {classes.length > 0 && (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide flex-shrink-0">
+                {lang === 'es' ? 'Clase' : lang === 'zh' ? '类' : lang === 'de' ? 'Klasse' : lang === 'fr' ? 'Classe' : 'Class'}:
+              </span>
+              {classes.slice(0, 5).map(n => (
+                <span key={n} className="text-[9px] font-bold bg-[#1a2e1a]/10 text-[#1a2e1a] px-1.5 py-0.5 rounded-full">
+                  {lang === 'zh' ? `第${n}类` : `Cl. ${n}`}
+                </span>
+              ))}
+              {classes.length > 5 && <span className="text-[9px] text-gray-400">+{classes.length - 5}</span>}
+            </div>
+          )}
+          {goodsServices && (
+            <div className="flex items-start gap-1.5 flex-1 min-w-0">
+              <span className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide flex-shrink-0 mt-0.5">
+                {lang === 'es' ? 'Desc.' : 'Desc.'}:
+              </span>
+              <span className="text-[9px] text-gray-500 line-clamp-1 min-w-0">{goodsServices}</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ── Class scope banner ─────────────────────────────────────────────── */}
@@ -863,6 +990,74 @@ export default function TrademarkClearancePanel({
           {classes.length > 8 && (
             <span className="text-[10px] text-gray-400">+{classes.length - 8}</span>
           )}
+        </div>
+      )}
+
+      {/* ── Part 1: Distinctiveness & Saturation Warning ─────────────────── */}
+      {result.distinctiveness && (
+        <div className="border-t border-gray-100 bg-white/50 px-4 py-3">
+          <div className="flex items-start gap-3">
+            {/* Left: tier bar & badge */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1.5">
+                <TrendingUp size={12} className="text-[#1a2e1a] flex-shrink-0" />
+                <span className="text-[10px] font-semibold text-gray-600 uppercase tracking-wide">
+                  {lang === 'es' ? 'Dilución y Distintividad' : lang === 'zh' ? '商标显著性' : lang === 'de' ? 'Unterscheidungskraft' : lang === 'fr' ? 'Distinctivité' : lang === 'pt' ? 'Distintividade' : 'Distinctiveness'}
+                </span>
+                <InfoTooltip text={tr('tooltipDistinctiveness', lang)} />
+                {/* Marca fuerte / débil badge */}
+                <span className={`ml-auto text-[9px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 flex-shrink-0 ${
+                  result.distinctiveness.score >= 4
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                    : result.distinctiveness.score >= 3
+                    ? 'bg-amber-50 border-amber-200 text-amber-700'
+                    : 'bg-red-50 border-red-200 text-red-700'
+                }`}>
+                  <Shield size={9} />
+                  {result.distinctiveness.score >= 4
+                    ? (lang === 'es' ? 'Marca fuerte' : 'Strong mark')
+                    : result.distinctiveness.score >= 3
+                    ? (lang === 'es' ? 'Marca media' : 'Medium mark')
+                    : (lang === 'es' ? 'Marca débil' : 'Weak mark')}
+                </span>
+              </div>
+              {/* Tier spectrum bar */}
+              <div className="flex items-stretch gap-px rounded-md overflow-hidden h-5 mb-1.5">
+                {TIER_ORDER.map(tier => {
+                  const isActive = result.distinctiveness?.tier === tier;
+                  return (
+                    <div key={tier} title={tier.charAt(0).toUpperCase() + tier.slice(1)}
+                      className={`flex-1 flex items-center justify-center text-[8px] font-semibold transition-all ${isActive ? TIER_COLORS[tier] + ' text-white' : TIER_INACTIVE[tier]}`}>
+                      {isActive ? tier.slice(0, 4).toUpperCase() : ''}
+                    </div>
+                  );
+                })}
+              </div>
+              {/* Saturation bar (based on totalMarcia as proxy) */}
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[9px] text-gray-400 flex-shrink-0">
+                  {lang === 'es' ? 'Saturación de clase' : lang === 'zh' ? '类别饱和度' : 'Class saturation'}:
+                </span>
+                <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${totalMarcia > 20 ? 'bg-red-400' : totalMarcia > 10 ? 'bg-amber-400' : 'bg-emerald-400'}`}
+                    style={{ width: `${Math.min(100, (totalMarcia / 30) * 100)}%` }}
+                  />
+                </div>
+                <span className={`text-[9px] font-semibold flex-shrink-0 ${totalMarcia > 20 ? 'text-red-600' : totalMarcia > 10 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                  {totalMarcia > 20 ? (lang === 'es' ? 'Alta' : 'High') : totalMarcia > 10 ? (lang === 'es' ? 'Media' : 'Med') : (lang === 'es' ? 'Baja' : 'Low')}
+                </span>
+              </div>
+              {/* AI narrative (teaser) */}
+              <p className={`text-[10px] leading-relaxed ${paid ? 'text-gray-600' : 'text-gray-400'}`}>
+                {paid
+                  ? (result.distinctiveness.explanation_user ?? (lang === 'en' ? result.distinctiveness.explanation_en : result.distinctiveness.explanation) ?? result.distinctiveness.explanation)
+                  : <span className="blur-[3px] select-none">{result.distinctiveness.explanation?.slice(0, 80) ?? 'Full analysis in report'}…</span>
+                }
+                {!paid && <span className="not-italic ml-1 text-[9px] text-gray-400 not-blur"><Lock size={8} className="inline mb-0.5" /></span>}
+              </p>
+            </div>
+          </div>
         </div>
       )}
 
@@ -937,34 +1132,222 @@ export default function TrademarkClearancePanel({
       {!paid && (
         <div className="border-t border-gray-100 bg-white/40 px-4 py-3 space-y-3">
 
-          {/* 1 — MARCia teaser */}
-          <div>
-            <div className="flex items-center gap-1.5 mb-1.5">
-              <FileSearch size={11} className="text-[#1a2e1a]" />
-              <span className="text-[10px] font-semibold text-gray-600">{tr('marciaTitle', lang)}</span>
+          {/* Part 5: Results tabs + counter + filters toggle */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-0.5 bg-gray-100 rounded-lg p-0.5">
+              <button
+                type="button"
+                onClick={() => setResultsTab('analysis')}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all ${resultsTab === 'analysis' ? 'bg-white text-[#1a2e1a] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                <BarChart2 size={10} />
+                {lang === 'es' ? 'Análisis' : lang === 'zh' ? '分析' : lang === 'de' ? 'Analyse' : lang === 'fr' ? 'Analyse' : 'Analysis'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setResultsTab('raw')}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all ${resultsTab === 'raw' ? 'bg-white text-[#1a2e1a] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                <List size={10} />
+                {lang === 'es' ? 'Resultados MARCia' : lang === 'zh' ? 'MARCia结果' : 'MARCia Results'}
+              </button>
             </div>
-            {topConflicts.length === 0 ? (
+            <div className="flex items-center gap-2">
+              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${totalMarcia > 0 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                {totalMarcia} {tr('matches', lang)}
+              </span>
+              {result.marciaFindings.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowFilters(v => !v)}
+                  className={`flex items-center gap-1 text-[10px] font-medium px-2 py-1 rounded-lg border transition-all ${showFilters ? 'bg-[#1a2e1a] text-white border-[#1a2e1a]' : 'text-gray-500 border-gray-200 hover:border-gray-300'}`}
+                >
+                  <Filter size={10} />
+                  {lang === 'es' ? 'Filtros' : lang === 'zh' ? '筛选' : 'Filters'}
+                  {(statusFilter !== 'all' || classFilter !== null) && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#c9a84c] flex-shrink-0" />
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Part 3: Filter panel */}
+          {showFilters && (
+            <div className="bg-white border border-gray-200 rounded-xl p-3 space-y-3">
+              {/* Status filter */}
+              <div>
+                <p className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
+                  {lang === 'es' ? 'Estado' : 'Status'}
+                </p>
+                <div className="flex flex-wrap gap-1">
+                  {(['all', 'active', 'inactive', 'registered', 'pending'] as const).map(s => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setStatusFilter(s)}
+                      className={`text-[9px] font-semibold px-2 py-1 rounded-full border transition-all ${
+                        statusFilter === s
+                          ? 'bg-[#1a2e1a] text-white border-[#1a2e1a]'
+                          : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      {s === 'all' ? (lang === 'es' ? 'Todas' : 'All')
+                       : s === 'active' ? (lang === 'es' ? 'Activas' : 'Active')
+                       : s === 'inactive' ? (lang === 'es' ? 'Inactivas' : 'Inactive')
+                       : s === 'registered' ? (lang === 'es' ? 'Registradas' : 'Registered')
+                       : (lang === 'es' ? 'En trámite' : 'Pending')}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {/* Class filter */}
+              {presentClasses.length > 0 && (
+                <div>
+                  <p className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
+                    {lang === 'es' ? 'Clase Nice' : lang === 'zh' ? '尼斯类' : 'Nice Class'}
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setClassFilter(null)}
+                      className={`text-[9px] font-semibold px-2 py-1 rounded-full border transition-all ${classFilter === null ? 'bg-[#1a2e1a] text-white border-[#1a2e1a]' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'}`}
+                    >
+                      {lang === 'es' ? 'Todas' : 'All'}
+                    </button>
+                    {presentClasses.slice(0, 15).map(cls => (
+                      <button
+                        key={cls}
+                        type="button"
+                        onClick={() => setClassFilter(classFilter === Number(cls) ? null : Number(cls))}
+                        className={`text-[9px] font-semibold px-2 py-1 rounded-full border transition-all ${classFilter === Number(cls) ? 'bg-[#1a2e1a] text-white border-[#1a2e1a]' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'}`}
+                      >
+                        {lang === 'zh' ? `第${cls}类` : `Cl. ${cls}`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {(statusFilter !== 'all' || classFilter !== null) && (
+                <button
+                  type="button"
+                  onClick={() => { setStatusFilter('all'); setClassFilter(null); }}
+                  className="text-[9px] text-gray-400 hover:text-gray-600 underline"
+                >
+                  {lang === 'es' ? 'Limpiar filtros' : 'Clear filters'}
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* 1 — MARCia teaser (Part 2: enhanced cards) */}
+          <div>
+            {filteredFindings.length === 0 && result.marciaFindings.length > 0 ? (
+              <p className="text-[10px] text-gray-400 italic py-2 text-center">
+                {lang === 'es' ? 'No hay resultados para los filtros seleccionados.' : 'No results match the selected filters.'}
+              </p>
+            ) : topConflicts.length === 0 ? (
               <p className="text-[10px] text-gray-400 italic">{tr('noMarciaFindings', lang)}</p>
             ) : (
               <>
-                {topConflicts.slice(0, 3).map((f, i) => {
+                {(resultsTab === 'analysis' ? topConflicts.slice(0, 3) : filteredFindings.slice(0, 3)).map((f, i) => {
                   const isExact = f.name.toLowerCase().trim() === markName.toLowerCase().trim();
-                  const showImage = !!imageBase64; // design or mixed mark
+                  const isDesignResult = !!imageBase64;
+                  const simScore = getSimilarityScore(f.name);
+                  const statusLower = f.status.toLowerCase();
+                  const isRegistered = /registrada|vigente|registered|active/i.test(statusLower) && !/tram|pend|proc/i.test(statusLower);
+                  const isPending = /tram|pend|proc|solicitud/i.test(statusLower);
+                  const isExpanded = expandedCards.has(i);
+
+                  const statusBadge = isRegistered
+                    ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                    : isPending
+                    ? 'bg-amber-100 text-amber-700 border-amber-200'
+                    : 'bg-gray-100 text-gray-600 border-gray-200';
+                  const statusLabel = isRegistered
+                    ? (lang === 'es' ? 'Registrada' : 'Registered')
+                    : isPending
+                    ? (lang === 'es' ? 'En Trámite' : 'Pending')
+                    : f.status;
+
                   return (
-                    <div key={i} className={`rounded-lg border px-2.5 py-1.5 mb-1 flex items-start gap-2 ${isExact ? 'border-red-200 bg-red-50' : 'border-amber-100 bg-amber-50/50'}`}>
-                      {showImage ? (
-                        f.imageUrl
-                          ? <img src={f.imageUrl} alt={f.name} className="w-7 h-7 object-contain rounded border border-gray-200 bg-white flex-shrink-0" />
-                          : <div className="w-7 h-7 rounded border border-gray-200 bg-white flex items-center justify-center flex-shrink-0"><Shield size={10} className="text-gray-300" /></div>
-                      ) : (
-                        <AlertTriangle size={11} className={`flex-shrink-0 mt-0.5 ${isExact ? 'text-red-500' : 'text-amber-500'}`} />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-[10px] font-bold text-gray-800">{f.name || (showImage ? '—' : f.name)}</span>
-                          {isExact && <span className="text-[8px] font-bold bg-red-100 text-red-700 px-1 py-0.5 rounded-full uppercase">{tr('exactMatch', lang)}</span>}
+                    <div key={i} className={`rounded-xl border mb-2 overflow-hidden transition-all ${isExact ? 'border-red-200' : 'border-gray-200'} bg-white shadow-sm`}>
+                      <div className="flex items-start gap-3 px-3 py-2.5">
+                        {/* Similarity gauge */}
+                        <div className="flex-shrink-0 flex flex-col items-center gap-0.5">
+                          <SimilarityGauge score={isExact ? 97 : simScore} size={44} />
+                          <span className="text-[8px] text-gray-400 text-center leading-tight">
+                            {lang === 'es' ? 'Similitud' : lang === 'zh' ? '相似度' : 'Similarity'}
+                          </span>
                         </div>
-                        <p className="text-[9px] text-gray-500">{f.status}{f.classNum ? ` · Cl. ${f.classNum}` : ''}</p>
+                        {/* Logo thumbnail */}
+                        <div className="flex-shrink-0 w-10 h-10 rounded-lg border border-gray-100 bg-gray-50 overflow-hidden flex items-center justify-center self-center">
+                          {isDesignResult && f.imageUrl
+                            ? <img src={f.imageUrl} alt={f.name} className="w-full h-full object-contain" />
+                            : isDesignResult
+                            ? <Shield size={12} className="text-gray-300" />
+                            : <span className="text-[8px] font-bold text-gray-400 text-center leading-tight px-0.5">{f.name.slice(0, 3).toUpperCase()}</span>
+                          }
+                        </div>
+                        {/* Details */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <span className="text-xs font-bold text-gray-800 leading-tight">{f.name || '—'}</span>
+                            <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                              <span className={`text-[9px] font-bold border rounded-full px-1.5 py-0.5 ${statusBadge}`}>{statusLabel}</span>
+                              {isExact && <span className="text-[8px] font-bold bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full uppercase">{tr('exactMatch', lang)}</span>}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {f.classNum && (
+                              <span className="text-[9px] font-semibold bg-[#1a2e1a]/10 text-[#1a2e1a] px-1.5 py-0.5 rounded-full">
+                                {lang === 'zh' ? `第${f.classNum}类` : `Cl. ${f.classNum}`}
+                              </span>
+                            )}
+                            {f.holder && (
+                              <span className="text-[9px] text-gray-500 truncate max-w-[140px]">{f.holder}</span>
+                            )}
+                          </div>
+                          {f.goodsServices && (
+                            <p className="text-[9px] text-gray-400 mt-0.5 line-clamp-1 leading-snug">{f.goodsServices}</p>
+                          )}
+                        </div>
+                      </div>
+                      {/* Expandable AI analysis row */}
+                      <div className="border-t border-gray-50">
+                        <button
+                          type="button"
+                          onClick={() => setExpandedCards(prev => {
+                            const next = new Set(prev);
+                            if (next.has(i)) next.delete(i); else next.add(i);
+                            return next;
+                          })}
+                          className="w-full flex items-center justify-between px-3 py-1.5 text-[9px] font-medium text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors"
+                        >
+                          <span className="flex items-center gap-1">
+                            <Sparkles size={9} className="text-[#c9a84c]" />
+                            {lang === 'es' ? 'Ver análisis IA' : lang === 'zh' ? '查看AI分析' : 'View AI analysis'}
+                            {!paid && <Lock size={8} className="text-gray-300 ml-0.5" />}
+                          </span>
+                          {isExpanded ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+                        </button>
+                        {isExpanded && (
+                          <div className="px-3 pb-2.5 pt-1 bg-gray-50/50">
+                            {paid ? (
+                              <p className="text-[10px] text-gray-600 leading-relaxed">
+                                {lang === 'es'
+                                  ? `La marca "${f.name}" presenta ${isExact ? 'coincidencia exacta' : 'similitud'} con tu solicitud. Estado actual: ${f.status}.${f.classNum ? ` Registrada en clase ${f.classNum}.` : ''}`
+                                  : `"${f.name}" shows ${isExact ? 'exact' : 'notable'} similarity with your mark. Current status: ${f.status}.${f.classNum ? ` Registered in class ${f.classNum}.` : ''}`
+                                }
+                              </p>
+                            ) : (
+                              <div className="flex items-center gap-1.5 text-[9px] text-gray-400">
+                                <Lock size={9} className="flex-shrink-0" />
+                                <span>{lang === 'es' ? 'Análisis detallado disponible en el Reporte Completo.' : 'Detailed AI analysis available in the Full Report.'}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
@@ -1075,7 +1458,7 @@ export default function TrademarkClearancePanel({
       {paid && (
         <div className="border-t border-gray-100 bg-white/50">
 
-          {/* 1 — MARCia full */}
+          {/* 1 — MARCia full (enhanced cards with similarity gauge) */}
           <div className="border-b border-gray-100">
             <button type="button" onClick={() => setMarciaExpanded(v => !v)}
               className="w-full flex items-center justify-between px-4 py-2 text-xs font-medium text-gray-600 hover:bg-white/80 transition-colors">
@@ -1092,15 +1475,44 @@ export default function TrademarkClearancePanel({
             </button>
             {marciaExpanded && (
               <div className="px-4 pb-4">
-                {result.marciaFindings.length === 0 ? (
-                  <p className="text-xs text-gray-500 italic">{tr('noMarciaFindings', lang)}</p>
+                {/* Filters for paid view */}
+                <div className="flex items-center gap-2 mb-3 flex-wrap">
+                  {(['all', 'registered', 'pending', 'inactive'] as const).map(s => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setStatusFilter(s)}
+                      className={`text-[9px] font-semibold px-2 py-0.5 rounded-full border transition-all ${statusFilter === s ? 'bg-[#1a2e1a] text-white border-[#1a2e1a]' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'}`}
+                    >
+                      {s === 'all' ? (lang === 'es' ? 'Todas' : 'All')
+                       : s === 'registered' ? (lang === 'es' ? 'Registradas' : 'Registered')
+                       : s === 'pending' ? (lang === 'es' ? 'En trámite' : 'Pending')
+                       : (lang === 'es' ? 'Inactivas' : 'Inactive')}
+                    </button>
+                  ))}
+                  {presentClasses.length > 0 && presentClasses.slice(0, 8).map(cls => (
+                    <button
+                      key={cls}
+                      type="button"
+                      onClick={() => setClassFilter(classFilter === Number(cls) ? null : Number(cls))}
+                      className={`text-[9px] font-semibold px-2 py-0.5 rounded-full border transition-all ${classFilter === Number(cls) ? 'bg-[#1a2e1a] text-white border-[#1a2e1a]' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'}`}
+                    >
+                      {lang === 'zh' ? `第${cls}类` : `Cl. ${cls}`}
+                    </button>
+                  ))}
+                </div>
+                {filteredFindings.length === 0 ? (
+                  <p className="text-xs text-gray-500 italic">{result.marciaFindings.length === 0 ? tr('noMarciaFindings', lang) : (lang === 'es' ? 'Sin resultados para los filtros seleccionados.' : 'No results match the selected filters.')}</p>
                 ) : (
                   <div className="space-y-2 mt-1">
-                    {result.marciaFindings.map((f, i) => {
+                    {filteredFindings.map((f, i) => {
                       const isDesignResult = !!imageBase64;
                       const statusLower = f.status.toLowerCase();
-                      const isRegistered = statusLower.includes('reg') && !statusLower.includes('tram') && !statusLower.includes('pend');
-                      const isPending = statusLower.includes('tram') || statusLower.includes('pend') || statusLower.includes('proc');
+                      const isRegistered = /registrada|vigente|registered|active/i.test(statusLower) && !/tram|pend|proc/i.test(statusLower);
+                      const isPending = /tram|pend|proc|solicitud/i.test(statusLower);
+                      const isExact = f.name.toLowerCase().trim() === markName.toLowerCase().trim();
+                      const simScore = getSimilarityScore(f.name);
+                      const isExpPaid = expandedCards.has(1000 + i);
                       const statusBadge = isRegistered
                         ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
                         : isPending
@@ -1112,34 +1524,64 @@ export default function TrademarkClearancePanel({
                         ? (lang === 'es' ? 'En Trámite' : 'Pending')
                         : f.status;
                       return (
-                        <div key={i} className="flex items-start gap-3 bg-white border border-gray-100 rounded-xl px-3 py-2.5 shadow-sm">
-                          {/* Image (always for design/mixed, placeholder for word) */}
-                          <div className="flex-shrink-0 w-10 h-10 rounded-lg border border-gray-200 bg-gray-50 overflow-hidden flex items-center justify-center">
-                            {isDesignResult && f.imageUrl
-                              ? <img src={f.imageUrl} alt={f.name} className="w-full h-full object-contain" />
-                              : isDesignResult
-                              ? <Shield size={14} className="text-gray-300" />
-                              : <span className="text-[9px] font-bold text-gray-400 text-center leading-tight px-0.5">{f.name.slice(0, 3).toUpperCase()}</span>
-                            }
+                        <div key={i} className={`bg-white border rounded-xl overflow-hidden shadow-sm ${isExact ? 'border-red-200' : 'border-gray-100'}`}>
+                          <div className="flex items-start gap-3 px-3 py-2.5">
+                            <SimilarityGauge score={isExact ? 97 : simScore} size={44} />
+                            <div className="flex-shrink-0 w-10 h-10 rounded-lg border border-gray-200 bg-gray-50 overflow-hidden flex items-center justify-center self-center">
+                              {isDesignResult && f.imageUrl
+                                ? <img src={f.imageUrl} alt={f.name} className="w-full h-full object-contain" />
+                                : isDesignResult
+                                ? <Shield size={14} className="text-gray-300" />
+                                : <span className="text-[9px] font-bold text-gray-400 text-center leading-tight px-0.5">{f.name.slice(0, 3).toUpperCase()}</span>
+                              }
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-2 mb-0.5">
+                                <span className="text-xs font-bold text-gray-800 leading-tight">{f.name || '—'}</span>
+                                <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
+                                  <span className={`text-[9px] font-bold border rounded-full px-1.5 py-0.5 ${statusBadge}`}>{statusLabel}</span>
+                                  {isExact && <span className="text-[8px] font-bold bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full uppercase">{tr('exactMatch', lang)}</span>}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {f.classNum && (
+                                  <span className="text-[10px] font-semibold bg-[#1a2e1a]/10 text-[#1a2e1a] px-1.5 py-0.5 rounded-full">
+                                    {lang === 'zh' ? `第${f.classNum}类` : `Cl. ${f.classNum}`}
+                                  </span>
+                                )}
+                                {f.holder && (
+                                  <span className="text-[10px] text-gray-500 truncate max-w-[160px]">{f.holder}</span>
+                                )}
+                              </div>
+                              {f.goodsServices && (
+                                <p className="text-[10px] text-gray-400 mt-0.5 line-clamp-2 leading-snug">{f.goodsServices}</p>
+                              )}
+                            </div>
                           </div>
-                          {/* Details */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2 mb-0.5">
-                              <span className="text-xs font-semibold text-gray-800 leading-tight">{f.name || '—'}</span>
-                              <span className={`text-[9px] font-bold border rounded-full px-1.5 py-0.5 flex-shrink-0 ${statusBadge}`}>{statusLabel}</span>
-                            </div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              {f.classNum && (
-                                <span className="text-[10px] font-medium bg-navy-50 text-navy-700 border border-navy-100 px-1.5 py-0.5 rounded-full">
-                                  {lang === 'es' ? 'Cl.' : 'Cl.'} {f.classNum}
-                                </span>
-                              )}
-                              {f.holder && (
-                                <span className="text-[10px] text-gray-500 truncate">{f.holder}</span>
-                              )}
-                            </div>
-                            {f.goodsServices && (
-                              <p className="text-[10px] text-gray-400 mt-0.5 line-clamp-2 leading-snug">{f.goodsServices}</p>
+                          {/* Expandable AI analysis */}
+                          <div className="border-t border-gray-50">
+                            <button
+                              type="button"
+                              onClick={() => setExpandedCards(prev => {
+                                const next = new Set(prev);
+                                const key = 1000 + i;
+                                if (next.has(key)) next.delete(key); else next.add(key);
+                                return next;
+                              })}
+                              className="w-full flex items-center justify-between px-3 py-1.5 text-[9px] font-medium text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors"
+                            >
+                              <span className="flex items-center gap-1"><Sparkles size={9} className="text-[#c9a84c]" />{lang === 'es' ? 'Ver análisis IA' : 'View AI analysis'}</span>
+                              {isExpPaid ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+                            </button>
+                            {isExpPaid && (
+                              <div className="px-3 pb-2.5 pt-1 bg-gray-50/50">
+                                <p className="text-[10px] text-gray-600 leading-relaxed">
+                                  {lang === 'es'
+                                    ? `"${f.name}" — ${isExact ? 'Coincidencia exacta con tu marca.' : `Similitud estimada ${simScore}%.`} Estado: ${f.status}.${f.classNum ? ` Clase ${f.classNum}.` : ''}${f.holder ? ` Titular: ${f.holder}.` : ''}`
+                                    : `"${f.name}" — ${isExact ? 'Exact match with your mark.' : `Estimated similarity ${simScore}%.`} Status: ${f.status}.${f.classNum ? ` Class ${f.classNum}.` : ''}${f.holder ? ` Holder: ${f.holder}.` : ''}`
+                                  }
+                                </p>
+                              </div>
                             )}
                           </div>
                         </div>
