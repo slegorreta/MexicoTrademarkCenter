@@ -249,6 +249,7 @@ const UI: Record<string, Record<string, string>> = {
   sentTo: { en: 'Your full report has been sent to', es: 'Tu reporte completo fue enviado a', zh: '您的完整报告已发送至', de: 'Ihr vollständiger Bericht wurde gesendet an', fr: 'Votre rapport complet a été envoyé à', hi: 'आपकी पूर्ण रिपोर्ट भेजी गई', pt: 'Seu relatório completo foi enviado para' },
   downloadPdf: { en: 'Download PDF Report', es: 'Descargar Reporte PDF', zh: '下载PDF报告', de: 'PDF-Bericht herunterladen', fr: 'Télécharger le rapport PDF', hi: 'PDF रिपोर्ट डाउनलोड करें', pt: 'Baixar Relatório PDF' },
   generatingPdf: { en: 'Generating your PDF…', es: 'Generando tu PDF…', zh: '正在生成PDF…', de: 'PDF wird erstellt…', fr: 'Génération du PDF en cours…', hi: 'PDF तैयार हो रहा है…', pt: 'Gerando seu PDF…' },
+  pdfDelayed: { en: 'Your report is taking longer than expected. It will be sent to your email shortly. If you do not receive it within 10 minutes, please contact support at contacto@mexicotrademarkscenter.com', es: 'Tu reporte está tardando más de lo esperado. Se enviará a tu correo en breve. Si no lo recibes en 10 minutos, escríbenos a contacto@mexicotrademarkscenter.com', zh: 'Your report is taking longer than expected. It will be sent to your email shortly. Contact support at contacto@mexicotrademarkscenter.com', de: 'Ihr Bericht benötigt mehr Zeit als erwartet. Er wird Ihnen per E-Mail zugesandt. Bei Fragen wenden Sie sich an contacto@mexicotrademarkscenter.com', fr: 'Votre rapport prend plus de temps que prévu. Il vous sera envoyé par e-mail sous peu. Contactez le support à contacto@mexicotrademarkscenter.com', hi: 'आपकी रिपोर्ट में अधिक समय लग रहा है। इसे जल्द ही आपके ईमेल पर भेजा जाएगा। संपर्क करें: contacto@mexicotrademarkscenter.com', pt: 'Seu relatório está demorando mais do que o esperado. Será enviado ao seu e-mail em breve. Contate o suporte em contacto@mexicotrademarkscenter.com' },
   fullReportBelow: { en: 'Full detailed analysis below', es: 'Análisis detallado completo a continuación', zh: '完整详细分析如下', de: 'Vollständige Detailanalyse unten', fr: 'Analyse détaillée complète ci-dessous', hi: 'पूर्ण विस्तृत विश्लेषण नीचे', pt: 'Análise detalhada completa abaixo' },
   // Detail sections
   distinctivenessTitle: { en: 'Distinctiveness Assessment', es: 'Evaluación de Distintividad', zh: '显著性评估', de: 'Unterscheidungskraft-Bewertung', fr: 'Évaluation de la distinctivité', hi: 'विशिष्टता मूल्यांकन', pt: 'Avaliação de Distintividade' },
@@ -838,6 +839,7 @@ export default function TrademarkClearancePanel({
   const [piLoading, setPiLoading] = useState(false);
   const [piError, setPiError] = useState('');
   const [pdfUrl, setPdfUrl] = useState('');
+  const [pdfFailed, setPdfFailed] = useState(false);
 
   // Detail section toggles (unlocked after payment)
   const [paid, setPaid] = useState(false);
@@ -900,6 +902,7 @@ export default function TrademarkClearancePanel({
   useEffect(() => {
     if (!paid || !reportOrderId || pdfUrl) return;
     let attempts = 0;
+    const MAX_ATTEMPTS = 24; // 24 × 5s = 2 min
     const poll = async () => {
       attempts++;
       try {
@@ -913,7 +916,11 @@ export default function TrademarkClearancePanel({
           if (d.url) { setPdfUrl(d.url); return; }
         }
       } catch {/* ignore */}
-      if (attempts < 12) setTimeout(poll, 5000);
+      if (attempts < MAX_ATTEMPTS) {
+        setTimeout(poll, 5000);
+      } else {
+        setPdfFailed(true);
+      }
     };
     setTimeout(poll, 4000);
   }, [paid, reportOrderId, pdfUrl]);
@@ -2982,6 +2989,11 @@ export default function TrademarkClearancePanel({
                 className="inline-flex items-center gap-2 bg-[#1a2e1a] hover:bg-[#2d4a2d] text-white text-xs font-semibold px-4 py-2.5 rounded-xl transition-colors">
                 <Download size={13} />{tr('downloadPdf', lang)}
               </a>
+            ) : pdfFailed ? (
+              <div className="flex items-start gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 max-w-sm">
+                <AlertTriangle size={13} className="flex-shrink-0 mt-0.5 text-amber-500" />
+                <span>{tr('pdfDelayed', lang)}</span>
+              </div>
             ) : (
               <div className="inline-flex items-center gap-2 text-xs text-emerald-600">
                 <Loader2 size={13} className="animate-spin" />{tr('generatingPdf', lang)}
