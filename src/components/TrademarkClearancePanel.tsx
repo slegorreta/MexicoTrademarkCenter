@@ -21,6 +21,13 @@ export interface DupontFactor { factor: string; verdict: 'favors_registration' |
 export interface DistinctivenessAssessment { tier: 'generic' | 'descriptive' | 'suggestive' | 'arbitrary' | 'fanciful'; score: number; explanation: string; explanation_en?: string; explanation_user?: string; }
 export interface TranslationFlag { languageCode: string; languageName: string; translatedForm: string; romanization?: string; risk: 'none' | 'low' | 'medium' | 'high'; issueCategory: string | null; details: string; details_en: string; }
 
+interface AlternativeName {
+  name: string;
+  score: number;
+  rationale: string;
+  rationale_en: string;
+}
+
 interface ClearanceResult {
   risk: 'low' | 'medium' | 'high';
   riskColor?: 'VERDE' | 'AMARILLO' | 'NARANJA' | 'ROJO';
@@ -43,6 +50,7 @@ interface ClearanceResult {
   variantsSearched?: string[];
   searchLanguage?: string;
   disclaimer: string;
+  alternativeNames?: AlternativeName[];
 }
 
 export type { ClearanceResult };
@@ -251,6 +259,16 @@ const UI: Record<string, Record<string, string>> = {
   generatingPdf: { en: 'Generating your PDF…', es: 'Generando tu PDF…', zh: '正在生成PDF…', de: 'PDF wird erstellt…', fr: 'Génération du PDF en cours…', hi: 'PDF तैयार हो रहा है…', pt: 'Gerando seu PDF…' },
   pdfDelayed: { en: 'Your report is taking longer than expected. It will be sent to your email shortly. If you do not receive it within 10 minutes, please contact support at contacto@mexicotrademarkscenter.com', es: 'Tu reporte está tardando más de lo esperado. Se enviará a tu correo en breve. Si no lo recibes en 10 minutos, escríbenos a contacto@mexicotrademarkscenter.com', zh: 'Your report is taking longer than expected. It will be sent to your email shortly. Contact support at contacto@mexicotrademarkscenter.com', de: 'Ihr Bericht benötigt mehr Zeit als erwartet. Er wird Ihnen per E-Mail zugesandt. Bei Fragen wenden Sie sich an contacto@mexicotrademarkscenter.com', fr: 'Votre rapport prend plus de temps que prévu. Il vous sera envoyé par e-mail sous peu. Contactez le support à contacto@mexicotrademarkscenter.com', hi: 'आपकी रिपोर्ट में अधिक समय लग रहा है। इसे जल्द ही आपके ईमेल पर भेजा जाएगा। संपर्क करें: contacto@mexicotrademarkscenter.com', pt: 'Seu relatório está demorando mais do que o esperado. Será enviado ao seu e-mail em breve. Contate o suporte em contacto@mexicotrademarkscenter.com' },
   fullReportBelow: { en: 'Full detailed analysis below', es: 'Análisis detallado completo a continuación', zh: '完整详细分析如下', de: 'Vollständige Detailanalyse unten', fr: 'Analyse détaillée complète ci-dessous', hi: 'पूर्ण विस्तृत विश्लेषण नीचे', pt: 'Análise detalhada completa abaixo' },
+  // Alternative names
+  seeAlternatives: { en: 'See fileable alternatives →', es: 'Ver alternativas registrables →', zh: '查看可注册替代名称 →', de: 'Registrierbare Alternativen anzeigen →', fr: 'Voir les alternatives déposables →', hi: 'पंजीकरण योग्य विकल्प देखें →', pt: 'Ver alternativas registráveis →', ja: '登録可能な代替案を見る →' },
+  alternativeNamesTitle: { en: 'Fileable Alternatives', es: 'Alternativas Registrables', zh: '可注册替代名称', de: 'Registrierbare Alternativen', fr: 'Alternatives déposables', hi: 'पंजीकरण योग्य विकल्प', pt: 'Alternativas Registráveis', ja: '登録可能な代替案' },
+  alternativeNamesSubtitle: { en: 'These coined marks avoid the conflicts found and are positioned for high registrability in Mexico.', es: 'Estas marcas de fantasía evitan los conflictos encontrados y tienen alta viabilidad de registro en México.', zh: '这些杜撰商标避免了发现的冲突，在墨西哥具有较高的注册可行性。', de: 'Diese Fantasiemarken vermeiden die gefundenen Konflikte und haben in Mexiko eine hohe Registrierbarkeit.', fr: 'Ces marques de fantaisie évitent les conflits trouvés et sont positionnées pour une haute enregistrabilité au Mexique.', hi: 'ये काल्पनिक मार्क मिले हुए विवादों से बचते हैं और मेक्सिको में उच्च पंजीकरण योग्यता के लिए स्थित हैं।', pt: 'Estas marcas de fantasia evitam os conflitos encontrados e estão posicionadas para alta registrabilidade no México.', ja: 'これらの造語商標は、発見された競合を回避し、メキシコでの高い登録可能性があります。' },
+  fileThisMark: { en: 'File this mark — USD $299', es: 'Registrar esta marca — USD $299', zh: '申请此商标 — USD $299', de: 'Diese Marke anmelden — USD $299', fr: 'Déposer cette marque — USD $299', hi: 'यह मार्क दर्ज करें — USD $299', pt: 'Protocolar esta marca — USD $299', ja: 'この商標を出願 — USD $299' },
+  registrabilityScore: { en: 'Registrability', es: 'Viabilidad', zh: '注册可能性', de: 'Registrierbarkeit', fr: 'Enregistrabilité', hi: 'पंजीकरण योग्यता', pt: 'Registrabilidade', ja: '登録可能性' },
+  // Attorney review add-on
+  attorneyReviewTitle: { en: 'Add Attorney Review', es: 'Agregar Revisión de Abogado', zh: '添加律师审核', de: 'Anwaltsüberprüfung hinzufügen', fr: 'Ajouter une révision juridique', hi: 'वकील समीक्षा जोड़ें', pt: 'Adicionar Revisão Jurídica', ja: '弁護士レビューを追加' },
+  attorneyReviewDesc: { en: 'A licensed Mexican trademark attorney will personally review this report, validate the AI analysis, and provide a written legal opinion before filing.', es: 'Un abogado de marcas mexicano certificado revisará personalmente este reporte, validará el análisis de IA y emitirá una opinión legal escrita antes de presentar.', zh: '一位持牌墨西哥商标律师将亲自审核此报告，验证AI分析，并在申请前提供书面法律意见。', de: 'Ein zugelassener mexikanischer Markenanwalt überprüft diesen Bericht persönlich, validiert die KI-Analyse und gibt vor der Anmeldung eine schriftliche Rechtsberatung ab.', fr: 'Un avocat mexicain spécialisé en marques examinera ce rapport personnellement, validera l\'analyse IA et fournira une opinion juridique écrite avant le dépôt.', hi: 'एक लाइसेंस प्राप्त मैक्सिकन ट्रेडमार्क वकील इस रिपोर्ट की व्यक्तिगत रूप से समीक्षा करेंगे, AI विश्लेषण को मान्य करेंगे, और दाखिल करने से पहले एक लिखित कानूनी राय प्रदान करेंगे।', pt: 'Um advogado mexicano de marcas licenciado revisará pessoalmente este relatório, validará a análise de IA e fornecerá uma opinião jurídica escrita antes do protocolo.', ja: 'メキシコの商標弁護士がこのレポートを個人的にレビューし、AI分析を検証し、出願前に書面による法的意見を提供します。' },
+  attorneyReviewCheckbox: { en: 'Add attorney review (+$9.99) — we\'ll confirm and bill this separately before filing.', es: 'Agregar revisión de abogado (+$9.99) — confirmamos y cobramos por separado antes de presentar.', zh: '添加律师审核（+$9.99）— 我们将在申请前单独确认并收费。', de: 'Anwaltsüberprüfung hinzufügen (+$9,99) — wir bestätigen und berechnen dies separat vor der Anmeldung.', fr: 'Ajouter une révision juridique (+9,99 $) — nous confirmerons et facturerons séparément avant le dépôt.', hi: 'वकील समीक्षा जोड़ें (+$9.99) — हम दाखिल करने से पहले अलग से पुष्टि और बिल करेंगे।', pt: 'Adicionar revisão jurídica (+$9,99) — confirmaremos e cobraremos separadamente antes do protocolo.', ja: '弁護士レビューを追加（+$9.99）— 出願前に個別に確認・請求します。' },
   // Detail sections
   distinctivenessTitle: { en: 'Distinctiveness Assessment', es: 'Evaluación de Distintividad', zh: '显著性评估', de: 'Unterscheidungskraft-Bewertung', fr: 'Évaluation de la distinctivité', hi: 'विशिष्टता मूल्यांकन', pt: 'Avaliação de Distintividade' },
   dupontTitle: { en: 'DuPont Analysis (13 Factors)', es: 'Análisis DuPont (13 Factores)', zh: '杜邦因素分析（13项）', de: 'DuPont-Analyse (13 Faktoren)', fr: 'Analyse DuPont (13 facteurs)', hi: 'DuPont विश्लेषण (13 कारक)', pt: 'Análise DuPont (13 Fatores)' },
@@ -840,6 +858,7 @@ export default function TrademarkClearancePanel({
   const [piError, setPiError] = useState('');
   const [pdfUrl, setPdfUrl] = useState('');
   const [pdfFailed, setPdfFailed] = useState(false);
+  const [wantsAttorneyReview, setWantsAttorneyReview] = useState(false);
 
   // Detail section toggles (unlocked after payment)
   const [paid, setPaid] = useState(false);
@@ -1095,6 +1114,7 @@ export default function TrademarkClearancePanel({
           email: email.trim().toLowerCase(),
           couponCode: couponApplied ? couponInput.trim().toUpperCase() : undefined,
           userId: user?.id ?? undefined,
+          attorneyReviewRequested: wantsAttorneyReview,
         }),
       });
       const d = await res.json();
@@ -1189,6 +1209,20 @@ export default function TrademarkClearancePanel({
               </span>
             ) : (
               <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${cfg.badge}`}>{cfg.label[lang as keyof typeof cfg.label] ?? cfg.label['en']}</span>
+            )}
+            {(result.riskColor === 'NARANJA' || result.riskColor === 'ROJO') && (result.alternativeNames?.length ?? 0) > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setStratExpanded(true);
+                  setTimeout(() => {
+                    document.getElementById('first-alternative')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }, 80);
+                }}
+                className="text-[10px] font-semibold text-orange-600 hover:text-orange-800 underline underline-offset-2 transition-colors"
+              >
+                {tr('seeAlternatives', lang)}
+              </button>
             )}
           </div>
         </div>
@@ -2738,6 +2772,53 @@ export default function TrademarkClearancePanel({
                 </button>
                 {stratExpanded && (
                   <div className="px-4 pb-4 space-y-3">
+                    {/* ── Alternative Name Cards ──────────────────────────── */}
+                    {(result.alternativeNames?.length ?? 0) > 0 && (
+                      <div className="mb-1">
+                        <div className="flex items-center gap-2 mb-2 mt-1">
+                          <Sparkles size={11} className="text-[#c9a84c] flex-shrink-0" />
+                          <span className="text-[10px] font-bold text-gray-700 uppercase tracking-wide">{tr('alternativeNamesTitle', lang)}</span>
+                        </div>
+                        <p className="text-[10px] text-gray-500 mb-3 leading-relaxed">{tr('alternativeNamesSubtitle', lang)}</p>
+                        <div className="space-y-2.5">
+                          {result.alternativeNames!.map((alt, i) => {
+                            const scoreColor = alt.score >= 85 ? 'bg-emerald-100 text-emerald-700 border-emerald-300'
+                              : alt.score >= 70 ? 'bg-amber-100 text-amber-700 border-amber-300'
+                              : 'bg-gray-100 text-gray-600 border-gray-300';
+                            const rationale = (lang === 'es') ? alt.rationale : alt.rationale_en;
+                            return (
+                              <div
+                                key={i}
+                                id={i === 0 ? 'first-alternative' : undefined}
+                                className="rounded-xl border-2 border-[#c9a84c]/30 bg-gradient-to-br from-[#faf8f0] to-white p-3 shadow-sm"
+                              >
+                                <div className="flex items-start justify-between gap-2 mb-2">
+                                  <div>
+                                    <p className="text-base font-black text-[#1a2e1a] tracking-wide leading-tight">{alt.name}</p>
+                                    <p className="text-[10px] text-gray-500 mt-1 leading-relaxed">{rationale}</p>
+                                  </div>
+                                  <span className={`flex-shrink-0 text-[9px] font-bold px-2 py-1 rounded-full border ${scoreColor}`}>
+                                    {tr('registrabilityScore', lang)} {alt.score}%
+                                  </span>
+                                </div>
+                                <div className="w-full h-1 bg-gray-100 rounded-full overflow-hidden mb-3">
+                                  <div className="h-full rounded-full transition-all" style={{ width: `${alt.score}%`, backgroundColor: alt.score >= 85 ? '#10b981' : alt.score >= 70 ? '#f59e0b' : '#9ca3af' }} />
+                                </div>
+                                <a
+                                  href={`/apply?mark=${encodeURIComponent(alt.name)}&ref=alternative`}
+                                  className="flex items-center justify-center gap-1.5 w-full bg-[#1a2e1a] hover:bg-[#2d4a2d] text-white text-xs font-bold py-2 rounded-lg transition-colors"
+                                >
+                                  <ArrowRight size={11} />
+                                  {tr('fileThisMark', lang)}
+                                </a>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div className="border-t border-gray-100 my-3" />
+                      </div>
+                    )}
+                    {/* ── Strategy Path Cards ─────────────────────────────── */}
                     {strategies.sort((a, b) => b.viability - a.viability).map((s, i) => (
                       <div key={i} className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
                         <div className="flex items-start justify-between gap-2 mb-2">
@@ -3119,6 +3200,27 @@ export default function TrademarkClearancePanel({
               </div>
               {couponError && <p className="text-xs text-red-600 mt-1.5 flex items-center gap-1"><AlertCircle size={11} />{couponError}</p>}
               {couponApplied && <p className="text-xs text-emerald-600 mt-1.5 flex items-center gap-1"><CheckCircle2 size={11} />{tr('discountApplied', lang)}</p>}
+            </div>
+            {/* Attorney review add-on */}
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => setWantsAttorneyReview(v => !v)}
+              onKeyDown={e => e.key === 'Enter' && setWantsAttorneyReview(v => !v)}
+              className={`mb-4 rounded-xl border-2 p-3 cursor-pointer transition-colors select-none ${wantsAttorneyReview ? 'border-[#c9a84c] bg-[#faf8f0]' : 'border-gray-200 bg-gray-50 hover:border-[#c9a84c]/50'}`}
+            >
+              <div className="flex items-start gap-2.5">
+                <div className={`flex-shrink-0 mt-0.5 w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${wantsAttorneyReview ? 'bg-[#c9a84c] border-[#c9a84c]' : 'border-gray-300 bg-white'}`}>
+                  {wantsAttorneyReview && <CheckCircle2 size={10} className="text-white" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <Scale size={11} className="text-[#c9a84c] flex-shrink-0" />
+                    <span className="text-xs font-bold text-gray-800">{tr('attorneyReviewTitle', lang)} <span className="text-[#c9a84c]">+$9.99</span></span>
+                  </div>
+                  <p className="text-[10px] text-gray-500 leading-relaxed">{tr('attorneyReviewCheckbox', lang)}</p>
+                </div>
+              </div>
             </div>
             {piError && <p className="text-xs text-red-600 mb-2 flex items-center gap-1"><AlertCircle size={11} />{piError}</p>}
             <button type="button" onClick={handleProceedToPayment} disabled={piLoading}

@@ -1355,6 +1355,84 @@ Devuelve únicamente JSON: {"riskSummary": "...", "riskSummary_en": "..."${isUse
   }
 }
 
+interface AlternativeName {
+  name: string;
+  score: number;
+  rationale: string;
+  rationale_en: string;
+}
+
+async function generateAlternativeNames(
+  apiKey: string,
+  markName: string,
+  goodsServices: string,
+  classes: number[],
+  conflictingNames: string[],
+  language: string,
+): Promise<AlternativeName[]> {
+  const classContext = classes.length > 0 ? ` for Nice class(es) ${classes.join(", ")}` : "";
+  const goodsCtx = goodsServices ? ` covering "${goodsServices}"` : "";
+  const conflictCtx = conflictingNames.length > 0
+    ? `\nConflicting marks that must be avoided: ${conflictingNames.slice(0, 5).map(n => `"${n}"`).join(", ")}.`
+    : "";
+  const langName = LANGUAGE_NAMES[language] ?? "English";
+  const isUserLang = language !== "es";
+
+  const prompt = `You are a Mexican trademark attorney and brand naming specialist.
+
+The proposed trademark "${markName}"${classContext}${goodsCtx} has been found to have HIGH or CRITICAL registration risk in Mexico (NARANJA or ROJO rating).${conflictCtx}
+
+Generate exactly 3 coined/fanciful alternative trademark names that:
+1. Sound or feel related to "${markName}" (preserve brand equity as much as possible)
+2. Avoid the conflicting marks listed above
+3. Are fanciful or arbitrary — maximum distinctiveness under Mexican trademark law
+4. Are short (1–2 words, max 12 characters total), memorable, and registrable
+5. Would be appropriate for the same goods/services
+
+For each alternative provide:
+- "name": the proposed trademark (title case)
+- "score": estimated registrability score 60–99 (higher = easier to register; coined/fanciful = 85+)
+- "rationale": 1 sentence in Spanish explaining why this name is better positioned for registration
+- "rationale_en": same sentence in English
+${isUserLang ? `- "rationale_user": same sentence in ${langName}` : ""}
+
+Return ONLY valid JSON: {"alternatives": [{"name":"...","score":0,"rationale":"...","rationale_en":"..."${isUserLang ? ',"rationale_user":"..."' : ""}}]}`;
+
+  try {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: "You are a trademark naming expert. Return only valid JSON." },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.8,
+        max_tokens: 800,
+        response_format: { type: "json_object" },
+      }),
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) return [];
+    const parsed = JSON.parse(content);
+    const alts: AlternativeName[] = (parsed.alternatives ?? [])
+      .filter((a: Record<string, unknown>) => a.name && typeof a.score === "number")
+      .slice(0, 3)
+      .map((a: Record<string, unknown>) => ({
+        name: String(a.name),
+        score: Math.min(99, Math.max(0, Number(a.score))),
+        rationale: String(a.rationale ?? ""),
+        rationale_en: String(a.rationale_en ?? a.rationale ?? ""),
+      }));
+    return alts;
+  } catch {
+    return [];
+  }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 200, headers: corsHeaders });
 
@@ -1519,27 +1597,39 @@ Deno.serve(async (req: Request) => {
       ? await analyzeMalaFe(apiKey, searchName, classes, enhancedGoodsServices, marciaResult.findings, lang)
       : { detected: false, riskLevel: "none" as const, explanation: "", explanation_en: "", indicators: [] };
 
-    // Generate a risk summary that is guaranteed to match the final aggregated risk level
+    // Generate alternative names for NARANJA/ROJO results
+    const shouldGenerateAlternatives = (riskColor === "NARANJA" || riskColor === "ROJO") && !!markName;
+    const conflictingNamesForAlts = marciaResult.findings
+      .filter(f => f.classOverlap === "same" || f.classOverlap === "related")
+      .map(f => f.name)
+      .slice(0, 8);
+
+    // Generate a risk summary + alternative names in parallel
     const summaryMarkName = isDesignOnly
       ? `[design mark]${designDescription ? ` — ${designDescription}` : ""}`
       : searchName;
-    const consistentSummary = await generateConsistentRiskSummary(
-      apiKey,
-      summaryMarkName,
-      enhancedGoodsServices,
-      classes,
-      risk,
-      riskColor,
-      exactSameClass,
-      exactRelatedClass,
-      exactUnrelatedOnly,
-      relevantFindings.length,
-      marciaResult.totalCount,
-      marciaResult.findings,
-      registrabilityResult.flags,
-      dupontAgainst,
-      lang,
-    );
+    const [consistentSummary, alternativeNames] = await Promise.all([
+      generateConsistentRiskSummary(
+        apiKey,
+        summaryMarkName,
+        enhancedGoodsServices,
+        classes,
+        risk,
+        riskColor,
+        exactSameClass,
+        exactRelatedClass,
+        exactUnrelatedOnly,
+        relevantFindings.length,
+        marciaResult.totalCount,
+        marciaResult.findings,
+        registrabilityResult.flags,
+        dupontAgainst,
+        lang,
+      ),
+      shouldGenerateAlternatives
+        ? generateAlternativeNames(apiKey, searchName, enhancedGoodsServices, classes, conflictingNamesForAlts, lang)
+        : Promise.resolve([] as AlternativeName[]),
+    ]);
 
     return new Response(JSON.stringify({
       risk,
@@ -1564,6 +1654,7 @@ Deno.serve(async (req: Request) => {
       variantsSearched: marciaResult.variantsSearched,
       searchLanguage: lang,
       disclaimer: DISCLAIMERS[lang],
+      alternativeNames,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err) {
     console.error("verify-trademark error:", err);

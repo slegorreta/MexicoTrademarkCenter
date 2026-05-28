@@ -22,7 +22,7 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const body = await req.json();
-    const { markName, goodsServices, language, clearanceResult, email, couponCode, userId } = body as {
+    const { markName, goodsServices, language, clearanceResult, email, couponCode, userId, attorneyReviewRequested } = body as {
       markName: string;
       goodsServices: string;
       language: string;
@@ -30,6 +30,7 @@ Deno.serve(async (req: Request) => {
       email: string;
       couponCode?: string;
       userId?: string;
+      attorneyReviewRequested?: boolean;
     };
 
     if (!markName || !email || !clearanceResult) {
@@ -77,6 +78,7 @@ Deno.serve(async (req: Request) => {
         goods_services: goodsServices ?? "",
         language: language ?? "en",
         clearance_result: clearanceResult,
+        attorney_review_requested: !!attorneyReviewRequested,
         email: email.trim().toLowerCase(),
         amount_usd: BASE_PRICE_USD,
         coupon_code: normalizedCoupon || null,
