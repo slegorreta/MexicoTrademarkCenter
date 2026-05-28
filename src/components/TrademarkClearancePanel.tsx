@@ -926,6 +926,11 @@ export default function TrademarkClearancePanel({
   const [pdfModalDone, setPdfModalDone] = useState(false);
   const [pdfModalUrl, setPdfModalUrl] = useState('');
 
+  // Background pre-generation: order + PDF kicked off as soon as result arrives
+  const [bgOrderId, setBgOrderId] = useState('');
+  const [bgPdfUrl, setBgPdfUrl] = useState('');
+  const bgGeneratingRef = useRef(false);
+
   // Detail section toggles
   const [dupontExpanded, setDupontExpanded] = useState(false);
   const [lfppiExpanded, setLfppiExpanded] = useState(true);
@@ -954,6 +959,9 @@ export default function TrademarkClearancePanel({
     runningRef.current = true;
     setStatus('checking');
     setResult(null);
+    setBgOrderId('');
+    setBgPdfUrl('');
+    bgGeneratingRef.current = false;
     setErrorMsg('');
     try {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/verify-trademark`, {
@@ -982,6 +990,63 @@ export default function TrademarkClearancePanel({
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [markName, goodsServices, classes.join(','), imageBase64]);
+
+  // Background PDF pre-generation: fires as soon as the clearance result is ready.
+  // By the time the user opens the modal and types their email, the PDF is usually done.
+  useEffect(() => {
+    if (!result || bgGeneratingRef.current) return;
+    bgGeneratingRef.current = true;
+    setBgOrderId('');
+    setBgPdfUrl('');
+
+    (async () => {
+      try {
+        const piRes = await fetch(`${SUPABASE_URL}/functions/v1/create-report-payment-intent`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+          body: JSON.stringify({
+            markName: markName.trim(),
+            goodsServices,
+            language: lang,
+            clearanceResult: result,
+            email: 'prefetch@mexicotrademarkcenter.com',
+            isFreeOverride: true,
+            userId: user?.id ?? undefined,
+          }),
+        });
+        if (!piRes.ok) return;
+        const piData = await piRes.json();
+        const orderId: string = piData.reportOrderId ?? '';
+        if (!orderId) return;
+        setBgOrderId(orderId);
+
+        // Poll until PDF is ready (up to ~2 minutes)
+        let attempts = 0;
+        const pollUrl = async (): Promise<void> => {
+          attempts++;
+          try {
+            const r = await fetch(`${SUPABASE_URL}/functions/v1/get-report-download-url`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+              body: JSON.stringify({ reportOrderId: orderId }),
+            });
+            if (r.ok) {
+              const d = await r.json();
+              if (d.url) { setBgPdfUrl(d.url); return; }
+            }
+          } catch {/* ignore */}
+          if (attempts < 30) {
+            await new Promise(res => setTimeout(res, 4000));
+            await pollUrl();
+          }
+        };
+        await pollUrl();
+      } catch {/* silent — never block user */} finally {
+        bgGeneratingRef.current = false;
+      }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [result]);
 
   // ── Fetch PDF URL after payment ───────────────────────────────────────────
   useEffect(() => {
@@ -1246,55 +1311,66 @@ export default function TrademarkClearancePanel({
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) return;
     setPdfModalLoading(true);
     try {
-      // 1. Create a free report order so generate-clearance-pdf has something to work with
-      const piRes = await fetch(`${SUPABASE_URL}/functions/v1/create-report-payment-intent`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
-        body: JSON.stringify({
-          markName: markName.trim(),
-          goodsServices,
-          language: lang,
-          clearanceResult: result,
-          email: emailVal,
-          isFreeOverride: true,
-          userId: user?.id ?? undefined,
-        }),
-      });
-      const piData = await piRes.json();
-      const orderId: string = piData.reportOrderId ?? '';
+      let orderId = bgOrderId;
+      let url = bgPdfUrl;
 
-      // 2. Poll for the PDF URL (generated in background by edge fn)
-      let attempts = 0;
-      const MAX = 30;
-      const poll = async (): Promise<string | null> => {
-        attempts++;
-        try {
-          const r = await fetch(`${SUPABASE_URL}/functions/v1/get-report-download-url`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
-            body: JSON.stringify({ reportOrderId: orderId }),
-          });
-          if (r.ok) {
-            const d = await r.json();
-            if (d.url) return d.url;
+      // If background pre-generation already has a PDF, use it directly.
+      // Otherwise create a new order and poll.
+      if (!orderId) {
+        const piRes = await fetch(`${SUPABASE_URL}/functions/v1/create-report-payment-intent`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+          body: JSON.stringify({
+            markName: markName.trim(),
+            goodsServices,
+            language: lang,
+            clearanceResult: result,
+            email: emailVal,
+            isFreeOverride: true,
+            userId: user?.id ?? undefined,
+          }),
+        });
+        const piData = await piRes.json();
+        orderId = piData.reportOrderId ?? '';
+      }
+
+      // Update the order email to the user's actual address
+      if (orderId && emailVal !== 'prefetch@mexicotrademarkcenter.com') {
+        supabase.from('clearance_report_orders').update({ email: emailVal }).eq('id', orderId).then(() => {});
+      }
+
+      if (!url && orderId) {
+        // Poll for PDF (should be fast since background pre-generation is running)
+        let attempts = 0;
+        const poll = async (): Promise<string | null> => {
+          attempts++;
+          try {
+            const r = await fetch(`${SUPABASE_URL}/functions/v1/get-report-download-url`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+              body: JSON.stringify({ reportOrderId: orderId }),
+            });
+            if (r.ok) {
+              const d = await r.json();
+              if (d.url) return d.url;
+            }
+          } catch {/* ignore */}
+          if (attempts < 30) {
+            await new Promise(res => setTimeout(res, 3000));
+            return poll();
           }
-        } catch {/* ignore */}
-        if (attempts < MAX) {
-          await new Promise(res => setTimeout(res, 4000));
-          return poll();
-        }
-        return null;
-      };
+          return null;
+        };
+        url = (await poll()) ?? '';
+      }
 
-      const url = await poll();
       if (url) {
         setPdfModalUrl(url);
-        // Send email to client + admins with the PDF
         fetch(`${SUPABASE_URL}/functions/v1/send-clearance-report-email`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
           body: JSON.stringify({ reportOrderId: orderId, email: emailVal, pdfUrl: url }),
-        }).catch(() => {/* fire-and-forget */});
+        }).catch(() => {});
       }
       trackEvent('report_emailed', { email: emailVal }, lang);
       setPdfModalDone(true);
