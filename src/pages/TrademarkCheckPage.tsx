@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, ArrowRight, Sparkles, CheckCircle2, FileText, HelpCircle, Loader2, Plus, X, Tag, ChevronDown, Send, CreditCard as Edit2, AlertTriangle, ChevronRight, Upload, Image as ImageIcon, Type } from 'lucide-react';
+import { Search, ArrowRight, ArrowLeft, Sparkles, CheckCircle2, FileText, HelpCircle, Loader2, Plus, X, Tag, ChevronDown, Send, CreditCard as Edit2, AlertTriangle, ChevronRight, Upload, Image as ImageIcon, Type } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import TrademarkClearancePanel from '../components/TrademarkClearancePanel';
 
@@ -75,6 +75,16 @@ type WizardStep = 1 | 2 | 3 | 4 | 5;
 // ─── Translations ─────────────────────────────────────────────────────────────
 
 const copy: Record<string, Partial<Record<Lang, string>>> = {
+  backLabel: {
+    en: 'Back',
+    zh: '返回',
+    es: 'Volver',
+    de: 'Zurück',
+    fr: 'Retour',
+    hi: 'वापस',
+    pt: 'Voltar',
+    ja: '戻る',
+  },
   pageTitle: {
     en: 'Free Trademark Clearance Search',
     zh: '免费商标预检索',
@@ -961,7 +971,14 @@ export default function TrademarkCheckPage() {
 
       {/* ── Page header ──────────────────────────────────────────────────────── */}
       <section className="bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800 text-white print-hide">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-12">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-10 lg:pb-12">
+          <button
+            onClick={() => navigate(-1)}
+            className="inline-flex items-center gap-1.5 text-white/60 hover:text-white text-sm font-medium mb-5 transition-colors group"
+          >
+            <ArrowLeft size={15} className="group-hover:-translate-x-0.5 transition-transform" />
+            {tr('backLabel')}
+          </button>
           <h1 className="text-2xl sm:text-3xl font-bold leading-tight mb-2">{tr('pageTitle')}</h1>
           <p className="text-sm text-gray-300 leading-relaxed max-w-xl">{tr('pageSubtitle')}</p>
         </div>

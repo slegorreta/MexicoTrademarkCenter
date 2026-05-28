@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Sparkles, Upload, X, ArrowRight, RefreshCw, Loader2, Image as ImageIcon, CheckCircle2, Lightbulb } from 'lucide-react';
+import { Sparkles, Upload, X, ArrowRight, ArrowLeft, RefreshCw, Loader2, Image as ImageIcon, CheckCircle2, Lightbulb } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { supabase } from '../lib/supabase';
 import TrademarkClearancePanel from '../components/TrademarkClearancePanel';
@@ -209,7 +209,14 @@ export default function TrademarkIdeaPage() {
     <div className="min-h-screen bg-gray-50">
       {/* Hero */}
       <section className="bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800 text-white">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-20">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-16 lg:pb-20">
+          <button
+            onClick={() => navigate(-1)}
+            className="inline-flex items-center gap-1.5 text-white/60 hover:text-white text-sm font-medium mb-6 transition-colors group"
+          >
+            <ArrowLeft size={15} className="group-hover:-translate-x-0.5 transition-transform" />
+            {tri('Back', '返回', 'Volver', 'Zurück', 'Retour', 'वापस', 'Voltar')}
+          </button>
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight mb-4">
             {tri(
               'Trademark Idea Generator',
