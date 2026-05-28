@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, ArrowDown, Star, Shield, Zap, Tag, ChevronDown, CheckCircle2, Sparkles, Search, FileText, HelpCircle, X } from 'lucide-react';
+import { ArrowRight, Star, Shield, Zap, Tag, ChevronDown, CheckCircle2, Sparkles, Search, FileText, HelpCircle, X } from 'lucide-react';
 import { useLanguage, type Language } from '../context/LanguageContext';
 import SEOHead from '../components/SEOHead';
 import CurrencyDisplay from '../components/CurrencyDisplay';
@@ -167,50 +167,47 @@ export default function LandingPage({ lang }: Props) {
             </div>
 
             {/* Primary CTAs */}
-            <div className="flex flex-col gap-1 mb-4 max-w-md">
-              <p className="text-sm font-bold text-white mb-1">{t('hero.step1')}</p>
-
-              {/* CTA 1 — Check availability */}
+            <div className="flex flex-col gap-3 mb-4 max-w-md">
+              {/* CTA 1 — Check availability (orange) */}
               <Link
                 to="/trademark-check"
-                className="group flex items-center gap-3 bg-white text-navy-900 font-bold px-6 py-4 rounded-2xl transition-all duration-200 shadow-xl hover:shadow-2xl hover:-translate-y-0.5"
+                className="group flex items-center gap-3 bg-gold-500 hover:bg-gold-400 text-white font-bold px-5 py-[14px] rounded-2xl transition-all duration-200 shadow-xl hover:shadow-gold-500/30 hover:-translate-y-0.5 min-h-[72px]"
               >
-                <div className="w-9 h-9 rounded-xl bg-gold-500 flex items-center justify-center flex-shrink-0 group-hover:bg-gold-400 transition-colors">
+                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 group-hover:bg-white/30 transition-colors">
                   <Search size={18} className="text-white" />
                 </div>
-                <span className="text-base font-bold text-navy-900 leading-tight">{t('hero.clearance.cta')}</span>
-                <ArrowRight size={18} className="ml-auto text-gold-500 group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
+                <div className="flex flex-col min-w-0 flex-1">
+                  <span className="text-[11px] font-extrabold text-white/90 uppercase tracking-[0.12em] leading-none mb-1">{t('hero.step1_label')}</span>
+                  <span className="text-sm font-bold leading-snug">{t('cta_check_available')}</span>
+                </div>
+                <ArrowRight size={18} className="group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
               </Link>
 
-              {/* Sequence arrow */}
-              <div className="flex justify-center py-0.5">
-                <ArrowDown size={18} className="text-gold-400/60" />
-              </div>
-
-              <p className="text-sm font-bold text-white mb-1">{t('hero.step2')}</p>
-
-              {/* CTA 2 — Start filing */}
+              {/* CTA 2 — Start filing (sky blue) */}
               <Link
                 to="/apply"
-                className="group flex items-center gap-3 bg-gold-500 hover:bg-gold-400 text-white font-bold px-6 py-4 rounded-2xl transition-all duration-200 shadow-lg hover:shadow-gold-500/25 hover:-translate-y-0.5"
+                className="group flex items-center gap-3 bg-sky-600 hover:bg-sky-500 text-white font-bold px-5 py-[14px] rounded-2xl transition-all duration-200 shadow-lg hover:shadow-sky-500/30 hover:-translate-y-0.5 min-h-[72px]"
               >
-                <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 group-hover:bg-white/30 transition-colors">
+                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 group-hover:bg-white/30 transition-colors">
                   <FileText size={18} className="text-white" />
                 </div>
-                <span className="text-base font-bold leading-tight">{t('hero.cta.start')}</span>
-                <ArrowRight size={18} className="ml-auto group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
+                <div className="flex flex-col min-w-0 flex-1">
+                  <span className="text-[11px] font-extrabold text-white/90 uppercase tracking-[0.12em] leading-none mb-1">{t('hero.step2_label')}</span>
+                  <span className="text-sm font-bold leading-snug">{t('cta_start_filing_full')}</span>
+                </div>
+                <ArrowRight size={18} className="group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
               </Link>
-            </div>
 
-            {/* AI Idea Generator — secondary nudge */}
-            <div className="inline-flex items-center gap-2.5 bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5">
-              <Sparkles size={14} className="text-gold-400 flex-shrink-0" />
-              <span className="text-gray-400 text-xs">{t('hero.ai.question')}</span>
+              {/* CTA 3 — Idea generator (bright green) */}
               <Link
                 to="/trademark-ideas"
-                className="flex-shrink-0 text-gold-300 hover:text-gold-200 text-xs font-semibold underline underline-offset-2 transition-colors"
+                className="group flex items-center gap-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-5 py-[14px] rounded-2xl transition-all duration-200 shadow-lg hover:shadow-emerald-500/30 hover:-translate-y-0.5 min-h-[72px]"
               >
-                {t('hero.ai.cta')}
+                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 group-hover:bg-white/30 transition-colors">
+                  <Sparkles size={18} className="text-white" />
+                </div>
+                <span className="text-sm font-bold leading-snug flex-1">{t('cta_idea_generator_full')}</span>
+                <ArrowRight size={18} className="group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
               </Link>
             </div>
           </div>
