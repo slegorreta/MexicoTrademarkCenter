@@ -236,6 +236,8 @@ const UI: Record<string, Record<string, string>> = {
   pdfModalTitle: { en: 'Get your PDF Report', es: 'Obtener su Reporte PDF', fr: 'Obtenir votre rapport PDF', pt: 'Obtenha seu Relatório PDF', de: 'Ihr PDF-Bericht', it: 'Ottieni il tuo Report PDF', zh: '获取您的PDF报告', ja: 'PDFレポートを取得', hi: 'अपनी PDF रिपोर्ट प्राप्त करें' },
   pdfModalDesc: { en: 'Enter your email to receive this report as a timestamped PDF. You can close this screen — the PDF is being generated in the background and will be sent to your inbox and shown here once it is ready.', es: 'Ingresa tu correo para recibir este reporte como PDF con sello de tiempo. Puedes cerrar esta pantalla — el PDF se está generando en segundo plano y se enviará a tu bandeja y aparecerá aquí cuando esté listo.', fr: 'Entrez votre e-mail pour recevoir ce rapport en PDF horodaté. Vous pouvez fermer cet écran — le PDF est en cours de génération en arrière-plan et sera envoyé dans votre boîte et affiché ici une fois prêt.', pt: 'Insira seu e-mail para receber este relatório em PDF com carimbo de tempo. Você pode fechar esta tela — o PDF está sendo gerado em segundo plano e será enviado para sua caixa e exibido aqui quando estiver pronto.', de: 'Geben Sie Ihre E-Mail ein, um diesen Bericht als zeitgestempeltes PDF zu erhalten. Sie können diesen Bildschirm schließen — das PDF wird im Hintergrund erstellt und an Ihren Posteingang gesendet und hier angezeigt, sobald es fertig ist.', it: 'Inserisci la tua e-mail per ricevere questo report come PDF con timestamp. Puoi chiudere questa schermata — il PDF viene generato in background e verrà inviato nella tua casella e mostrato qui quando sarà pronto.', zh: '输入您的邮箱以接收此报告的带时间戳PDF。您可以关闭此屏幕——PDF正在后台生成，完成后将发送到您的邮箱并在此处显示。', ja: 'メールアドレスを入力してタイムスタンプ付きPDFレポートを受け取ってください。この画面は閉じてもかまいません — PDFはバックグラウンドで生成中で、完成次第メールに送信されここに表示されます。', hi: 'इस रिपोर्ट को टाइमस्टैम्प PDF के रूप में प्राप्त करने के लिए अपना ईमेल दर्ज करें। आप यह स्क्रीन बंद कर सकते हैं — PDF बैकग्राउंड में तैयार हो रहा है और तैयार होने पर आपके इनबॉक्स में भेजा जाएगा और यहाँ दिखाया जाएगा।' },
   pdfGenerating: { en: 'Generating your PDF…', es: 'Generando tu PDF…', fr: 'Génération du PDF…', pt: 'Gerando PDF…', de: 'PDF wird erstellt…', it: 'Generazione PDF in corso…', zh: '正在生成PDF…', ja: 'PDF生成中…', hi: 'PDF तैयार हो रहा है…' },
+  pdfGeneratingLabel: { en: 'Generating report…', es: 'Generando reporte…', fr: 'Génération du rapport…', pt: 'Gerando relatório…', de: 'Bericht wird erstellt…', it: 'Generazione del report…', zh: '正在生成报告…', ja: 'レポート生成中…', hi: 'रिपोर्ट तैयार हो रही है…' },
+  pdfReadyLabel: { en: 'Your PDF is ready!', es: '¡Tu PDF está listo!', fr: 'Votre PDF est prêt !', pt: 'Seu PDF está pronto!', de: 'Ihr PDF ist bereit!', it: 'Il tuo PDF è pronto!', zh: 'PDF已准备好！', ja: 'PDFが準備できました！', hi: 'आपका PDF तैयार है!' },
   pdfSent: { en: 'PDF sent! Check your inbox.', es: '¡PDF enviado! Revisa tu bandeja.', fr: 'PDF envoyé ! Vérifiez votre boîte.', pt: 'PDF enviado! Verifique sua caixa.', de: 'PDF gesendet! Prüfen Sie Ihren Posteingang.', it: 'PDF inviato! Controlla la tua casella.', zh: 'PDF已发送！请查收邮件。', ja: 'PDF送信済み！受信トレイをご確認ください。', hi: 'PDF भेज दिया! अपना इनबॉक्स देखें।' },
   downloadPdfNow: { en: 'Download PDF', es: 'Descargar PDF', fr: 'Télécharger le PDF', pt: 'Baixar PDF', de: 'PDF herunterladen', it: 'Scarica PDF', zh: '下载PDF', ja: 'PDFをダウンロード', hi: 'PDF डाउनलोड करें' },
   pdfModalCloseSafe: { en: 'You can close this screen — the PDF will be sent to your email and shown here once it is ready.', es: 'Puedes cerrar esta pantalla — el PDF se enviará a tu correo y aparecerá aquí cuando esté listo.', fr: 'Vous pouvez fermer cet écran — le PDF sera envoyé à votre e-mail et affiché ici une fois prêt.', pt: 'Você pode fechar esta tela — o PDF será enviado ao seu e-mail e exibido aqui quando estiver pronto.', de: 'Sie können diesen Bildschirm schließen — das PDF wird an Ihre E-Mail gesendet und hier angezeigt, sobald es fertig ist.', it: 'Puoi chiudere questa schermata — il PDF verrà inviato alla tua e-mail e mostrato qui quando sarà pronto.', zh: '您可以关闭此屏幕——PDF将发送到您的邮箱，准备好后会在此处显示。', ja: 'この画面は閉じてもかまいません — PDFはメールに送信され、準備ができたらここに表示されます。', hi: 'आप यह स्क्रीन बंद कर सकते हैं — PDF आपके ईमेल पर भेजा जाएगा और तैयार होने पर यहाँ दिखाया जाएगा।' },
@@ -930,6 +932,19 @@ export default function TrademarkClearancePanel({
   const [pdfModalUrl, setPdfModalUrl] = useState('');
   // Tracks a committed delivery that continues even if the modal is closed
   const pendingDeliveryRef = useRef<{ email: string; orderId: string } | null>(null);
+  // Progress bar: 0–100, animates during generation, snaps to 100 when URL arrives
+  const [pdfProgress, setPdfProgress] = useState(0);
+  const pdfProgressTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Snap to 100 if background PDF finishes while user already submitted email
+  useEffect(() => {
+    if (pdfModalDone && bgPdfUrl && pdfProgress < 100) {
+      if (pdfProgressTimer.current) clearInterval(pdfProgressTimer.current);
+      setPdfProgress(100);
+      setPdfModalUrl(bgPdfUrl);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bgPdfUrl, pdfModalDone]);
 
   // Background pre-generation: order + PDF kicked off as soon as result arrives
   const [bgOrderId, setBgOrderId] = useState('');
@@ -1324,6 +1339,20 @@ export default function TrademarkClearancePanel({
     setPdfModalDone(true);
     setPdfModalLoading(false);
 
+    // Start progress animation — if bgPdfUrl is already ready, jump straight to 100
+    if (bgPdfUrl) {
+      setPdfProgress(100);
+    } else {
+      setPdfProgress(0);
+      // Animate to ~90% over ~90 seconds (eases off near the top), then snap to 100 on URL arrival
+      let current = 0;
+      pdfProgressTimer.current = setInterval(() => {
+        current += (90 - current) * 0.025 + 0.15;
+        if (current >= 90) { current = 90; if (pdfProgressTimer.current) clearInterval(pdfProgressTimer.current); }
+        setPdfProgress(Math.round(current));
+      }, 800);
+    }
+
     // Continue all async work in the background — independent of modal visibility
     (async () => {
       try {
@@ -1380,6 +1409,8 @@ export default function TrademarkClearancePanel({
 
         if (url) {
           // Update PDF URL — visible both in modal (if still open) and in the CTA banner
+          if (pdfProgressTimer.current) clearInterval(pdfProgressTimer.current);
+          setPdfProgress(100);
           setPdfModalUrl(url);
           fetch(`${SUPABASE_URL}/functions/v1/send-clearance-report-email`, {
             method: 'POST',
@@ -3657,27 +3688,65 @@ export default function TrademarkClearancePanel({
                 <p className="text-[10px] text-gray-400 text-center mt-2">{tr('pdfModalCloseSafe', lang)}</p>
               </>
             ) : (
-              <div className="text-center">
-                <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
-                  <CheckCircle2 size={28} className="text-emerald-600" />
+              <div>
+                {/* Header */}
+                <div className="flex items-center gap-3 mb-4">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${pdfModalUrl ? 'bg-emerald-100' : 'bg-[#1a2e1a]/10'}`}>
+                    {pdfModalUrl
+                      ? <CheckCircle2 size={20} className="text-emerald-600" />
+                      : <Loader2 size={20} className="text-[#1a2e1a] animate-spin" />
+                    }
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-900">
+                      {pdfModalUrl ? tr('pdfSent', lang) : tr('pdfGenerating', lang)}
+                    </h3>
+                    <p className="text-xs text-gray-500 mt-0.5">{pdfModalEmail}</p>
+                  </div>
                 </div>
-                <h3 className="text-sm font-bold text-gray-900 mb-1">{tr('pdfSent', lang)}</h3>
-                <p className="text-xs text-gray-500 mb-4">{pdfModalEmail}</p>
+
+                {/* Progress bar */}
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[11px] font-medium text-gray-500">
+                      {pdfModalUrl
+                        ? tr('pdfReadyLabel', lang)
+                        : tr('pdfGeneratingLabel', lang)}
+                    </span>
+                    <span className="text-[11px] font-bold tabular-nums" style={{ color: pdfModalUrl ? '#059669' : '#1a2e1a' }}>
+                      {pdfProgress}%
+                    </span>
+                  </div>
+                  <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-700 ease-out"
+                      style={{
+                        width: `${pdfProgress}%`,
+                        background: pdfModalUrl
+                          ? 'linear-gradient(90deg, #059669, #34d399)'
+                          : 'linear-gradient(90deg, #1a2e1a, #4a7a4a)',
+                      }}
+                    />
+                  </div>
+                  {!pdfModalUrl && (
+                    <p className="text-[10px] text-gray-400 mt-1.5">{tr('pdfModalCloseSafe', lang)}</p>
+                  )}
+                </div>
+
+                {/* Download button (appears when ready) */}
                 {pdfModalUrl ? (
-                  <a
-                    href={pdfModalUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 bg-[#1a2e1a] hover:bg-[#2d4a2d] text-white text-xs font-semibold px-4 py-2.5 rounded-xl transition-colors mb-3"
-                  >
-                    <Download size={13} />{tr('downloadPdfNow', lang)}
-                  </a>
-                ) : (
-                  <p className="text-xs text-gray-400 flex items-center justify-center gap-1.5 mb-3">
-                    <Loader2 size={11} className="animate-spin" />{tr('pdfGenerating', lang)}
-                  </p>
-                )}
-                <p className="text-[10px] text-gray-400">{tr('pdfModalCloseSafe', lang)}</p>
+                  <>
+                    <a
+                      href={pdfModalUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-4 py-3 rounded-xl transition-colors mb-2"
+                    >
+                      <Download size={14} />{tr('downloadPdfNow', lang)}
+                    </a>
+                    <p className="text-[10px] text-gray-400 text-center">{tr('pdfModalCloseSafe', lang)}</p>
+                  </>
+                ) : null}
               </div>
             )}
           </div>
