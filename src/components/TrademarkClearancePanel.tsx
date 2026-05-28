@@ -1,7 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { trackEvent } from '../lib/analytics';
-import { supabase } from '../lib/supabase';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import {
@@ -70,6 +67,7 @@ interface Props {
   onRiskAcknowledgedChange?: (acknowledged: boolean) => void;
   imageBase64?: string;
   imageMimeType?: string;
+  userId?: string;
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -77,6 +75,40 @@ interface Props {
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 const STRIPE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string;
+
+// ─── Local helpers (avoid circular imports) ───────────────────────────────────
+
+function fireTrackEvent(event: string, properties?: Record<string, unknown>, language?: string, orderRef?: string) {
+  import('../lib/analytics').then(({ trackEvent }) => {
+    fireTrackEvent(event as Parameters<typeof trackEvent>[0], properties, language, orderRef).catch(() => {});
+  }).catch(() => {});
+}
+
+async function supabaseInsert(table: string, row: Record<string, unknown>) {
+  await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      'Prefer': 'return=minimal',
+    },
+    body: JSON.stringify(row),
+  });
+}
+
+async function supabaseUpdate(table: string, row: Record<string, unknown>, eqCol: string, eqVal: string) {
+  await fetch(`${SUPABASE_URL}/rest/v1/${table}?${eqCol}=eq.${encodeURIComponent(eqVal)}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      'Prefer': 'return=minimal',
+    },
+    body: JSON.stringify(row),
+  });
+}
 
 const RISK_CFG = {
   low: { label: { en: 'High Chances', es: 'Altas Probabilidades', zh: '高注册概率', de: 'Hohe Chancen', fr: 'Bonnes chances', hi: 'उच्च संभावना', pt: 'Altas Chances', ja: '登録可能性：高' }, icon: CheckCircle2, bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', badge: 'bg-emerald-100 text-emerald-700', bar: 'bg-emerald-500', summaryBg: 'bg-emerald-50/60', summaryBorder: 'border-l-emerald-400' },
@@ -879,10 +911,9 @@ function computePentagonScores(result: ClearanceResult, lang: string): PentagonD
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function TrademarkClearancePanel({
-  markName, goodsServices = '', classes, language, autoRun = true, showFilingCta = false, onStartFiling, onResult, onSelectDespiteRisk, onRiskAcknowledgedChange, imageBase64, imageMimeType,
+  markName, goodsServices = '', classes, language, autoRun = true, showFilingCta = false, onStartFiling, onResult, onSelectDespiteRisk, onRiskAcknowledgedChange, imageBase64, imageMimeType, userId,
 }: Props) {
   const lang = (language in (UI.clearanceAnalysis)) ? language : 'en' as Lang;
-  const { user } = useAuth();
 
   const [stripePromise] = useState(() => STRIPE_KEY ? loadStripe(STRIPE_KEY) : null);
   const [status, setStatus] = useState<'idle' | 'checking' | 'done' | 'error'>('idle');
@@ -997,7 +1028,7 @@ export default function TrademarkClearancePanel({
       setResult(data as ClearanceResult);
       setStatus('done');
       onResult?.(data as ClearanceResult);
-      trackEvent('report_viewed', { risk: (data as ClearanceResult).risk, riskColor: (data as ClearanceResult).riskColor }, lang);
+      fireTrackEvent('report_viewed', { risk: (data as ClearanceResult).risk, riskColor: (data as ClearanceResult).riskColor }, lang);
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Check failed');
       setStatus('error');
@@ -1034,7 +1065,7 @@ export default function TrademarkClearancePanel({
             clearanceResult: result,
             email: 'prefetch@mexicotrademarkcenter.com',
             isFreeOverride: true,
-            userId: user?.id ?? undefined,
+            userId: userId ?? undefined,
           }),
         });
         if (!piRes.ok) return;
@@ -1267,7 +1298,7 @@ export default function TrademarkClearancePanel({
           clearanceResult: result,
           email: email.trim().toLowerCase(),
           couponCode: couponApplied ? couponInput.trim().toUpperCase() : undefined,
-          userId: user?.id ?? undefined,
+          userId: userId ?? undefined,
           attorneyReviewRequested: wantsAttorneyReview,
         }),
       });
@@ -1284,7 +1315,7 @@ export default function TrademarkClearancePanel({
         setClientSecret(d.clientSecret);
         setPurchaseStep('payment');
       }
-      trackEvent('payment_started', { markName: markName.trim() }, lang, d.reportOrderId?.slice(0, 8));
+      fireTrackEvent('payment_started', { markName: markName.trim() }, lang, d.reportOrderId?.slice(0, 8));
     } catch { setPiError('Payment setup failed. Please try again.'); }
     finally { setPiLoading(false); }
   };
@@ -1295,7 +1326,7 @@ export default function TrademarkClearancePanel({
       await fetch(`${SUPABASE_URL}/functions/v1/confirm-report-payment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
-        body: JSON.stringify({ paymentIntentId, reportOrderId, userId: user?.id }),
+        body: JSON.stringify({ paymentIntentId, reportOrderId, userId: userId }),
       });
       handlePaymentSuccess();
     } catch (e) {
@@ -1310,7 +1341,7 @@ export default function TrademarkClearancePanel({
     if (reportOrderId) {
       sessionStorage.setItem('tcpOrderId', reportOrderId);
     }
-    trackEvent('payment_succeeded', { markName: markName.trim() }, lang, reportOrderId?.slice(0, 8));
+    fireTrackEvent('payment_succeeded', { markName: markName.trim() }, lang, reportOrderId?.slice(0, 8));
   };
 
   const handleEmailCapture = async () => {
@@ -1319,8 +1350,8 @@ export default function TrademarkClearancePanel({
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) return;
     setCaptureSending(true);
     try {
-      await supabase.from('report_email_captures').insert({ email: emailVal, language: lang ?? null, order_ref: reportOrderId ? reportOrderId.slice(0, 8) : null });
-      trackEvent('report_emailed', { email: emailVal }, lang, reportOrderId?.slice(0, 8));
+      await supabaseInsert('report_email_captures', { email: emailVal, language: lang ?? null, order_ref: reportOrderId ? reportOrderId.slice(0, 8) : null });
+      fireTrackEvent('report_emailed', { email: emailVal }, lang, reportOrderId?.slice(0, 8));
       // TODO: call send-clearance-report-email edge function once report email delivery is wired
       setCaptureSent(true);
     } catch {/* never block UI */}
@@ -1373,7 +1404,7 @@ export default function TrademarkClearancePanel({
               clearanceResult: result,
               email: emailVal,
               isFreeOverride: true,
-              userId: user?.id ?? undefined,
+              userId: userId ?? undefined,
             }),
           });
           const piData = await piRes.json();
@@ -1383,7 +1414,7 @@ export default function TrademarkClearancePanel({
 
         // Update order to the user's real email (await so the DB row is correct before emailing)
         if (orderId && emailVal !== 'prefetch@mexicotrademarkcenter.com') {
-          await supabase.from('clearance_report_orders').update({ email: emailVal }).eq('id', orderId);
+          await supabaseUpdate('clearance_report_orders', { email: emailVal }, 'id', orderId);
         }
 
         if (!url && orderId) {
@@ -1426,7 +1457,7 @@ export default function TrademarkClearancePanel({
             if (emailRes.ok) setPdfEmailSent(true);
           } catch {/* never block UI */}
         }
-        trackEvent('report_emailed', { email: emailVal }, lang);
+        fireTrackEvent('report_emailed', { email: emailVal }, lang);
       } catch {/* never block UI */}
     })();
   };
@@ -1488,7 +1519,7 @@ export default function TrademarkClearancePanel({
               <button
                 type="button"
                 onClick={() => {
-                  trackEvent('report_cta_clicked', { source: 'cta_stronger_names', mark: markName }, lang);
+                  fireTrackEvent('report_cta_clicked', { source: 'cta_stronger_names', mark: markName }, lang);
                   setStratExpanded(true);
                   setTimeout(() => {
                     document.getElementById('first-alternative')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1536,7 +1567,7 @@ export default function TrademarkClearancePanel({
               sessionStorage.setItem('clrGoods', goodsServices ?? '');
               sessionStorage.setItem('clrResult', JSON.stringify(result));
             }
-            trackEvent('report_cta_clicked', { source: 'above_fold', mark: markName }, lang);
+            fireTrackEvent('report_cta_clicked', { source: 'above_fold', mark: markName }, lang);
           }}
           className="w-full flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white font-bold px-5 py-3 rounded-xl transition-colors shadow-md text-sm"
         >
@@ -3065,7 +3096,7 @@ export default function TrademarkClearancePanel({
                                       sessionStorage.setItem('clrGoods', goodsServices ?? '');
                                       sessionStorage.setItem('clrResult', JSON.stringify(result));
                                     }
-                                    trackEvent('report_cta_clicked', { source: 'alternative_card', mark: alt.name }, lang);
+                                    fireTrackEvent('report_cta_clicked', { source: 'alternative_card', mark: alt.name }, lang);
                                   }}
                                   className="flex items-center justify-center gap-1.5 w-full bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold py-2 rounded-lg transition-colors"
                                 >
@@ -3574,7 +3605,7 @@ export default function TrademarkClearancePanel({
                   clientSecret={clientSecret}
                   paymentIntentId={paymentIntentId}
                   reportOrderId={reportOrderId}
-                  userId={user?.id}
+                  userId={userId}
                   onSuccess={handlePaymentSuccess}
                   onBack={() => setPurchaseStep('coupon')}
                 />
