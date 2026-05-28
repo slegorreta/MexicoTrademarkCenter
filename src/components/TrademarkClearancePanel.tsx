@@ -264,6 +264,7 @@ const UI: Record<string, Record<string, string>> = {
   },
   // Change 0: Optional email capture card
   emailCaptureHeading: { en: 'Get this report by email', es: 'Reciba este informe por correo', fr: 'Recevez ce rapport par e-mail', pt: 'Receba este relatório por e-mail', de: 'Diesen Bericht per E-Mail erhalten', it: 'Ricevi questo rapporto via e-mail', zh: '通过电子邮件获取本报告', ja: 'このレポートをメールで受け取る', hi: 'यह रिपोर्ट ईमेल पर प्राप्त करें' },
+  freePdfCta: { en: 'Get your free PDF report', es: 'Obtener tu reporte PDF gratis', fr: 'Obtenir votre rapport PDF gratuit', pt: 'Obter seu relatório PDF gratuito', de: 'Kostenlosen PDF-Bericht erhalten', it: 'Ottieni il tuo report PDF gratuito', zh: '获取免费PDF报告', ja: '無料PDFレポートを取得', hi: 'मुफ़्त PDF रिपोर्ट प्राप्त करें' },
   emailCaptureSub: {
     en: "The full report is shown below and free to download — no email required. Add your email only if you'd like a copy sent to your inbox.",
     es: 'El informe completo se muestra abajo y puede descargarlo gratis, sin necesidad de correo. Agregue su correo solo si desea recibir una copia.',
@@ -3259,32 +3260,18 @@ export default function TrademarkClearancePanel({
         </p>
       </div>
 
-      {/* ── Optional email capture (non-blocking) ──────────────────────────── */}
-      {!captureSent ? (
+      {/* ── Free PDF report CTA ──────────────────────────────────────────────── */}
+      {!pdfModalDone ? (
         <div className="border-t border-gray-100 px-4 py-4 bg-orange-50 print:hidden">
-          <div className="flex items-center gap-2 mb-1">
-            <Mail size={14} className="text-orange-500 flex-shrink-0" />
-            <p className="text-xs font-bold text-orange-800">{tr('emailCaptureHeading', lang)}</p>
-          </div>
-          <p className="text-[10px] text-orange-600/80 mb-2.5 leading-relaxed">{tr('emailCaptureSub', lang)}</p>
-          <div className="flex gap-2">
-            <input
-              type="email"
-              value={captureEmail}
-              onChange={e => setCaptureEmail(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleEmailCapture()}
-              placeholder="you@example.com"
-              className="flex-1 border border-orange-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white"
-            />
-            <button
-              type="button"
-              onClick={handleEmailCapture}
-              disabled={captureSending || !captureEmail.trim()}
-              className="flex-shrink-0 bg-orange-500 hover:bg-orange-600 active:bg-orange-700 disabled:opacity-50 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors shadow-sm"
-            >
-              {captureSending ? <Loader2 size={12} className="animate-spin" /> : tr('emailCaptureSend', lang)}
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setShowPdfModal(true)}
+            className="w-full flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white font-bold px-5 py-3 rounded-xl transition-colors shadow-md text-sm"
+          >
+            <Download size={14} />
+            {tr('freePdfCta', lang)}
+            <ArrowRight size={14} />
+          </button>
         </div>
       ) : (
         <div className="border-t border-gray-100 px-4 py-3 bg-emerald-50 print:hidden">
