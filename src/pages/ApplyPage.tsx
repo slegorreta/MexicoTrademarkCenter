@@ -571,7 +571,7 @@ export default function ApplyPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [step, setStep] = useState<Step>(() =>
-    new URLSearchParams(window.location.search).get('fromClearance') === '1' ? 4 : 1
+    new URLSearchParams(window.location.search).get('fromClearance') === '1' ? 2 : 1
   );
   const [showAuthGate, setShowAuthGate] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -1766,19 +1766,115 @@ export default function ApplyPage() {
             </div>
           )}
 
-          {/* STEP 2 — Goods & Services (was Step 3) */}
+          {/* STEP 2 — Classification Confirmation (from clearance) OR Goods & Services (normal flow) */}
           {step === 2 && (
             <div>
               <h2 className="text-lg font-bold text-navy-900 mb-1 flex items-center gap-2">
-                {t('form.step2')}
+                {fromClearance
+                  ? tri('Confirm Goods & Services', '确认商品/服务', 'Confirmar Bienes y Servicios', 'Waren & Dienstleistungen bestätigen', 'Confirmer les produits & services', 'वस्तुओं और सेवाओं की पुष्टि करें', 'Confirmar Bens e Serviços')
+                  : t('form.step2')}
                 <InfoTooltip text={t('tooltip.niceClass')} />
               </h2>
-              <p className="text-sm text-gray-500 mb-6">
-                {tri('Describe the goods or services for each Nice Classification class you want to protect. Add as many classes as needed.', '描述每个您希望保护的尼斯分类类别的商品或服务。可以添加任意数量的类别。', 'Describe los bienes o servicios para cada clase de la Clasificación de Niza. Agrega tantas clases como necesites.', 'Beschreiben Sie die Waren oder Dienstleistungen für jede Nizza-Klasse. Fügen Sie so viele Klassen wie nötig hinzu.', 'Décrivez les produits ou services pour chaque classe de Nice. Ajoutez autant de classes que nécessaire.', 'प्रत्येक नाइस वर्गीकरण कक्षा के लिए वस्तुओं या सेवाओं का वर्णन करें। जितनी जरूरत हो उतनी कक्षाएं जोड़ें।', 'Descreva os bens ou serviços para cada classe de Nice. Adicione quantas classes forem necessárias.')}
+              <p className="text-sm text-gray-500 mb-5">
+                {fromClearance
+                  ? tri(
+                      'The classes and goods/services below were pre-filled from your clearance search. Review and edit the description for each class before proceeding. You can also remove classes or add new ones.',
+                      '以下类别和商品/服务已从您的检索搜索中预填充。在继续之前，请审核并编辑每个类别的描述。您也可以删除类别或添加新类别。',
+                      'Las clases y bienes/servicios a continuación fueron pre-completados desde tu búsqueda. Revisa y edita la descripción de cada clase antes de continuar. También puedes eliminar clases o agregar nuevas.',
+                      'Die folgenden Klassen und Waren/Dienstleistungen wurden aus Ihrer Recherche vorausgefüllt. Überprüfen und bearbeiten Sie die Beschreibung vor dem Fortfahren.',
+                      "Les classes et produits/services ci-dessous ont été pré-remplis depuis votre recherche. Vérifiez et modifiez la description de chaque classe avant de continuer.",
+                      'नीचे दी गई कक्षाएं और वस्तुएं/सेवाएं आपकी क्लीयरेंस खोज से पहले से भरी गई हैं। आगे बढ़ने से पहले प्रत्येक कक्षा का विवरण समीक्षा करें और संपादित करें।',
+                      'As classes e bens/serviços abaixo foram pré-preenchidos da sua pesquisa. Revise e edite a descrição de cada classe antes de prosseguir.'
+                    )
+                  : tri('Describe the goods or services for each Nice Classification class you want to protect. Add as many classes as needed.', '描述每个您希望保护的尼斯分类类别的商品或服务。可以添加任意数量的类别。', 'Describe los bienes o servicios para cada clase de la Clasificación de Niza. Agrega tantas clases como necesites.', 'Beschreiben Sie die Waren oder Dienstleistungen für jede Nizza-Klasse. Fügen Sie so viele Klassen wie nötig hinzu.', 'Décrivez les produits ou services pour chaque classe de Nice. Ajoutez autant de classes que nécessaire.', 'प्रत्येक नाइस वर्गीकरण कक्षा के लिए वस्तुओं या सेवाओं का वर्णन करें। जितनी जरूरत हो उतनी कक्षाएं जोड़ें।', 'Descreva os bens ou serviços para cada classe de Nice. Adicione quantas classes forem necessárias.')}
               </p>
+
+              {/* ── Classification Confirmation (fromClearance only) ── */}
+              {fromClearance && (
+                <div className="space-y-4 mb-6">
+                  {form.classEntries.map((entry) => {
+                    const nc = entry.classNumber ? ALL_CLASSES.find(c => c.classNumber === entry.classNumber) : null;
+                    return (
+                      <div key={entry.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                        <div className="flex items-start justify-between gap-3 mb-3">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {entry.classNumber !== null ? (
+                              <span className="text-xs font-bold bg-[#1a2e1a]/10 text-[#1a2e1a] px-2 py-0.5 rounded-full">
+                                {tri(`Class ${entry.classNumber}`, `第${entry.classNumber}类`, `Clase ${entry.classNumber}`)}
+                              </span>
+                            ) : (
+                              <select
+                                className="text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#c9a84c]"
+                                value=""
+                                onChange={e => {
+                                  const num = parseInt(e.target.value, 10);
+                                  if (!num) return;
+                                  const cls = ALL_CLASSES.find(c => c.classNumber === num);
+                                  updateEntry(entry.id, { classNumber: num, classTitleEn: cls?.titleEn ?? '', isConfirmed: true });
+                                }}
+                              >
+                                <option value="">{tri('— Select class —', '— 选择类别 —', '— Seleccionar clase —')}</option>
+                                {ALL_CLASSES.map(c => (
+                                  <option key={c.classNumber} value={c.classNumber}>Class {c.classNumber} — {c.titleEn}</option>
+                                ))}
+                              </select>
+                            )}
+                            {nc && (
+                              <span className="text-xs text-gray-500 font-medium">{nc.titleEn}</span>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeEntry(entry.id)}
+                            disabled={form.classEntries.length === 1}
+                            className="flex-shrink-0 text-gray-300 hover:text-red-500 disabled:opacity-30 transition-colors"
+                            title={tri('Remove class', '删除类别', 'Eliminar clase')}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1.5">
+                            {tri('Goods / Services Description', '商品/服务描述', 'Descripción de bienes/servicios', 'Waren/Dienstleistungen Beschreibung', 'Description des produits/services', 'वस्तु/सेवा विवरण', 'Descrição de bens/serviços')}
+                            <span className="text-red-500 ml-0.5">*</span>
+                          </label>
+                          <textarea
+                            rows={3}
+                            value={entry.description}
+                            onChange={e => updateEntry(entry.id, { description: e.target.value })}
+                            placeholder={tri(
+                              'Describe the specific goods or services in this class (e.g. "software for trademark search; AI-powered legal analysis tools")',
+                              '描述此类别中的具体商品或服务',
+                              'Describe los bienes o servicios específicos de esta clase (ej. "software para búsqueda de marcas; herramientas de análisis legal con IA")',
+                            )}
+                            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#c9a84c] focus:border-transparent resize-none leading-relaxed"
+                          />
+                          {!entry.description.trim() && (
+                            <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                              <AlertCircle size={11} className="flex-shrink-0" />
+                              {tri('Please add a description of the goods or services for this class.', '请为此类别添加商品或服务描述。', 'Por favor agregue una descripción de bienes o servicios para esta clase.')}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Add another class */}
+                  <button
+                    type="button"
+                    onClick={addNewEntry}
+                    className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-gray-200 hover:border-[#c9a84c] text-gray-400 hover:text-[#c9a84c] font-semibold py-3 rounded-xl text-sm transition-all"
+                  >
+                    <Plus size={15} />
+                    {tri('Add Another Class', '添加另一个类别', 'Agregar Otra Clase', 'Weitere Klasse hinzufügen', 'Ajouter une autre classe', 'एक और कक्षा जोड़ें', 'Adicionar Outra Classe')}
+                  </button>
+                </div>
+              )}
+
               {/* Reusing G&S content marker — inserted below as step2gscontent */}
-              {/* STEP 2 content START */}
-              {confirmedEntries.length > 0 && (
+              {/* STEP 2 content START — only shown in normal (non-clearance) flow */}
+              {!fromClearance && confirmedEntries.length > 0 && (
                 <div className="space-y-2 mb-6">
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
                     {tri('Confirmed Classes', '已确认类别', 'Clases Confirmadas', 'Bestätigte Klassen', 'Classes confirmées', 'पुष्टि की गई कक्षाएं', 'Classes Confirmadas')}
@@ -1816,7 +1912,7 @@ export default function ApplyPage() {
                 </div>
               )}
 
-              <div ref={activeEntryRef}>
+              {!fromClearance && <div ref={activeEntryRef}>
                 {activeEntryIsConfirmed ? (
                   <div className="space-y-4">
                     {(() => {
@@ -1905,7 +2001,7 @@ export default function ApplyPage() {
                     />
                   </div>
                 )}
-              </div>
+              </div>}
             </div>
           )}
 
@@ -3071,8 +3167,9 @@ export default function ApplyPage() {
               <button
                 type="button"
                 onClick={() => {
-                  // When from clearance, Back at step 4 returns to step 1 (skipping 2 & 3)
-                  if (fromClearance && step === 4) { setStep(1); return; }
+                  // When from clearance: step 4 → step 2 (classification confirm), step 2 → step 1
+                  if (fromClearance && step === 4) { setStep(2); return; }
+                  if (fromClearance && step === 2) { setStep(1); return; }
                   setStep(s => Math.max(1, s - 1) as Step);
                 }}
                 disabled={step === 1 || (step === 7 && !!clientSecret)}
@@ -3097,12 +3194,14 @@ export default function ApplyPage() {
                         return;
                       }
                     }
-                    // When from clearance, Next at step 1 jumps directly to step 4 (skip 2 & 3)
-                    if (fromClearance && step === 1) { setStep(4); return; }
+                    // When from clearance: step 1 → step 2 (classification confirm), step 2 → step 4 (skip clearance re-run)
+                    if (fromClearance && step === 1) { setStep(2); return; }
+                    if (fromClearance && step === 2) { setStep(4); return; }
                     setStep(s => Math.min(7, s + 1) as Step);
                   }}
                   disabled={
                     (!fromClearance && step === 2 && confirmedEntries.length === 0 && !activeEntryIsConfirmed) ||
+                    (fromClearance && step === 2 && form.classEntries.some(e => !e.description.trim())) ||
                     (!fromClearance && step === 3 && Object.values(clearanceResults).some(r => r.risk === 'high' || r.risk === 'medium') && !step3RiskAcknowledged)
                   }
                   className="px-5 py-2.5 rounded-xl bg-gold-500 hover:bg-gold-400 text-white text-sm font-semibold transition-colors disabled:opacity-40 shadow-md"

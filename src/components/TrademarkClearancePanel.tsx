@@ -230,7 +230,13 @@ const UI: Record<string, Record<string, string>> = {
     pt: 'O Relatório Completo inclui: todos os 13 fatores DuPont com raciocínio detalhado, análise LFPPI completa, todos os resultados MARCia, conflitos de tradução em 8 idiomas, 13 domínios, pesquisa web e PDF profissional em português e inglês.',
   },
   // Change 1+2+3: Filing CTA and alternative names
-  ctaFileThisName: { en: 'File this name — $299', es: 'Registrar este nombre — $299', fr: 'Déposer ce nom — 299 $', pt: 'Registrar este nome — US$ 299', de: 'Diese Marke anmelden — 299 $', it: 'Deposita questo nome — 299 $', zh: '注册此名称 — $299', ja: 'この名称を出願する — $299', hi: 'यह नाम दाखिल करें — $299' },
+  ctaFileThisName: { en: 'File this trademark now — $299 USD', es: 'Registrar esta marca ahora — $299 USD', fr: 'Déposer cette marque maintenant — 299 $ USD', pt: 'Registrar esta marca agora — US$ 299', de: 'Marke jetzt anmelden — 299 $ USD', it: 'Deposita questo marchio ora — 299 $ USD', zh: '立即注册此商标 — $299 USD', ja: 'この商標を今すぐ出願 — $299 USD', hi: 'इस ट्रेडमार्क को अभी दाखिल करें — $299 USD' },
+  getPdfReport: { en: 'Get PDF Report', es: 'Obtener PDF', fr: 'Obtenir le PDF', pt: 'Obter PDF', de: 'PDF erhalten', it: 'Ottieni PDF', zh: '获取PDF报告', ja: 'PDFを取得', hi: 'PDF रिपोर्ट प्राप्त करें' },
+  pdfModalTitle: { en: 'Get your PDF Report', es: 'Obtener su Reporte PDF', fr: 'Obtenir votre rapport PDF', pt: 'Obtenha seu Relatório PDF', de: 'Ihr PDF-Bericht', it: 'Ottieni il tuo Report PDF', zh: '获取您的PDF报告', ja: 'PDFレポートを取得', hi: 'अपनी PDF रिपोर्ट प्राप्त करें' },
+  pdfModalDesc: { en: 'Enter your email and we\'ll generate a timestamped PDF of this full report and send it to your inbox.', es: 'Ingresa tu correo y generaremos un PDF con sello de tiempo de este reporte completo y lo enviaremos a tu bandeja.', fr: 'Entrez votre e-mail et nous générerons un PDF horodaté de ce rapport complet.', pt: 'Insira seu e-mail e geraremos um PDF com carimbo de tempo deste relatório completo.', de: 'Geben Sie Ihre E-Mail ein und wir erstellen ein zeitgestempeltes PDF dieses vollständigen Berichts.', it: 'Inserisci la tua e-mail e genereremo un PDF con timestamp di questo report completo.', zh: '输入您的邮箱，我们将生成此完整报告的带时间戳PDF并发送到您的邮箱。', ja: 'メールアドレスを入力してください。このレポートのタイムスタンプ付きPDFを生成してお送りします。', hi: 'अपना ईमेल दर्ज करें और हम इस पूरी रिपोर्ट का टाइमस्टैम्प PDF तैयार करके आपके इनबॉक्स में भेजेंगे।' },
+  pdfGenerating: { en: 'Generating your PDF…', es: 'Generando tu PDF…', fr: 'Génération du PDF…', pt: 'Gerando PDF…', de: 'PDF wird erstellt…', it: 'Generazione PDF in corso…', zh: '正在生成PDF…', ja: 'PDF生成中…', hi: 'PDF तैयार हो रहा है…' },
+  pdfSent: { en: 'PDF sent! Check your inbox.', es: '¡PDF enviado! Revisa tu bandeja.', fr: 'PDF envoyé ! Vérifiez votre boîte.', pt: 'PDF enviado! Verifique sua caixa.', de: 'PDF gesendet! Prüfen Sie Ihren Posteingang.', it: 'PDF inviato! Controlla la tua casella.', zh: 'PDF已发送！请查收邮件。', ja: 'PDF送信済み！受信トレイをご確認ください。', hi: 'PDF भेज दिया! अपना इनबॉक्स देखें।' },
+  downloadPdfNow: { en: 'Download PDF', es: 'Descargar PDF', fr: 'Télécharger le PDF', pt: 'Baixar PDF', de: 'PDF herunterladen', it: 'Scarica PDF', zh: '下载PDF', ja: 'PDFをダウンロード', hi: 'PDF डाउनलोड करें' },
   ctaStrongerNames: { en: 'Three stronger names you can file instead →', es: 'Tres nombres más sólidos que puede registrar →', fr: 'Trois noms plus solides que vous pouvez déposer →', pt: 'Três nomes mais sólidos que você pode registrar →', de: 'Drei stärkere Namen, die Sie stattdessen anmelden können →', it: 'Tre nomi più solidi che puoi depositare →', zh: '三个更稳妥、可改为注册的名称 →', ja: '代わりに出願できる、より強力な3つの名称 →', hi: 'इसके बजाय दाखिल करने योग्य तीन मज़बूत नाम →' },
   // Change 4: Scope statement
   scopeStatement: {
@@ -913,6 +919,13 @@ export default function TrademarkClearancePanel({
   const [captureSent, setCaptureSent] = useState(false);
   const [captureSending, setCaptureSending] = useState(false);
 
+  // PDF report modal
+  const [showPdfModal, setShowPdfModal] = useState(false);
+  const [pdfModalEmail, setPdfModalEmail] = useState('');
+  const [pdfModalLoading, setPdfModalLoading] = useState(false);
+  const [pdfModalDone, setPdfModalDone] = useState(false);
+  const [pdfModalUrl, setPdfModalUrl] = useState('');
+
   // Detail section toggles
   const [dupontExpanded, setDupontExpanded] = useState(false);
   const [lfppiExpanded, setLfppiExpanded] = useState(true);
@@ -1226,6 +1239,61 @@ export default function TrademarkClearancePanel({
     finally { setCaptureSending(false); }
   };
 
+  // ── PDF report generation via edge function ───────────────────────────────
+  const handleRequestPdfReport = async () => {
+    if (!pdfModalEmail.trim() || pdfModalLoading) return;
+    const emailVal = pdfModalEmail.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) return;
+    setPdfModalLoading(true);
+    try {
+      // 1. Create a free report order so generate-clearance-pdf has something to work with
+      const piRes = await fetch(`${SUPABASE_URL}/functions/v1/create-report-payment-intent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({
+          markName: markName.trim(),
+          goodsServices,
+          language: lang,
+          clearanceResult: result,
+          email: emailVal,
+          couponCode: 'FREE100',
+          userId: user?.id ?? undefined,
+        }),
+      });
+      const piData = await piRes.json();
+      const orderId: string = piData.reportOrderId ?? '';
+
+      // 2. Poll for the PDF URL (generated in background by edge fn)
+      let attempts = 0;
+      const MAX = 30;
+      const poll = async (): Promise<string | null> => {
+        attempts++;
+        try {
+          const r = await fetch(`${SUPABASE_URL}/functions/v1/get-report-download-url`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+            body: JSON.stringify({ reportOrderId: orderId }),
+          });
+          if (r.ok) {
+            const d = await r.json();
+            if (d.url) return d.url;
+          }
+        } catch {/* ignore */}
+        if (attempts < MAX) {
+          await new Promise(res => setTimeout(res, 4000));
+          return poll();
+        }
+        return null;
+      };
+
+      const url = await poll();
+      if (url) setPdfModalUrl(url);
+      trackEvent('report_emailed', { email: emailVal }, lang);
+      setPdfModalDone(true);
+    } catch {/* never block UI */}
+    finally { setPdfModalLoading(false); }
+  };
+
   // ── Per-mark lazy AI analysis fetch (Improvement 1) ──────────────────────
   const fetchMarkAnalysis = async (cardKey: number, finding: MarciaFinding) => {
     if (markAnalysisCache[cardKey]) return;
@@ -1308,11 +1376,11 @@ export default function TrademarkClearancePanel({
           </button>
           <button
             type="button"
-            title={lang === 'es' ? 'Exportar reporte' : 'Export report'}
+            onClick={() => setShowPdfModal(true)}
             className="flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-lg border transition-colors border-[#1a2e1a] text-[#1a2e1a] hover:bg-[#1a2e1a]/10"
           >
             <Download size={11} />
-            {lang === 'es' ? 'Exportar' : lang === 'zh' ? '导出' : lang === 'de' ? 'Export' : lang === 'fr' ? 'Exporter' : 'Export'}
+            {tr('getPdfReport', lang)}
           </button>
         </div>
       </div>
@@ -1320,9 +1388,16 @@ export default function TrademarkClearancePanel({
       {/* ── Above-fold filing CTA (Change 1) — visible for ALL verdicts ─────── */}
       <div className="border-t border-gray-100 bg-white px-4 py-3 print:hidden">
         <a
-          href={`/apply?mark=${encodeURIComponent(markName)}`}
-          onClick={() => trackEvent('report_cta_clicked', { source: 'above_fold', mark: markName }, lang)}
-          className="w-full flex items-center justify-center gap-2 bg-[#1a2e1a] hover:bg-[#2d4a2d] text-white font-bold px-5 py-3 rounded-xl transition-colors shadow-md text-sm"
+          href={`/apply?mark=${encodeURIComponent(markName)}&fromClearance=1`}
+          onClick={() => {
+            if (result) {
+              sessionStorage.setItem('clrMark', markName);
+              sessionStorage.setItem('clrGoods', goodsServices ?? '');
+              sessionStorage.setItem('clrResult', JSON.stringify(result));
+            }
+            trackEvent('report_cta_clicked', { source: 'above_fold', mark: markName }, lang);
+          }}
+          className="w-full flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white font-bold px-5 py-3 rounded-xl transition-colors shadow-md text-sm"
         >
           <FileText size={14} />
           {tr('ctaFileThisName', lang)}
@@ -2861,9 +2936,16 @@ export default function TrademarkClearancePanel({
                                   <div className="h-full rounded-full transition-all" style={{ width: `${alt.score}%`, backgroundColor: alt.score >= 85 ? '#10b981' : alt.score >= 70 ? '#f59e0b' : '#9ca3af' }} />
                                 </div>
                                 <a
-                                  href={`/apply?mark=${encodeURIComponent(alt.name)}&ref=alternative`}
-                                  onClick={() => trackEvent('report_cta_clicked', { source: 'alternative_card', mark: alt.name }, lang)}
-                                  className="flex items-center justify-center gap-1.5 w-full bg-[#1a2e1a] hover:bg-[#2d4a2d] text-white text-xs font-bold py-2 rounded-lg transition-colors"
+                                  href={`/apply?mark=${encodeURIComponent(alt.name)}&fromClearance=1&ref=alternative`}
+                                  onClick={() => {
+                                    if (result) {
+                                      sessionStorage.setItem('clrMark', alt.name);
+                                      sessionStorage.setItem('clrGoods', goodsServices ?? '');
+                                      sessionStorage.setItem('clrResult', JSON.stringify(result));
+                                    }
+                                    trackEvent('report_cta_clicked', { source: 'alternative_card', mark: alt.name }, lang);
+                                  }}
+                                  className="flex items-center justify-center gap-1.5 w-full bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold py-2 rounded-lg transition-colors"
                                 >
                                   <ArrowRight size={11} />
                                   {tr('fileThisMark', lang)}
@@ -3445,6 +3527,80 @@ export default function TrademarkClearancePanel({
         <Info size={11} className="text-gray-400 flex-shrink-0 mt-0.5" />
         <p className="text-xs text-gray-400 leading-relaxed">{result.disclaimer}</p>
       </div>
+
+      {/* ── PDF Report Modal ────────────────────────────────────────────────── */}
+      {showPdfModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 print:hidden" onClick={() => !pdfModalLoading && setShowPdfModal(false)}>
+          <div className="absolute inset-0 bg-black/50" />
+          <div className="relative bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 z-10" onClick={e => e.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => !pdfModalLoading && setShowPdfModal(false)}
+              className="absolute top-3 right-3 w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors"
+            >
+              <X size={14} />
+            </button>
+
+            {!pdfModalDone ? (
+              <>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-[#1a2e1a]/10 flex items-center justify-center flex-shrink-0">
+                    <FileText size={18} className="text-[#1a2e1a]" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-900">{tr('pdfModalTitle', lang)}</h3>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mb-4 leading-relaxed">{tr('pdfModalDesc', lang)}</p>
+                <input
+                  type="email"
+                  value={pdfModalEmail}
+                  onChange={e => setPdfModalEmail(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleRequestPdfReport()}
+                  placeholder="you@example.com"
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-[#c9a84c] focus:border-transparent"
+                  disabled={pdfModalLoading}
+                />
+                <button
+                  type="button"
+                  onClick={handleRequestPdfReport}
+                  disabled={pdfModalLoading || !pdfModalEmail.trim()}
+                  className="w-full flex items-center justify-center gap-2 bg-[#1a2e1a] hover:bg-[#2d4a2d] disabled:opacity-50 text-white font-bold py-3 rounded-xl text-sm transition-colors"
+                >
+                  {pdfModalLoading ? (
+                    <><Loader2 size={14} className="animate-spin" />{tr('pdfGenerating', lang)}</>
+                  ) : (
+                    <><Download size={14} />{tr('getPdfReport', lang)}</>
+                  )}
+                </button>
+              </>
+            ) : (
+              <div className="text-center">
+                <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle2 size={28} className="text-emerald-600" />
+                </div>
+                <h3 className="text-sm font-bold text-gray-900 mb-1">{tr('pdfSent', lang)}</h3>
+                <p className="text-xs text-gray-500 mb-4">{pdfModalEmail}</p>
+                {pdfModalUrl && (
+                  <a
+                    href={pdfModalUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 bg-[#1a2e1a] hover:bg-[#2d4a2d] text-white text-xs font-semibold px-4 py-2.5 rounded-xl transition-colors mb-3"
+                  >
+                    <Download size={13} />{tr('downloadPdfNow', lang)}
+                  </a>
+                )}
+                {!pdfModalUrl && (
+                  <p className="text-xs text-gray-400 flex items-center justify-center gap-1.5">
+                    <Loader2 size={11} className="animate-spin" />{tr('pdfGenerating', lang)}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── Risk acknowledgment (when caller provides handler and risk is medium/high) ── */}
       {onSelectDespiteRisk && (result.risk === 'medium' || result.risk === 'high') && (
