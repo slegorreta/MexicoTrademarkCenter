@@ -1802,39 +1802,45 @@ export default function ApplyPage() {
                   {form.classEntries.map((entry) => {
                     const nc = entry.classNumber ? ALL_CLASSES.find(c => c.classNumber === entry.classNumber) : null;
                     return (
-                      <div key={entry.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                      <div key={entry.id} className="rounded-xl border border-emerald-200 bg-emerald-50/30 p-4 shadow-sm">
                         <div className="flex items-start justify-between gap-3 mb-3">
-                          <div className="flex items-center gap-2 flex-wrap">
+                          <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
                             {entry.classNumber !== null ? (
-                              <span className="text-xs font-bold bg-[#1a2e1a]/10 text-[#1a2e1a] px-2 py-0.5 rounded-full">
-                                {tri(`Class ${entry.classNumber}`, `第${entry.classNumber}类`, `Clase ${entry.classNumber}`)}
-                              </span>
+                              <>
+                                <span className="text-xs font-bold bg-[#1a2e1a] text-white px-2.5 py-1 rounded-full flex-shrink-0">
+                                  {tri(`Class ${entry.classNumber}`, `第${entry.classNumber}类`, `Clase ${entry.classNumber}`, `Klasse ${entry.classNumber}`, `Classe ${entry.classNumber}`, `कक्षा ${entry.classNumber}`, `Classe ${entry.classNumber}`, `クラス${entry.classNumber}`)}
+                                </span>
+                                {nc && (
+                                  <span className="text-xs text-gray-600 font-medium">{nc.titleEn}</span>
+                                )}
+                              </>
                             ) : (
-                              <select
-                                className="text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#c9a84c]"
-                                value=""
-                                onChange={e => {
-                                  const num = parseInt(e.target.value, 10);
-                                  if (!num) return;
-                                  const cls = ALL_CLASSES.find(c => c.classNumber === num);
-                                  updateEntry(entry.id, { classNumber: num, classTitleEn: cls?.titleEn ?? '', isConfirmed: true });
-                                }}
-                              >
-                                <option value="">{tri('— Select class —', '— 选择类别 —', '— Seleccionar clase —')}</option>
-                                {ALL_CLASSES.map(c => (
-                                  <option key={c.classNumber} value={c.classNumber}>Class {c.classNumber} — {c.titleEn}</option>
-                                ))}
-                              </select>
-                            )}
-                            {nc && (
-                              <span className="text-xs text-gray-500 font-medium">{nc.titleEn}</span>
+                              <div className="flex items-center gap-2 flex-1 min-w-0">
+                                <label className="text-xs font-medium text-gray-600 flex-shrink-0">
+                                  {tri('Nice Class #', '尼斯分类 #', 'Clase Niza #', 'Nizza-Klasse #', 'Classe Nice #', 'नाइस क्लास #', 'Classe de Nice #', 'ニース分類 #')}
+                                </label>
+                                <input
+                                  type="number"
+                                  min={1}
+                                  max={45}
+                                  value={entry.classNumber ?? ''}
+                                  onChange={e => {
+                                    const num = parseInt(e.target.value, 10);
+                                    if (!num || num < 1 || num > 45) return;
+                                    const cls = ALL_CLASSES.find(c => c.classNumber === num);
+                                    updateEntry(entry.id, { classNumber: num, classTitleEn: cls?.titleEn ?? '', isConfirmed: true });
+                                  }}
+                                  placeholder="1–45"
+                                  className="w-20 text-xs border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#c9a84c]"
+                                />
+                              </div>
                             )}
                           </div>
                           <button
                             type="button"
                             onClick={() => removeEntry(entry.id)}
                             disabled={form.classEntries.length === 1}
-                            className="flex-shrink-0 text-gray-300 hover:text-red-500 disabled:opacity-30 transition-colors"
+                            className="flex-shrink-0 text-gray-300 hover:text-red-500 disabled:opacity-30 transition-colors mt-0.5"
                             title={tri('Remove class', '删除类别', 'Eliminar clase')}
                           >
                             <Trash2 size={14} />
@@ -1850,16 +1856,20 @@ export default function ApplyPage() {
                             value={entry.description}
                             onChange={e => updateEntry(entry.id, { description: e.target.value })}
                             placeholder={tri(
-                              'Describe the specific goods or services in this class (e.g. "software for trademark search; AI-powered legal analysis tools")',
+                              'Describe the specific goods or services in this class',
                               '描述此类别中的具体商品或服务',
-                              'Describe los bienes o servicios específicos de esta clase (ej. "software para búsqueda de marcas; herramientas de análisis legal con IA")',
+                              'Describe los bienes o servicios específicos de esta clase',
+                              'Waren/Dienstleistungen für diese Klasse beschreiben',
+                              'Décrivez les produits ou services spécifiques de cette classe',
+                              'इस कक्षा के विशिष्ट माल या सेवाओं का वर्णन करें',
+                              'Descreva os bens ou serviços específicos desta classe',
                             )}
-                            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#c9a84c] focus:border-transparent resize-none leading-relaxed"
+                            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#c9a84c] focus:border-transparent resize-none leading-relaxed bg-white"
                           />
                           {!entry.description.trim() && (
                             <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
                               <AlertCircle size={11} className="flex-shrink-0" />
-                              {tri('Please add a description of the goods or services for this class.', '请为此类别添加商品或服务描述。', 'Por favor agregue una descripción de bienes o servicios para esta clase.')}
+                              {tri('Please describe the goods or services for this class.', '请为此类别添加商品或服务描述。', 'Por favor agregue una descripción de bienes o servicios para esta clase.')}
                             </p>
                           )}
                         </div>
@@ -1870,7 +1880,11 @@ export default function ApplyPage() {
                   {/* Add another class */}
                   <button
                     type="button"
-                    onClick={addNewEntry}
+                    onClick={() => {
+                      const goodsText = form.classEntries[0]?.description ?? '';
+                      const entry = { ...newEntry(), description: goodsText };
+                      setForm(f => ({ ...f, classEntries: [...f.classEntries, entry] }));
+                    }}
                     className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-gray-200 hover:border-[#c9a84c] text-gray-400 hover:text-[#c9a84c] font-semibold py-3 rounded-xl text-sm transition-all"
                   >
                     <Plus size={15} />
