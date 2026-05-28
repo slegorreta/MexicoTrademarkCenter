@@ -78,8 +78,6 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 const STRIPE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string;
 
-const stripePromise = STRIPE_KEY ? loadStripe(STRIPE_KEY) : null;
-
 const RISK_CFG = {
   low: { label: { en: 'High Chances', es: 'Altas Probabilidades', zh: '高注册概率', de: 'Hohe Chancen', fr: 'Bonnes chances', hi: 'उच्च संभावना', pt: 'Altas Chances', ja: '登録可能性：高' }, icon: CheckCircle2, bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', badge: 'bg-emerald-100 text-emerald-700', bar: 'bg-emerald-500', summaryBg: 'bg-emerald-50/60', summaryBorder: 'border-l-emerald-400' },
   medium: { label: { en: 'Medium Chances', es: 'Probabilidades Medias', zh: '中等注册概率', de: 'Mittlere Chancen', fr: 'Chances modérées', hi: 'मध्यम संभावना', pt: 'Chances Médias', ja: '登録可能性：中' }, icon: AlertTriangle, bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', badge: 'bg-amber-100 text-amber-700', bar: 'bg-amber-500', summaryBg: 'bg-amber-50/60', summaryBorder: 'border-l-amber-400' },
@@ -886,6 +884,7 @@ export default function TrademarkClearancePanel({
   const lang = (language in (UI.clearanceAnalysis)) ? language : 'en' as Lang;
   const { user } = useAuth();
 
+  const [stripePromise] = useState(() => STRIPE_KEY ? loadStripe(STRIPE_KEY) : null);
   const [status, setStatus] = useState<'idle' | 'checking' | 'done' | 'error'>('idle');
   const [result, setResult] = useState<ClearanceResult | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
