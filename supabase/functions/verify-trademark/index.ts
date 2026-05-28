@@ -515,6 +515,98 @@ async function searchMarcia(markName: string, classes: number[], phoneticVariant
   }
 }
 
+// ─── TMView Search ─────────────────────────────────────────────────────────────
+
+interface TMViewTrademark {
+  st13: string;
+  name: string;
+  applicationNumber: string;
+  registrationNumber?: string;
+  applicationDate?: string;
+  registrationDate?: string;
+  expiryDate?: string;
+  status: string;
+  niceClasses: number[];
+  applicant: string;
+  type: string;
+  territory: string;
+  goodsAndServices?: string;
+}
+
+interface TMViewResult {
+  total: number;
+  start: number;
+  rows: number;
+  trademarks: TMViewTrademark[];
+}
+
+const tmviewCache = new Map<string, { result: TMViewResult; expiresAt: number }>();
+
+async function searchTMView(name: string, classes: number[]): Promise<TMViewResult> {
+  const key = `${name.toLowerCase().trim()}|${classes.slice().sort().join(",")}`;
+  const cached = tmviewCache.get(key);
+  if (cached && Date.now() < cached.expiresAt) return cached.result;
+
+  const query = new URLSearchParams({
+    dsids: "MX",
+    name: name.trim(),
+    start: "0",
+    rows: "50",
+    lang: "es",
+  });
+  if (classes.length > 0) query.set("niceClass", classes.join(","));
+
+  const url = `https://www.tmdn.org/tmview/tmview/api/v3/search?${query.toString()}`;
+
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt - 1)));
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10_000);
+    try {
+      const res = await fetch(url, {
+        headers: { "Accept": "application/json", "User-Agent": "MexicoTrademarkCenter/1.0" },
+        signal: controller.signal,
+      });
+      if (res.status === 429 || res.status === 503) { lastErr = new Error(`TMView ${res.status}`); continue; }
+      if (!res.ok) { lastErr = new Error(`TMView ${res.status}`); break; }
+
+      const data = await res.json() as Record<string, unknown>;
+      const header = (data.header ?? {}) as Record<string, unknown>;
+      const beans = Array.isArray(data.trademarkBeans) ? data.trademarkBeans as Record<string, unknown>[] : [];
+
+      const result: TMViewResult = {
+        total: Number(header.total ?? 0),
+        start: Number(header.start ?? 0),
+        rows: Number(header.rows ?? beans.length),
+        trademarks: beans.map(b => ({
+          st13: String(b.ST13 ?? b.st13 ?? ""),
+          name: String(b.trademarkName ?? b.name ?? ""),
+          applicationNumber: String(b.applicationNumber ?? ""),
+          registrationNumber: b.registrationNumber ? String(b.registrationNumber) : undefined,
+          applicationDate: b.applicationDate ? String(b.applicationDate) : undefined,
+          registrationDate: b.registrationDate ? String(b.registrationDate) : undefined,
+          expiryDate: b.expiryDate ? String(b.expiryDate) : undefined,
+          status: String(b.trademarkStatus ?? b.status ?? ""),
+          niceClasses: Array.isArray(b.niceClasses) ? (b.niceClasses as unknown[]).map(Number).filter(n => !isNaN(n)) : [],
+          applicant: String(b.applicantName ?? b.applicant ?? ""),
+          type: String(b.trademarkType ?? b.type ?? ""),
+          territory: String(b.territoryCode ?? "MX"),
+          goodsAndServices: b.goodsAndServices ? String(b.goodsAndServices) : undefined,
+        })),
+      };
+
+      tmviewCache.set(key, { result, expiresAt: Date.now() + 5 * 60 * 1000 });
+      return result;
+    } catch (err) {
+      lastErr = err;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+  throw lastErr ?? new Error("TMView fetch failed");
+}
+
 interface RegistrabilityFlag {
   category: string;
   severity: "low" | "medium" | "high";
@@ -1660,14 +1752,15 @@ Deno.serve(async (req: Request) => {
     // Generate phonetic variants before MARCia search so they can be included in queries
     const phoneticVariants = markName ? await generatePhoneticVariants(apiKey, searchName) : [];
 
-    // Run MARCia first so conflicting class numbers can inform the registrability analysis
+    // Run MARCia + TMView + other checks in parallel
     // Skip text-based searches when pure design with no word element extracted
-    const [webResult, marciaResult, domainResults, translationAnalysis, niceClassification] = await Promise.all([
+    const [webResult, marciaResult, domainResults, translationAnalysis, niceClassification, tmviewResult] = await Promise.all([
       markName ? searchWeb(apiKey, searchName, classes, enhancedGoodsServices, lang) : Promise.resolve({ findings: [], risk: "low" as const }),
       markName ? searchMarcia(searchName, classes, phoneticVariants) : Promise.resolve({ findings: [], marciaUrl: "https://marcia.impi.gob.mx/marcas/search/quick", totalCount: 0, variantsSearched: [] }),
       markName ? checkDomains(searchName) : Promise.resolve([]),
       markName ? analyzeTranslations(apiKey, searchName, classes, enhancedGoodsServices, lang) : Promise.resolve([]),
       classifyNiceClasses(apiKey, searchName, enhancedGoodsServices || (isDesignOnly ? "design mark" : ""), lang),
+      markName ? searchTMView(searchName, classes).catch(err => { console.error("TMView error (non-fatal):", err); return null; }) : Promise.resolve(null),
     ]);
 
     const famousMarkConflicts = markName ? checkFamousMarks(searchName) : [];
@@ -1834,6 +1927,9 @@ Deno.serve(async (req: Request) => {
       alternativeNames,
       attorneyCommentary: attorneyCommentaryResult.native,
       attorneyCommentary_es: attorneyCommentaryResult.spanish,
+      tmviewFindings: tmviewResult?.trademarks ?? null,
+      tmviewTotal: tmviewResult?.total ?? null,
+      tmviewAvailable: tmviewResult !== null,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err) {
     console.error("verify-trademark error:", err);

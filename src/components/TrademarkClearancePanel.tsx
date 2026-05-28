@@ -1,5 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
+import TMViewErrorBoundary from './TMViewErrorBoundary';
+
+const TMViewResults = lazy(() => import('./TMViewResults'));
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import {
   Shield, Loader2, ChevronDown, ChevronUp, ExternalLink,
@@ -50,6 +53,9 @@ interface ClearanceResult {
   searchLanguage?: string;
   disclaimer: string;
   alternativeNames?: AlternativeName[];
+  tmviewFindings?: import('../lib/tmview').TMViewTrademark[] | null;
+  tmviewTotal?: number | null;
+  tmviewAvailable?: boolean;
 }
 
 export type { ClearanceResult };
@@ -909,6 +915,126 @@ function computePentagonScores(result: ClearanceResult, lang: string): PentagonD
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
+
+// ─── TMView Section (self-contained, lazy-loaded) ─────────────────────────────
+
+function TMViewSection({ result, classes, lang }: {
+  result: ClearanceResult;
+  classes: number[];
+  lang: string;
+}) {
+  const [tmviewExpanded, setTmviewExpanded] = useState(false);
+  const [tmviewPage, setTmviewPage] = useState(0);
+  const [tmviewResult, setTmviewResult] = useState<import('../lib/tmview').TMViewResult | null>(null);
+  const [tmviewLoading, setTmviewLoading] = useState(false);
+  const [tmviewError, setTmviewError] = useState<string | null>(null);
+  const fetchedRef = useRef(false);
+
+  const available = result.tmviewAvailable !== false;
+  const initialTotal = result.tmviewTotal ?? 0;
+  const initialFindings = result.tmviewFindings;
+
+  // Populate from the pre-fetched result embedded in the clearance response
+  useEffect(() => {
+    if (initialFindings && !fetchedRef.current) {
+      fetchedRef.current = true;
+      setTmviewResult({
+        total: initialTotal,
+        start: 0,
+        rows: initialFindings.length,
+        trademarks: initialFindings,
+      });
+    }
+  }, [initialFindings, initialTotal]);
+
+  const handlePageChange = async (start: number) => {
+    setTmviewLoading(true);
+    setTmviewError(null);
+    try {
+      const { searchTMView } = await import('../lib/tmview');
+      const r = await searchTMView({ name: result.marciaUrl.includes('query=') ? decodeURIComponent(result.marciaUrl.split('query=')[1] ?? '') : '', niceClasses: classes, start, rows: 50 });
+      setTmviewResult(r);
+      setTmviewPage(Math.floor(start / 50));
+    } catch {
+      setTmviewError(lang === 'en' ? 'Could not load page. Please try again.' : 'No se pudo cargar la página. Intenta de nuevo.');
+    } finally {
+      setTmviewLoading(false);
+    }
+  };
+
+  if (!available && !initialFindings) {
+    return (
+      <div className="border-b border-gray-100 px-4 py-3">
+        <div className="flex items-start gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">
+          <AlertTriangle size={13} className="shrink-0 mt-0.5" />
+          {lang === 'en'
+            ? 'IMPI data via TMView temporarily unavailable. MARCia results above remain valid.'
+            : 'Datos de IMPI vía TMView no disponibles temporalmente. Los resultados MARCia siguen siendo válidos.'}
+        </div>
+      </div>
+    );
+  }
+
+  const displayTotal = tmviewResult?.total ?? initialTotal;
+
+  return (
+    <div className="border-b border-gray-100">
+      <button
+        type="button"
+        onClick={() => setTmviewExpanded(v => !v)}
+        className="w-full flex items-center justify-between px-4 py-2 text-xs font-medium text-gray-600 hover:bg-white/80 transition-colors"
+      >
+        <span className="flex flex-col items-start text-left gap-0.5">
+          <span className="flex items-center gap-2">
+            <Globe size={12} className="text-blue-600" />
+            <span>
+              {lang === 'en' ? 'TMView / IMPI — Real-Time Registry' : 'TMView / IMPI — Registro en tiempo real'}
+              {' '}
+              <span className="text-gray-400 font-normal">({displayTotal.toLocaleString()} {lang === 'en' ? 'marks' : 'marcas'})</span>
+            </span>
+            <span className="inline-block px-1.5 py-0.5 rounded text-[9px] font-semibold bg-blue-100 text-blue-700 leading-none">
+              {lang === 'en' ? 'Live' : 'Tiempo real'}
+            </span>
+          </span>
+          <span className="text-[9px] text-gray-400 font-normal pl-5">
+            {lang === 'en'
+              ? 'Direct IMPI registry data via TMDN TMView. Updates within 24–72 h of IMPI.'
+              : 'Datos directos del registro IMPI vía TMDN TMView. Se actualiza en 24–72 h.'}
+          </span>
+        </span>
+        {tmviewExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+      </button>
+
+      {tmviewExpanded && (
+        <div className="px-4 pb-4">
+          {tmviewError && (
+            <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg p-2 mb-3">
+              <AlertCircle size={12} />
+              {tmviewError}
+            </div>
+          )}
+          <TMViewErrorBoundary language={lang}>
+            <Suspense fallback={<div className="h-32 flex items-center justify-center"><Loader2 size={20} className="animate-spin text-gray-400" /></div>}>
+              {tmviewResult ? (
+                <TMViewResults
+                  result={tmviewResult}
+                  classes={classes}
+                  language={lang as 'en' | 'es'}
+                  onPageChange={handlePageChange}
+                  loading={tmviewLoading}
+                />
+              ) : (
+                <div className="h-32 flex items-center justify-center">
+                  <Loader2 size={20} className="animate-spin text-gray-400" />
+                </div>
+              )}
+            </Suspense>
+          </TMViewErrorBoundary>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function TrademarkClearancePanel({
   markName, goodsServices = '', classes, language, autoRun = true, showFilingCta = false, onStartFiling, onResult, onSelectDespiteRisk, onRiskAcknowledgedChange, imageBase64, imageMimeType, userId,
@@ -2526,6 +2652,9 @@ export default function TrademarkClearancePanel({
               </div>
             )}
           </div>
+
+          {/* 1b — TMView / IMPI real-time */}
+          <TMViewSection result={result} classes={classes} lang={lang} />
 
           {/* 2 — LFPPI full */}
           <div className="border-b border-gray-100">
