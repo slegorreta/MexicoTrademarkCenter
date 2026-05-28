@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, Shield, Globe as Globe2, FileText, Award, ChevronDown, Sparkles, Search, HelpCircle, X, Star, Scale, BarChart2 } from 'lucide-react';
+import { ArrowRight, Shield, Globe as Globe2, FileText, Award, ChevronDown, Sparkles, Search, HelpCircle, X, Star, Scale, BarChart2, Zap } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { useState, useEffect, type ReactNode } from 'react';
 import AboutSection from '../components/AboutSection';
@@ -145,31 +145,29 @@ export default function HomePage() {
                 {/* CTA 1 — Check availability (orange) */}
                 <Link
                   to="/trademark-check"
-                  className="group flex items-center gap-3 bg-gold-500 hover:bg-gold-400 text-white font-bold px-6 py-4 rounded-2xl transition-all duration-200 shadow-xl hover:shadow-gold-500/30 hover:-translate-y-0.5"
+                  className="group flex items-center gap-3 bg-gold-500 hover:bg-gold-400 text-white font-bold px-5 py-4 rounded-2xl transition-all duration-200 shadow-xl hover:shadow-gold-500/30 hover:-translate-y-0.5"
                 >
                   <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 group-hover:bg-white/30 transition-colors">
                     <Search size={18} className="text-white" />
                   </div>
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-semibold text-white/70 uppercase tracking-widest leading-none mb-0.5">Step 1</span>
-                    <span className="text-base font-bold leading-tight">See if your trademark is available — free</span>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-xs font-extrabold text-white uppercase tracking-widest leading-none mb-1">STEP 1</span>
+                    <span className="text-sm font-bold leading-snug">See if your trademark is available — free</span>
                   </div>
                   <ArrowRight size={18} className="ml-auto group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
                 </Link>
-                {/* Microcopy */}
-                <p className="text-xs text-gold-300/80 text-center -mt-1">{t('cta_check_microcopy')}</p>
 
-                {/* CTA 2 — File (brighter orange tone) */}
+                {/* CTA 2 — File (sky blue — distinct from orange) */}
                 <Link
                   to="/apply"
-                  className="group flex items-center gap-3 bg-amber-500 hover:bg-amber-400 text-white font-bold px-6 py-4 rounded-2xl transition-all duration-200 shadow-lg hover:shadow-amber-500/30 hover:-translate-y-0.5"
+                  className="group flex items-center gap-3 bg-sky-600 hover:bg-sky-500 text-white font-bold px-5 py-4 rounded-2xl transition-all duration-200 shadow-lg hover:shadow-sky-500/30 hover:-translate-y-0.5"
                 >
                   <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 group-hover:bg-white/30 transition-colors">
                     <FileText size={18} className="text-white" />
                   </div>
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-semibold text-white/70 uppercase tracking-widest leading-none mb-0.5">Step 2</span>
-                    <span className="text-base font-bold leading-tight">Start filing your trademark — US$299 (all included)</span>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-xs font-extrabold text-white uppercase tracking-widest leading-none mb-1">STEP 2</span>
+                    <span className="text-sm font-bold leading-snug">Start filing your trademark — US$299 (all included)</span>
                   </div>
                   <ArrowRight size={18} className="ml-auto group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
                 </Link>
@@ -177,12 +175,12 @@ export default function HomePage() {
                 {/* CTA 3 — Idea generator (bright green) */}
                 <Link
                   to="/trademark-ideas"
-                  className="group flex items-center gap-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 py-4 rounded-2xl transition-all duration-200 shadow-lg hover:shadow-emerald-500/30 hover:-translate-y-0.5"
+                  className="group flex items-center gap-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-5 py-4 rounded-2xl transition-all duration-200 shadow-lg hover:shadow-emerald-500/30 hover:-translate-y-0.5"
                 >
                   <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 group-hover:bg-white/30 transition-colors">
                     <Sparkles size={18} className="text-white" />
                   </div>
-                  <span className="text-base font-bold leading-tight">Don't have a trademark yet? We can give you ideas — free</span>
+                  <span className="text-sm font-bold leading-snug">Don't have a trademark yet? We can give you ideas — free</span>
                   <ArrowRight size={18} className="ml-auto group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
                 </Link>
               </div>
@@ -203,6 +201,11 @@ export default function HomePage() {
                     )}
                   </div>
                 ))}
+                {/* Microcopy as trust item */}
+                <div className="flex items-center gap-1.5 text-gray-400">
+                  <Zap size={14} className="text-gold-400 flex-shrink-0" />
+                  <span className="text-xs">{t('cta_check_microcopy')}</span>
+                </div>
               </div>
             </div>
           </div>
