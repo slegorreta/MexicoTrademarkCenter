@@ -1256,7 +1256,7 @@ export default function TrademarkClearancePanel({
           language: lang,
           clearanceResult: result,
           email: emailVal,
-          couponCode: 'FREE100',
+          isFreeOverride: true,
           userId: user?.id ?? undefined,
         }),
       });
@@ -1287,7 +1287,15 @@ export default function TrademarkClearancePanel({
       };
 
       const url = await poll();
-      if (url) setPdfModalUrl(url);
+      if (url) {
+        setPdfModalUrl(url);
+        // Send email to client + admins with the PDF
+        fetch(`${SUPABASE_URL}/functions/v1/send-clearance-report-email`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+          body: JSON.stringify({ reportOrderId: orderId, email: emailVal, pdfUrl: url }),
+        }).catch(() => {/* fire-and-forget */});
+      }
       trackEvent('report_emailed', { email: emailVal }, lang);
       setPdfModalDone(true);
     } catch {/* never block UI */}
@@ -1546,13 +1554,9 @@ export default function TrademarkClearancePanel({
                   </details>
                 </div>
               )}
-              {/* AI narrative (teaser) */}
-              <p className={`text-[10px] leading-relaxed ${paid ? 'text-gray-600' : 'text-gray-400'}`}>
-                {paid
-                  ? (result.distinctiveness.explanation_user ?? (lang === 'en' ? result.distinctiveness.explanation_en : result.distinctiveness.explanation) ?? result.distinctiveness.explanation)
-                  : <span className="blur-[3px] select-none">{result.distinctiveness.explanation?.slice(0, 80) ?? 'Full analysis in report'}…</span>
-                }
-                {!paid && <span className="not-italic ml-1 text-[9px] text-gray-400 not-blur"><Lock size={8} className="inline mb-0.5" /></span>}
+              {/* AI narrative */}
+              <p className="text-[10px] leading-relaxed text-gray-600">
+                {result.distinctiveness.explanation_user ?? (lang === 'en' ? result.distinctiveness.explanation_en : result.distinctiveness.explanation) ?? result.distinctiveness.explanation}
               </p>
             </div>
           </div>
@@ -2050,39 +2054,31 @@ export default function TrademarkClearancePanel({
                               if (next.has(i)) next.delete(i); else next.add(i);
                               return next;
                             });
-                            if (paid && !markAnalysisCache[i]) fetchMarkAnalysis(i, f);
+                            if (!markAnalysisCache[i]) fetchMarkAnalysis(i, f);
                           }}
                           className="w-full flex items-center justify-between px-3 py-1.5 text-[9px] font-medium text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors"
                         >
                           <span className="flex items-center gap-1">
                             <Sparkles size={9} className="text-[#c9a84c]" />
                             {lang === 'es' ? 'Ver análisis IA' : lang === 'zh' ? '查看AI分析' : 'View AI analysis'}
-                            {!paid && <Lock size={8} className="text-gray-300 ml-0.5" />}
                           </span>
                           {isExpanded ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
                         </button>
                         {isExpanded && (
                           <div className="px-3 pb-2.5 pt-1 bg-gray-50/50">
-                            {paid ? (
-                              aiData?.loading ? (
-                                <div className="flex items-center gap-1.5 text-[9px] text-gray-400">
-                                  <Loader2 size={9} className="animate-spin flex-shrink-0" />
-                                  <span>{lang === 'es' ? 'Analizando…' : 'Analyzing…'}</span>
-                                </div>
-                              ) : aiData?.analysis ? (
-                                <p className="text-[10px] text-gray-600 leading-relaxed">{aiData.analysis}</p>
-                              ) : (
-                                <p className="text-[10px] text-gray-600 leading-relaxed">
-                                  {lang === 'es'
-                                    ? `La marca "${f.name}" presenta ${isExact ? 'coincidencia exacta' : 'similitud'} con tu solicitud. Estado: ${f.status}.${f.classNum ? ` Clase ${f.classNum}.` : ''}`
-                                    : `"${f.name}" shows ${isExact ? 'exact' : 'notable'} similarity. Status: ${f.status}.${f.classNum ? ` Class ${f.classNum}.` : ''}`}
-                                </p>
-                              )
-                            ) : (
+                            {aiData?.loading ? (
                               <div className="flex items-center gap-1.5 text-[9px] text-gray-400">
-                                <Lock size={9} className="flex-shrink-0" />
-                                <span>{lang === 'es' ? 'Análisis detallado disponible en el Reporte Completo.' : 'Detailed AI analysis available in the Full Report.'}</span>
+                                <Loader2 size={9} className="animate-spin flex-shrink-0" />
+                                <span>{lang === 'es' ? 'Analizando…' : 'Analyzing…'}</span>
                               </div>
+                            ) : aiData?.analysis ? (
+                              <p className="text-[10px] text-gray-600 leading-relaxed">{aiData.analysis}</p>
+                            ) : (
+                              <p className="text-[10px] text-gray-600 leading-relaxed">
+                                {lang === 'es'
+                                  ? `La marca "${f.name}" presenta ${isExact ? 'coincidencia exacta' : 'similitud'} con tu solicitud. Estado: ${f.status}.${f.classNum ? ` Clase ${f.classNum}.` : ''}`
+                                  : `"${f.name}" shows ${isExact ? 'exact' : 'notable'} similarity. Status: ${f.status}.${f.classNum ? ` Class ${f.classNum}.` : ''}`}
+                              </p>
                             )}
                           </div>
                         )}
@@ -2090,68 +2086,63 @@ export default function TrademarkClearancePanel({
                     </div>
                   );
                 })}
-                {totalMarcia > 3 && <LockedRow lang={lang} />}
               </>
-            )}
-            {totalMarcia > 3 && (
-              <FullReportNotice lang={lang} />
             )}
           </div>
 
-          {/* 2 — LFPPI teaser */}
+          {/* 2 — LFPPI flags (full, unblurred) */}
           {regFlags.length > 0 && (
             <div>
               <div className="flex items-center gap-1.5 mb-1.5">
                 <Scale size={11} className="text-[#1a2e1a]" />
                 <span className="text-[10px] font-semibold text-gray-600">{tr('lfppiTitle', lang)}</span>
                 <InfoTooltip text={tr('tooltipLfppi', lang)} className="ml-0.5" />
-                <Lock size={9} className="text-gray-300 ml-auto" />
               </div>
-              {regFlags.slice(0, 3).map((f, i) => (
+              {regFlags.map((f, i) => (
                 <div key={i} className={`rounded-lg border px-2.5 py-1.5 mb-1 ${f.severity === 'high' ? 'border-red-100 bg-red-50/50' : f.severity === 'medium' ? 'border-amber-100 bg-amber-50/50' : 'border-blue-100 bg-blue-50/50'}`}>
                   <div className="flex items-center gap-1.5 mb-0.5">
                     <span className={`text-[9px] font-bold px-1 py-0.5 rounded ${f.severity === 'high' ? 'bg-red-100 text-red-700' : f.severity === 'medium' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>{f.severity.toUpperCase()}</span>
                     <span className="text-[10px] font-semibold text-gray-700">{CATEGORY_LABELS[f.category] ?? f.category}</span>
                   </div>
-                  <p className="text-[10px] text-gray-400 blur-[2px] select-none">{f.explanation?.slice(0, 60) ?? 'explanation locked'}...</p>
+                  <p className="text-[10px] text-gray-600 leading-relaxed">
+                    {f.explanation_user ?? (lang === 'en' ? f.explanation_en : f.explanation) ?? f.explanation}
+                  </p>
                 </div>
               ))}
-              {regFlags.length > 3 && <LockedRow lang={lang} />}
-              <FullReportNotice lang={lang} />
             </div>
           )}
 
-          {/* 3 — DuPont teaser */}
+          {/* 3 — DuPont summary (full, unblurred) */}
           {dupont.length > 0 && (
             <div>
               <div className="flex items-center gap-1.5 mb-1.5">
                 <Scale size={11} className="text-[#1a2e1a]" />
                 <span className="text-[10px] font-semibold text-gray-600">{tr('dupontTitle', lang)}</span>
                 <InfoTooltip text={tr('tooltipDupont', lang)} className="ml-0.5" />
-                <Lock size={9} className="text-gray-300 ml-auto" />
               </div>
-              {dupont.slice(0, 3).map((f, i) => (
-                <div key={i} className="rounded-lg border border-gray-100 bg-white px-2.5 py-1.5 mb-1 flex items-center gap-2">
-                  <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${f.verdict === 'favors_registration' ? 'bg-emerald-400' : f.verdict === 'against_registration' ? 'bg-red-400' : 'bg-gray-300'}`} />
-                  <span className="text-[10px] font-semibold text-gray-600 flex-1 min-w-0">{DUPONT_LABELS[f.factor] ?? f.factor}</span>
-                  <span className="text-[9px] text-gray-300 blur-[2px] flex-shrink-0">reasoning locked</span>
+              {dupont.slice(0, 5).map((f, i) => (
+                <div key={i} className="rounded-lg border border-gray-100 bg-white px-2.5 py-1.5 mb-1">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${f.verdict === 'favors_registration' ? 'bg-emerald-400' : f.verdict === 'against_registration' ? 'bg-red-400' : 'bg-gray-300'}`} />
+                    <span className="text-[10px] font-semibold text-gray-600">{DUPONT_LABELS[f.factor] ?? f.factor}</span>
+                  </div>
+                  <p className="text-[10px] text-gray-500 leading-relaxed pl-3">
+                    {f.reasoning_user ?? (lang === 'en' ? f.reasoning_en : f.reasoning) ?? f.reasoning}
+                  </p>
                 </div>
               ))}
-              <LockedRow lang={lang} />
-              <FullReportNotice lang={lang} />
             </div>
           )}
 
-          {/* 4 — Distinctiveness teaser */}
+          {/* 4 — Distinctiveness (full, unblurred) */}
           {result.distinctiveness && (
             <div>
               <div className="flex items-center gap-1.5 mb-1.5">
                 <TrendingUp size={11} className="text-[#1a2e1a]" />
                 <span className="text-[10px] font-semibold text-gray-600">{tr('distinctivenessTitle', lang)}</span>
                 <InfoTooltip text={tr('tooltipDistinctiveness', lang)} className="ml-0.5" />
-                <Lock size={9} className="text-gray-300 ml-auto" />
               </div>
-              <div className="flex items-stretch gap-0 rounded-lg overflow-hidden border border-gray-100">
+              <div className="flex items-stretch gap-0 rounded-lg overflow-hidden border border-gray-100 mb-1.5">
                 {TIER_ORDER.map(tier => {
                   const isActive = result.distinctiveness?.tier === tier;
                   return (
@@ -2162,11 +2153,9 @@ export default function TrademarkClearancePanel({
                   );
                 })}
               </div>
-              <p className="text-[10px] text-gray-400 mt-1 flex items-center gap-1">
-                <Lock size={8} className="flex-shrink-0" />
-                <span className="blur-[3px] select-none">{result.distinctiveness.explanation?.slice(0, 60) ?? 'Full explanation available in report'}...</span>
+              <p className="text-[10px] text-gray-600 leading-relaxed">
+                {result.distinctiveness.explanation_user ?? (lang === 'en' ? result.distinctiveness.explanation_en : result.distinctiveness.explanation) ?? result.distinctiveness.explanation}
               </p>
-              <FullReportNotice lang={lang} />
             </div>
           )}
 
@@ -3196,9 +3185,12 @@ export default function TrademarkClearancePanel({
 
       {/* ── Optional email capture (non-blocking) ──────────────────────────── */}
       {!captureSent ? (
-        <div className="border-t border-gray-100 px-4 py-3 bg-white print:hidden">
-          <p className="text-xs font-semibold text-gray-700 mb-0.5">{tr('emailCaptureHeading', lang)}</p>
-          <p className="text-[10px] text-gray-400 mb-2 leading-relaxed">{tr('emailCaptureSub', lang)}</p>
+        <div className="border-t border-gray-100 px-4 py-4 bg-orange-50 print:hidden">
+          <div className="flex items-center gap-2 mb-1">
+            <Mail size={14} className="text-orange-500 flex-shrink-0" />
+            <p className="text-xs font-bold text-orange-800">{tr('emailCaptureHeading', lang)}</p>
+          </div>
+          <p className="text-[10px] text-orange-600/80 mb-2.5 leading-relaxed">{tr('emailCaptureSub', lang)}</p>
           <div className="flex gap-2">
             <input
               type="email"
@@ -3206,13 +3198,13 @@ export default function TrademarkClearancePanel({
               onChange={e => setCaptureEmail(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleEmailCapture()}
               placeholder="you@example.com"
-              className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#c9a84c] focus:border-transparent"
+              className="flex-1 border border-orange-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white"
             />
             <button
               type="button"
               onClick={handleEmailCapture}
               disabled={captureSending || !captureEmail.trim()}
-              className="flex-shrink-0 bg-[#1a2e1a] hover:bg-[#2d4a2d] disabled:opacity-50 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors"
+              className="flex-shrink-0 bg-orange-500 hover:bg-orange-600 active:bg-orange-700 disabled:opacity-50 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors shadow-sm"
             >
               {captureSending ? <Loader2 size={12} className="animate-spin" /> : tr('emailCaptureSend', lang)}
             </button>

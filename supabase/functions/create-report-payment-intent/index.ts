@@ -22,7 +22,7 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const body = await req.json();
-    const { markName, goodsServices, language, clearanceResult, email, couponCode, userId, attorneyReviewRequested } = body as {
+    const { markName, goodsServices, language, clearanceResult, email, couponCode, userId, attorneyReviewRequested, isFreeOverride } = body as {
       markName: string;
       goodsServices: string;
       language: string;
@@ -31,18 +31,19 @@ Deno.serve(async (req: Request) => {
       couponCode?: string;
       userId?: string;
       attorneyReviewRequested?: boolean;
+      isFreeOverride?: boolean;
     };
 
     if (!markName || !email || !clearanceResult) {
       return new Response(JSON.stringify({ error: "markName, email, and clearanceResult are required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Validate coupon if provided
-    let discountPercent = 0;
+    // Validate coupon if provided (skipped when isFreeOverride is true)
+    let discountPercent = isFreeOverride ? 100 : 0;
     let couponId: string | null = null;
     const normalizedCoupon = couponCode?.trim().toUpperCase() ?? "";
 
-    if (normalizedCoupon) {
+    if (!isFreeOverride && normalizedCoupon) {
       const { data: coupon } = await supabase
         .from("coupons")
         .select("id, discount_percent, active, expires_at, max_uses, uses_count")
