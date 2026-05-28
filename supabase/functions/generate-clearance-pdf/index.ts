@@ -106,6 +106,10 @@ interface ClearanceResult {
   translationAnalysis?: TranslationFlag[];
   niceClassification?: NiceClass[];
   disclaimer?: string;
+  // Pre-computed by verify-trademark — native language version
+  attorneyCommentary?: string;
+  // Pre-computed by verify-trademark — Spanish version (used for bilingual PDFs)
+  attorneyCommentary_es?: string;
 }
 
 type Lang = "en" | "es" | "zh" | "de" | "fr" | "hi" | "pt" | "ja";
@@ -514,7 +518,7 @@ Idioma de salida: ${langName}. Cada palabra debe estar en ${langName}. Sin markd
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
-        model: "gpt-4o",
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: `You are a Mexican trademark attorney. Write professional legal opinions using LFPPI terminology only. No markdown, no bullet points, plain prose. Output in ${langName}.` },
           { role: "user", content: prompt },
@@ -534,7 +538,7 @@ Idioma de salida: ${langName}. Cada palabra debe estar en ${langName}. Sin markd
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
         body: JSON.stringify({
-          model: "gpt-4o",
+          model: "gpt-4o-mini",
           messages: [
             { role: "system", content: "Translate the following Mexican trademark attorney opinion into English. Maintain formal legal tone. Preserve all trademark names, LFPPI citations, and expediente numbers exactly. No markdown. Output in English only." },
             { role: "user", content: native },
@@ -832,8 +836,15 @@ async function buildPdf(
   const safeMarkName = safeText(markName).replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 20);
   const classNum = niceClasses.length > 0 ? String(niceClasses[0].classNumber) : "X";
 
+  // Use pre-computed commentary from verify-trademark if available (zero extra latency).
+  // Fall back to on-demand generation with gpt-4o-mini for legacy orders.
   let commentary = { native: "", english: "" };
-  if (openAiKey) {
+  if (result.attorneyCommentary) {
+    commentary = {
+      native: result.attorneyCommentary,
+      english: result.attorneyCommentary_es ?? result.attorneyCommentary,
+    };
+  } else if (openAiKey) {
     commentary = await generateAttorneyCommentary(openAiKey, markName, goodsServices, result, searchLang);
   }
 
@@ -1986,9 +1997,12 @@ async function buildPdf(
     // Native-language cover + sections
     renderCover(searchLang, verdict, score);
     renderAllSections(searchLang, false);
-    // Spanish cover + sections (for use by client's Mexican attorney)
+    // Spanish cover + sections — swap commentary so Spanish text appears in the Spanish half
+    const origNative = commentary.native;
+    commentary.native = commentary.english || commentary.native;
     renderCover("es", verdict, score);
     renderAllSections("es", false);
+    commentary.native = origNative;
   } else if (searchLang === "es") {
     renderCover("es", verdict, score);
     renderAllSections("es", false);

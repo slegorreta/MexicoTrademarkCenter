@@ -1433,6 +1433,167 @@ Return ONLY valid JSON: {"alternatives": [{"name":"...","score":0,"rationale":".
   }
 }
 
+// ─── Enhanced Attorney Commentary (pre-computed during search) ────────────────
+// Runs in parallel with risk summary generation so it adds zero wall-clock time.
+// Produces a 250-350 word bilingual opinion using all data already computed.
+
+const LANGUAGE_NAMES_COMMENTARY: Record<string, string> = {
+  en: "English", es: "Spanish", zh: "Chinese (Simplified)", de: "German",
+  fr: "French", hi: "Hindi", pt: "Portuguese", ja: "Japanese",
+};
+
+async function generateEnhancedAttorneyCommentary(
+  apiKey: string,
+  markName: string,
+  goodsServices: string,
+  language: string,
+  risk: "low" | "medium" | "high",
+  riskColor: string,
+  flags: RegistrabilityFlag[],
+  dupont: DupontFactor[],
+  distinctiveness: DistinctivenessAssessment | undefined,
+  marciaFindings: Array<{ name: string; expediente?: string; classNum: string; similarityScore?: number }>,
+  niceClasses: NiceClass[],
+  translationAnalysis: TranslationFlag[],
+  malaFe: { detected: boolean; riskLevel: string; explanation: string; explanation_en: string; indicators: string[] },
+  marciaTotalCount: number,
+): Promise<{ native: string; spanish: string }> {
+  const nativeLangName = LANGUAGE_NAMES_COMMENTARY[language] ?? "English";
+
+  const rawScore = (distinctiveness?.score ?? 50) <= 5
+    ? (distinctiveness?.score ?? 50) * 20
+    : (distinctiveness?.score ?? 50);
+  const distTier = distinctiveness?.tier ?? "unknown";
+
+  const topConflicts = marciaFindings.slice(0, 5);
+  const conflictList = topConflicts.length > 0
+    ? topConflicts.map(f =>
+        `"${f.name}" (Exp. ${f.expediente ?? "N/A"}, Clase ${f.classNum}${f.similarityScore ? `, similitud ${f.similarityScore}%` : ""})`
+      ).join("; ")
+    : "no se encontraron conflictos directos";
+
+  const highFlags = flags.filter(f => f.severity === "high").map(f => f.category);
+  const medFlags = flags.filter(f => f.severity === "medium").map(f => f.category);
+  const dupontAgainst = dupont.filter(f => f.verdict === "against_registration").map(f => f.factor);
+  const dupontFor = dupont.filter(f => f.verdict === "favors_registration").map(f => f.factor);
+  const niceClassList = niceClasses.map(nc => `Clase ${nc.classNumber} (${nc.className_en || nc.className})`).join(", ");
+  const translationRisks = translationAnalysis.filter(t => t.risk === "high" || t.risk === "medium")
+    .map(t => `${t.languageName}: "${t.translatedForm}" — ${t.issueCategory ?? t.details_en}`);
+
+  const contextBlock = [
+    `Mark: "${markName}"`,
+    goodsServices ? `Goods/Services: ${goodsServices}` : "",
+    niceClassList ? `NICE Classes: ${niceClassList}` : "",
+    `Overall Risk: ${risk.toUpperCase()} (${riskColor})`,
+    `Distinctiveness: ${distTier} tier, score ${rawScore}/100`,
+    `MARCia IMPI conflicts found: ${marciaTotalCount} total`,
+    topConflicts.length > 0 ? `Top conflicts: ${conflictList}` : "No direct conflicts found",
+    highFlags.length > 0 ? `High-severity LFPPI grounds: ${highFlags.join(", ")}` : "",
+    medFlags.length > 0 ? `Medium-severity LFPPI grounds: ${medFlags.join(", ")}` : "",
+    dupontAgainst.length > 0 ? `DuPont factors against registration: ${dupontAgainst.join(", ")}` : "",
+    dupontFor.length > 0 ? `DuPont factors favoring registration: ${dupontFor.join(", ")}` : "",
+    translationRisks.length > 0 ? `Translation/meaning risks: ${translationRisks.join(" | ")}` : "",
+    malaFe.detected ? `Bad-faith risk detected (${malaFe.riskLevel}): ${malaFe.explanation_en}` : "",
+  ].filter(Boolean).join("\n");
+
+  const spanishPrompt = `Eres un abogado senior especialista en propiedad intelectual mexicana con mas de 20 anos de experiencia ante el IMPI.
+
+REGLAS DE PUNTUACION (obligatorias):
+- Distintividad: SIEMPRE usa formato "X/100". NUNCA "X/5" ni "X de 5".
+- Ejemplo correcto: "puntuacion de distintividad de ${rawScore}/100"
+
+Redacta una OPINION DE REGISTRABILIDAD AMPLIADA de 250-350 palabras en un solo bloque de prosa profesional (sin encabezados, sin bullets, sin markdown). Usa EXCLUSIVAMENTE terminologia de la LFPPI y doctrina mexicana de triple similitud (fonetica, visual, conceptual). NO menciones DuPont ni jurisprudencia estadounidense.
+
+DATOS DE ANALISIS:
+${contextBlock}
+
+ESTRUCTURA OBLIGATORIA (prosa fluida, un solo parrafo o dos parrafos cortos):
+1. Veredicto de registrabilidad con fundamento legal (articulos LFPPI especificos).
+2. Analisis de los 2-3 principales conflictos marcarios: nombre, expediente, elemento dominante, triple similitud aplicable.
+3. Evaluacion de la distintividad y su impacto practico en el registro.
+4. Si existen causales LFPPI de alta severidad, citalas con el articulo exacto.
+5. Si hay riesgos de traduccion o mala fe registral, mencionalos brevemente.
+6. Recomendacion concreta y accionable (modificar, limitar clases, busqueda de oposicion, etc.).
+
+Idioma de salida: Espanol. Sin markdown. Solo prosa legal profesional.`;
+
+  try {
+    // Run both language versions in parallel (Spanish always; native only if not Spanish)
+    const needsNative = language !== "es";
+
+    const nativePrompt = needsNative ? `You are a senior Mexican trademark attorney with 20+ years of IMPI experience.
+
+SCORING RULES (mandatory):
+- Distinctiveness score: ALWAYS use "X/100" format. NEVER "X/5".
+- Example: "distinctiveness score of ${rawScore}/100"
+
+Write an ENHANCED REGISTRABILITY OPINION of 250-350 words as a single professional prose block (no headings, no bullets, no markdown). Use ONLY LFPPI terminology and Mexican triple-similarity doctrine (phonetic, visual, conceptual). Do NOT reference DuPont factors or US jurisprudence by name.
+
+ANALYSIS DATA:
+${contextBlock}
+
+MANDATORY STRUCTURE (flowing prose, one or two short paragraphs):
+1. Registrability verdict with specific LFPPI legal basis (cite exact articles).
+2. Analysis of the 2-3 main conflicting marks: name, expediente number, dominant element, applicable similarity grounds.
+3. Distinctiveness assessment and its practical impact on registration prospects.
+4. If high-severity LFPPI grounds exist, cite the exact article.
+5. If translation risks or bad-faith concerns exist, address them briefly.
+6. Concrete, actionable recommendation (amend, restrict classes, monitor for opposition, etc.).
+
+Output language: ${nativeLangName}. No markdown. Professional legal prose only.` : "";
+
+    const [spanishRes, nativeRes] = await Promise.all([
+      fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          model: "gpt-4o",
+          messages: [
+            { role: "system", content: "You are a Mexican trademark attorney. Write professional legal opinions using LFPPI terminology only. No markdown, no bullet points, plain prose. Output in Spanish." },
+            { role: "user", content: spanishPrompt },
+          ],
+          temperature: 0.3,
+          max_tokens: 600,
+        }),
+      }),
+      needsNative
+        ? fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+            body: JSON.stringify({
+              model: "gpt-4o",
+              messages: [
+                { role: "system", content: `You are a Mexican trademark attorney. Write professional legal opinions using LFPPI terminology only. No markdown, no bullet points, plain prose. Output in ${nativeLangName}.` },
+                { role: "user", content: nativePrompt },
+              ],
+              temperature: 0.3,
+              max_tokens: 600,
+            }),
+          })
+        : Promise.resolve(null),
+    ]);
+
+    let spanish = "";
+    let native = "";
+
+    if (spanishRes.ok) {
+      const d = await spanishRes.json();
+      spanish = d.choices?.[0]?.message?.content?.trim() ?? "";
+    }
+
+    if (nativeRes && nativeRes.ok) {
+      const d = await nativeRes.json();
+      native = d.choices?.[0]?.message?.content?.trim() ?? "";
+    } else {
+      native = spanish;
+    }
+
+    return { native, spanish };
+  } catch {
+    return { native: "", spanish: "" };
+  }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 200, headers: corsHeaders });
 
@@ -1604,11 +1765,11 @@ Deno.serve(async (req: Request) => {
       .map(f => f.name)
       .slice(0, 8);
 
-    // Generate a risk summary + alternative names in parallel
+    // Generate a risk summary + alternative names + attorney commentary in parallel
     const summaryMarkName = isDesignOnly
       ? `[design mark]${designDescription ? ` — ${designDescription}` : ""}`
       : searchName;
-    const [consistentSummary, alternativeNames] = await Promise.all([
+    const [consistentSummary, alternativeNames, attorneyCommentaryResult] = await Promise.all([
       generateConsistentRiskSummary(
         apiKey,
         summaryMarkName,
@@ -1629,6 +1790,22 @@ Deno.serve(async (req: Request) => {
       shouldGenerateAlternatives
         ? generateAlternativeNames(apiKey, searchName, enhancedGoodsServices, classes, conflictingNamesForAlts, lang)
         : Promise.resolve([] as AlternativeName[]),
+      generateEnhancedAttorneyCommentary(
+        apiKey,
+        summaryMarkName,
+        enhancedGoodsServices,
+        lang,
+        risk,
+        riskColor,
+        registrabilityResult.flags,
+        registrabilityResult.dupont,
+        registrabilityResult.distinctiveness,
+        marciaResult.findings,
+        niceClassification,
+        translationAnalysis,
+        malaFeResult,
+        marciaResult.totalCount,
+      ),
     ]);
 
     return new Response(JSON.stringify({
@@ -1655,6 +1832,8 @@ Deno.serve(async (req: Request) => {
       searchLanguage: lang,
       disclaimer: DISCLAIMERS[lang],
       alternativeNames,
+      attorneyCommentary: attorneyCommentaryResult.native,
+      attorneyCommentary_es: attorneyCommentaryResult.spanish,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err) {
     console.error("verify-trademark error:", err);
