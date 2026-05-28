@@ -237,6 +237,7 @@ const UI: Record<string, Record<string, string>> = {
   pdfGenerating: { en: 'Generating your PDF…', es: 'Generando tu PDF…', fr: 'Génération du PDF…', pt: 'Gerando PDF…', de: 'PDF wird erstellt…', it: 'Generazione PDF in corso…', zh: '正在生成PDF…', ja: 'PDF生成中…', hi: 'PDF तैयार हो रहा है…' },
   pdfSent: { en: 'PDF sent! Check your inbox.', es: '¡PDF enviado! Revisa tu bandeja.', fr: 'PDF envoyé ! Vérifiez votre boîte.', pt: 'PDF enviado! Verifique sua caixa.', de: 'PDF gesendet! Prüfen Sie Ihren Posteingang.', it: 'PDF inviato! Controlla la tua casella.', zh: 'PDF已发送！请查收邮件。', ja: 'PDF送信済み！受信トレイをご確認ください。', hi: 'PDF भेज दिया! अपना इनबॉक्स देखें।' },
   downloadPdfNow: { en: 'Download PDF', es: 'Descargar PDF', fr: 'Télécharger le PDF', pt: 'Baixar PDF', de: 'PDF herunterladen', it: 'Scarica PDF', zh: '下载PDF', ja: 'PDFをダウンロード', hi: 'PDF डाउनलोड करें' },
+  pdfModalCloseSafe: { en: 'You can close this window — your PDF will still be sent.', es: 'Puedes cerrar esta ventana — tu PDF se enviará de todos modos.', fr: 'Vous pouvez fermer cette fenêtre — votre PDF sera envoyé quand même.', pt: 'Você pode fechar esta janela — seu PDF ainda será enviado.', de: 'Sie können dieses Fenster schließen — Ihr PDF wird trotzdem gesendet.', it: 'Puoi chiudere questa finestra — il tuo PDF verrà comunque inviato.', zh: '您可以关闭此窗口——您的PDF仍会发送给您。', ja: 'このウィンドウを閉じても構いません。PDFは送信されます。', hi: 'आप इस विंडो को बंद कर सकते हैं — आपका PDF फिर भी भेजा जाएगा।' },
   ctaStrongerNames: { en: 'Three stronger names you can file instead →', es: 'Tres nombres más sólidos que puede registrar →', fr: 'Trois noms plus solides que vous pouvez déposer →', pt: 'Três nomes mais sólidos que você pode registrar →', de: 'Drei stärkere Namen, die Sie stattdessen anmelden können →', it: 'Tre nomi più solidi che puoi depositare →', zh: '三个更稳妥、可改为注册的名称 →', ja: '代わりに出願できる、より強力な3つの名称 →', hi: 'इसके बजाय दाखिल करने योग्य तीन मज़बूत नाम →' },
   // Change 4: Scope statement
   scopeStatement: {
@@ -926,6 +927,8 @@ export default function TrademarkClearancePanel({
   const [pdfModalLoading, setPdfModalLoading] = useState(false);
   const [pdfModalDone, setPdfModalDone] = useState(false);
   const [pdfModalUrl, setPdfModalUrl] = useState('');
+  // Tracks a committed delivery that continues even if the modal is closed
+  const pendingDeliveryRef = useRef<{ email: string; orderId: string } | null>(null);
 
   // Background pre-generation: order + PDF kicked off as soon as result arrives
   const [bgOrderId, setBgOrderId] = useState('');
@@ -1311,72 +1314,81 @@ export default function TrademarkClearancePanel({
     const emailVal = pdfModalEmail.trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) return;
     setPdfModalLoading(true);
-    try {
-      let orderId = bgOrderId;
-      let url = bgPdfUrl;
 
-      // If background pre-generation already has a PDF, use it directly.
-      // Otherwise create a new order and poll.
-      if (!orderId) {
-        const piRes = await fetch(`${SUPABASE_URL}/functions/v1/create-report-payment-intent`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
-          body: JSON.stringify({
-            markName: markName.trim(),
-            goodsServices,
-            language: lang,
-            clearanceResult: result,
-            email: emailVal,
-            isFreeOverride: true,
-            userId: user?.id ?? undefined,
-          }),
-        });
-        const piData = await piRes.json();
-        orderId = piData.reportOrderId ?? '';
-      }
+    // Mark this delivery as committed so work continues even if modal closes
+    const capturedOrderId = bgOrderId;
+    pendingDeliveryRef.current = { email: emailVal, orderId: capturedOrderId };
 
-      // Update the order email to the user's actual address
-      if (orderId && emailVal !== 'prefetch@mexicotrademarkcenter.com') {
-        supabase.from('clearance_report_orders').update({ email: emailVal }).eq('id', orderId).then(() => {});
-      }
+    // Transition to "done" state immediately so user sees confirmation and can close
+    setPdfModalDone(true);
+    setPdfModalLoading(false);
 
-      if (!url && orderId) {
-        // Poll for PDF (should be fast since background pre-generation is running)
-        let attempts = 0;
-        const poll = async (): Promise<string | null> => {
-          attempts++;
-          try {
-            const r = await fetch(`${SUPABASE_URL}/functions/v1/get-report-download-url`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
-              body: JSON.stringify({ reportOrderId: orderId }),
-            });
-            if (r.ok) {
-              const d = await r.json();
-              if (d.url) return d.url;
+    // Continue all async work in the background — independent of modal visibility
+    (async () => {
+      try {
+        let orderId = capturedOrderId;
+        let url = bgPdfUrl;
+
+        if (!orderId) {
+          const piRes = await fetch(`${SUPABASE_URL}/functions/v1/create-report-payment-intent`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+            body: JSON.stringify({
+              markName: markName.trim(),
+              goodsServices,
+              language: lang,
+              clearanceResult: result,
+              email: emailVal,
+              isFreeOverride: true,
+              userId: user?.id ?? undefined,
+            }),
+          });
+          const piData = await piRes.json();
+          orderId = piData.reportOrderId ?? '';
+          pendingDeliveryRef.current = { email: emailVal, orderId };
+        }
+
+        // Update order to the user's real email
+        if (orderId && emailVal !== 'prefetch@mexicotrademarkcenter.com') {
+          supabase.from('clearance_report_orders').update({ email: emailVal }).eq('id', orderId).then(() => {});
+        }
+
+        if (!url && orderId) {
+          let attempts = 0;
+          const poll = async (): Promise<string | null> => {
+            attempts++;
+            try {
+              const r = await fetch(`${SUPABASE_URL}/functions/v1/get-report-download-url`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+                body: JSON.stringify({ reportOrderId: orderId }),
+              });
+              if (r.ok) {
+                const d = await r.json();
+                if (d.url) return d.url;
+              }
+            } catch {/* ignore */}
+            if (attempts < 30) {
+              await new Promise(res => setTimeout(res, 3000));
+              return poll();
             }
-          } catch {/* ignore */}
-          if (attempts < 30) {
-            await new Promise(res => setTimeout(res, 3000));
-            return poll();
-          }
-          return null;
-        };
-        url = (await poll()) ?? '';
-      }
+            return null;
+          };
+          url = (await poll()) ?? '';
+        }
 
-      if (url) {
-        setPdfModalUrl(url);
-        fetch(`${SUPABASE_URL}/functions/v1/send-clearance-report-email`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
-          body: JSON.stringify({ reportOrderId: orderId, email: emailVal, pdfUrl: url }),
-        }).catch(() => {});
-      }
-      trackEvent('report_emailed', { email: emailVal }, lang);
-      setPdfModalDone(true);
-    } catch {/* never block UI */}
-    finally { setPdfModalLoading(false); }
+        if (url) {
+          // Update PDF URL — visible both in modal (if still open) and in the CTA banner
+          setPdfModalUrl(url);
+          fetch(`${SUPABASE_URL}/functions/v1/send-clearance-report-email`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+            body: JSON.stringify({ reportOrderId: orderId, email: emailVal, pdfUrl: url }),
+          }).catch(() => {});
+        }
+        trackEvent('report_emailed', { email: emailVal }, lang);
+      } catch {/* never block UI */}
+    })();
   };
 
   // ── Per-mark lazy AI analysis fetch (Improvement 1) ──────────────────────
@@ -3274,11 +3286,25 @@ export default function TrademarkClearancePanel({
           </button>
         </div>
       ) : (
-        <div className="border-t border-gray-100 px-4 py-3 bg-emerald-50 print:hidden">
-          <p className="text-xs text-emerald-700 flex items-center gap-1.5">
-            <CheckCircle2 size={13} className="flex-shrink-0" />
-            {tr('emailCaptureSent', lang)}
-          </p>
+        <div className="border-t border-gray-100 px-4 py-4 bg-emerald-50 print:hidden">
+          <div className="flex items-center gap-2 mb-2">
+            <CheckCircle2 size={14} className="text-emerald-600 flex-shrink-0" />
+            <p className="text-xs font-semibold text-emerald-800">{tr('emailCaptureSent', lang)}</p>
+          </div>
+          {pdfModalUrl ? (
+            <a
+              href={pdfModalUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-2.5 rounded-xl transition-colors text-sm"
+            >
+              <Download size={14} />{tr('downloadPdfNow', lang)}
+            </a>
+          ) : (
+            <p className="text-xs text-emerald-600 flex items-center gap-1.5">
+              <Loader2 size={11} className="animate-spin flex-shrink-0" />{tr('pdfGenerating', lang)}
+            </p>
+          )}
         </div>
       )}
 
@@ -3585,12 +3611,12 @@ export default function TrademarkClearancePanel({
 
       {/* ── PDF Report Modal ────────────────────────────────────────────────── */}
       {showPdfModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 print:hidden" onClick={() => !pdfModalLoading && setShowPdfModal(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 print:hidden" onClick={() => setShowPdfModal(false)}>
           <div className="absolute inset-0 bg-black/50" />
           <div className="relative bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 z-10" onClick={e => e.stopPropagation()}>
             <button
               type="button"
-              onClick={() => !pdfModalLoading && setShowPdfModal(false)}
+              onClick={() => setShowPdfModal(false)}
               className="absolute top-3 right-3 w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors"
             >
               <X size={14} />
@@ -3614,20 +3640,16 @@ export default function TrademarkClearancePanel({
                   onKeyDown={e => e.key === 'Enter' && handleRequestPdfReport()}
                   placeholder="you@example.com"
                   className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-[#c9a84c] focus:border-transparent"
-                  disabled={pdfModalLoading}
                 />
                 <button
                   type="button"
                   onClick={handleRequestPdfReport}
-                  disabled={pdfModalLoading || !pdfModalEmail.trim()}
+                  disabled={!pdfModalEmail.trim()}
                   className="w-full flex items-center justify-center gap-2 bg-[#1a2e1a] hover:bg-[#2d4a2d] disabled:opacity-50 text-white font-bold py-3 rounded-xl text-sm transition-colors"
                 >
-                  {pdfModalLoading ? (
-                    <><Loader2 size={14} className="animate-spin" />{tr('pdfGenerating', lang)}</>
-                  ) : (
-                    <><Download size={14} />{tr('getPdfReport', lang)}</>
-                  )}
+                  <Download size={14} />{tr('getPdfReport', lang)}
                 </button>
+                <p className="text-[10px] text-gray-400 text-center mt-2">{tr('pdfModalCloseSafe', lang)}</p>
               </>
             ) : (
               <div className="text-center">
@@ -3636,7 +3658,7 @@ export default function TrademarkClearancePanel({
                 </div>
                 <h3 className="text-sm font-bold text-gray-900 mb-1">{tr('pdfSent', lang)}</h3>
                 <p className="text-xs text-gray-500 mb-4">{pdfModalEmail}</p>
-                {pdfModalUrl && (
+                {pdfModalUrl ? (
                   <a
                     href={pdfModalUrl}
                     target="_blank"
@@ -3645,12 +3667,12 @@ export default function TrademarkClearancePanel({
                   >
                     <Download size={13} />{tr('downloadPdfNow', lang)}
                   </a>
-                )}
-                {!pdfModalUrl && (
-                  <p className="text-xs text-gray-400 flex items-center justify-center gap-1.5">
+                ) : (
+                  <p className="text-xs text-gray-400 flex items-center justify-center gap-1.5 mb-3">
                     <Loader2 size={11} className="animate-spin" />{tr('pdfGenerating', lang)}
                   </p>
                 )}
+                <p className="text-[10px] text-gray-400">{tr('pdfModalCloseSafe', lang)}</p>
               </div>
             )}
           </div>
