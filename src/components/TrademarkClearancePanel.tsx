@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { trackEvent } from '../lib/analytics';
+import { supabase } from '../lib/supabase';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import {
@@ -227,6 +229,48 @@ const UI: Record<string, Record<string, string>> = {
     hi: 'पूर्ण रिपोर्ट में शामिल हैं: 13 DuPont कारक (विस्तृत तर्क के साथ), पूर्ण LFPPI विश्लेषण, सभी MARCia परिणाम, 8 भाषाओं में अनुवाद संघर्ष, 13 डोमेन, वेब खोज और हिंदी व अंग्रेजी में PDF।',
     pt: 'O Relatório Completo inclui: todos os 13 fatores DuPont com raciocínio detalhado, análise LFPPI completa, todos os resultados MARCia, conflitos de tradução em 8 idiomas, 13 domínios, pesquisa web e PDF profissional em português e inglês.',
   },
+  // Change 1+2+3: Filing CTA and alternative names
+  ctaFileThisName: { en: 'File this name — $299', es: 'Registrar este nombre — $299', fr: 'Déposer ce nom — 299 $', pt: 'Registrar este nome — US$ 299', de: 'Diese Marke anmelden — 299 $', it: 'Deposita questo nome — 299 $', zh: '注册此名称 — $299', ja: 'この名称を出願する — $299', hi: 'यह नाम दाखिल करें — $299' },
+  ctaStrongerNames: { en: 'Three stronger names you can file instead →', es: 'Tres nombres más sólidos que puede registrar →', fr: 'Trois noms plus solides que vous pouvez déposer →', pt: 'Três nomes mais sólidos que você pode registrar →', de: 'Drei stärkere Namen, die Sie stattdessen anmelden können →', it: 'Tre nomi più solidi che puoi depositare →', zh: '三个更稳妥、可改为注册的名称 →', ja: '代わりに出願できる、より強力な3つの名称 →', hi: 'इसके बजाय दाखिल करने योग्य तीन मज़बूत नाम →' },
+  // Change 4: Scope statement
+  scopeStatement: {
+    en: 'MTC files your mark with IMPI as submitted. The clearance report is automated and informational, not legal advice. IMPI alone determines registration. Government fees are non-refundable.',
+    es: 'MTC presenta su marca ante el IMPI tal como usted la somete. El informe es automatizado e informativo, no es asesoría legal. Solo el IMPI determina el registro. Las tarifas oficiales no son reembolsables.',
+    fr: "MTC dépose votre marque auprès de l'IMPI telle que vous la soumettez. Le rapport est automatisé et informatif, il ne constitue pas un avis juridique. Seul l'IMPI décide de l'enregistrement. Les taxes officielles ne sont pas remboursables.",
+    pt: 'A MTC deposita sua marca no IMPI tal como você a submete. O relatório é automatizado e informativo, não é assessoria jurídica. Somente o IMPI determina o registro. As taxas oficiais não são reembolsáveis.',
+    de: 'MTC meldet Ihre Marke beim IMPI so an, wie Sie sie einreichen. Der Bericht ist automatisiert und informativ, keine Rechtsberatung. Allein das IMPI entscheidet über die Eintragung. Amtliche Gebühren sind nicht erstattungsfähig.',
+    it: "MTC deposita il tuo marchio presso l'IMPI così come lo invii. Il rapporto è automatizzato e informativo, non è consulenza legale. Solo l'IMPI determina la registrazione. Le tasse ufficiali non sono rimborsabili.",
+    zh: 'MTC 按您提交的内容向 IMPI 申请您的商标。本报告由自动化分析生成，仅供参考，不构成法律意见。是否核准注册完全由 IMPI 决定。官方规费一经缴纳，恕不退还。',
+    ja: 'MTC はお客様が提出された内容のまま商標を IMPI に出願します。本レポートは自動生成された参考情報であり、法的助言ではありません。登録の可否は IMPI のみが決定します。公的手数料は返金されません。',
+    hi: 'MTC आपके चिह्न को आपके द्वारा प्रस्तुत रूप में IMPI के समक्ष दाखिल करता है। यह रिपोर्ट स्वचालित और सूचनात्मक है, कानूनी सलाह नहीं। पंजीकरण का निर्णय केवल IMPI करता है। सरकारी शुल्क वापस नहीं किया जाता।',
+  },
+  // Change 4c: Attorney review offer
+  attorneyReviewOffer: {
+    en: 'Want certainty before you file? Have a Mexican IP attorney review this mark for $9.99.',
+    es: '¿Quiere certeza antes de presentar? Un abogado mexicano en marcas revisa esta marca por $9.99.',
+    fr: 'Vous voulez une certitude avant de déposer ? Faites examiner cette marque par un avocat mexicain en PI pour 9,99 $.',
+    pt: 'Quer certeza antes de registrar? Um advogado mexicano de PI revisa esta marca por US$ 9,99.',
+    de: 'Sicherheit vor der Anmeldung? Lassen Sie diese Marke von einem mexikanischen IP-Anwalt für 9,99 $ prüfen.',
+    it: 'Vuoi certezza prima di depositare? Fai esaminare questo marchio da un avvocato messicano in PI per 9,99 $.',
+    zh: '申请前想更有把握？由墨西哥知识产权律师审核此商标，仅需 $9.99。',
+    ja: '出願前に確実性が欲しいですか？メキシコの知財弁護士がこの商標を $9.99 で確認します。',
+    hi: 'दाखिल करने से पहले निश्चितता चाहते हैं? एक मैक्सिकन IP वकील से इस चिह्न की समीक्षा कराएं — $9.99 में।',
+  },
+  // Change 0: Optional email capture card
+  emailCaptureHeading: { en: 'Get this report by email', es: 'Reciba este informe por correo', fr: 'Recevez ce rapport par e-mail', pt: 'Receba este relatório por e-mail', de: 'Diesen Bericht per E-Mail erhalten', it: 'Ricevi questo rapporto via e-mail', zh: '通过电子邮件获取本报告', ja: 'このレポートをメールで受け取る', hi: 'यह रिपोर्ट ईमेल पर प्राप्त करें' },
+  emailCaptureSub: {
+    en: "The full report is shown below and free to download — no email required. Add your email only if you'd like a copy sent to your inbox.",
+    es: 'El informe completo se muestra abajo y puede descargarlo gratis, sin necesidad de correo. Agregue su correo solo si desea recibir una copia.',
+    fr: 'Le rapport complet s\'affiche ci-dessous et est téléchargeable gratuitement, sans e-mail. Indiquez votre e-mail uniquement si vous souhaitez en recevoir une copie.',
+    pt: 'O relatório completo aparece abaixo e pode ser baixado gratuitamente, sem e-mail. Informe seu e-mail apenas se quiser receber uma cópia.',
+    de: 'Der vollständige Bericht wird unten angezeigt und ist kostenlos herunterladbar – ohne E-Mail. Geben Sie Ihre E-Mail nur an, wenn Sie eine Kopie möchten.',
+    it: 'Il rapporto completo è mostrato qui sotto ed è scaricabile gratuitamente, senza e-mail. Inserisci la tua e-mail solo se desideri riceverne una copia.',
+    zh: '完整报告已显示在下方，可免费下载，无需邮箱。如希望收到副本，再填写邮箱即可。',
+    ja: '完全なレポートは下に表示されており、メールアドレスなしで無料でダウンロードできます。コピーの送付を希望される場合のみご入力ください。',
+    hi: 'पूरी रिपोर्ट नीचे दिखाई गई है और बिना ईमेल के मुफ़्त डाउनलोड की जा सकती है। प्रति प्राप्त करना चाहें तभी अपना ईमेल जोड़ें।',
+  },
+  emailCaptureSend: { en: 'Send me a copy', es: 'Enviarme una copia', fr: 'M\'envoyer une copie', pt: 'Enviar uma cópia', de: 'Kopie senden', it: 'Inviami una copia', zh: '发送副本', ja: 'コピーを送る', hi: 'मुझे एक प्रति भेजें' },
+  emailCaptureSent: { en: 'Sent! Check your inbox.', es: '¡Enviado! Revisa tu bandeja.', fr: 'Envoyé ! Vérifiez votre boîte.', pt: 'Enviado! Verifique sua caixa.', de: 'Gesendet! Prüfen Sie Ihren Posteingang.', it: 'Inviato! Controlla la tua casella.', zh: '已发送！请查收邮件。', ja: '送信済み！受信トレイをご確認ください。', hi: 'भेज दिया! अपना इनबॉक्स देखें।' },
   // Email step
   emailStepTitle: { en: 'Enter your email to receive the report', es: 'Ingresa tu email para recibir el reporte', zh: '输入您的邮箱以接收报告', de: 'E-Mail-Adresse für den Berichtsempfang', fr: 'Entrez votre e-mail pour recevoir le rapport', hi: 'रिपोर्ट प्राप्त करने के लिए अपना ईमेल दर्ज करें', pt: 'Insira seu e-mail para receber o relatório' },
   emailLabel: { en: 'Email address', es: 'Correo electrónico', zh: '电子邮件地址', de: 'E-Mail-Adresse', fr: 'Adresse e-mail', hi: 'ईमेल पता', pt: 'Endereço de e-mail' },
@@ -860,8 +904,16 @@ export default function TrademarkClearancePanel({
   const [pdfFailed, setPdfFailed] = useState(false);
   const [wantsAttorneyReview, setWantsAttorneyReview] = useState(false);
 
-  // Detail section toggles (unlocked after payment)
-  const [paid, setPaid] = useState(false);
+  // The full report is always free. `paid` kept as a compat flag but always true.
+  // Gate legacy paid UI behind ENABLE_PAID_FULL_REPORT env flag (default off).
+  const PAID_REPORT_ENABLED = import.meta.env.VITE_ENABLE_PAID_FULL_REPORT === 'true';
+  const [paid, setPaid] = useState(!PAID_REPORT_ENABLED); // free by default
+  // Optional email capture (non-blocking)
+  const [captureEmail, setCaptureEmail] = useState('');
+  const [captureSent, setCaptureSent] = useState(false);
+  const [captureSending, setCaptureSending] = useState(false);
+
+  // Detail section toggles
   const [dupontExpanded, setDupontExpanded] = useState(false);
   const [lfppiExpanded, setLfppiExpanded] = useState(true);
   const [translationExpanded, setTranslationExpanded] = useState(true);
@@ -901,6 +953,7 @@ export default function TrademarkClearancePanel({
       setResult(data as ClearanceResult);
       setStatus('done');
       onResult?.(data as ClearanceResult);
+      trackEvent('report_viewed', { risk: (data as ClearanceResult).risk, riskColor: (data as ClearanceResult).riskColor }, lang);
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Check failed');
       setStatus('error');
@@ -1130,6 +1183,7 @@ export default function TrademarkClearancePanel({
         setClientSecret(d.clientSecret);
         setPurchaseStep('payment');
       }
+      trackEvent('payment_started', { markName: markName.trim() }, lang, d.reportOrderId?.slice(0, 8));
     } catch { setPiError('Payment setup failed. Please try again.'); }
     finally { setPiLoading(false); }
   };
@@ -1155,6 +1209,21 @@ export default function TrademarkClearancePanel({
     if (reportOrderId) {
       sessionStorage.setItem('tcpOrderId', reportOrderId);
     }
+    trackEvent('payment_succeeded', { markName: markName.trim() }, lang, reportOrderId?.slice(0, 8));
+  };
+
+  const handleEmailCapture = async () => {
+    if (!captureEmail.trim() || captureSent || captureSending) return;
+    const emailVal = captureEmail.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) return;
+    setCaptureSending(true);
+    try {
+      await supabase.from('report_email_captures').insert({ email: emailVal, language: lang ?? null, order_ref: reportOrderId ? reportOrderId.slice(0, 8) : null });
+      trackEvent('report_emailed', { email: emailVal }, lang, reportOrderId?.slice(0, 8));
+      // TODO: call send-clearance-report-email edge function once report email delivery is wired
+      setCaptureSent(true);
+    } catch {/* never block UI */}
+    finally { setCaptureSending(false); }
   };
 
   // ── Per-mark lazy AI analysis fetch (Improvement 1) ──────────────────────
@@ -1214,6 +1283,7 @@ export default function TrademarkClearancePanel({
               <button
                 type="button"
                 onClick={() => {
+                  trackEvent('report_cta_clicked', { source: 'cta_stronger_names', mark: markName }, lang);
                   setStratExpanded(true);
                   setTimeout(() => {
                     document.getElementById('first-alternative')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1221,7 +1291,7 @@ export default function TrademarkClearancePanel({
                 }}
                 className="text-[10px] font-semibold text-orange-600 hover:text-orange-800 underline underline-offset-2 transition-colors"
               >
-                {tr('seeAlternatives', lang)}
+                {tr('ctaStrongerNames', lang)}
               </button>
             )}
           </div>
@@ -1238,15 +1308,26 @@ export default function TrademarkClearancePanel({
           </button>
           <button
             type="button"
-            disabled={!paid}
-            title={paid ? (lang === 'es' ? 'Exportar reporte' : 'Export report') : (lang === 'es' ? 'Disponible en reporte completo' : 'Available in full report')}
-            className={`flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-lg border transition-colors ${paid ? 'border-[#1a2e1a] text-[#1a2e1a] hover:bg-[#1a2e1a]/10' : 'border-gray-200 text-gray-300 cursor-not-allowed'}`}
+            title={lang === 'es' ? 'Exportar reporte' : 'Export report'}
+            className="flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-lg border transition-colors border-[#1a2e1a] text-[#1a2e1a] hover:bg-[#1a2e1a]/10"
           >
             <Download size={11} />
             {lang === 'es' ? 'Exportar' : lang === 'zh' ? '导出' : lang === 'de' ? 'Export' : lang === 'fr' ? 'Exporter' : 'Export'}
-            {!paid && <Lock size={9} className="ml-0.5" />}
           </button>
         </div>
+      </div>
+
+      {/* ── Above-fold filing CTA (Change 1) — visible for ALL verdicts ─────── */}
+      <div className="border-t border-gray-100 bg-white px-4 py-3 print:hidden">
+        <a
+          href={`/apply?mark=${encodeURIComponent(markName)}`}
+          onClick={() => trackEvent('report_cta_clicked', { source: 'above_fold', mark: markName }, lang)}
+          className="w-full flex items-center justify-center gap-2 bg-[#1a2e1a] hover:bg-[#2d4a2d] text-white font-bold px-5 py-3 rounded-xl transition-colors shadow-md text-sm"
+        >
+          <FileText size={14} />
+          {tr('ctaFileThisName', lang)}
+          <ArrowRight size={14} />
+        </a>
       </div>
 
       {/* ── Part 7: Search summary panel ──────────────────────────────────── */}
@@ -1543,12 +1624,6 @@ export default function TrademarkClearancePanel({
                     <span className="text-[9px] font-bold w-6 text-right flex-shrink-0" style={{ color: d.value >= 70 ? '#10b981' : d.value >= 40 ? '#f59e0b' : '#ef4444' }}>{d.value}</span>
                   </div>
                 ))}
-                {!paid && (
-                  <p className="text-[9px] text-gray-400 flex items-center gap-1 mt-2">
-                    <Lock size={8} className="flex-shrink-0" />
-                    {lang === 'es' ? 'Análisis por eje en el Reporte Completo.' : 'Per-axis analysis in the Full Report.'}
-                  </p>
-                )}
               </div>
             </div>
           </div>
@@ -1582,25 +1657,13 @@ export default function TrademarkClearancePanel({
               </div>
             </div>
             <div className="flex flex-wrap gap-1.5 mb-1.5">
-              {famousConflicts.slice(0, paid ? famousConflicts.length : 3).map((c, i) => (
+              {famousConflicts.map((c, i) => (
                 <div key={i} className={`flex items-center gap-1 text-[9px] font-semibold px-2 py-1 rounded-lg border ${c.similarity >= 90 ? 'bg-red-100 text-red-800 border-red-200' : c.similarity >= 70 ? 'bg-orange-100 text-orange-800 border-orange-200' : 'bg-amber-100 text-amber-800 border-amber-200'}`}>
                   <span>{c.famousMark}</span>
                   <span className="opacity-60 text-[8px]">{c.similarity}%</span>
                 </div>
               ))}
-              {!paid && famousConflicts.length > 3 && (
-                <div className="flex items-center gap-1 text-[9px] text-gray-400 px-2 py-1 rounded-lg border border-gray-200 bg-gray-50">
-                  <Lock size={8} />
-                  <span>+{famousConflicts.length - 3} {lang === 'es' ? 'más' : 'more'}</span>
-                </div>
-              )}
             </div>
-            {!paid && (
-              <p className="text-[9px] text-red-600 flex items-center gap-1">
-                <Lock size={8} className="flex-shrink-0" />
-                {lang === 'es' ? 'Lista completa de marcas famosas conflictivas en el Reporte Completo.' : 'Full famous marks conflict list available in the Full Report.'}
-              </p>
-            )}
           </div>
         );
       })()}
@@ -1633,7 +1696,6 @@ export default function TrademarkClearancePanel({
                 <span className="text-[10px] text-gray-400">·</span>
                 <span className="text-[10px] font-bold text-red-600">{dupontAgainst} {tr('against', lang)}</span>
               </div>
-              {!paid && <FullReportNotice lang={lang} />}
             </div>
           )}
           {/* LFPPI */}
@@ -1643,20 +1705,17 @@ export default function TrademarkClearancePanel({
               ? <span className="text-[10px] font-bold text-emerald-600">{tr('noIssues', lang)}</span>
               : <span className="text-[10px] font-bold text-red-600">{regFlags.length} {regFlags.length === 1 ? tr('issueDetected', lang) : tr('issuesDetected', lang)}</span>
             }
-            {!paid && regFlags.length > 0 && <FullReportNotice lang={lang} />}
           </div>
           {/* MARCia */}
           <div className="rounded-lg border border-gray-100 bg-white px-3 py-2">
             <p className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide mb-1">{tr('marciaHits', lang)}</p>
             <span className={`text-[10px] font-bold ${totalMarcia > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>{totalMarcia} {tr('matches', lang)}</span>
-            {!paid && totalMarcia > 1 && <FullReportNotice lang={lang} />}
           </div>
         </div>
       </div>
 
-      {/* ── Teaser previews (free, always visible) ─────────────────────────── */}
-      {!paid && (
-        <div className="border-t border-gray-100 bg-white/40 px-4 py-3 space-y-3">
+      {/* ── MARCia quick results (always visible) ──────────────────────────── */}
+      <div className="border-t border-gray-100 bg-white/40 px-4 py-3 space-y-3">
 
           {/* Part 5: Results tabs + counter + filters toggle */}
           <div className="flex items-center justify-between gap-2">
@@ -2052,15 +2111,12 @@ export default function TrademarkClearancePanel({
                   {d.status === 'unknown' && <span className="text-[9px] font-semibold text-gray-500 bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded-full flex items-center gap-0.5"><Minus size={8} />{tr('unknown', lang)}</span>}
                 </div>
               ))}
-              <FullReportNotice lang={lang} />
             </div>
           </div>
         </div>
-      )}
 
-      {/* ── POST-PAYMENT: Full detail sections ─────────────────────────────── */}
-      {paid && (
-        <div className="border-t border-gray-100 bg-white/50">
+      {/* ── Full detail sections (always visible — report is free) ──────────── */}
+      <div className="border-t border-gray-100 bg-white/50">
 
           {/* 1 — MARCia full (enhanced cards with similarity gauge) */}
           <div className="border-b border-gray-100">
@@ -2806,6 +2862,7 @@ export default function TrademarkClearancePanel({
                                 </div>
                                 <a
                                   href={`/apply?mark=${encodeURIComponent(alt.name)}&ref=alternative`}
+                                  onClick={() => trackEvent('report_cta_clicked', { source: 'alternative_card', mark: alt.name }, lang)}
                                   className="flex items-center justify-center gap-1.5 w-full bg-[#1a2e1a] hover:bg-[#2d4a2d] text-white text-xs font-bold py-2 rounded-lg transition-colors"
                                 >
                                   <ArrowRight size={11} />
@@ -3047,10 +3104,49 @@ export default function TrademarkClearancePanel({
             </div>
           )}
         </div>
+
+      {/* ── Scope statement / disclaimer ───────────────────────────────────── */}
+      <div className="border-t border-gray-100 px-4 py-3 bg-gray-50/60 print:block">
+        <p className="text-[10px] text-gray-400 leading-relaxed">
+          {tr('scopeStatement', lang)}
+        </p>
+      </div>
+
+      {/* ── Optional email capture (non-blocking) ──────────────────────────── */}
+      {!captureSent ? (
+        <div className="border-t border-gray-100 px-4 py-3 bg-white print:hidden">
+          <p className="text-xs font-semibold text-gray-700 mb-0.5">{tr('emailCaptureHeading', lang)}</p>
+          <p className="text-[10px] text-gray-400 mb-2 leading-relaxed">{tr('emailCaptureSub', lang)}</p>
+          <div className="flex gap-2">
+            <input
+              type="email"
+              value={captureEmail}
+              onChange={e => setCaptureEmail(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleEmailCapture()}
+              placeholder="you@example.com"
+              className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#c9a84c] focus:border-transparent"
+            />
+            <button
+              type="button"
+              onClick={handleEmailCapture}
+              disabled={captureSending || !captureEmail.trim()}
+              className="flex-shrink-0 bg-[#1a2e1a] hover:bg-[#2d4a2d] disabled:opacity-50 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors"
+            >
+              {captureSending ? <Loader2 size={12} className="animate-spin" /> : tr('emailCaptureSend', lang)}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="border-t border-gray-100 px-4 py-3 bg-emerald-50 print:hidden">
+          <p className="text-xs text-emerald-700 flex items-center gap-1.5">
+            <CheckCircle2 size={13} className="flex-shrink-0" />
+            {tr('emailCaptureSent', lang)}
+          </p>
+        </div>
       )}
 
-      {/* ── Purchase / Post-payment flow ───────────────────────────────────── */}
-      <div className="border-t border-gray-100 print:hidden">
+      {/* ── Purchase / Post-payment flow (only shown when PAID_REPORT_ENABLED=true) ── */}
+      {PAID_REPORT_ENABLED && <div className="border-t border-gray-100 print:hidden">
 
         {/* POST-PAYMENT state */}
         {paid && purchaseStep === 'done' && (
@@ -3279,7 +3375,7 @@ export default function TrademarkClearancePanel({
             )}
           </div>
         )}
-      </div>
+      </div>}
 
       {/* ── Step 5 — File Your Trademark (shown in TrademarkCheckPage only) ── */}
       {showFilingCta && (
@@ -3351,7 +3447,7 @@ export default function TrademarkClearancePanel({
       </div>
 
       {/* ── Risk acknowledgment (when caller provides handler and risk is medium/high) ── */}
-      {onSelectDespiteRisk && (result.risk === 'medium' || result.risk === 'high') && !paid && (
+      {onSelectDespiteRisk && (result.risk === 'medium' || result.risk === 'high') && (
         <div className={`border-t-2 ${riskAcknowledged ? 'border-amber-300 bg-amber-50' : 'border-amber-400 bg-amber-50'} px-4 py-4`}>
           <div className="flex items-center gap-2 mb-3">
             <AlertTriangle size={15} className="text-amber-600 flex-shrink-0" />
