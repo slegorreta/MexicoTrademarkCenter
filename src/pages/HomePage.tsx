@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, ArrowDown, Shield, Clock, Globe as Globe2, DollarSign, FileText, Award, ChevronDown, Sparkles, Search, HelpCircle, X, Star, Scale, BarChart2 } from 'lucide-react';
+import { ArrowRight, Shield, Globe as Globe2, FileText, Award, ChevronDown, Sparkles, Search, HelpCircle, X, Star, Scale, BarChart2 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { useState, useEffect, type ReactNode } from 'react';
 import AboutSection from '../components/AboutSection';
@@ -26,9 +26,7 @@ export default function HomePage() {
   const [showImpiModal, setShowImpiModal] = useState(false);
 
   const trustBadges = [
-    { icon: Clock, key: 'trust.filing', onTooltip: () => setShowImpiModal(true) },
     { icon: Globe2, key: 'trust.impi', onTooltip: () => setShowConstanciaModal(true) },
-    { icon: DollarSign, key: 'trust.bilingual', onTooltip: () => setShowSavingsModal(true) },
     { icon: Scale, key: 'trust.lawyers.label', onTooltip: () => setShowLawyersModal(true) },
   ];
 
@@ -133,9 +131,7 @@ export default function HomePage() {
           <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-500 rounded-full blur-3xl" />
         </div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24">
-          <div className="lg:grid lg:grid-cols-2 lg:gap-16 lg:items-center">
-
-            {/* Left column — copy + CTAs */}
+          <div className="max-w-2xl">
             <div>
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight mb-5">
                 {t('hero_headline')}
@@ -145,10 +141,8 @@ export default function HomePage() {
               </p>
 
               {/* Primary CTAs */}
-              <div className="flex flex-col gap-1 mb-5 max-w-md">
-                <p className="text-xs font-semibold text-gold-400 uppercase tracking-widest mb-1">{t('hero.step1')}</p>
-
-                {/* CTA 1 — Check availability (PRIMARY — large filled) */}
+              <div className="flex flex-col gap-2 mb-5 max-w-md">
+                {/* CTA 1 — Check availability (PRIMARY — large filled orange) */}
                 <Link
                   to="/trademark-check"
                   className="group flex items-center gap-3 bg-gold-500 hover:bg-gold-400 text-white font-bold px-6 py-4 rounded-2xl transition-all duration-200 shadow-xl hover:shadow-gold-500/30 hover:-translate-y-0.5"
@@ -160,34 +154,27 @@ export default function HomePage() {
                   <ArrowRight size={18} className="ml-auto group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
                 </Link>
                 {/* Microcopy */}
-                <p className="text-xs text-gold-300/80 text-center pt-1 pb-0.5">{t('cta_check_microcopy')}</p>
+                <p className="text-xs text-gold-300/80 text-center">{t('cta_check_microcopy')}</p>
 
-                {/* Idea generator pill — tertiary, sits between Step 1 and the arrow */}
+                {/* Idea generator pill */}
                 <Link
                   to="/trademark-ideas"
-                  className="inline-flex items-center gap-2 self-center bg-white/8 border border-gold-400/25 hover:border-gold-400/50 rounded-full px-4 py-1.5 transition-colors group/pill mt-0.5"
+                  className="inline-flex items-center gap-2 self-center bg-white/8 border border-gold-400/25 hover:border-gold-400/50 rounded-full px-4 py-1.5 transition-colors group/pill"
                 >
                   <Sparkles size={12} className="text-gold-400 flex-shrink-0" />
                   <span className="text-xs text-gold-200 group-hover/pill:text-gold-100 transition-colors">{t('idea_generator_pill')}</span>
                 </Link>
 
-                {/* Sequence arrow */}
-                <div className="flex justify-center py-1">
-                  <ArrowDown size={16} className="text-white/30" />
-                </div>
-
-                <p className="text-xs font-semibold text-white/50 uppercase tracking-widest mb-1">{t('hero.step2')}</p>
-
-                {/* CTA 2 — File (SECONDARY — ghost/outline) */}
+                {/* CTA 2 — File (SECONDARY — solid dark navy) */}
                 <Link
                   to="/apply"
-                  className="group flex items-center gap-3 border border-white/25 hover:border-white/50 bg-white/5 hover:bg-white/10 text-white/80 hover:text-white font-semibold px-6 py-3.5 rounded-2xl transition-all duration-200"
+                  className="group flex items-center gap-3 bg-navy-950 hover:bg-navy-900 text-white font-semibold px-6 py-3.5 rounded-2xl transition-all duration-200 shadow-lg hover:-translate-y-0.5 mt-1"
                 >
-                  <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0 group-hover:bg-white/20 transition-colors">
-                    <FileText size={16} className="text-white/70 group-hover:text-white transition-colors" />
+                  <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0 group-hover:bg-white/15 transition-colors">
+                    <FileText size={16} className="text-white" />
                   </div>
                   <span className="text-sm font-semibold leading-tight">{t('cta_start_filing')}</span>
-                  <ArrowRight size={16} className="ml-auto opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
+                  <ArrowRight size={16} className="ml-auto group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
                 </Link>
               </div>
 
@@ -209,85 +196,6 @@ export default function HomePage() {
                 ))}
               </div>
             </div>
-
-            {/* Right column — decorative report preview (desktop only) */}
-            <div className="hidden lg:flex items-center justify-center" aria-hidden="true">
-              <div className="relative w-full max-w-sm">
-                {/* Glow behind card */}
-                <div className="absolute inset-0 bg-gold-500/10 rounded-3xl blur-2xl scale-110" />
-                <div className="relative bg-white/8 border border-white/15 rounded-2xl p-5 backdrop-blur-sm shadow-2xl">
-                  {/* Card header */}
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <p className="text-[10px] font-semibold text-gold-400 uppercase tracking-widest mb-0.5">Clearance Report</p>
-                      <p className="text-white font-bold text-sm">LUXÉ BRAND™</p>
-                    </div>
-                    {/* Verdict pill */}
-                    <span className="inline-flex items-center gap-1.5 bg-amber-400/20 border border-amber-400/40 text-amber-300 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
-                      Moderate
-                    </span>
-                  </div>
-
-                  {/* Radar chart — static SVG */}
-                  <div className="flex justify-center mb-4">
-                    <svg width="110" height="100" viewBox="0 0 110 100" className="opacity-80">
-                      {/* Pentagon grid lines */}
-                      {[0.33, 0.66, 1].map((scale, gi) => (
-                        <polygon
-                          key={gi}
-                          points={[0,1,2,3,4].map(i => {
-                            const a = (i * 2 * Math.PI / 5) - Math.PI / 2;
-                            return `${55 + 42 * scale * Math.cos(a)},${50 + 42 * scale * Math.sin(a)}`;
-                          }).join(' ')}
-                          fill="none"
-                          stroke="rgba(255,255,255,0.12)"
-                          strokeWidth="1"
-                        />
-                      ))}
-                      {/* Data shape */}
-                      <polygon
-                        points={[0.7, 0.45, 0.6, 0.8, 0.5].map((v, i) => {
-                          const a = (i * 2 * Math.PI / 5) - Math.PI / 2;
-                          return `${55 + 42 * v * Math.cos(a)},${50 + 42 * v * Math.sin(a)}`;
-                        }).join(' ')}
-                        fill="rgba(251,191,36,0.25)"
-                        stroke="rgba(251,191,36,0.7)"
-                        strokeWidth="1.5"
-                      />
-                      {/* Axis dots */}
-                      {[0.7, 0.45, 0.6, 0.8, 0.5].map((v, i) => {
-                        const a = (i * 2 * Math.PI / 5) - Math.PI / 2;
-                        return <circle key={i} cx={55 + 42 * v * Math.cos(a)} cy={50 + 42 * v * Math.sin(a)} r="3" fill="rgb(251,191,36)" />;
-                      })}
-                    </svg>
-                  </div>
-
-                  {/* Blurred placeholder rows */}
-                  <div className="space-y-2.5">
-                    {[
-                      { label: 'IMPI Registry', pct: '70%', color: 'bg-amber-400' },
-                      { label: 'Web Presence', pct: '45%', color: 'bg-emerald-400' },
-                      { label: 'Domain Conflicts', pct: '20%', color: 'bg-emerald-400' },
-                    ].map((row) => (
-                      <div key={row.label} className="flex items-center gap-2.5">
-                        <span className="text-[10px] text-white/50 w-24 flex-shrink-0">{row.label}</span>
-                        <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                          <div className={`h-full ${row.color} rounded-full opacity-70`} style={{ width: row.pct }} />
-                        </div>
-                        <span className="text-[10px] text-white/40 w-7 text-right">{row.pct}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Footer note */}
-                  <p className="text-[9px] text-white/30 text-center mt-4 leading-relaxed">
-                    Sample preview · Real reports generated in ~60 s
-                  </p>
-                </div>
-              </div>
-            </div>
-
           </div>
         </div>
       </section>
