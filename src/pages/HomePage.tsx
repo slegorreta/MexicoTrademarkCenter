@@ -141,8 +141,8 @@ export default function HomePage() {
               </p>
 
               {/* Primary CTAs */}
-              <div className="flex flex-col gap-2 mb-5 max-w-md">
-                {/* CTA 1 — Check availability (PRIMARY — large filled orange) */}
+              <div className="flex flex-col gap-3 mb-5 max-w-md">
+                {/* CTA 1 — Check availability (orange) */}
                 <Link
                   to="/trademark-check"
                   className="group flex items-center gap-3 bg-gold-500 hover:bg-gold-400 text-white font-bold px-6 py-4 rounded-2xl transition-all duration-200 shadow-xl hover:shadow-gold-500/30 hover:-translate-y-0.5"
@@ -150,31 +150,40 @@ export default function HomePage() {
                   <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 group-hover:bg-white/30 transition-colors">
                     <Search size={18} className="text-white" />
                   </div>
-                  <span className="text-base font-bold leading-tight">{t('cta_check_free')}</span>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-semibold text-white/70 uppercase tracking-widest leading-none mb-0.5">Step 1</span>
+                    <span className="text-base font-bold leading-tight">See if your trademark is available — free</span>
+                  </div>
                   <ArrowRight size={18} className="ml-auto group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
                 </Link>
                 {/* Microcopy */}
-                <p className="text-xs text-gold-300/80 text-center">{t('cta_check_microcopy')}</p>
+                <p className="text-xs text-gold-300/80 text-center -mt-1">{t('cta_check_microcopy')}</p>
 
-                {/* Idea generator pill */}
-                <Link
-                  to="/trademark-ideas"
-                  className="inline-flex items-center gap-2 self-center bg-white/8 border border-gold-400/25 hover:border-gold-400/50 rounded-full px-4 py-1.5 transition-colors group/pill"
-                >
-                  <Sparkles size={12} className="text-gold-400 flex-shrink-0" />
-                  <span className="text-xs text-gold-200 group-hover/pill:text-gold-100 transition-colors">{t('idea_generator_pill')}</span>
-                </Link>
-
-                {/* CTA 2 — File (SECONDARY — solid dark navy) */}
+                {/* CTA 2 — File (brighter orange tone) */}
                 <Link
                   to="/apply"
-                  className="group flex items-center gap-3 bg-navy-950 hover:bg-navy-900 text-white font-semibold px-6 py-3.5 rounded-2xl transition-all duration-200 shadow-lg hover:-translate-y-0.5 mt-1"
+                  className="group flex items-center gap-3 bg-amber-500 hover:bg-amber-400 text-white font-bold px-6 py-4 rounded-2xl transition-all duration-200 shadow-lg hover:shadow-amber-500/30 hover:-translate-y-0.5"
                 >
-                  <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0 group-hover:bg-white/15 transition-colors">
-                    <FileText size={16} className="text-white" />
+                  <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 group-hover:bg-white/30 transition-colors">
+                    <FileText size={18} className="text-white" />
                   </div>
-                  <span className="text-sm font-semibold leading-tight">{t('cta_start_filing')}</span>
-                  <ArrowRight size={16} className="ml-auto group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-semibold text-white/70 uppercase tracking-widest leading-none mb-0.5">Step 2</span>
+                    <span className="text-base font-bold leading-tight">Start filing your trademark — US$299 (all included)</span>
+                  </div>
+                  <ArrowRight size={18} className="ml-auto group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
+                </Link>
+
+                {/* CTA 3 — Idea generator (bright green) */}
+                <Link
+                  to="/trademark-ideas"
+                  className="group flex items-center gap-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 py-4 rounded-2xl transition-all duration-200 shadow-lg hover:shadow-emerald-500/30 hover:-translate-y-0.5"
+                >
+                  <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 group-hover:bg-white/30 transition-colors">
+                    <Sparkles size={18} className="text-white" />
+                  </div>
+                  <span className="text-base font-bold leading-tight">Don't have a trademark yet? We can give you ideas — free</span>
+                  <ArrowRight size={18} className="ml-auto group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
                 </Link>
               </div>
 
