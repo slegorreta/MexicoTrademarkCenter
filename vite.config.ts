@@ -73,10 +73,11 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          stripe: ['@stripe/react-stripe-js', '@stripe/stripe-js'],
-          supabase: ['@supabase/supabase-js'],
+        manualChunks(id) {
+          if (id.includes('TrademarkClearancePanel')) return 'clearance-panel';
+          if (id.includes('@stripe/react-stripe-js') || id.includes('@stripe/stripe-js')) return 'stripe';
+          if (id.includes('@supabase/supabase-js')) return 'supabase';
+          if (id.includes('react-dom') || id.includes('react-router-dom') || (id.includes('node_modules/react/') && !id.includes('react-dom') && !id.includes('react-router'))) return 'vendor';
         },
       },
     },
