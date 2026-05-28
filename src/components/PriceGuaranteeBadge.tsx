@@ -12,20 +12,22 @@ export default function PriceGuaranteeBadge({ variant = 'float', hidden = false 
   if (hidden) return null;
 
   const label = language === 'zh'
-    ? '市场最低价，有保障。'
+    ? '墨西哥最低价'
     : language === 'es'
-    ? 'El precio más bajo del mercado, garantizado.'
+    ? 'El precio más bajo en México'
     : language === 'de'
-    ? 'Günstigster Preis am Markt, garantiert.'
+    ? 'Niedrigster Preis in Mexiko'
     : language === 'fr'
-    ? 'Le prix le plus bas du marché, garanti.'
+    ? 'Prix le plus bas au Mexique'
     : language === 'hi'
-    ? 'बाज़ार में सबसे कम दाम, गारंटी के साथ।'
+    ? 'मेक्सिको में सबसे कम कीमत'
     : language === 'pt'
-    ? 'O menor preço do mercado, garantido.'
+    ? 'Menor preço no México'
     : language === 'ja'
-    ? '業界最低価格、保証付き。'
-    : 'Lowest price in the market, guaranteed.';
+    ? 'メキシコで最低価格'
+    : language === 'it'
+    ? 'Prezzo più basso in Messico'
+    : 'Lowest price in Mexico';
 
   if (variant === 'inline') {
     return (
@@ -64,9 +66,6 @@ export default function PriceGuaranteeBadge({ variant = 'float', hidden = false 
         <div>
           <p className="text-[11px] font-extrabold text-navy-900 leading-tight tracking-wide uppercase">
             {label}
-          </p>
-          <p className="text-[10px] text-gray-500 mt-0.5 leading-tight">
-            {language === 'zh' ? '法律费用价格匹配' : language === 'es' ? 'Igualación de precio en honorarios' : language === 'de' ? 'Preisanpassung auf Servicegebühren' : language === 'fr' ? 'Alignement de prix sur les honoraires' : language === 'hi' ? 'कानूनी शुल्क पर मूल्य समानता' : language === 'pt' ? 'Igualdade de preço em honorários' : language === 'ja' ? 'サービス料の価格保証' : 'Price match on legal fees'}
           </p>
         </div>
       </div>

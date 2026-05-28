@@ -132,80 +132,162 @@ export default function HomePage() {
           <div className="absolute top-20 left-10 w-72 h-72 bg-gold-500 rounded-full blur-3xl" />
           <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-500 rounded-full blur-3xl" />
         </div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28">
-          <div className="max-w-3xl">
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight mb-6">
-              {t('hero.headline')}
-            </h1>
-            <p className="text-lg text-gray-300 leading-relaxed mb-8 max-w-2xl">
-              {t('hero.subheading')}
-            </p>
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24">
+          <div className="lg:grid lg:grid-cols-2 lg:gap-16 lg:items-center">
 
-            {/* Primary CTAs */}
-            <div className="flex flex-col gap-1 mb-4 max-w-md">
-              <p className="text-sm font-bold text-white mb-1">{t('hero.step1')}</p>
+            {/* Left column — copy + CTAs */}
+            <div>
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight mb-5">
+                {t('hero_headline')}
+              </h1>
+              <p className="text-base text-gray-300 leading-relaxed mb-8 max-w-xl">
+                {t('hero_subhead')}
+              </p>
 
-              {/* CTA 1 — Check availability */}
-              <Link
-                to="/trademark-check"
-                className="group flex items-center gap-3 bg-white text-navy-900 font-bold px-6 py-4 rounded-2xl transition-all duration-200 shadow-xl hover:shadow-2xl hover:-translate-y-0.5"
-              >
-                <div className="w-9 h-9 rounded-xl bg-gold-500 flex items-center justify-center flex-shrink-0 group-hover:bg-gold-400 transition-colors">
-                  <Search size={18} className="text-white" />
+              {/* Primary CTAs */}
+              <div className="flex flex-col gap-1 mb-5 max-w-md">
+                <p className="text-xs font-semibold text-gold-400 uppercase tracking-widest mb-1">{t('hero.step1')}</p>
+
+                {/* CTA 1 — Check availability (PRIMARY — large filled) */}
+                <Link
+                  to="/trademark-check"
+                  className="group flex items-center gap-3 bg-gold-500 hover:bg-gold-400 text-white font-bold px-6 py-4 rounded-2xl transition-all duration-200 shadow-xl hover:shadow-gold-500/30 hover:-translate-y-0.5"
+                >
+                  <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 group-hover:bg-white/30 transition-colors">
+                    <Search size={18} className="text-white" />
+                  </div>
+                  <span className="text-base font-bold leading-tight">{t('cta_check_free')}</span>
+                  <ArrowRight size={18} className="ml-auto group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
+                </Link>
+                {/* Microcopy */}
+                <p className="text-xs text-gold-300/80 text-center pt-1 pb-0.5">{t('cta_check_microcopy')}</p>
+
+                {/* Idea generator pill — tertiary, sits between Step 1 and the arrow */}
+                <Link
+                  to="/trademark-ideas"
+                  className="inline-flex items-center gap-2 self-center bg-white/8 border border-gold-400/25 hover:border-gold-400/50 rounded-full px-4 py-1.5 transition-colors group/pill mt-0.5"
+                >
+                  <Sparkles size={12} className="text-gold-400 flex-shrink-0" />
+                  <span className="text-xs text-gold-200 group-hover/pill:text-gold-100 transition-colors">{t('idea_generator_pill')}</span>
+                </Link>
+
+                {/* Sequence arrow */}
+                <div className="flex justify-center py-1">
+                  <ArrowDown size={16} className="text-white/30" />
                 </div>
-                <span className="text-base font-bold text-navy-900 leading-tight">{t('hero.clearance.cta')}</span>
-                <ArrowRight size={18} className="ml-auto text-gold-500 group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
-              </Link>
 
-              {/* Sequence arrow */}
-              <div className="flex justify-center py-0.5">
-                <ArrowDown size={18} className="text-gold-400/60" />
+                <p className="text-xs font-semibold text-white/50 uppercase tracking-widest mb-1">{t('hero.step2')}</p>
+
+                {/* CTA 2 — File (SECONDARY — ghost/outline) */}
+                <Link
+                  to="/apply"
+                  className="group flex items-center gap-3 border border-white/25 hover:border-white/50 bg-white/5 hover:bg-white/10 text-white/80 hover:text-white font-semibold px-6 py-3.5 rounded-2xl transition-all duration-200"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0 group-hover:bg-white/20 transition-colors">
+                    <FileText size={16} className="text-white/70 group-hover:text-white transition-colors" />
+                  </div>
+                  <span className="text-sm font-semibold leading-tight">{t('cta_start_filing')}</span>
+                  <ArrowRight size={16} className="ml-auto opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
+                </Link>
               </div>
 
-              <p className="text-sm font-bold text-white mb-1">{t('hero.step2')}</p>
+              {/* Trust row */}
+              <div className="flex flex-wrap gap-x-5 gap-y-2.5 mt-6">
+                {trustBadges.map((badge, i) => (
+                  <div key={i} className="flex items-center gap-1.5 text-gray-400">
+                    <badge.icon size={14} className="text-gold-400 flex-shrink-0" />
+                    <span className="text-xs">{t(badge.key)}</span>
+                    {badge.onTooltip && (
+                      <button
+                        onClick={badge.onTooltip}
+                        className="text-gold-400/60 hover:text-gold-300 transition-colors flex-shrink-0"
+                      >
+                        <HelpCircle size={12} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
 
-              {/* CTA 2 — Register now */}
-              <Link
-                to="/apply"
-                className="group flex items-center gap-3 bg-gold-500 hover:bg-gold-400 text-white font-bold px-6 py-4 rounded-2xl transition-all duration-200 shadow-lg hover:shadow-gold-500/25 hover:-translate-y-0.5"
-              >
-                <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 group-hover:bg-white/30 transition-colors">
-                  <FileText size={18} className="text-white" />
+            {/* Right column — decorative report preview (desktop only) */}
+            <div className="hidden lg:flex items-center justify-center" aria-hidden="true">
+              <div className="relative w-full max-w-sm">
+                {/* Glow behind card */}
+                <div className="absolute inset-0 bg-gold-500/10 rounded-3xl blur-2xl scale-110" />
+                <div className="relative bg-white/8 border border-white/15 rounded-2xl p-5 backdrop-blur-sm shadow-2xl">
+                  {/* Card header */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <p className="text-[10px] font-semibold text-gold-400 uppercase tracking-widest mb-0.5">Clearance Report</p>
+                      <p className="text-white font-bold text-sm">LUXÉ BRAND™</p>
+                    </div>
+                    {/* Verdict pill */}
+                    <span className="inline-flex items-center gap-1.5 bg-amber-400/20 border border-amber-400/40 text-amber-300 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
+                      Moderate
+                    </span>
+                  </div>
+
+                  {/* Radar chart — static SVG */}
+                  <div className="flex justify-center mb-4">
+                    <svg width="110" height="100" viewBox="0 0 110 100" className="opacity-80">
+                      {/* Pentagon grid lines */}
+                      {[0.33, 0.66, 1].map((scale, gi) => (
+                        <polygon
+                          key={gi}
+                          points={[0,1,2,3,4].map(i => {
+                            const a = (i * 2 * Math.PI / 5) - Math.PI / 2;
+                            return `${55 + 42 * scale * Math.cos(a)},${50 + 42 * scale * Math.sin(a)}`;
+                          }).join(' ')}
+                          fill="none"
+                          stroke="rgba(255,255,255,0.12)"
+                          strokeWidth="1"
+                        />
+                      ))}
+                      {/* Data shape */}
+                      <polygon
+                        points={[0.7, 0.45, 0.6, 0.8, 0.5].map((v, i) => {
+                          const a = (i * 2 * Math.PI / 5) - Math.PI / 2;
+                          return `${55 + 42 * v * Math.cos(a)},${50 + 42 * v * Math.sin(a)}`;
+                        }).join(' ')}
+                        fill="rgba(251,191,36,0.25)"
+                        stroke="rgba(251,191,36,0.7)"
+                        strokeWidth="1.5"
+                      />
+                      {/* Axis dots */}
+                      {[0.7, 0.45, 0.6, 0.8, 0.5].map((v, i) => {
+                        const a = (i * 2 * Math.PI / 5) - Math.PI / 2;
+                        return <circle key={i} cx={55 + 42 * v * Math.cos(a)} cy={50 + 42 * v * Math.sin(a)} r="3" fill="rgb(251,191,36)" />;
+                      })}
+                    </svg>
+                  </div>
+
+                  {/* Blurred placeholder rows */}
+                  <div className="space-y-2.5">
+                    {[
+                      { label: 'IMPI Registry', pct: '70%', color: 'bg-amber-400' },
+                      { label: 'Web Presence', pct: '45%', color: 'bg-emerald-400' },
+                      { label: 'Domain Conflicts', pct: '20%', color: 'bg-emerald-400' },
+                    ].map((row) => (
+                      <div key={row.label} className="flex items-center gap-2.5">
+                        <span className="text-[10px] text-white/50 w-24 flex-shrink-0">{row.label}</span>
+                        <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                          <div className={`h-full ${row.color} rounded-full opacity-70`} style={{ width: row.pct }} />
+                        </div>
+                        <span className="text-[10px] text-white/40 w-7 text-right">{row.pct}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Footer note */}
+                  <p className="text-[9px] text-white/30 text-center mt-4 leading-relaxed">
+                    Sample preview · Real reports generated in ~60 s
+                  </p>
                 </div>
-                <span className="text-base font-bold leading-tight">{t('hero.cta.start')}</span>
-                <ArrowRight size={18} className="ml-auto group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
-              </Link>
+              </div>
             </div>
 
-            {/* AI Idea Generator — secondary nudge */}
-            <div className="inline-flex items-center gap-2.5 bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5">
-              <Sparkles size={14} className="text-gold-400 flex-shrink-0" />
-              <span className="text-gray-400 text-xs">{t('hero.ai.question')}</span>
-              <Link
-                to="/trademark-ideas"
-                className="flex-shrink-0 text-gold-300 hover:text-gold-200 text-xs font-semibold underline underline-offset-2 transition-colors"
-              >
-                {t('hero.ai.cta')}
-              </Link>
-            </div>
-
-            {/* Trust row */}
-            <div className="flex flex-wrap gap-4 mt-8">
-              {trustBadges.map((badge, i) => (
-                <div key={i} className="flex items-center gap-2 text-gray-300">
-                  <badge.icon size={16} className="text-gold-400 flex-shrink-0" />
-                  <span className="text-sm">{t(badge.key)}</span>
-                  {badge.onTooltip && (
-                    <button
-                      onClick={badge.onTooltip}
-                      className="text-gold-400/70 hover:text-gold-300 transition-colors flex-shrink-0"
-                    >
-                      <HelpCircle size={13} />
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       </section>

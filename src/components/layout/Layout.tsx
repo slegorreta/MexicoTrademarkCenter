@@ -66,7 +66,7 @@ const BADGE_HIDDEN_PATHS = ['/trademark-check', '/apply', '/figurative-search'];
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { language } = useLanguage();
   const location = useLocation();
-  const showWeChat = language === 'zh' || language === 'en';
+  const showWeChat = language === 'zh';
   const hideBadge = BADGE_HIDDEN_PATHS.some(p => location.pathname.startsWith(p));
 
   return (
