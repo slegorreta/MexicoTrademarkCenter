@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { CheckCircle2, ChevronRight, Upload, X, Plus, Trash2, Lock, CreditCard, AlertCircle, AlertTriangle, Sparkles, Tag, Loader2, Pencil, Eye, EyeOff, UserPlus, HelpCircle, Info, Save, Shield, Search, LogIn, Mail, ArrowLeft } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
@@ -9,7 +9,8 @@ import { supabase } from '../lib/supabase';
 import { calculatePrice, getAllClasses, type ClassSuggestion } from '../lib/classifier';
 import { getSortedCountries, getSortedDialCodes, type SupportedLang } from '../lib/countries';
 import AIDescriptionAssistant, { type RelatedClass } from '../components/AIDescriptionAssistant';
-import TrademarkClearancePanel, { type ClearanceResult } from '../components/TrademarkClearancePanel';
+import { type ClearanceResult } from '../components/TrademarkClearancePanel';
+const TrademarkClearancePanel = lazy(() => import('../components/TrademarkClearancePanel'));
 
 type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
@@ -2060,15 +2061,17 @@ export default function ApplyPage() {
                         </p>
                       </div>
                     </div>
-                    <TrademarkClearancePanel
-                      markName={priorSearchName}
-                      goodsServices={priorGoods}
-                      classes={allSelectedClassNumbers}
-                      language={panelLang}
-                      onResult={r => { setClearanceResults(prev => ({ ...prev, _prior: r })); setStep3RiskAcknowledged(false); }}
-                      onSelectDespiteRisk={() => {}}
-                      onRiskAcknowledgedChange={ack => setStep3RiskAcknowledged(ack)}
-                    />
+                    <Suspense fallback={<div className="flex items-center justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-gold-500" /></div>}>
+                      <TrademarkClearancePanel
+                        markName={priorSearchName}
+                        goodsServices={priorGoods}
+                        classes={allSelectedClassNumbers}
+                        language={panelLang}
+                        onResult={r => { setClearanceResults(prev => ({ ...prev, _prior: r })); setStep3RiskAcknowledged(false); }}
+                        onSelectDespiteRisk={() => {}}
+                        onRiskAcknowledgedChange={ack => setStep3RiskAcknowledged(ack)}
+                      />
+                    </Suspense>
                     <button
                       type="button"
                       onClick={() => setClearanceSkipped(true)}
@@ -2080,15 +2083,17 @@ export default function ApplyPage() {
                 ) : (
                   <div className="space-y-4">
                     {form.markName.trim() && (
-                      <TrademarkClearancePanel
-                        markName={form.markName}
-                        goodsServices={form.classEntries.map(e => e.description).filter(Boolean).join('; ')}
-                        classes={allSelectedClassNumbers}
-                        language={panelLang}
-                        onResult={r => { setClearanceResults(prev => ({ ...prev, _step3: r })); setStep3RiskAcknowledged(false); }}
-                        onSelectDespiteRisk={() => setShowConflictModal(false)}
-                        onRiskAcknowledgedChange={ack => setStep3RiskAcknowledged(ack)}
-                      />
+                      <Suspense fallback={<div className="flex items-center justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-gold-500" /></div>}>
+                        <TrademarkClearancePanel
+                          markName={form.markName}
+                          goodsServices={form.classEntries.map(e => e.description).filter(Boolean).join('; ')}
+                          classes={allSelectedClassNumbers}
+                          language={panelLang}
+                          onResult={r => { setClearanceResults(prev => ({ ...prev, _step3: r })); setStep3RiskAcknowledged(false); }}
+                          onSelectDespiteRisk={() => setShowConflictModal(false)}
+                          onRiskAcknowledgedChange={ack => setStep3RiskAcknowledged(ack)}
+                        />
+                      </Suspense>
                     )}
                   </div>
                 )}
@@ -2613,13 +2618,15 @@ export default function ApplyPage() {
                     </button>
                   </div>
                   <div className="p-5">
-                    <TrademarkClearancePanel
-                      markName={form.markName}
-                      goodsServices={form.classEntries.map(e => e.description).filter(Boolean).join('; ')}
-                      classes={[]}
-                      language={(language === 'zh' ? 'zh' : language === 'es' ? 'es' : language === 'de' ? 'de' : language === 'fr' ? 'fr' : language === 'hi' ? 'hi' : language === 'pt' ? 'pt' : 'en') as 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt'}
-                      autoRun
-                    />
+                    <Suspense fallback={<div className="flex items-center justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-gold-500" /></div>}>
+                      <TrademarkClearancePanel
+                        markName={form.markName}
+                        goodsServices={form.classEntries.map(e => e.description).filter(Boolean).join('; ')}
+                        classes={[]}
+                        language={(language === 'zh' ? 'zh' : language === 'es' ? 'es' : language === 'de' ? 'de' : language === 'fr' ? 'fr' : language === 'hi' ? 'hi' : language === 'pt' ? 'pt' : 'en') as 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt'}
+                        autoRun
+                      />
+                    </Suspense>
                   </div>
                   {/* Acknowledgment checkbox */}
                   <div className="px-5 pb-5">

@@ -1,9 +1,9 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, lazy, Suspense } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Sparkles, Upload, X, ArrowRight, ArrowLeft, RefreshCw, Loader2, Image as ImageIcon, CheckCircle2, Lightbulb } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { supabase } from '../lib/supabase';
-import TrademarkClearancePanel from '../components/TrademarkClearancePanel';
+const TrademarkClearancePanel = lazy(() => import('../components/TrademarkClearancePanel'));
 
 interface IdeaCard {
   name: string;
@@ -445,12 +445,14 @@ export default function TrademarkIdeaPage() {
 
                       {/* Clearance panel */}
                       {isChecked && (
-                        <TrademarkClearancePanel
-                          markName={idea.name}
-                          classes={[]}
-                          language={(language === 'zh' ? 'zh' : language === 'es' ? 'es' : language === 'de' ? 'de' : language === 'fr' ? 'fr' : language === 'hi' ? 'hi' : language === 'pt' ? 'pt' : 'en') as 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt'}
-                          autoRun={true}
-                        />
+                        <Suspense fallback={<div className="flex items-center justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-gold-500" /></div>}>
+                          <TrademarkClearancePanel
+                            markName={idea.name}
+                            classes={[]}
+                            language={(language === 'zh' ? 'zh' : language === 'es' ? 'es' : language === 'de' ? 'de' : language === 'fr' ? 'fr' : language === 'hi' ? 'hi' : language === 'pt' ? 'pt' : 'en') as 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt'}
+                            autoRun={true}
+                          />
+                        </Suspense>
                       )}
                     </div>
 

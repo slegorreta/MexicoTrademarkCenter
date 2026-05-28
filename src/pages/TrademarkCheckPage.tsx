@@ -1,8 +1,9 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, lazy, Suspense } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, ArrowRight, ArrowLeft, Sparkles, CheckCircle2, FileText, HelpCircle, Loader2, Plus, X, Tag, ChevronDown, Send, CreditCard as Edit2, AlertTriangle, ChevronRight, Upload, Image as ImageIcon, Type } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
-import TrademarkClearancePanel from '../components/TrademarkClearancePanel';
+
+const TrademarkClearancePanel = lazy(() => import('../components/TrademarkClearancePanel'));
 
 type Lang = 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt' | 'ja';
 
@@ -1490,17 +1491,19 @@ export default function TrademarkCheckPage() {
             onEditRequest={() => {}} // step 4 is terminal
             editLabel={tr('editLabel')}
           >
-            <TrademarkClearancePanel
-              markName={markName}
-              goodsServices={goodsInput}
-              classes={selectedNums}
-              language={lang as 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt'}
-              autoRun={true}
-              showFilingCta={true}
-              onStartFiling={handleStartFiling}
-              imageBase64={markType === 'design' ? designBase64 : undefined}
-              imageMimeType={markType === 'design' ? designMime : undefined}
-            />
+            <Suspense fallback={<div className="flex items-center justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-gold-500" /></div>}>
+              <TrademarkClearancePanel
+                markName={markName}
+                goodsServices={goodsInput}
+                classes={selectedNums}
+                language={lang as 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt'}
+                autoRun={true}
+                showFilingCta={true}
+                onStartFiling={handleStartFiling}
+                imageBase64={markType === 'design' ? designBase64 : undefined}
+                imageMimeType={markType === 'design' ? designMime : undefined}
+              />
+            </Suspense>
           </StepCard>
         </div>
 
