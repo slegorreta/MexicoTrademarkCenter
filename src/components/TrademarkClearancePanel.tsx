@@ -970,6 +970,11 @@ export default function TrademarkClearancePanel({
   const [pdfProgress, setPdfProgress] = useState(0);
   const pdfProgressTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Background pre-generation: order + PDF kicked off as soon as result arrives
+  const [bgOrderId, setBgOrderId] = useState('');
+  const [bgPdfUrl, setBgPdfUrl] = useState('');
+  const bgGeneratingRef = useRef(false);
+
   // Snap to 100 if background PDF finishes while user already submitted email
   useEffect(() => {
     if (pdfModalDone && bgPdfUrl && pdfProgress < 100) {
@@ -979,11 +984,6 @@ export default function TrademarkClearancePanel({
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bgPdfUrl, pdfModalDone]);
-
-  // Background pre-generation: order + PDF kicked off as soon as result arrives
-  const [bgOrderId, setBgOrderId] = useState('');
-  const [bgPdfUrl, setBgPdfUrl] = useState('');
-  const bgGeneratingRef = useRef(false);
 
   // Detail section toggles
   const [dupontExpanded, setDupontExpanded] = useState(false);
