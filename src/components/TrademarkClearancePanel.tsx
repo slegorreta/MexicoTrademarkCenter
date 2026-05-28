@@ -928,8 +928,12 @@ export default function TrademarkClearancePanel({
   const [showPdfModal, setShowPdfModal] = useState(false);
   const [pdfModalEmail, setPdfModalEmail] = useState('');
   const [pdfModalLoading, setPdfModalLoading] = useState(false);
+  // pdfModalDone = user submitted email (generation in progress or complete)
   const [pdfModalDone, setPdfModalDone] = useState(false);
+  // pdfModalUrl = signed URL once PDF is ready (drives progress → 100%)
   const [pdfModalUrl, setPdfModalUrl] = useState('');
+  // pdfEmailSent = email was successfully dispatched to user
+  const [pdfEmailSent, setPdfEmailSent] = useState(false);
   // Tracks a committed delivery that continues even if the modal is closed
   const pendingDeliveryRef = useRef<{ email: string; orderId: string } | null>(null);
   // Progress bar: 0–100, animates during generation, snaps to 100 when URL arrives
@@ -1378,9 +1382,9 @@ export default function TrademarkClearancePanel({
           pendingDeliveryRef.current = { email: emailVal, orderId };
         }
 
-        // Update order to the user's real email
+        // Update order to the user's real email (await so the DB row is correct before emailing)
         if (orderId && emailVal !== 'prefetch@mexicotrademarkcenter.com') {
-          supabase.from('clearance_report_orders').update({ email: emailVal }).eq('id', orderId).then(() => {});
+          await supabase.from('clearance_report_orders').update({ email: emailVal }).eq('id', orderId);
         }
 
         if (!url && orderId) {
@@ -1408,15 +1412,20 @@ export default function TrademarkClearancePanel({
         }
 
         if (url) {
-          // Update PDF URL — visible both in modal (if still open) and in the CTA banner
+          // Snap progress to 100% and reveal download button
           if (pdfProgressTimer.current) clearInterval(pdfProgressTimer.current);
           setPdfProgress(100);
           setPdfModalUrl(url);
-          fetch(`${SUPABASE_URL}/functions/v1/send-clearance-report-email`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
-            body: JSON.stringify({ reportOrderId: orderId, email: emailVal, pdfUrl: url }),
-          }).catch(() => {});
+
+          // Send the email — pass resendTo so the function routes to the real user address
+          try {
+            const emailRes = await fetch(`${SUPABASE_URL}/functions/v1/send-clearance-report-email`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+              body: JSON.stringify({ reportOrderId: orderId, resendTo: emailVal }),
+            });
+            if (emailRes.ok) setPdfEmailSent(true);
+          } catch {/* never block UI */}
         }
         trackEvent('report_emailed', { email: emailVal }, lang);
       } catch {/* never block UI */}
@@ -3689,9 +3698,9 @@ export default function TrademarkClearancePanel({
               </>
             ) : (
               <div>
-                {/* Header */}
-                <div className="flex items-center gap-3 mb-4">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${pdfModalUrl ? 'bg-emerald-100' : 'bg-[#1a2e1a]/10'}`}>
+                {/* Header — icon + title change by phase */}
+                <div className="flex items-center gap-3 mb-5">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors duration-500 ${pdfModalUrl ? 'bg-emerald-100' : 'bg-[#1a2e1a]/10'}`}>
                     {pdfModalUrl
                       ? <CheckCircle2 size={20} className="text-emerald-600" />
                       : <Loader2 size={20} className="text-[#1a2e1a] animate-spin" />
@@ -3699,25 +3708,23 @@ export default function TrademarkClearancePanel({
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-gray-900">
-                      {pdfModalUrl ? tr('pdfSent', lang) : tr('pdfGenerating', lang)}
+                      {pdfModalUrl ? tr('pdfReadyLabel', lang) : tr('pdfGeneratingLabel', lang)}
                     </h3>
-                    <p className="text-xs text-gray-500 mt-0.5">{pdfModalEmail}</p>
+                    <p className="text-[11px] text-gray-400 mt-0.5">{pdfModalEmail}</p>
                   </div>
                 </div>
 
                 {/* Progress bar */}
-                <div className="mb-4">
+                <div className="mb-5">
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="text-[11px] font-medium text-gray-500">
-                      {pdfModalUrl
-                        ? tr('pdfReadyLabel', lang)
-                        : tr('pdfGeneratingLabel', lang)}
+                      {pdfModalUrl ? tr('pdfReadyLabel', lang) : tr('pdfGeneratingLabel', lang)}
                     </span>
                     <span className="text-[11px] font-bold tabular-nums" style={{ color: pdfModalUrl ? '#059669' : '#1a2e1a' }}>
                       {pdfProgress}%
                     </span>
                   </div>
-                  <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-2.5 w-full bg-gray-100 rounded-full overflow-hidden">
                     <div
                       className="h-full rounded-full transition-all duration-700 ease-out"
                       style={{
@@ -3729,24 +3736,26 @@ export default function TrademarkClearancePanel({
                     />
                   </div>
                   {!pdfModalUrl && (
-                    <p className="text-[10px] text-gray-400 mt-1.5">{tr('pdfModalCloseSafe', lang)}</p>
+                    <p className="text-[10px] text-gray-400 mt-2 leading-relaxed">{tr('pdfModalCloseSafe', lang)}</p>
                   )}
                 </div>
 
-                {/* Download button (appears when ready) */}
-                {pdfModalUrl ? (
-                  <>
+                {/* Phase 3: PDF ready — download button + email confirmation */}
+                {pdfModalUrl && (
+                  <div className="space-y-3">
                     <a
                       href={pdfModalUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-4 py-3 rounded-xl transition-colors mb-2"
+                      className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-4 py-3 rounded-xl transition-colors"
                     >
                       <Download size={14} />{tr('downloadPdfNow', lang)}
                     </a>
-                    <p className="text-[10px] text-gray-400 text-center">{tr('pdfModalCloseSafe', lang)}</p>
-                  </>
-                ) : null}
+                    <p className="text-[11px] text-center leading-relaxed" style={{ color: pdfEmailSent ? '#059669' : '#9ca3af' }}>
+                      {pdfEmailSent ? tr('pdfSent', lang) : tr('pdfModalCloseSafe', lang)}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </div>
