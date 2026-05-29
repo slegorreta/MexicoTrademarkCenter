@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, lazy, Suspense } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, ArrowRight, ArrowLeft, Sparkles, CheckCircle2, FileText, HelpCircle, Loader2, Plus, X, Tag, ChevronDown, Send, CreditCard as Edit2, AlertTriangle, ChevronRight, Upload, Image as ImageIcon, Type } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import { classifyGoods } from '../lib/classifier';
 
 const TrademarkClearancePanel = lazy(() => import('../components/TrademarkClearancePanel'));
 
@@ -1641,16 +1642,28 @@ export default function TrademarkCheckPage() {
                                 });
                                 if (!res.ok) throw new Error('Service unavailable');
                                 const data = await res.json();
-                                if (data.status === 'classified' && Array.isArray(data.classes)) {
-                                  const fresh = (data.classes as SuggestedClass[]).filter(c => !selectedNums.includes(c.classNumber));
-                                  if (fresh.length === 0) {
-                                    setAddDescError(tr('addClassNoResults'));
-                                  } else {
-                                    setAddDescSuggested(fresh);
-                                    setAddDescSelected(fresh.map(c => c.classNumber));
-                                  }
+                                let aiClasses: SuggestedClass[] = [];
+                                if (data.status === 'classified' && Array.isArray(data.classes) && data.classes.length > 0) {
+                                  aiClasses = data.classes as SuggestedClass[];
                                 } else {
+                                  // AI asked clarifying questions or returned no classes — fall back to local keyword classifier
+                                  const fallback = classifyGoods(addDescInput.trim(), '', [], 8);
+                                  aiClasses = fallback.map(f => ({
+                                    classNumber: f.classNumber,
+                                    titleEn: f.titleEn,
+                                    titleLocalized: f.titleEn,
+                                    confidence: f.confidence,
+                                    reasoning: f.reasons[0] ?? '',
+                                    descriptionEn: '',
+                                    descriptionEs: '',
+                                  }));
+                                }
+                                const fresh = aiClasses.filter(c => !selectedNums.includes(c.classNumber));
+                                if (fresh.length === 0) {
                                   setAddDescError(tr('addClassNoResults'));
+                                } else {
+                                  setAddDescSuggested(fresh);
+                                  setAddDescSelected(fresh.map(c => c.classNumber));
                                 }
                               } catch {
                                 setAddDescError(lang === 'es' ? 'Error al clasificar. Intenta de nuevo.' : 'Classification failed. Please try again.');
