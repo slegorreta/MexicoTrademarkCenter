@@ -571,20 +571,25 @@ const LOADING_STEPS: Record<Lang, { label: string; detail: string }[]> = {
   ],
 };
 
-function ClearanceLoadingSteps({ lang }: { lang: Lang }) {
+function ClearanceLoadingSteps({ lang, done }: { lang: Lang; done: boolean }) {
   const steps = LOADING_STEPS[lang] ?? LOADING_STEPS.en;
   const [activeIndex, setActiveIndex] = useState(0);
   const [completedCount, setCompletedCount] = useState(0);
   const [elapsed, setElapsed] = useState(0);
 
-  const durations = [1600, 1400, 1800, 1500, 1300, 1100, 1400, 999999];
-  const totalEstimated = durations.slice(0, -1).reduce((a, b) => a + b, 0);
+  // First 7 steps are time-simulated. The 8th ("Compiling report") is the heaviest
+  // server work and completes only when the API responds — we give it a realistic
+  // estimate of 12 000 ms for the "remaining time" display but never auto-advance it.
+  const durations = [2000, 1800, 2200, 1800, 1600, 1400, 1800];
+  const lastStepEstimateMs = 12000;
+  const totalEstimated = durations.reduce((a, b) => a + b, 0) + lastStepEstimateMs;
 
   useEffect(() => {
     let elapsedMs = 0;
     const timers: ReturnType<typeof setTimeout>[] = [];
+    // Only auto-advance steps 0–6 (indices 0..steps.length-2)
     for (let i = 0; i < steps.length - 1; i++) {
-      elapsedMs += durations[i] ?? 1500;
+      elapsedMs += durations[i] ?? 1800;
       const idx = i;
       timers.push(setTimeout(() => {
         setCompletedCount(idx + 1);
@@ -600,12 +605,16 @@ function ClearanceLoadingSteps({ lang }: { lang: Lang }) {
     return () => clearInterval(interval);
   }, []);
 
-  // Circular progress gauge
-  const progress = Math.min(1, completedCount / (steps.length - 1));
+  // Progress: timed steps fill 0–(n-1)/n of the bar; the last step fills in only
+  // when `done` is true (API responded). This prevents the bar from hitting 100%
+  // while the server is still compiling the report.
+  const timedProgress = completedCount / steps.length; // max = 7/8 = 87.5%
+  const progress = done ? 1 : timedProgress;
+
   const gaugeR = 28; const gaugeCx = 36; const gaugeCy = 36;
   const gaugeCirc = 2 * Math.PI * gaugeR;
   const gaugeDash = progress * gaugeCirc;
-  const gaugeColor = progress >= 0.8 ? '#10b981' : progress >= 0.4 ? '#c9a84c' : '#1a2e1a';
+  const gaugeColor = done ? '#10b981' : progress >= 0.6 ? '#c9a84c' : '#1a2e1a';
 
   const elapsedLabel = elapsed < 60
     ? `${elapsed}s`
@@ -647,7 +656,7 @@ function ClearanceLoadingSteps({ lang }: { lang: Lang }) {
             />
           </div>
           <p className="text-[9px] text-gray-400 mt-0.5">
-            {lang === 'es' ? `Est. ${Math.max(0, Math.round((totalEstimated / 1000) - elapsed))}s restantes` : `Est. ${Math.max(0, Math.round((totalEstimated / 1000) - elapsed))}s remaining`}
+            {done ? (lang === 'es' ? 'Completado' : 'Complete') : (lang === 'es' ? `Est. ${Math.max(0, Math.round((totalEstimated / 1000) - elapsed))}s restantes` : `Est. ${Math.max(0, Math.round((totalEstimated / 1000) - elapsed))}s remaining`)}
           </p>
         </div>
       </div>
@@ -1263,7 +1272,7 @@ export default function TrademarkClearancePanel({
     );
   }
   if (status === 'checking') {
-    return <ClearanceLoadingSteps lang={lang} />;
+    return <ClearanceLoadingSteps lang={lang} done={false} />;
   }
   if (status === 'error') {
     return (
@@ -1679,11 +1688,31 @@ export default function TrademarkClearancePanel({
         <a
           href={`/apply?mark=${encodeURIComponent(markName)}&fromClearance=1`}
           onClick={() => {
-            if (result) {
-              sessionStorage.setItem('clrMark', markName);
-              sessionStorage.setItem('clrGoods', goodsServices ?? '');
-              sessionStorage.setItem('clrResult', JSON.stringify(result));
-            }
+            sessionStorage.setItem('clrMark', markName);
+            sessionStorage.setItem('clrGoods', goodsServices ?? '');
+            if (result) sessionStorage.setItem('clrResult', JSON.stringify(result));
+
+            // Pass class numbers so ApplyPage can pre-fill without asking user again
+            sessionStorage.setItem('clrSelected', JSON.stringify(classes));
+
+            // Build clrSuggested from niceClassification in the result (if present)
+            // so the class titles and descriptions auto-populate on the filing form.
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const niceClassification = (result as any)?.niceClassification as Array<{
+              classNumber: number; className_en: string; officialHeading_en: string; officialHeading: string;
+            }> | undefined;
+            const suggested = classes.map(num => {
+              const nc = niceClassification?.find(c => c.classNumber === num);
+              return {
+                classNumber: num,
+                titleEn: nc?.className_en ?? `Class ${num}`,
+                descriptionEn: nc?.officialHeading_en ?? '',
+                descriptionEs: nc?.officialHeading ?? '',
+                confidence: 1,
+              };
+            });
+            sessionStorage.setItem('clrSuggested', JSON.stringify(suggested));
+
             fireTrackEvent('report_cta_clicked', { source: 'above_fold', mark: markName }, lang);
           }}
           className="w-full flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white font-bold px-5 py-3 rounded-xl transition-colors shadow-md text-sm"
