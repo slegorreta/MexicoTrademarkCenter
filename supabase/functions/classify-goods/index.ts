@@ -72,6 +72,39 @@ RESPONSE FORMAT (always return valid JSON):
 
 Return ONLY the JSON object, no markdown, no preamble.`;
 
+const DIRECT_CLASSIFY_PROMPT = `You are an expert Mexican trademark attorney and Nice Classification specialist with 20+ years of experience filing trademarks before the Instituto Mexicano de la Propiedad Industrial (IMPI).
+
+Your role is to identify the correct Nice Classification class(es) for the described goods or services and produce precise Spanish-language classification descriptions using IMPI's official Clasificador de Niza terminology.
+
+${NICE_CLASSES_SUMMARY}
+
+IMPORTANT: Always classify immediately. Never ask clarifying questions. Use your expertise to interpret the description and identify the most relevant class(es) with high confidence. Apply common-knowledge understanding of business types (e.g., "pizzeria" = restaurant = Class 43, "bookstore" = retail books = Class 35 + Class 16, etc.).
+
+IMPI TERMINOLOGY RULES — mandatory for "descriptionEs":
+- Use ONLY terms that appear verbatim in IMPI's Clasificador de Niza or its Lista Complementaria for the applicable class.
+- Find the CLOSEST CONTEXTUALLY EQUIVALENT term. Context and purpose prevails over literal translation.
+- If multiple Clasificador terms apply within the same class, combine them with semicolons.
+- NEVER invent or paraphrase. Stay within documented scope.
+
+Return ONLY valid JSON in this exact format:
+{
+  "status": "classified",
+  "classes": [
+    {
+      "classNumber": 43,
+      "titleEn": "Food & Beverage Services",
+      "titleLocalized": "Food & Beverage Services",
+      "confidence": 0.95,
+      "reasoning": "Brief explanation of why this class applies",
+      "descriptionEn": "Restaurant services; pizzeria services; food and drink services",
+      "descriptionEs": "servicios de restaurante; servicios de pizzeria; servicios de alimentos y bebidas"
+    }
+  ],
+  "summary": "Brief explanation in 1-2 sentences"
+}
+
+Return ONLY the JSON object, no markdown, no preamble.`;
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
@@ -88,9 +121,10 @@ Deno.serve(async (req: Request) => {
     }
 
     const body = await req.json();
-    const { messages, language = "en" } = body as {
+    const { messages, language = "en", directClassify = false } = body as {
       messages: Array<{ role: "user" | "assistant"; content: string }>;
       language?: string;
+      directClassify?: boolean;
     };
 
     if (!messages || messages.length === 0) {
@@ -102,6 +136,8 @@ Deno.serve(async (req: Request) => {
 
     const langName = LANGUAGE_NAMES[language] ?? "English";
     const isEnglish = language === "en";
+
+    const baseSystemPrompt = directClassify ? DIRECT_CLASSIFY_PROMPT : SYSTEM_PROMPT;
 
     const languageInstruction = isEnglish
       ? `The applicant writes in English. Write reasoning, summary, questions, and titleLocalized in English. descriptionEn must be in English; descriptionEs must use only official IMPI Clasificador de Niza / Lista Complementaria terminology in Spanish.`
@@ -116,7 +152,7 @@ Keep these fields always as specified:
   - "descriptionEn": always in English
   - "descriptionEs": always using ONLY official IMPI Clasificador de Niza / Lista Complementaria terminology in Spanish`;
 
-    const systemContent = `${SYSTEM_PROMPT}\n\n${languageInstruction}`;
+    const systemContent = `${baseSystemPrompt}\n\n${languageInstruction}`;
 
     const openAIMessages = [
       { role: "system", content: systemContent },
