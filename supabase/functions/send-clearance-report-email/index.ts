@@ -304,6 +304,7 @@ function buildStaffNotificationHtml(
   couponCode: string | null,
   discountPercent: number,
   paidAt: string,
+  tokenCostUsd: number | null,
 ): string {
   const shortId = orderId.slice(0, 8).toUpperCase();
   const dateStr = new Date(paidAt).toLocaleDateString("en-US", {
@@ -385,6 +386,10 @@ function buildStaffNotificationHtml(
           <td style="font-size:13px;color:#555;padding:10px 16px">Order Reference</td>
           <td style="font-size:13px;color:#1a2e1a;padding:10px 16px;font-family:monospace">${shortId}</td>
         </tr>
+        ${tokenCostUsd !== null ? `<tr style="border-top:1px solid #f0f0ec;background:#fafaf8">
+          <td style="font-size:13px;color:#555;padding:10px 16px">Est. AI Token Cost</td>
+          <td style="font-size:13px;color:#1a2e1a;padding:10px 16px;font-weight:bold">USD $${tokenCostUsd.toFixed(4)}</td>
+        </tr>` : ""}
       </table>
 
       <!-- Admin link -->
@@ -539,6 +544,20 @@ Deno.serve(async (req: Request) => {
     }
 
     const risk = order.clearance_result?.risk ?? "low";
+
+    // Look up the most recent token usage log entry for this mark (best-effort)
+    let tokenCostUsd: number | null = null;
+    try {
+      const { data: tokenRow } = await supabase
+        .from("token_usage_log")
+        .select("cost_usd")
+        .eq("mark_name", order.mark_name)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (tokenRow) tokenCostUsd = Number(tokenRow.cost_usd);
+    } catch { /* non-fatal */ }
+
     const staffHtml = buildStaffNotificationHtml(
       order.id,
       order.mark_name,
@@ -550,6 +569,7 @@ Deno.serve(async (req: Request) => {
       order.coupon_code ?? null,
       order.discount_percent ?? 0,
       order.paid_at ?? new Date().toISOString(),
+      tokenCostUsd,
     );
 
     const staffSubject = `[TM Report Purchased] ${order.mark_name} — Order ${order.id.slice(0, 8).toUpperCase()}`;

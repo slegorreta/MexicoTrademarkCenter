@@ -1,10 +1,95 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
+
+// ─── Token cost tracking ──────────────────────────────────────────────────────
+// Per-request accumulator reset at the start of each Deno.serve invocation.
+
+interface TokenUsage { promptTokens: number; completionTokens: number; totalTokens: number; costUsd: number }
+
+// Pricing per 1 000 tokens (input / output) as of 2025-05 — update as needed
+const MODEL_PRICING: Record<string, [number, number]> = {
+  "gpt-4o":              [0.0025, 0.01],
+  "gpt-4o-mini":         [0.00015, 0.0006],
+  "gpt-4o-search-preview": [0.0025, 0.01],
+};
+
+function modelCost(model: string, promptTok: number, completionTok: number): number {
+  const [inputPer1k, outputPer1k] = MODEL_PRICING[model] ?? [0.0025, 0.01];
+  return (promptTok / 1000) * inputPer1k + (completionTok / 1000) * outputPer1k;
+}
+
+// Module-level accumulator — safe because each edge function invocation is isolated
+let _requestTokens: { prompt: number; completion: number; total: number; costUsd: number } = { prompt: 0, completion: 0, total: 0, costUsd: 0 };
+
+function resetTokenAccumulator() {
+  _requestTokens = { prompt: 0, completion: 0, total: 0, costUsd: 0 };
+}
+
+function accumulateUsage(model: string, usage: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } | undefined) {
+  if (!usage) return;
+  const p = usage.prompt_tokens ?? 0;
+  const c = usage.completion_tokens ?? 0;
+  const t = usage.total_tokens ?? p + c;
+  _requestTokens.prompt += p;
+  _requestTokens.completion += c;
+  _requestTokens.total += t;
+  _requestTokens.costUsd += modelCost(model, p, c);
+}
+
+function getAccumulatedTokens(): TokenUsage {
+  return {
+    promptTokens: _requestTokens.prompt,
+    completionTokens: _requestTokens.completion,
+    totalTokens: _requestTokens.total,
+    costUsd: _requestTokens.costUsd,
+  };
+}
+
+// Drop-in fetch wrapper for OpenAI chat completions — captures usage automatically.
+// Extracts the model name from the request body so callers need no extra arg.
+async function openAIFetch(url: string, init: RequestInit): Promise<{ ok: boolean; status: number; json: () => Promise<Record<string, unknown>> }> {
+  const res = await fetch(url, init);
+  const data = await res.json() as Record<string, unknown>;
+  // Parse model from request body for accurate pricing
+  let model = "gpt-4o";
+  try {
+    const bodyStr = typeof init.body === "string" ? init.body : new TextDecoder().decode(init.body as Uint8Array);
+    const parsed = JSON.parse(bodyStr) as Record<string, unknown>;
+    if (typeof parsed.model === "string") model = parsed.model;
+  } catch { /* ignore */ }
+  accumulateUsage(model, data.usage as Parameters<typeof accumulateUsage>[1]);
+  return {
+    ok: res.ok,
+    status: res.status,
+    json: async () => data,
+  };
+}
+
+async function persistTokenUsage(markName: string, tokenUsage: TokenUsage) {
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!supabaseUrl || !serviceKey) return;
+    const sb = createClient(supabaseUrl, serviceKey);
+    await sb.from("token_usage_log").insert({
+      mark_name: markName,
+      model: "mixed (gpt-4o + gpt-4o-mini)",
+      prompt_tokens: tokenUsage.promptTokens,
+      completion_tokens: tokenUsage.completionTokens,
+      total_tokens: tokenUsage.totalTokens,
+      cost_usd: tokenUsage.costUsd,
+      source: "verify-trademark",
+    });
+  } catch (err) {
+    console.error("Failed to persist token usage:", err);
+  }
+}
 
 // ─── Famous & Notorious Marks List (Art. 173 Fr. XV LFPPI) ───────────────────
 // Top global brands + IMPI-recognized notorious marks across all classes
@@ -287,7 +372,7 @@ async function runMarciaQuery(
 async function generatePhoneticVariants(apiKey: string, markName: string): Promise<string[]> {
   if (!markName.trim() || markName.length < 2) return [];
   try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await openAIFetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
@@ -820,7 +905,7 @@ Devuelve exactamente:
   ].map(factor => ({ factor, verdict: "neutral" as const, reasoning: "", reasoning_en: "", reasoning_user: "" }));
 
   try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await openAIFetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
@@ -944,7 +1029,7 @@ Return a JSON array. For each language, include an entry even if risk is "none":
 Be thorough and specific. If "${markName}" is already in English and has no meaningful translation (e.g. a made-up word), still check what it sounds like or evokes in each language. Return exactly 8 entries, one per language.`;
 
   try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await openAIFetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
@@ -1026,7 +1111,7 @@ Risk levels:
 - "low": no significant existing marks found`;
 
   try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await openAIFetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({ model: "gpt-4o-search-preview", messages: [{ role: "user", content: prompt }], max_tokens: 800 }),
@@ -1046,7 +1131,7 @@ CRITICAL INSTRUCTIONS:
 
 Return JSON only: { "risk": "low"|"medium"|"high", "findings": ["specific finding..."], "reasoning": "..." }`;
 
-      const fallback = await fetch("https://api.openai.com/v1/chat/completions", {
+      const fallback = await openAIFetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
         body: JSON.stringify({
@@ -1129,7 +1214,7 @@ Return JSON array:
 Return ONLY JSON array, no markdown. Be precise — only include classes where the user's declared goods/services genuinely fall. Do not include speculative or tangential classes.`;
 
   try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await openAIFetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
@@ -1271,7 +1356,7 @@ Devuelve SOLO JSON:
 }`;
 
   try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await openAIFetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
@@ -1418,7 +1503,7 @@ ${translationInstruction}
 Devuelve únicamente JSON: {"riskSummary": "...", "riskSummary_en": "..."${isUserLang ? ', "riskSummary_user": "..."' : ""}}`;
 
   try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await openAIFetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
@@ -1491,7 +1576,7 @@ ${isUserLang ? `- "rationale_user": same sentence in ${langName}` : ""}
 Return ONLY valid JSON: {"alternatives": [{"name":"...","score":0,"rationale":"...","rationale_en":"..."${isUserLang ? ',"rationale_user":"..."' : ""}}]}`;
 
   try {
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    const res = await openAIFetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
@@ -1689,6 +1774,9 @@ Output language: ${nativeLangName}. No markdown. Professional legal prose only.`
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 200, headers: corsHeaders });
 
+  // Reset per-request token accumulator
+  resetTokenAccumulator();
+
   try {
     const apiKey = Deno.env.get("OPENAI_API_KEY");
     if (!apiKey) {
@@ -1713,7 +1801,7 @@ Deno.serve(async (req: Request) => {
     let designDescription = "";
     if (imageBase64) {
       try {
-        const visionRes = await fetch("https://api.openai.com/v1/chat/completions", {
+        const visionRes = await openAIFetch("https://api.openai.com/v1/chat/completions", {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
           body: JSON.stringify({
@@ -1930,7 +2018,12 @@ Deno.serve(async (req: Request) => {
       tmviewFindings: tmviewResult?.trademarks ?? null,
       tmviewTotal: tmviewResult?.total ?? null,
       tmviewAvailable: tmviewResult !== null,
+      tokenUsage: getAccumulatedTokens(),
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+    // Persist token usage asynchronously after response is sent
+    const finalTokens = getAccumulatedTokens();
+    EdgeRuntime.waitUntil(persistTokenUsage(searchName, finalTokens));
   } catch (err) {
     console.error("verify-trademark error:", err);
     return new Response(JSON.stringify({ error: "Internal error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
