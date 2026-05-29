@@ -1431,24 +1431,10 @@ export default function TrademarkCheckPage() {
                     return (
                       <div
                         key={cls.num}
-                        className={`border rounded-xl overflow-hidden transition-colors ${isSelected ? 'border-navy-300 bg-white' : 'border-gray-200 bg-gray-50 opacity-60'}`}
+                        className={`border rounded-xl overflow-hidden transition-all ${isSelected ? 'border-emerald-300 bg-white shadow-sm' : 'border-gray-200 bg-gray-50 opacity-60'}`}
                       >
                         {/* Class header row */}
                         <div className="flex items-start gap-3 px-4 py-3">
-                          <button
-                            type="button"
-                            onClick={() => toggleClass(cls.num)}
-                            aria-label={isSelected ? 'Deselect class' : 'Select class'}
-                            className={`flex-shrink-0 w-5 h-5 mt-0.5 rounded border-2 flex items-center justify-center transition-all ${
-                              isSelected
-                                ? 'bg-navy-800 border-navy-800 shadow-sm'
-                                : 'border-gray-300 bg-white hover:border-navy-400'
-                            }`}
-                          >
-                            {isSelected && (
-                              <CheckCircle2 size={11} className="text-white" strokeWidth={3} />
-                            )}
-                          </button>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${isSelected ? 'bg-navy-100 text-navy-700' : 'bg-gray-200 text-gray-500'}`}>
@@ -1466,10 +1452,18 @@ export default function TrademarkCheckPage() {
                           <button
                             type="button"
                             onClick={() => toggleClass(cls.num)}
-                            title={isSelected ? 'Deselect' : 'Select'}
-                            className={`flex-shrink-0 transition-colors mt-0.5 ${isSelected ? 'text-gray-300 hover:text-red-400' : 'text-gray-200 hover:text-navy-400'}`}
+                            title={isSelected ? 'Deselect class' : 'Select class'}
+                            className={`flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                              isSelected
+                                ? 'bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 hover:border-red-300'
+                                : 'bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300'
+                            }`}
                           >
-                            <X size={14} />
+                            {isSelected ? (
+                              <><X size={12} strokeWidth={2.5} />{lang === 'es' ? 'Quitar' : lang === 'zh' ? '移除' : lang === 'de' ? 'Entf.' : lang === 'fr' ? 'Retirer' : lang === 'pt' ? 'Remover' : 'Remove'}</>
+                            ) : (
+                              <><CheckCircle2 size={12} strokeWidth={2.5} />{lang === 'es' ? 'Añadir' : lang === 'zh' ? '添加' : lang === 'de' ? 'Hinzuf.' : lang === 'fr' ? 'Ajouter' : lang === 'pt' ? 'Adicionar' : 'Add'}</>
+                            )}
                           </button>
                         </div>
                         {/* IMPI description */}
@@ -1583,28 +1577,49 @@ export default function TrademarkCheckPage() {
                         )}
                         {/* AI suggested classes from describe tab */}
                         {addDescSuggested.length > 0 && (
-                          <div className="space-y-1.5">
-                            {addDescSuggested.map(s => (
-                              <label key={s.classNumber} className="flex items-start gap-2.5 cursor-pointer group">
-                                <input
-                                  type="checkbox"
-                                  checked={addDescSelected.includes(s.classNumber)}
-                                  onChange={() => setAddDescSelected(prev =>
-                                    prev.includes(s.classNumber) ? prev.filter(n => n !== s.classNumber) : [...prev, s.classNumber]
-                                  )}
-                                  className="mt-0.5 flex-shrink-0 accent-navy-700"
-                                />
-                                <div className="min-w-0">
-                                  <div className="flex items-center gap-1.5 flex-wrap">
-                                    <span className="text-[10px] font-bold bg-navy-100 text-navy-700 px-1.5 py-0.5 rounded-full">
-                                      {classLabel(s.classNumber)}
-                                    </span>
-                                    <span className="text-xs font-semibold text-gray-800">{s.titleLocalized || s.titleEn}</span>
+                          <div className="space-y-2">
+                            {addDescSuggested.map(s => {
+                              const isChecked = addDescSelected.includes(s.classNumber);
+                              const niceInfo = ALL_NICE_CLASSES.find(c => c.num === s.classNumber);
+                              return (
+                                <div
+                                  key={s.classNumber}
+                                  className={`border rounded-xl overflow-hidden transition-all ${isChecked ? 'border-emerald-300 bg-white shadow-sm' : 'border-gray-200 bg-gray-50 opacity-70'}`}
+                                >
+                                  <div className="flex items-start gap-3 px-3 py-2.5">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-1.5 flex-wrap">
+                                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isChecked ? 'bg-navy-100 text-navy-700' : 'bg-gray-200 text-gray-500'}`}>
+                                          {classLabel(s.classNumber)}
+                                        </span>
+                                        <span className="text-xs font-semibold text-gray-900">{s.titleLocalized || s.titleEn}</span>
+                                        {niceInfo?.titleEs && <span className="text-[10px] text-gray-400">({niceInfo.titleEs})</span>}
+                                      </div>
+                                      {s.reasoning && <p className="text-[10px] text-gray-500 mt-0.5 italic leading-relaxed">{s.reasoning}</p>}
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => setAddDescSelected(prev =>
+                                        prev.includes(s.classNumber) ? prev.filter(n => n !== s.classNumber) : [...prev, s.classNumber]
+                                      )}
+                                      className={`flex-shrink-0 flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold transition-all ${
+                                        isChecked
+                                          ? 'bg-red-50 border border-red-200 text-red-600 hover:bg-red-100'
+                                          : 'bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100'
+                                      }`}
+                                    >
+                                      {isChecked ? <><X size={10} strokeWidth={2.5} />Remove</> : <><CheckCircle2 size={10} strokeWidth={2.5} />Add</>}
+                                    </button>
                                   </div>
-                                  {s.reasoning && <p className="text-[10px] text-gray-400 mt-0.5 italic leading-relaxed">{s.reasoning}</p>}
+                                  {s.descriptionEs && isChecked && (
+                                    <div className="border-t border-gray-100 bg-gray-50 px-3 py-2">
+                                      <p className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">{tr('impiDescription')}</p>
+                                      <p className="text-[10px] text-gray-700 font-mono leading-relaxed">{s.descriptionEs}</p>
+                                    </div>
+                                  )}
                                 </div>
-                              </label>
-                            ))}
+                              );
+                            })}
                             <button
                               type="button"
                               disabled={addDescSelected.length === 0}
