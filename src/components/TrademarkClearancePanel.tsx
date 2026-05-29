@@ -616,17 +616,19 @@ function ClearanceLoadingSteps({ lang, done }: { lang: Lang; done: boolean }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [completedCount, setCompletedCount] = useState(0);
   const [elapsed, setElapsed] = useState(0);
+  const [tick, setTick] = useState(0);
   const lastStepStartRef = useRef<number | null>(null);
+  const startTimeRef = useRef(Date.now());
 
-  // Steps 1–12 auto-advance on a timer; step 13 ("Compiling report") uses a
-  // continuous exponential-decay crawl so the bar never freezes while awaiting the API.
-  const durations = [1800, 1600, 2000, 1700, 1500, 1800, 1400, 1700, 1600, 1800, 1500, 1700];
+  // Per-step durations (ms). Total ~20s for steps 0-11; step 12 is the final "compiling" step.
+  const durations = [1500, 1400, 1800, 1500, 1300, 1600, 1200, 1500, 1400, 1600, 1300, 1400];
+  const timedTotal = durations.reduce((a, b) => a + b, 0); // ~16600ms
 
   useEffect(() => {
     let elapsedMs = 0;
     const timers: ReturnType<typeof setTimeout>[] = [];
     for (let i = 0; i < steps.length - 1; i++) {
-      elapsedMs += durations[i] ?? 1800;
+      elapsedMs += durations[i] ?? 1500;
       const idx = i;
       timers.push(setTimeout(() => {
         setCompletedCount(idx + 1);
@@ -640,23 +642,41 @@ function ClearanceLoadingSteps({ lang, done }: { lang: Lang; done: boolean }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [steps.length]);
 
+  // rAF loop for smooth continuous bar fill during the last step
   useEffect(() => {
-    const interval = setInterval(() => setElapsed(e => e + 1), 1000);
+    let rafId: number;
+    const loop = () => {
+      setTick(Date.now());
+      rafId = requestAnimationFrame(loop);
+    };
+    rafId = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(rafId);
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setElapsed(Math.round((Date.now() - startTimeRef.current) / 1000));
+    }, 500);
     return () => clearInterval(interval);
   }, []);
 
-  // Each of the 13 steps owns 1/13 of the bar. Steps 1–12 advance discretely.
-  // Step 13 crawls continuously via an exponential-decay curve (τ = 15s) so the
-  // bar always moves and never freezes while the API is still responding.
-  const stepSlot = 1 / steps.length;
+  // Progress model:
+  // • Steps 0-11 each own an equal slice of the first 90% of the bar.
+  // • The last step (step 12) owns the remaining 10%, filled via a fast
+  //   exponential-decay curve (τ = 4s) so it visually completes in ~8-10s
+  //   and feels proportional to the other steps.
+  const timedShare = 0.90;
+  const lastShare = 1 - timedShare;
+  const stepSlot = timedShare / (steps.length - 1);
   const timedBase = completedCount * stepSlot;
   let lastStepFill = 0;
   if (completedCount === steps.length - 1 && lastStepStartRef.current !== null) {
+    void tick; // consumed to trigger re-render via rAF
     const extraSec = (Date.now() - lastStepStartRef.current) / 1000;
-    lastStepFill = stepSlot * (1 - Math.exp(-extraSec / 15));
+    lastStepFill = lastShare * (1 - Math.exp(-extraSec / 4));
   }
-  const progress = done ? 1 : timedBase + lastStepFill;
-  const totalEstimated = durations.reduce((a, b) => a + b, 0) + 10000;
+  const progress = done ? 1 : Math.min(timedBase + lastStepFill, 0.98);
+  const totalEstimated = timedTotal + 8000;
 
   const gaugeR = 28; const gaugeCx = 36; const gaugeCy = 36;
   const gaugeCirc = 2 * Math.PI * gaugeR;
