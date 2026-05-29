@@ -740,7 +740,7 @@ export default function ApplyPage() {
   };
 
   const confirmedEntries = form.classEntries.filter(e => e.isConfirmed || e.fallbackClasses.length > 0);
-  const activeEntry = form.classEntries[form.classEntries.length - 1];
+  const activeEntry = form.classEntries[form.classEntries.length - 1] ?? newEntry();
   const activeEntryIsConfirmed = activeEntry.isConfirmed || activeEntry.fallbackClasses.length > 0;
 
   const allSelectedClassNumbers: number[] = [];
@@ -860,6 +860,8 @@ export default function ApplyPage() {
 
   // Load existing draft on mount
   useEffect(() => {
+    // Don't overwrite pre-filled form state from a clearance search with a stale draft
+    if (fromClearance) { draftLoaded.current = true; return; }
     if (user) {
       // Authenticated: load from Supabase
       (async () => {

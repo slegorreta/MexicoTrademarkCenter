@@ -1,8 +1,34 @@
-import { useState } from 'react';
+import { useState, Component, type ReactNode, type ErrorInfo } from 'react';
 import { X } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import Header from './Header';
 import Footer from './Footer';
+
+class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  componentDidCatch(error: Error, info: ErrorInfo) { console.error('Layout ErrorBoundary caught:', error, info); }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-8 bg-gray-50">
+          <p className="text-lg font-semibold text-gray-800">Something went wrong.</p>
+          <p className="text-sm text-gray-500 max-w-md text-center">{this.state.error.message}</p>
+          <button
+            onClick={() => { this.setState({ error: null }); window.location.href = '/'; }}
+            className="px-5 py-2.5 bg-[#1a2e1a] text-white rounded-xl text-sm font-semibold hover:bg-[#2d4a2d] transition-colors"
+          >
+            Go Home
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 import PriceGuaranteeBadge from '../PriceGuaranteeBadge';
 import { useLanguage } from '../../context/LanguageContext';
 
@@ -70,14 +96,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const hideBadge = BADGE_HIDDEN_PATHS.some(p => location.pathname.startsWith(p));
 
   return (
-    <div className="min-h-screen flex flex-col bg-white">
-      <Header />
-      <main className="flex-1 pt-16 lg:pt-20">
-        {children}
-      </main>
-      <Footer />
-      {showWeChat && <WeChatWidget />}
-      <PriceGuaranteeBadge variant="float" hidden={hideBadge} />
-    </div>
+    <ErrorBoundary>
+      <div className="min-h-screen flex flex-col bg-white">
+        <Header />
+        <main className="flex-1 pt-16 lg:pt-20">
+          {children}
+        </main>
+        <Footer />
+        {showWeChat && <WeChatWidget />}
+        <PriceGuaranteeBadge variant="float" hidden={hideBadge} />
+      </div>
+    </ErrorBoundary>
   );
 }
