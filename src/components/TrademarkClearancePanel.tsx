@@ -269,6 +269,8 @@ const UI: Record<string, Record<string, string>> = {
   ctaFileThisName: { en: 'File this trademark now — $299 USD', es: 'Registrar esta marca ahora — $299 USD', fr: 'Déposer cette marque maintenant — 299 $ USD', pt: 'Registrar esta marca agora — US$ 299', de: 'Marke jetzt anmelden — 299 $ USD', it: 'Deposita questo marchio ora — 299 $ USD', zh: '立即注册此商标 — $299 USD', ja: 'この商標を今すぐ出願 — $299 USD', hi: 'इस ट्रेडमार्क को अभी दाखिल करें — $299 USD' },
   getPdfReport: { en: 'Get PDF Report', es: 'Obtener PDF', fr: 'Obtenir le PDF', pt: 'Obter PDF', de: 'PDF erhalten', it: 'Ottieni PDF', zh: '获取PDF报告', ja: 'PDFを取得', hi: 'PDF रिपोर्ट प्राप्त करें' },
   pdfReportReady: { en: '✓ PDF Report Ready', es: '✓ PDF listo', fr: '✓ PDF prêt', pt: '✓ PDF pronto', de: '✓ PDF bereit', it: '✓ PDF pronto', zh: '✓ PDF已就绪', ja: '✓ PDF準備完了', hi: '✓ PDF तैयार है' },
+  pdfCtaGenerating: { en: 'Generating Report…', es: 'Generando Reporte…', fr: 'Génération du rapport…', pt: 'Gerando Relatório…', de: 'Bericht wird erstellt…', it: 'Generazione report…', zh: '正在生成报告…', ja: 'レポート生成中…', hi: 'रिपोर्ट तैयार हो रही है…' },
+  pdfCtaReady: { en: 'PDF Report Ready — Click to Download', es: 'Reporte PDF Listo — Haz clic para descargar', fr: 'Rapport PDF prêt — Cliquez pour télécharger', pt: 'Relatório PDF pronto — Clique para baixar', de: 'PDF-Bericht bereit — Zum Herunterladen klicken', it: 'Report PDF pronto — Clicca per scaricare', zh: 'PDF报告已就绪 — 点击下载', ja: 'PDFレポート準備完了 — クリックでダウンロード', hi: 'PDF रिपोर्ट तैयार — डाउनलोड के लिए क्लिक करें' },
   pdfModalTitle: { en: 'Get your PDF Report', es: 'Obtener su Reporte PDF', fr: 'Obtenir votre rapport PDF', pt: 'Obtenha seu Relatório PDF', de: 'Ihr PDF-Bericht', it: 'Ottieni il tuo Report PDF', zh: '获取您的PDF报告', ja: 'PDFレポートを取得', hi: 'अपनी PDF रिपोर्ट प्राप्त करें' },
   pdfModalDesc: { en: 'Enter your email to receive this report as a timestamped PDF. You can close this screen — the PDF is being generated in the background and will be sent to your inbox and shown here once it is ready.', es: 'Ingresa tu correo para recibir este reporte como PDF con sello de tiempo. Puedes cerrar esta pantalla — el PDF se está generando en segundo plano y se enviará a tu bandeja y aparecerá aquí cuando esté listo.', fr: 'Entrez votre e-mail pour recevoir ce rapport en PDF horodaté. Vous pouvez fermer cet écran — le PDF est en cours de génération en arrière-plan et sera envoyé dans votre boîte et affiché ici une fois prêt.', pt: 'Insira seu e-mail para receber este relatório em PDF com carimbo de tempo. Você pode fechar esta tela — o PDF está sendo gerado em segundo plano e será enviado para sua caixa e exibido aqui quando estiver pronto.', de: 'Geben Sie Ihre E-Mail ein, um diesen Bericht als zeitgestempeltes PDF zu erhalten. Sie können diesen Bildschirm schließen — das PDF wird im Hintergrund erstellt und an Ihren Posteingang gesendet und hier angezeigt, sobald es fertig ist.', it: 'Inserisci la tua e-mail per ricevere questo report come PDF con timestamp. Puoi chiudere questa schermata — il PDF viene generato in background e verrà inviato nella tua casella e mostrato qui quando sarà pronto.', zh: '输入您的邮箱以接收此报告的带时间戳PDF。您可以关闭此屏幕——PDF正在后台生成，完成后将发送到您的邮箱并在此处显示。', ja: 'メールアドレスを入力してタイムスタンプ付きPDFレポートを受け取ってください。この画面は閉じてもかまいません — PDFはバックグラウンドで生成中で、完成次第メールに送信されここに表示されます。', hi: 'इस रिपोर्ट को टाइमस्टैम्प PDF के रूप में प्राप्त करने के लिए अपना ईमेल दर्ज करें। आप यह स्क्रीन बंद कर सकते हैं — PDF बैकग्राउंड में तैयार हो रहा है और तैयार होने पर आपके इनबॉक्स में भेजा जाएगा और यहाँ दिखाया जाएगा।' },
   pdfGenerating: { en: 'Generating your PDF…', es: 'Generando tu PDF…', fr: 'Génération du PDF…', pt: 'Gerando PDF…', de: 'PDF wird erstellt…', it: 'Generazione PDF in corso…', zh: '正在生成PDF…', ja: 'PDF生成中…', hi: 'PDF तैयार हो रहा है…' },
@@ -1166,6 +1168,9 @@ export default function TrademarkClearancePanel({
   // Background pre-generation: order + PDF kicked off as soon as result arrives
   const [bgOrderId, setBgOrderId] = useState('');
   const [bgPdfUrl, setBgPdfUrl] = useState('');
+  const [bgGenerating, setBgGenerating] = useState(false);
+  const [bgProgress, setBgProgress] = useState(0);
+  const bgProgressTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const bgGeneratingRef = useRef(false);
 
   // Snap to 100 if background PDF finishes while user already submitted email
@@ -1245,6 +1250,17 @@ export default function TrademarkClearancePanel({
     bgGeneratingRef.current = true;
     setBgOrderId('');
     setBgPdfUrl('');
+    setBgGenerating(true);
+    setBgProgress(0);
+
+    // Animate progress bar 0→88% over ~90s using exponential decay so it feels live
+    const BG_TAU = 30; // seconds to reach ~95% of slot
+    const bgStart = Date.now();
+    if (bgProgressTimer.current) clearInterval(bgProgressTimer.current);
+    bgProgressTimer.current = setInterval(() => {
+      const elapsed = (Date.now() - bgStart) / 1000;
+      setBgProgress(Math.round(88 * (1 - Math.exp(-elapsed / BG_TAU))));
+    }, 400);
 
     (async () => {
       try {
@@ -1279,7 +1295,13 @@ export default function TrademarkClearancePanel({
             });
             if (r.ok) {
               const d = await r.json();
-              if (d.url) { setBgPdfUrl(d.url); return; }
+              if (d.url) {
+                if (bgProgressTimer.current) clearInterval(bgProgressTimer.current);
+                setBgProgress(100);
+                setBgPdfUrl(d.url);
+                setBgGenerating(false);
+                return;
+              }
             }
           } catch {/* ignore */}
           if (attempts < 30) {
@@ -1290,6 +1312,8 @@ export default function TrademarkClearancePanel({
         await pollUrl();
       } catch {/* silent — never block user */} finally {
         bgGeneratingRef.current = false;
+        if (bgProgressTimer.current) clearInterval(bgProgressTimer.current);
+        setBgGenerating(false);
       }
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1737,18 +1761,33 @@ export default function TrademarkClearancePanel({
           >
             <Printer size={14} />
           </button>
-          <button
-            type="button"
-            onClick={() => setShowPdfModal(true)}
-            className={`flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-lg border transition-all ${
-              bgPdfUrl && !pdfModalDone
-                ? 'border-emerald-500 text-emerald-700 bg-emerald-50 animate-pulse shadow-sm shadow-emerald-200'
-                : 'border-[#1a2e1a] text-[#1a2e1a] hover:bg-[#1a2e1a]/10'
-            }`}
-          >
-            <Download size={11} />
-            {bgPdfUrl && !pdfModalDone ? tr('pdfReportReady', lang) : tr('getPdfReport', lang)}
-          </button>
+          {bgGenerating && !bgPdfUrl ? (
+            <div className="flex flex-col items-start gap-0.5 min-w-[110px]">
+              <div className="flex items-center gap-1 text-[10px] font-semibold text-emerald-700">
+                <Loader2 size={10} className="animate-spin flex-shrink-0" />
+                {tr('pdfCtaGenerating', lang)}
+              </div>
+              <div className="w-full h-1 bg-emerald-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-emerald-500 rounded-full transition-all duration-700"
+                  style={{ width: `${bgProgress}%` }}
+                />
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => bgPdfUrl && !pdfModalDone ? window.open(bgPdfUrl, '_blank') : setShowPdfModal(true)}
+              className={`flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-lg border transition-all ${
+                bgPdfUrl && !pdfModalDone
+                  ? 'border-emerald-500 text-emerald-700 bg-emerald-50 animate-[pulse_1s_ease-in-out_infinite] shadow-sm shadow-emerald-200'
+                  : 'border-[#1a2e1a] text-[#1a2e1a] hover:bg-[#1a2e1a]/10'
+              }`}
+            >
+              <Download size={11} />
+              {bgPdfUrl && !pdfModalDone ? tr('pdfReportReady', lang) : tr('getPdfReport', lang)}
+            </button>
+          )}
         </div>
       </div>
 
@@ -3567,17 +3606,49 @@ export default function TrademarkClearancePanel({
 
       {/* ── Free PDF report CTA ──────────────────────────────────────────────── */}
       {!pdfModalDone ? (
-        <div className="border-t border-gray-100 px-4 py-4 bg-orange-50 print:hidden">
-          <button
-            type="button"
-            onClick={() => setShowPdfModal(true)}
-            className="w-full flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white font-bold px-5 py-3 rounded-xl transition-colors shadow-md text-sm"
-          >
-            <Download size={14} />
-            {tr('freePdfCta', lang)}
-            <ArrowRight size={14} />
-          </button>
-        </div>
+        bgGenerating && !bgPdfUrl ? (
+          /* Generating state — green progress bar */
+          <div className="border-t border-gray-100 px-4 py-4 bg-emerald-50 print:hidden">
+            <div className="flex items-center gap-2 mb-2">
+              <Loader2 size={14} className="animate-spin text-emerald-600 flex-shrink-0" />
+              <p className="text-xs font-semibold text-emerald-800">{tr('pdfCtaGenerating', lang)}</p>
+              <span className="ml-auto text-[10px] text-emerald-600 font-medium">{bgProgress}%</span>
+            </div>
+            <div className="w-full h-2 bg-emerald-100 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-emerald-500 rounded-full transition-all duration-700"
+                style={{ width: `${bgProgress}%` }}
+              />
+            </div>
+          </div>
+        ) : bgPdfUrl ? (
+          /* Ready state — blinking green CTA */
+          <div className="border-t border-gray-100 px-4 py-4 bg-emerald-50 print:hidden">
+            <a
+              href={bgPdfUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-3 rounded-xl transition-colors shadow-md text-sm animate-[pulse_1s_ease-in-out_infinite] hover:animate-none"
+            >
+              <Download size={14} />
+              {tr('pdfCtaReady', lang)}
+              <ArrowRight size={14} />
+            </a>
+          </div>
+        ) : (
+          /* Default state — orange CTA */
+          <div className="border-t border-gray-100 px-4 py-4 bg-orange-50 print:hidden">
+            <button
+              type="button"
+              onClick={() => setShowPdfModal(true)}
+              className="w-full flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white font-bold px-5 py-3 rounded-xl transition-colors shadow-md text-sm"
+            >
+              <Download size={14} />
+              {tr('freePdfCta', lang)}
+              <ArrowRight size={14} />
+            </button>
+          </div>
+        )
       ) : (
         <div className="border-t border-gray-100 px-4 py-4 bg-emerald-50 print:hidden">
           <div className="flex items-center gap-2 mb-2">
