@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pgrep -f 'vite.*5173' > /dev/null 2>&1 || (cd /tmp/cc-agent/66295843/project && node node_modules/.bin/vite --port 5173 --host > /tmp/vite.log 2>&1 &)",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
