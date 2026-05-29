@@ -565,7 +565,32 @@ Idioma de salida: ${langName}. Cada palabra debe estar en ${langName}. Sin markd
 
 // ─── Static Data ─────────────────────────────────────────────────────────────
 
+// English labels used when rendering the EN half of the report
 const CONFUSION_FACTORS_EN: Record<string, string> = {
+  similarity_of_marks: "Similarity of Marks (Phonetic, Visual, Conceptual)",
+  strength_of_marks: "Strength / Fame of the Marks",
+  similarity_of_goods: "Similarity of Goods / Services",
+  channels_of_trade: "Channels of Trade / Distribution",
+  conditions_of_purchase: "Purchasing Conditions / Target Consumer",
+  actual_confusion: "Evidence of Actual Confusion in the Market",
+  concurrent_use: "Prolonged Concurrent Use Without Confusion",
+  variety_of_goods: "Variety of Goods on Which the Mark is Used",
+  market_interface: "Market Interface / Nature of Prior Use",
+  applicant_bad_faith: "Applicant Bad Faith (Art. 173 Fr. XVIII LFPPI)",
+  sophistication_of_buyers: "Sophistication of Target Consumers",
+  number_of_similar_marks: "Number of Similar Marks in the Sector",
+  extent_of_potential_confusion: "Extent of Potential Confusion Risk",
+  // Spanish-keyed fallbacks (AI may return Spanish keys)
+  "Similitud de las Marcas": "Similarity of Marks (Phonetic, Visual, Conceptual)",
+  "Similitud de los Bienes/Servicios": "Similarity of Goods / Services",
+  "Canales de Distribucion": "Channels of Trade / Distribution",
+  "Consumidores / Compradores": "Target Consumer / Purchasing Conditions",
+  "Marcas Famosas o Notoriamente Conocidas": "Famous / Well-Known Marks",
+  "Numero de Registros Similares en el Mercado": "Number of Similar Marks in the Sector",
+};
+
+// Spanish labels used when rendering the ES half of the report
+const CONFUSION_FACTORS_ES: Record<string, string> = {
   similarity_of_marks: "Similitud de las Marcas (Fonetica, Visual, Conceptual)",
   strength_of_marks: "Fortaleza / Notoriedad de las Marcas",
   similarity_of_goods: "Similitud de Productos / Servicios",
@@ -824,8 +849,8 @@ async function buildPdf(
 
   const niceClasses = result.niceClassification ?? [];
   const searchLang = (result.searchLanguage ?? "en") as Lang;
-  // ES-only: single Spanish report. EN: single English report. All others: native + Spanish.
-  const isBilingual = searchLang !== "en" && searchLang !== "es";
+  // ES-only: single Spanish report. All others (EN and other languages): primary lang + Spanish.
+  const isBilingual = searchLang !== "es";
 
   const score = computeScore(result);
   const verdict = scoreToVerdict(score);
@@ -842,7 +867,7 @@ async function buildPdf(
   if (result.attorneyCommentary) {
     commentary = {
       native: result.attorneyCommentary,
-      english: result.attorneyCommentary_es ?? result.attorneyCommentary,
+      english: result.attorneyCommentary_en ?? result.attorneyCommentary,
     };
   } else if (openAiKey) {
     commentary = await generateAttorneyCommentary(openAiKey, markName, goodsServices, result, searchLang);
@@ -1031,10 +1056,12 @@ async function buildPdf(
       }
 
       // 5-axis pentagon
-      if (y > MARGIN_BOT + 120) {
+      const pCardHNeeded = pentagonScores.length * 38 + 30;
+      if (y > MARGIN_BOT + pCardHNeeded) {
         p.drawText(T("pentagonSection"), { x: MARGIN_X, y, size: 7.5, font: bold, color: C.textMuted });
         y -= 10;
-        const pCardH = 130;
+        // Each axis row: label(12) + bar(14) + interp(12) = 38px × 5 axes + top/bottom padding
+        const pCardH = pentagonScores.length * 38 + 20;
         drawCard(p, MARGIN_X, y, CONTENT_W, pCardH);
 
         const pentCX = MARGIN_X + 88;
@@ -1426,7 +1453,8 @@ async function buildPdf(
         const isAgainst = f.verdict === "against_registration" || f.verdict === "Desfavorable";
         const fc = isFavor ? C.success : isAgainst ? C.critical : C.textMuted;
         const verdLabel = isFavor ? TI("FAVORABLE", "FAVORABLE") : isAgainst ? TI("UNFAVORABLE", "DESFAVORABLE") : TI("NEUTRAL", "NEUTRAL");
-        const factorLabel = CONFUSION_FACTORS_EN[f.factor] ?? safeText(f.factor);
+        const factorMap = (useEnglish || lang === "en") ? CONFUSION_FACTORS_EN : CONFUSION_FACTORS_ES;
+        const factorLabel = factorMap[f.factor] ?? safeText(f.factor);
         const reasonText = useEnglish ? (f.reasoning_en ?? f.reasoning) : f.reasoning;
         const reasonLines = wrapText(reasonText, regular, 8, COL_W - 22);
         const factorLines = wrapText(`${i + 1}. ${factorLabel}`, bold, 8, COL_W - 60);
@@ -1994,21 +2022,20 @@ async function buildPdf(
   };
 
   if (isBilingual) {
-    // Native-language cover + sections
+    // First half: primary language (EN uses useEnglish=true, others use their own lang)
+    const useEn = searchLang === "en";
     renderCover(searchLang, verdict, score);
-    renderAllSections(searchLang, false);
-    // Spanish cover + sections — swap commentary so Spanish text appears in the Spanish half
+    renderAllSections(searchLang, useEn);
+    // Second half: Spanish — swap commentary to Spanish text
     const origNative = commentary.native;
     commentary.native = commentary.english || commentary.native;
     renderCover("es", verdict, score);
     renderAllSections("es", false);
     commentary.native = origNative;
-  } else if (searchLang === "es") {
+  } else {
+    // ES-only
     renderCover("es", verdict, score);
     renderAllSections("es", false);
-  } else {
-    renderCover("en", verdict, score);
-    renderAllSections("en", true);
   }
 
   // ══════════════════════════════════════════════════════════════════════
