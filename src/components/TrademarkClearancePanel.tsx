@@ -616,24 +616,24 @@ function ClearanceLoadingSteps({ lang, done }: { lang: Lang; done: boolean }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [completedCount, setCompletedCount] = useState(0);
   const [elapsed, setElapsed] = useState(0);
+  const lastStepStartRef = useRef<number | null>(null);
 
-  // Steps 1–12 auto-advance on a timer; step 13 ("Compiling report") only completes
-  // when the API responds (done=true). Total simulated time ~22s covers most of the
-  // real server processing, keeping the bar visibly moving throughout the wait.
+  // Steps 1–12 auto-advance on a timer; step 13 ("Compiling report") uses a
+  // continuous exponential-decay crawl so the bar never freezes while awaiting the API.
   const durations = [1800, 1600, 2000, 1700, 1500, 1800, 1400, 1700, 1600, 1800, 1500, 1700];
-  const lastStepEstimateMs = 10000;
-  const totalEstimated = durations.reduce((a, b) => a + b, 0) + lastStepEstimateMs;
 
   useEffect(() => {
     let elapsedMs = 0;
     const timers: ReturnType<typeof setTimeout>[] = [];
-    // Only auto-advance steps 0–6 (indices 0..steps.length-2)
     for (let i = 0; i < steps.length - 1; i++) {
       elapsedMs += durations[i] ?? 1800;
       const idx = i;
       timers.push(setTimeout(() => {
         setCompletedCount(idx + 1);
         setActiveIndex(idx + 1);
+        if (idx + 1 === steps.length - 1) {
+          lastStepStartRef.current = Date.now();
+        }
       }, elapsedMs));
     }
     return () => timers.forEach(clearTimeout);
@@ -645,11 +645,18 @@ function ClearanceLoadingSteps({ lang, done }: { lang: Lang; done: boolean }) {
     return () => clearInterval(interval);
   }, []);
 
-  // Progress: timed steps fill 0–(n-1)/n of the bar; the last step fills in only
-  // when `done` is true (API responded). This prevents the bar from hitting 100%
-  // while the server is still compiling the report.
-  const timedProgress = completedCount / steps.length; // max = 7/8 = 87.5%
-  const progress = done ? 1 : timedProgress;
+  // Each of the 13 steps owns 1/13 of the bar. Steps 1–12 advance discretely.
+  // Step 13 crawls continuously via an exponential-decay curve (τ = 15s) so the
+  // bar always moves and never freezes while the API is still responding.
+  const stepSlot = 1 / steps.length;
+  const timedBase = completedCount * stepSlot;
+  let lastStepFill = 0;
+  if (completedCount === steps.length - 1 && lastStepStartRef.current !== null) {
+    const extraSec = (Date.now() - lastStepStartRef.current) / 1000;
+    lastStepFill = stepSlot * (1 - Math.exp(-extraSec / 15));
+  }
+  const progress = done ? 1 : timedBase + lastStepFill;
+  const totalEstimated = durations.reduce((a, b) => a + b, 0) + 10000;
 
   const gaugeR = 28; const gaugeCx = 36; const gaugeCy = 36;
   const gaugeCirc = 2 * Math.PI * gaugeR;
