@@ -356,6 +356,76 @@ const copy: Record<string, Partial<Record<Lang, string>>> = {
     pt: 'Adicionar uma classe',
     ja: 'クラスを追加',
   },
+  addClassBrowseTab: {
+    en: 'Browse Classes',
+    zh: '浏览类别',
+    es: 'Explorar Clases',
+    de: 'Klassen durchsuchen',
+    fr: 'Parcourir les classes',
+    hi: 'कक्षाएं ब्राउज़ करें',
+    pt: 'Explorar Classes',
+    ja: 'クラスを検索',
+  },
+  addClassDescribeTab: {
+    en: 'Describe Goods/Services',
+    zh: '描述商品/服务',
+    es: 'Describir Bienes/Servicios',
+    de: 'Waren/Dienstleistungen beschreiben',
+    fr: 'Décrire les produits/services',
+    hi: 'माल/सेवाओं का वर्णन करें',
+    pt: 'Descrever Produtos/Serviços',
+    ja: '商品・サービスを説明',
+  },
+  addClassDescPlaceholder: {
+    en: 'e.g. online tutoring for children, educational apps and e-learning platforms…',
+    zh: '例如：儿童在线辅导、教育应用程序和电子学习平台…',
+    es: 'ej. tutoría en línea para niños, aplicaciones educativas y plataformas de e-learning…',
+    de: 'z. B. Online-Nachhilfe für Kinder, Lern-Apps und E-Learning-Plattformen…',
+    fr: 'ex. cours particuliers en ligne pour enfants, applications éducatives et plateformes e-learning…',
+    hi: 'उदा. बच्चों के लिए ऑनलाइन ट्यूटरिंग, शैक्षिक ऐप्स और ई-लर्निंग प्लेटफ़ॉर्म…',
+    pt: 'ex. tutoria online para crianças, aplicativos educacionais e plataformas de e-learning…',
+    ja: '例: 子供向けオンライン家庭教師、教育アプリ、eラーニングプラットフォーム…',
+  },
+  addClassClassifyBtn: {
+    en: 'Classify with AI',
+    zh: '用AI分类',
+    es: 'Clasificar con IA',
+    de: 'Mit KI klassifizieren',
+    fr: "Classifier avec l'IA",
+    hi: 'AI से वर्गीकृत करें',
+    pt: 'Classificar com IA',
+    ja: 'AIで分類する',
+  },
+  addClassAddSelected: {
+    en: 'Add Selected Classes',
+    zh: '添加已选类别',
+    es: 'Agregar Clases Seleccionadas',
+    de: 'Ausgewählte Klassen hinzufügen',
+    fr: 'Ajouter les classes sélectionnées',
+    hi: 'चुनी गई कक्षाएं जोड़ें',
+    pt: 'Adicionar Classes Selecionadas',
+    ja: '選択したクラスを追加',
+  },
+  addClassNoResults: {
+    en: 'No new classes found for this description.',
+    zh: '未找到新类别。',
+    es: 'No se encontraron nuevas clases para esta descripción.',
+    de: 'Keine neuen Klassen für diese Beschreibung gefunden.',
+    fr: 'Aucune nouvelle classe trouvée pour cette description.',
+    hi: 'इस विवरण के लिए कोई नई कक्षा नहीं मिली।',
+    pt: 'Nenhuma nova classe encontrada para esta descrição.',
+    ja: 'この説明に対する新しいクラスが見つかりませんでした。',
+  },
+  confirmClassesBanner: {
+    en: 'Check the classes below — deselect any that do not apply before running the search.',
+    zh: '检查下方类别 — 在运行搜索前取消选择不适用的类别。',
+    es: 'Revisa las clases a continuación — deselecciona las que no apliquen antes de ejecutar la búsqueda.',
+    de: 'Überprüfen Sie die Klassen unten — entfernen Sie nicht zutreffende Klassen vor der Suche.',
+    fr: 'Vérifiez les classes ci-dessous — désélectionnez celles qui ne s\'appliquent pas avant de lancer la recherche.',
+    hi: 'नीचे की कक्षाएं जांचें — खोज चलाने से पहले जो लागू न हो उन्हें हटाएं।',
+    pt: 'Verifique as classes abaixo — desmarque as que não se aplicam antes de executar a busca.',
+    ja: '以下のクラスを確認してください — 検索を実行する前に該当しないクラスの選択を外してください。',
+  },
   editLabel: {
     en: 'Edit',
     zh: '编辑',
@@ -684,6 +754,12 @@ export default function TrademarkCheckPage() {
   });
   const [showAddPicker, setShowAddPicker] = useState(false);
   const [pickerSearch, setPickerSearch]   = useState('');
+  const [addPanelTab, setAddPanelTab]     = useState<'browse' | 'describe'>('browse');
+  const [addDescInput, setAddDescInput]   = useState('');
+  const [addDescClassifying, setAddDescClassifying] = useState(false);
+  const [addDescSuggested, setAddDescSuggested]     = useState<SuggestedClass[]>([]);
+  const [addDescSelected, setAddDescSelected]       = useState<number[]>([]);
+  const [addDescError, setAddDescError]             = useState<string | null>(null);
   const [editConfirmStep, setEditConfirmStep] = useState<WizardStep | null>(null);
   const [startOverConfirm, setStartOverConfirm] = useState(false);
 
@@ -1338,34 +1414,44 @@ export default function TrademarkCheckPage() {
                 </div>
               )}
 
+              {/* Confirmation banner when 2+ classes */}
+              {confirmClasses.length >= 2 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 flex items-center gap-2.5">
+                  <AlertTriangle size={14} className="text-amber-500 flex-shrink-0" />
+                  <p className="text-xs text-amber-800 leading-relaxed">{tr('confirmClassesBanner')}</p>
+                </div>
+              )}
+
               {/* Class list */}
               <div className="space-y-2">
                 {confirmClasses.length > 0 ? (
                   confirmClasses.map(cls => {
                     const suggested = suggestedClasses.find(s => s.classNumber === cls.num);
+                    const isSelected = selectedNums.includes(cls.num);
                     return (
                       <div
                         key={cls.num}
-                        className="border border-gray-200 rounded-xl overflow-hidden"
+                        className={`border rounded-xl overflow-hidden transition-colors ${isSelected ? 'border-navy-300 bg-white' : 'border-gray-200 bg-gray-50 opacity-60'}`}
                       >
                         {/* Class header row */}
-                        <div className="flex items-start gap-3 px-4 py-3 bg-white">
+                        <div className="flex items-start gap-3 px-4 py-3">
                           <button
                             type="button"
                             onClick={() => toggleClass(cls.num)}
-                            className={`flex-shrink-0 w-5 h-5 mt-0.5 rounded border-2 flex items-center justify-center transition-colors ${
-                              selectedNums.includes(cls.num)
-                                ? 'bg-navy-800 border-navy-800'
-                                : 'border-gray-300 bg-white'
+                            aria-label={isSelected ? 'Deselect class' : 'Select class'}
+                            className={`flex-shrink-0 w-5 h-5 mt-0.5 rounded border-2 flex items-center justify-center transition-all ${
+                              isSelected
+                                ? 'bg-navy-800 border-navy-800 shadow-sm'
+                                : 'border-gray-300 bg-white hover:border-navy-400'
                             }`}
                           >
-                            {selectedNums.includes(cls.num) && (
+                            {isSelected && (
                               <CheckCircle2 size={11} className="text-white" strokeWidth={3} />
                             )}
                           </button>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-[11px] font-bold bg-navy-100 text-navy-700 px-2 py-0.5 rounded-full">
+                              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${isSelected ? 'bg-navy-100 text-navy-700' : 'bg-gray-200 text-gray-500'}`}>
                                 {classLabel(cls.num)}
                               </span>
                               <span className="text-sm font-semibold text-gray-900">
@@ -1380,13 +1466,14 @@ export default function TrademarkCheckPage() {
                           <button
                             type="button"
                             onClick={() => toggleClass(cls.num)}
-                            className="flex-shrink-0 text-gray-300 hover:text-red-400 transition-colors mt-0.5"
+                            title={isSelected ? 'Deselect' : 'Select'}
+                            className={`flex-shrink-0 transition-colors mt-0.5 ${isSelected ? 'text-gray-300 hover:text-red-400' : 'text-gray-200 hover:text-navy-400'}`}
                           >
                             <X size={14} />
                           </button>
                         </div>
                         {/* IMPI description */}
-                        {suggested?.descriptionEs && (
+                        {suggested?.descriptionEs && isSelected && (
                           <div className="border-t border-gray-100 bg-gray-50 px-4 py-2.5">
                             <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">
                               {tr('impiDescription')}
@@ -1404,11 +1491,15 @@ export default function TrademarkCheckPage() {
                 )}
               </div>
 
-              {/* Add a class */}
+              {/* Add a class — two-tab panel */}
               <div className="relative">
                 <button
                   type="button"
-                  onClick={() => { setShowAddPicker(v => !v); setPickerSearch(''); }}
+                  onClick={() => {
+                    const next = !showAddPicker;
+                    setShowAddPicker(next);
+                    if (next) { setPickerSearch(''); setAddPanelTab('browse'); setAddDescInput(''); setAddDescSuggested([]); setAddDescSelected([]); setAddDescError(null); }
+                  }}
                   className="inline-flex items-center gap-1.5 text-xs font-medium text-navy-700 hover:text-navy-900 border border-dashed border-navy-300 hover:border-navy-500 rounded-xl px-3 py-2 transition-colors"
                 >
                   <Plus size={13} />
@@ -1417,41 +1508,163 @@ export default function TrademarkCheckPage() {
                 </button>
 
                 {showAddPicker && (
-                  <div className="absolute left-0 top-full mt-1 z-20 w-80 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
-                    <div className="p-2 border-b border-gray-100">
-                      <input
-                        type="text"
-                        value={pickerSearch}
-                        onChange={e => setPickerSearch(e.target.value)}
-                        placeholder={lang === 'zh' ? '搜索类别…' : lang === 'es' ? 'Buscar clase…' : lang === 'de' ? 'Klasse suchen…' : lang === 'fr' ? 'Rechercher une classe…' : lang === 'hi' ? 'कक्षा खोजें…' : lang === 'pt' ? 'Pesquisar classe…' : 'Search classes…'}
-                        className="w-full text-xs border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-navy-400"
-                        autoFocus
-                      />
+                  <div className="mt-2 w-full bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+                    {/* Tabs */}
+                    <div className="flex border-b border-gray-100">
+                      <button
+                        type="button"
+                        onClick={() => setAddPanelTab('browse')}
+                        className={`flex-1 text-xs font-semibold py-2.5 px-3 transition-colors ${addPanelTab === 'browse' ? 'text-navy-800 border-b-2 border-navy-700 bg-navy-50/50' : 'text-gray-500 hover:text-gray-700'}`}
+                      >
+                        {tr('addClassBrowseTab')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAddPanelTab('describe')}
+                        className={`flex-1 text-xs font-semibold py-2.5 px-3 transition-colors flex items-center justify-center gap-1.5 ${addPanelTab === 'describe' ? 'text-navy-800 border-b-2 border-navy-700 bg-navy-50/50' : 'text-gray-500 hover:text-gray-700'}`}
+                      >
+                        <Sparkles size={11} />
+                        {tr('addClassDescribeTab')}
+                      </button>
                     </div>
-                    <div className="max-h-56 overflow-y-auto">
-                      {availableToAdd.length === 0 ? (
-                        <p className="text-xs text-gray-400 text-center py-4">
-                          {lang === 'zh' ? '未找到结果' : lang === 'es' ? 'Sin resultados' : lang === 'de' ? 'Keine Ergebnisse' : lang === 'fr' ? 'Aucun résultat' : lang === 'hi' ? 'कोई परिणाम नहीं' : lang === 'pt' ? 'Sem resultados' : 'No results'}
-                        </p>
-                      ) : (
-                        availableToAdd.map(cls => (
+
+                    {/* Tab: Browse */}
+                    {addPanelTab === 'browse' && (
+                      <>
+                        <div className="p-2 border-b border-gray-100">
+                          <input
+                            type="text"
+                            value={pickerSearch}
+                            onChange={e => setPickerSearch(e.target.value)}
+                            placeholder={lang === 'zh' ? '搜索类别…' : lang === 'es' ? 'Buscar clase…' : lang === 'de' ? 'Klasse suchen…' : lang === 'fr' ? 'Rechercher une classe…' : lang === 'hi' ? 'कक्षा खोजें…' : lang === 'pt' ? 'Pesquisar classe…' : 'Search classes…'}
+                            className="w-full text-xs border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-navy-400"
+                            autoFocus
+                          />
+                        </div>
+                        <div className="max-h-56 overflow-y-auto">
+                          {availableToAdd.length === 0 ? (
+                            <p className="text-xs text-gray-400 text-center py-4">
+                              {lang === 'zh' ? '未找到结果' : lang === 'es' ? 'Sin resultados' : lang === 'de' ? 'Keine Ergebnisse' : lang === 'fr' ? 'Aucun résultat' : lang === 'hi' ? 'कोई परिणाम नहीं' : lang === 'pt' ? 'Sem resultados' : 'No results'}
+                            </p>
+                          ) : (
+                            availableToAdd.map(cls => (
+                              <button
+                                key={cls.num}
+                                type="button"
+                                onClick={() => { toggleClass(cls.num); setShowAddPicker(false); setPickerSearch(''); }}
+                                className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 text-left transition-colors border-b border-gray-50 last:border-0"
+                              >
+                                <span className="text-[10px] font-bold bg-navy-100 text-navy-700 px-2 py-0.5 rounded-full flex-shrink-0">
+                                  {lang === 'zh' ? `第${cls.num}类` : lang === 'ja' ? `第${cls.num}類` : `Cl. ${cls.num}`}
+                                </span>
+                                <div className="min-w-0">
+                                  <p className="text-xs font-medium text-gray-800 truncate">{cls.title}</p>
+                                  <p className="text-[10px] text-gray-400 truncate">{cls.titleEs}</p>
+                                </div>
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      </>
+                    )}
+
+                    {/* Tab: Describe */}
+                    {addPanelTab === 'describe' && (
+                      <div className="p-3 space-y-3">
+                        <textarea
+                          value={addDescInput}
+                          onChange={e => { setAddDescInput(e.target.value); setAddDescSuggested([]); setAddDescSelected([]); setAddDescError(null); }}
+                          placeholder={tr('addClassDescPlaceholder')}
+                          rows={3}
+                          className="w-full text-xs border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-navy-400 resize-none placeholder-gray-400"
+                        />
+                        {addDescError && (
+                          <p className="text-xs text-red-500 flex items-center gap-1"><AlertTriangle size={11} />{addDescError}</p>
+                        )}
+                        {/* AI suggested classes from describe tab */}
+                        {addDescSuggested.length > 0 && (
+                          <div className="space-y-1.5">
+                            {addDescSuggested.map(s => (
+                              <label key={s.classNumber} className="flex items-start gap-2.5 cursor-pointer group">
+                                <input
+                                  type="checkbox"
+                                  checked={addDescSelected.includes(s.classNumber)}
+                                  onChange={() => setAddDescSelected(prev =>
+                                    prev.includes(s.classNumber) ? prev.filter(n => n !== s.classNumber) : [...prev, s.classNumber]
+                                  )}
+                                  className="mt-0.5 flex-shrink-0 accent-navy-700"
+                                />
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="text-[10px] font-bold bg-navy-100 text-navy-700 px-1.5 py-0.5 rounded-full">
+                                      {classLabel(s.classNumber)}
+                                    </span>
+                                    <span className="text-xs font-semibold text-gray-800">{s.titleLocalized || s.titleEn}</span>
+                                  </div>
+                                  {s.reasoning && <p className="text-[10px] text-gray-400 mt-0.5 italic leading-relaxed">{s.reasoning}</p>}
+                                </div>
+                              </label>
+                            ))}
+                            <button
+                              type="button"
+                              disabled={addDescSelected.length === 0}
+                              onClick={() => {
+                                addDescSelected.forEach(n => { if (!selectedNums.includes(n)) toggleClass(n); });
+                                setShowAddPicker(false);
+                                setAddDescInput('');
+                                setAddDescSuggested([]);
+                                setAddDescSelected([]);
+                              }}
+                              className="w-full mt-1 bg-navy-800 hover:bg-navy-700 disabled:opacity-40 text-white text-xs font-semibold py-2 rounded-lg transition-colors"
+                            >
+                              {tr('addClassAddSelected')} {addDescSelected.length > 0 && `(${addDescSelected.length})`}
+                            </button>
+                          </div>
+                        )}
+                        {addDescSuggested.length === 0 && (
                           <button
-                            key={cls.num}
                             type="button"
-                            onClick={() => { toggleClass(cls.num); setShowAddPicker(false); setPickerSearch(''); }}
-                            className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 text-left transition-colors border-b border-gray-50 last:border-0"
+                            disabled={!addDescInput.trim() || addDescClassifying}
+                            onClick={async () => {
+                              setAddDescClassifying(true);
+                              setAddDescError(null);
+                              setAddDescSuggested([]);
+                              setAddDescSelected([]);
+                              try {
+                                const contextNote = selectedNums.length > 0
+                                  ? `\n\nAlready selected classes for this mark: ${selectedNums.map(n => `Class ${n}`).join(', ')}. Please suggest complementary classes not already covered.`
+                                  : '';
+                                const res = await fetch(`${SUPABASE_URL}/functions/v1/classify-goods`, {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+                                  body: JSON.stringify({ messages: [{ role: 'user', content: addDescInput.trim() + contextNote }], language: lang }),
+                                });
+                                if (!res.ok) throw new Error('Service unavailable');
+                                const data = await res.json();
+                                if (data.status === 'classified' && Array.isArray(data.classes)) {
+                                  const fresh = (data.classes as SuggestedClass[]).filter(c => !selectedNums.includes(c.classNumber));
+                                  if (fresh.length === 0) {
+                                    setAddDescError(tr('addClassNoResults'));
+                                  } else {
+                                    setAddDescSuggested(fresh);
+                                    setAddDescSelected(fresh.map(c => c.classNumber));
+                                  }
+                                } else {
+                                  setAddDescError(tr('addClassNoResults'));
+                                }
+                              } catch {
+                                setAddDescError(lang === 'es' ? 'Error al clasificar. Intenta de nuevo.' : 'Classification failed. Please try again.');
+                              } finally {
+                                setAddDescClassifying(false);
+                              }
+                            }}
+                            className="w-full flex items-center justify-center gap-1.5 bg-navy-800 hover:bg-navy-700 disabled:opacity-40 text-white text-xs font-semibold py-2 rounded-lg transition-colors"
                           >
-                            <span className="text-[10px] font-bold bg-navy-100 text-navy-700 px-2 py-0.5 rounded-full flex-shrink-0">
-                              {lang === 'zh' ? `第${cls.num}类` : lang === 'ja' ? `第${cls.num}類` : `Cl. ${cls.num}`}
-                            </span>
-                            <div className="min-w-0">
-                              <p className="text-xs font-medium text-gray-800 truncate">{cls.title}</p>
-                              <p className="text-[10px] text-gray-400 truncate">{cls.titleEs}</p>
-                            </div>
+                            {addDescClassifying ? <><Loader2 size={12} className="animate-spin" />{tr('classifyingLabel')}</> : <><Sparkles size={12} />{tr('addClassClassifyBtn')}</>}
                           </button>
-                        ))
-                      )}
-                    </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

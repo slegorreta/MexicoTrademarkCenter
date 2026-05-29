@@ -629,6 +629,16 @@ export default function ApplyPage() {
   const [postPaymentShowPassword, setPostPaymentShowPassword] = useState(false);
   const [fireworksDone, setFireworksDone] = useState(false);
 
+  // Two-tab "Add Another Class" panel state (clearance flow)
+  const [showAddClassPanel, setShowAddClassPanel] = useState(false);
+  const [addClassTab, setAddClassTab] = useState<'browse' | 'describe'>('browse');
+  const [addClassSearch, setAddClassSearch] = useState('');
+  const [addClassDescInput, setAddClassDescInput] = useState('');
+  const [addClassDescClassifying, setAddClassDescClassifying] = useState(false);
+  const [addClassDescSuggested, setAddClassDescSuggested] = useState<Array<{ classNumber: number; titleEn: string; titleLocalized: string; confidence: number; reasoning?: string }>>([]);
+  const [addClassDescSelected, setAddClassDescSelected] = useState<number[]>([]);
+  const [addClassDescError, setAddClassDescError] = useState<string | null>(null);
+
   const suggestedName = useRef<string>('');
 
   // Detect clearance origin from URL param (set before TCP keys are cleared on unmount)
@@ -1880,19 +1890,213 @@ export default function ApplyPage() {
                     );
                   })}
 
-                  {/* Add another class */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const goodsText = form.classEntries[0]?.description ?? '';
-                      const entry = { ...newEntry(), description: goodsText };
-                      setForm(f => ({ ...f, classEntries: [...f.classEntries, entry] }));
-                    }}
-                    className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-gray-200 hover:border-[#c9a84c] text-gray-400 hover:text-[#c9a84c] font-semibold py-3 rounded-xl text-sm transition-all"
-                  >
-                    <Plus size={15} />
-                    {tri('Add Another Class', '添加另一个类别', 'Agregar Otra Clase', 'Weitere Klasse hinzufügen', 'Ajouter une autre classe', 'एक और कक्षा जोड़ें', 'Adicionar Outra Classe')}
-                  </button>
+                  {/* Add another class — two-tab panel */}
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = !showAddClassPanel;
+                        setShowAddClassPanel(next);
+                        if (next) { setAddClassSearch(''); setAddClassTab('browse'); setAddClassDescInput(''); setAddClassDescSuggested([]); setAddClassDescSelected([]); setAddClassDescError(null); }
+                      }}
+                      className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-gray-200 hover:border-[#c9a84c] text-gray-400 hover:text-[#c9a84c] font-semibold py-3 rounded-xl text-sm transition-all"
+                    >
+                      <Plus size={15} />
+                      {tri('Add Another Class', '添加另一个类别', 'Agregar Otra Clase', 'Weitere Klasse hinzufügen', 'Ajouter une autre classe', 'एक और कक्षा जोड़ें', 'Adicionar Outra Classe')}
+                    </button>
+
+                    {showAddClassPanel && (
+                      <div className="mt-2 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+                        {/* Tabs */}
+                        <div className="flex border-b border-gray-100">
+                          <button
+                            type="button"
+                            onClick={() => setAddClassTab('browse')}
+                            className={`flex-1 text-xs font-semibold py-2.5 px-3 transition-colors ${addClassTab === 'browse' ? 'text-navy-800 border-b-2 border-[#1a2e1a] bg-gray-50' : 'text-gray-500 hover:text-gray-700'}`}
+                          >
+                            {tri('Browse Classes', '浏览类别', 'Explorar Clases', 'Klassen durchsuchen', 'Parcourir les classes', 'कक्षाएं ब्राउज़ करें', 'Explorar Classes')}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setAddClassTab('describe')}
+                            className={`flex-1 text-xs font-semibold py-2.5 px-3 transition-colors flex items-center justify-center gap-1.5 ${addClassTab === 'describe' ? 'text-navy-800 border-b-2 border-[#1a2e1a] bg-gray-50' : 'text-gray-500 hover:text-gray-700'}`}
+                          >
+                            <Sparkles size={11} />
+                            {tri('Describe with AI', '用AI描述', 'Describir con IA', 'Mit KI beschreiben', "Décrire avec l'IA", 'AI से वर्णन करें', 'Descrever com IA')}
+                          </button>
+                        </div>
+
+                        {/* Browse tab */}
+                        {addClassTab === 'browse' && (
+                          <>
+                            <div className="p-2 border-b border-gray-100">
+                              <input
+                                type="text"
+                                value={addClassSearch}
+                                onChange={e => setAddClassSearch(e.target.value)}
+                                placeholder={tri('Search classes…', '搜索类别…', 'Buscar clase…', 'Klasse suchen…', 'Rechercher une classe…', 'कक्षा खोजें…', 'Pesquisar classe…')}
+                                className="w-full text-xs border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#c9a84c]"
+                                autoFocus
+                              />
+                            </div>
+                            <div className="max-h-56 overflow-y-auto">
+                              {(() => {
+                                const existingNums = form.classEntries.map(e => e.classNumber).filter(Boolean) as number[];
+                                const filtered = ALL_CLASSES.filter(c =>
+                                  !existingNums.includes(c.classNumber) &&
+                                  (addClassSearch === '' || `${c.classNumber} ${c.titleEn}`.toLowerCase().includes(addClassSearch.toLowerCase()))
+                                );
+                                return filtered.length === 0 ? (
+                                  <p className="text-xs text-gray-400 text-center py-4">
+                                    {tri('No results', '未找到结果', 'Sin resultados', 'Keine Ergebnisse', 'Aucun résultat', 'कोई परिणाम नहीं', 'Sem resultados')}
+                                  </p>
+                                ) : filtered.map(cls => (
+                                  <button
+                                    key={cls.classNumber}
+                                    type="button"
+                                    onClick={() => {
+                                      const entry: ClassEntry = {
+                                        ...newEntry(),
+                                        classNumber: cls.classNumber,
+                                        classTitleEn: cls.titleEn,
+                                        isConfirmed: true,
+                                        description: form.classEntries[0]?.description ?? '',
+                                      };
+                                      setForm(f => ({ ...f, classEntries: [...f.classEntries, entry] }));
+                                      setShowAddClassPanel(false);
+                                      setAddClassSearch('');
+                                    }}
+                                    className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 text-left transition-colors border-b border-gray-50 last:border-0"
+                                  >
+                                    <span className="text-[10px] font-bold bg-[#1a2e1a]/10 text-[#1a2e1a] px-2 py-0.5 rounded-full flex-shrink-0">
+                                      {tri(`Cl. ${cls.classNumber}`, `第${cls.classNumber}类`, `Cl. ${cls.classNumber}`, `Kl. ${cls.classNumber}`, `Cl. ${cls.classNumber}`, `कक्षा ${cls.classNumber}`, `Cl. ${cls.classNumber}`)}
+                                    </span>
+                                    <p className="text-xs font-medium text-gray-800 truncate">{cls.titleEn}</p>
+                                  </button>
+                                ));
+                              })()}
+                            </div>
+                          </>
+                        )}
+
+                        {/* Describe tab */}
+                        {addClassTab === 'describe' && (
+                          <div className="p-3 space-y-3">
+                            <textarea
+                              value={addClassDescInput}
+                              onChange={e => { setAddClassDescInput(e.target.value); setAddClassDescSuggested([]); setAddClassDescSelected([]); setAddClassDescError(null); }}
+                              placeholder={tri(
+                                'e.g. online courses for children, tutoring apps and educational platforms…',
+                                '例如：儿童在线课程、辅导应用和教育平台…',
+                                'ej. cursos en línea para niños, aplicaciones de tutoría y plataformas educativas…',
+                                'z. B. Online-Kurse für Kinder, Nachhilfe-Apps…',
+                                "ex. cours en ligne pour enfants, applications de tutorat…",
+                                'उदा. बच्चों के लिए ऑनलाइन पाठ्यक्रम, ट्यूटरिंग ऐप्स…',
+                                'ex. cursos online para crianças, aplicativos de tutoria…',
+                              )}
+                              rows={3}
+                              className="w-full text-xs border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#c9a84c] resize-none placeholder-gray-400"
+                            />
+                            {addClassDescError && (
+                              <p className="text-xs text-red-500 flex items-center gap-1"><AlertTriangle size={11} />{addClassDescError}</p>
+                            )}
+                            {addClassDescSuggested.length > 0 ? (
+                              <div className="space-y-1.5">
+                                {addClassDescSuggested.map(s => (
+                                  <label key={s.classNumber} className="flex items-start gap-2.5 cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={addClassDescSelected.includes(s.classNumber)}
+                                      onChange={() => setAddClassDescSelected(prev =>
+                                        prev.includes(s.classNumber) ? prev.filter(n => n !== s.classNumber) : [...prev, s.classNumber]
+                                      )}
+                                      className="mt-0.5 flex-shrink-0 accent-[#1a2e1a]"
+                                    />
+                                    <div className="min-w-0">
+                                      <div className="flex items-center gap-1.5 flex-wrap">
+                                        <span className="text-[10px] font-bold bg-[#1a2e1a]/10 text-[#1a2e1a] px-1.5 py-0.5 rounded-full">
+                                          {tri(`Class ${s.classNumber}`, `第${s.classNumber}类`, `Clase ${s.classNumber}`, `Klasse ${s.classNumber}`, `Classe ${s.classNumber}`, `कक्षा ${s.classNumber}`, `Classe ${s.classNumber}`)}
+                                        </span>
+                                        <span className="text-xs font-semibold text-gray-800">{s.titleLocalized || s.titleEn}</span>
+                                      </div>
+                                      {s.reasoning && <p className="text-[10px] text-gray-400 mt-0.5 italic">{s.reasoning}</p>}
+                                    </div>
+                                  </label>
+                                ))}
+                                <button
+                                  type="button"
+                                  disabled={addClassDescSelected.length === 0}
+                                  onClick={() => {
+                                    const existingNums = form.classEntries.map(e => e.classNumber).filter(Boolean) as number[];
+                                    const toAdd = addClassDescSelected.filter(n => !existingNums.includes(n));
+                                    const newEntries = toAdd.map(num => {
+                                      const s = addClassDescSuggested.find(x => x.classNumber === num);
+                                      const nc = ALL_CLASSES.find(c => c.classNumber === num);
+                                      return { ...newEntry(), classNumber: num, classTitleEn: s?.titleEn ?? nc?.titleEn ?? '', isConfirmed: true, description: form.classEntries[0]?.description ?? '' } as ClassEntry;
+                                    });
+                                    setForm(f => ({ ...f, classEntries: [...f.classEntries, ...newEntries] }));
+                                    setShowAddClassPanel(false);
+                                    setAddClassDescInput('');
+                                    setAddClassDescSuggested([]);
+                                    setAddClassDescSelected([]);
+                                  }}
+                                  className="w-full mt-1 bg-[#1a2e1a] hover:bg-[#2d4a2d] disabled:opacity-40 text-white text-xs font-semibold py-2 rounded-lg transition-colors"
+                                >
+                                  {tri('Add Selected Classes', '添加已选类别', 'Agregar Clases Seleccionadas', 'Ausgewählte Klassen hinzufügen', 'Ajouter les classes sélectionnées', 'चुनी गई कक्षाएं जोड़ें', 'Adicionar Classes Selecionadas')}
+                                  {addClassDescSelected.length > 0 && ` (${addClassDescSelected.length})`}
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                disabled={!addClassDescInput.trim() || addClassDescClassifying}
+                                onClick={async () => {
+                                  setAddClassDescClassifying(true);
+                                  setAddClassDescError(null);
+                                  try {
+                                    const existingNums = form.classEntries.map(e => e.classNumber).filter(Boolean) as number[];
+                                    const contextNote = existingNums.length > 0
+                                      ? `\n\nAlready selected classes: ${existingNums.map(n => `Class ${n}`).join(', ')}. Suggest complementary classes not already covered.`
+                                      : '';
+                                    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+                                    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+                                    const res = await fetch(`${supabaseUrl}/functions/v1/classify-goods`, {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${supabaseAnonKey}` },
+                                      body: JSON.stringify({ messages: [{ role: 'user', content: addClassDescInput.trim() + contextNote }], language }),
+                                    });
+                                    if (!res.ok) throw new Error('Service unavailable');
+                                    const data = await res.json();
+                                    if (data.status === 'classified' && Array.isArray(data.classes) && data.classes.length > 0) {
+                                      const fresh = data.classes.filter((c: { classNumber: number }) => !existingNums.includes(c.classNumber));
+                                      if (fresh.length === 0) {
+                                        setAddClassDescError(tri('No new classes found.', '未找到新类别。', 'No se encontraron nuevas clases.', 'Keine neuen Klassen gefunden.', 'Aucune nouvelle classe trouvée.', 'कोई नई कक्षा नहीं मिली।', 'Nenhuma nova classe encontrada.'));
+                                      } else {
+                                        setAddClassDescSuggested(fresh);
+                                        setAddClassDescSelected(fresh.map((c: { classNumber: number }) => c.classNumber));
+                                      }
+                                    } else {
+                                      setAddClassDescError(tri('No classes found. Try a more detailed description.', '未找到类别，请尝试更详细的描述。', 'No se encontraron clases. Intenta con una descripción más detallada.', 'Keine Klassen gefunden. Bitte ausführlicher beschreiben.', 'Aucune classe trouvée. Essayez une description plus détaillée.', 'कोई कक्षा नहीं मिली। अधिक विस्तृत विवरण आज़माएं।', 'Nenhuma classe encontrada. Tente uma descrição mais detalhada.'));
+                                    }
+                                  } catch {
+                                    setAddClassDescError(tri('Classification failed. Please try again.', '分类失败，请重试。', 'Error al clasificar. Intenta de nuevo.', 'Klassifizierung fehlgeschlagen.', 'Échec de la classification.', 'वर्गीकरण विफल हुआ।', 'Classificação falhou.'));
+                                  } finally {
+                                    setAddClassDescClassifying(false);
+                                  }
+                                }}
+                                className="w-full flex items-center justify-center gap-1.5 bg-[#1a2e1a] hover:bg-[#2d4a2d] disabled:opacity-40 text-white text-xs font-semibold py-2 rounded-lg transition-colors"
+                              >
+                                {addClassDescClassifying
+                                  ? <><Loader2 size={12} className="animate-spin" />{tri('Classifying…', '分类中…', 'Clasificando…', 'Klassifizierung…', 'Classification…', 'वर्गीकृत हो रहा है…', 'Classificando…')}</>
+                                  : <><Sparkles size={12} />{tri('Classify with AI', '用AI分类', 'Clasificar con IA', 'Mit KI klassifizieren', "Classifier avec l'IA", 'AI से वर्गीकृत करें', 'Classificar com IA')}</>
+                                }
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
