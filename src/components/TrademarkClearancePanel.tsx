@@ -1335,7 +1335,7 @@ export default function TrademarkClearancePanel({
 
   const cfg = RISK_CFG[result.risk];
   const RiskIcon = cfg.icon;
-  const marciaFindings = marciaFindings ?? [];
+  const marciaFindings = result.marciaFindings ?? [];
   const dupont = result.dupont ?? [];
   const dupontFavor = dupont.filter(f => f.verdict === 'favors_registration').length;
   const dupontNeutral = dupont.filter(f => f.verdict === 'neutral').length;

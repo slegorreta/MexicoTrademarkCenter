@@ -177,7 +177,7 @@ const copy: Record<string, Partial<Record<Lang, string>>> = {
     ja: '調査分析',
   },
   step4Subtitle: {
-    en: 'AI-powered search against the IMPI MARCia database.',
+    en: 'AI-powered search and analysis.',
     zh: 'AI驱动的IMPI MARCia数据库检索。',
     es: 'Búsqueda impulsada por IA contra la base de datos IMPI MARCia.',
     de: 'KI-gestützte Suche in der IMPI MARCia-Datenbank.',
