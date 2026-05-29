@@ -490,7 +490,7 @@ function InlineCheckout({ lang, finalAmount, clientSecret: _clientSecret, paymen
 
 const LOADING_STEPS: Record<Lang, { label: string; detail: string }[]> = {
   en: [
-    { label: 'Querying IMPI MARCia database', detail: 'Scanning official registry for identical and confusingly similar marks…' },
+    { label: 'Querying IMPI databases', detail: 'Scanning official registry for identical and confusingly similar marks…' },
     { label: 'Analyzing phonetic & visual similarity', detail: 'Comparing sound, appearance and meaning with existing marks…' },
     { label: 'Evaluating DuPont factors', detail: 'Assessing all 13 likelihood-of-confusion criteria under Mexican law…' },
     { label: 'Assessing distinctiveness (LFPPI)', detail: 'Classifying mark tier: generic, descriptive, suggestive, arbitrary or fanciful…' },
@@ -963,16 +963,7 @@ function TMViewSection({ result, classes, lang }: {
   };
 
   if (!available && !initialFindings) {
-    return (
-      <div className="border-b border-gray-100 px-4 py-3">
-        <div className="flex items-start gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">
-          <AlertTriangle size={13} className="shrink-0 mt-0.5" />
-          {lang === 'en'
-            ? 'IMPI data via TMView temporarily unavailable. MARCia results above remain valid.'
-            : 'Datos de IMPI vía TMView no disponibles temporalmente. Los resultados MARCia siguen siendo válidos.'}
-        </div>
-      </div>
-    );
+    return null;
   }
 
   const displayTotal = tmviewResult?.total ?? initialTotal;
