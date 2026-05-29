@@ -725,7 +725,14 @@ function ClearanceLoadingSteps({ lang, done }: { lang: Lang; done: boolean }) {
             />
           </div>
           <p className="text-[9px] text-gray-400 mt-0.5">
-            {done ? (lang === 'es' ? 'Completado' : 'Complete') : (lang === 'es' ? `Est. ${Math.max(0, Math.round((totalEstimated / 1000) - elapsed))}s restantes` : `Est. ${Math.max(0, Math.round((totalEstimated / 1000) - elapsed))}s remaining`)}
+            {done
+              ? (lang === 'es' ? 'Completado' : 'Complete')
+              : (() => {
+                  const secsLeft = Math.round((totalEstimated / 1000) - elapsed);
+                  if (secsLeft <= 0) return lang === 'es' ? 'Finalizando…' : 'Almost done…';
+                  return lang === 'es' ? `Est. ${secsLeft}s restantes` : `Est. ${secsLeft}s remaining`;
+                })()
+            }
           </p>
         </div>
       </div>

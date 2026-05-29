@@ -620,6 +620,9 @@ export default function ApplyPage() {
   const [agreedToDisclaimer, setAgreedToDisclaimer] = useState(false);
   const [disclaimerError, setDisclaimerError] = useState(false);
 
+  // Step 5 owner-details inline validation
+  const [step5Error, setStep5Error] = useState<string | null>(null);
+
   // Post-payment account prompt state
   const [postPaymentMode, setPostPaymentMode] = useState<'prompt' | 'login' | 'reset' | 'reset_sent'>('prompt');
   const [postPaymentLoginEmail, setPostPaymentLoginEmail] = useState('');
@@ -672,7 +675,7 @@ export default function ApplyPage() {
             const nc = ALL_CLASSES.find(c => c.classNumber === num);
             return {
               id: `entry-${num}-${Date.now()}-${Math.random()}`,
-              description: clrGoods,
+              description: sc?.descriptionEn?.trim() || clrGoods,
               businessIndustry: '',
               classNumber: num,
               classTitleEn: sc?.titleEn ?? nc?.titleEn ?? `Class ${num}`,
@@ -1782,6 +1785,13 @@ export default function ApplyPage() {
                     <input type="text" className={inputClass} value={form.taxId} onChange={e => set({ taxId: e.target.value })} />
                   </div>
                 </div>
+
+                {step5Error && (
+                  <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mt-2">
+                    <AlertCircle size={14} className="text-red-500 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-red-700">{step5Error}</p>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -2567,7 +2577,11 @@ export default function ApplyPage() {
                     </div>
                   </div>
 
-                  {Object.keys(clearanceResults).length > 0 && (
+                  {Object.entries(clearanceResults).some(([entryId]) => {
+                    const entry = form.classEntries.find(e => e.id === entryId);
+                    const classNums = entry ? (entry.isConfirmed && entry.classNumber !== null ? [entry.classNumber] : entry.fallbackClasses) : [];
+                    return classNums.length > 0;
+                  }) && (
                     <div className="border border-gray-200 rounded-xl overflow-hidden">
                       <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-200">
                         <span className="text-sm font-semibold text-navy-900">{tri('Clearance Check Summary', '商标检索摘要', 'Resumen de Búsqueda de Disponibilidad', 'Zusammenfassung der Markenrecherche', 'Résumé de la vérification de disponibilité', 'क्लीयरेंस जांच सारांश', 'Resumo da Verificação de Disponibilidade', '商標調査結果')}</span>
@@ -2578,6 +2592,7 @@ export default function ApplyPage() {
                           const classNums = entry
                             ? entry.isConfirmed && entry.classNumber !== null ? [entry.classNumber] : entry.fallbackClasses
                             : [];
+                          if (classNums.length === 0) return null;
                           const riskColors = { low: 'text-emerald-700 bg-emerald-100', medium: 'text-amber-700 bg-amber-100', high: 'text-red-700 bg-red-100' };
                           return (
                             <div key={entryId} className="flex items-center gap-3 px-4 py-2.5">
@@ -2703,13 +2718,14 @@ export default function ApplyPage() {
                       </p>
 
                       <div className="space-y-3 pt-1">
-                        <label className="flex items-start gap-3 cursor-pointer group">
-                          <input
-                            type="checkbox"
-                            checked={agreedToTerms}
-                            onChange={e => { setAgreedToTerms(e.target.checked); if (e.target.checked) setDisclaimerError(false); }}
-                            className="mt-0.5 rounded border-red-300 text-red-600 focus:ring-red-500"
-                          />
+                        <button
+                          type="button"
+                          onClick={() => { setAgreedToTerms(v => !v); setDisclaimerError(false); }}
+                          className="flex items-start gap-3 w-full text-left group"
+                        >
+                          <span className={`flex-shrink-0 mt-0.5 w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${agreedToTerms ? 'bg-red-600 border-red-600' : 'border-red-300 bg-white group-hover:border-red-500'}`}>
+                            {agreedToTerms && <CheckCircle2 size={10} className="text-white" strokeWidth={3} />}
+                          </span>
                           <span className="text-xs text-red-900 leading-relaxed group-hover:text-red-800">
                             {tri(
                               'I have read and agree to the Terms of Service governing this trademark filing service.',
@@ -2722,15 +2738,16 @@ export default function ApplyPage() {
                               '私はこの商標出願サービスを規定する利用規約を読み、同意します。'
                             )}
                           </span>
-                        </label>
+                        </button>
 
-                        <label className="flex items-start gap-3 cursor-pointer group">
-                          <input
-                            type="checkbox"
-                            checked={agreedToDisclaimer}
-                            onChange={e => { setAgreedToDisclaimer(e.target.checked); if (e.target.checked) setDisclaimerError(false); }}
-                            className="mt-0.5 rounded border-red-300 text-red-600 focus:ring-red-500"
-                          />
+                        <button
+                          type="button"
+                          onClick={() => { setAgreedToDisclaimer(v => !v); setDisclaimerError(false); }}
+                          className="flex items-start gap-3 w-full text-left group"
+                        >
+                          <span className={`flex-shrink-0 mt-0.5 w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${agreedToDisclaimer ? 'bg-red-600 border-red-600' : 'border-red-300 bg-white group-hover:border-red-500'}`}>
+                            {agreedToDisclaimer && <CheckCircle2 size={10} className="text-white" strokeWidth={3} />}
+                          </span>
                           <span className="text-xs text-red-900 leading-relaxed group-hover:text-red-800">
                             {tri(
                               'I understand and acknowledge that: (a) filing does not guarantee registration; (b) IMPI may refuse my application for any reason under Mexican law; (c) all fees paid are non-refundable; and (d) I assume the entire risk related to the registrability of this mark.',
@@ -2743,7 +2760,7 @@ export default function ApplyPage() {
                               '私は以下を理解し認めます：(a) 出願は登録を保証しない；(b) IMPIはメキシコ法のいかなる理由によっても私の出願を拒絶できる；(c) 支払われたすべての料金は返金不可；(d) この商標の登録可能性に関するリスクを全面的に引き受ける。'
                             )}
                           </span>
-                        </label>
+                        </button>
                       </div>
 
                       {disclaimerError && (
@@ -3401,6 +3418,7 @@ export default function ApplyPage() {
               <button
                 type="button"
                 onClick={() => {
+                  setStep5Error(null);
                   // When from clearance: step 4 → step 2 (classification confirm), step 2 → step 1
                   if (fromClearance && step === 4) { setStep(2); return; }
                   if (fromClearance && step === 2) { setStep(1); return; }
@@ -3431,6 +3449,21 @@ export default function ApplyPage() {
                     // When from clearance: step 1 → step 2 (classification confirm), step 2 → step 4 (skip clearance re-run)
                     if (fromClearance && step === 1) { setStep(2); return; }
                     if (fromClearance && step === 2) { setStep(4); return; }
+                    if (step === 5) {
+                      const missing5: string[] = [];
+                      if (!form.legalName.trim()) missing5.push(tri('Legal name','法定名称','Nombre legal','Rechtlicher Name','Nom légal','कानूनी नाम','Nome legal'));
+                      if (!form.country.trim()) missing5.push(tri('Country','国家','País','Land','Pays','देश','País'));
+                      if (!form.address.trim()) missing5.push(tri('Address','地址','Domicilio','Adresse','Adresse','पता','Endereço'));
+                      if (!form.city.trim()) missing5.push(tri('City','城市','Ciudad','Stadt','Ville','शहर','Cidade'));
+                      if (!form.postalCode.trim()) missing5.push(tri('Postal code','邮政编码','Código postal','Postleitzahl','Code postal','पिन कोड','CEP'));
+                      if (!form.email.trim()) missing5.push(tri('Email','电子邮件','Correo electrónico','E-Mail','E-mail','ईमेल','E-mail'));
+                      if (form.email.trim() && form.email !== form.emailConfirm) missing5.push(tri('Email must match','两次邮件必须相同','Los correos deben coincidir','E-Mails müssen übereinstimmen','Les e-mails doivent correspondre','ईमेल मेल खाने चाहिए','E-mails devem coincidir'));
+                      if (missing5.length > 0) {
+                        setStep5Error(tri('Please fill in the following required fields:','请填写以下必填字段：','Por favor completa los siguientes campos obligatorios:','Bitte füllen Sie die folgenden Pflichtfelder aus:','Veuillez remplir les champs obligatoires suivants :','कृपया निम्नलिखित आवश्यक फ़ील्ड भरें:','Por favor preencha os seguintes campos obrigatórios:') + ' ' + missing5.join(', ') + '.');
+                        return;
+                      }
+                      setStep5Error(null);
+                    }
                     setStep(s => Math.min(7, s + 1) as Step);
                   }}
                   disabled={

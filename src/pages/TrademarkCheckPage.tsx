@@ -649,11 +649,12 @@ function InfoTooltip({ text }: { text: string }) {
 // ─── Stepper component ────────────────────────────────────────────────────────
 
 function StepperBar({
-  current, maxReached, labels,
+  current, maxReached, labels, onFilingTabClick,
 }: {
   current: WizardStep;
   maxReached: WizardStep;
   labels: string[];
+  onFilingTabClick?: () => void;
 }) {
   return (
     <div className="flex items-start gap-0 w-full">
@@ -663,6 +664,7 @@ function StepperBar({
         const done = step < current;
         const active = step === current;
         const reachable = step <= maxReached;
+        const filingClickable = isFilingStep && reachable && !active && !!onFilingTabClick;
 
         const circleCls = isFilingStep
           ? done
@@ -683,18 +685,34 @@ function StepperBar({
         const connectorLeft = reachable ? (isFilingStep ? 'bg-emerald-300' : 'bg-navy-700') : 'bg-gray-200';
         const connectorRight = step < maxReached ? (step >= 4 ? 'bg-emerald-300' : 'bg-navy-700') : 'bg-gray-200';
 
-        return (
-          <div key={step} className="flex-1 flex flex-col items-center relative">
+        const inner = (
+          <>
             {i > 0 && (
               <div className={`absolute left-0 top-5 w-1/2 h-0.5 -translate-y-1/2 ${connectorLeft}`} />
             )}
             {i < labels.length - 1 && (
               <div className={`absolute right-0 top-5 w-1/2 h-0.5 -translate-y-1/2 ${connectorRight}`} />
             )}
-            <div className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all ${circleCls}`}>
+            <div className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all ${circleCls} ${filingClickable ? 'ring-2 ring-emerald-300 ring-offset-1' : ''}`}>
               {done ? <CheckCircle2 size={16} className="text-white" /> : isFilingStep && !active ? <FileText size={15} /> : step}
             </div>
             <p className={`mt-2 text-[10px] sm:text-xs font-medium text-center leading-tight px-1 ${labelCls}`}>{label}</p>
+          </>
+        );
+
+        return filingClickable ? (
+          <button
+            key={step}
+            type="button"
+            onClick={onFilingTabClick}
+            className="flex-1 flex flex-col items-center relative cursor-pointer"
+            title={label}
+          >
+            {inner}
+          </button>
+        ) : (
+          <div key={step} className="flex-1 flex flex-col items-center relative">
+            {inner}
           </div>
         );
       })}
@@ -1064,7 +1082,7 @@ export default function TrademarkCheckPage() {
       {/* ── Stepper bar ───────────────────────────────────────────────────────── */}
       <div className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-30 print-hide">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <StepperBar current={currentStep} maxReached={maxReached} labels={stepLabels} />
+          <StepperBar current={currentStep} maxReached={maxReached} labels={stepLabels} onFilingTabClick={maxReached >= 5 ? handleStartFiling : undefined} />
         </div>
       </div>
 
