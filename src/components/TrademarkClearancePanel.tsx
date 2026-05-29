@@ -1335,6 +1335,7 @@ export default function TrademarkClearancePanel({
 
   const cfg = RISK_CFG[result.risk];
   const RiskIcon = cfg.icon;
+  const marciaFindings = marciaFindings ?? [];
   const dupont = result.dupont ?? [];
   const dupontFavor = dupont.filter(f => f.verdict === 'favors_registration').length;
   const dupontNeutral = dupont.filter(f => f.verdict === 'neutral').length;
@@ -1352,7 +1353,7 @@ export default function TrademarkClearancePanel({
     if (statusFilter === 'pending') return /tram|pend|proc|solicitud/i.test(s);
     return true;
   };
-  const filteredFindings = result.marciaFindings.filter(f =>
+  const filteredFindings = marciaFindings.filter(f =>
     matchesStatusFilter(f.status) &&
     (classFilter === null || String(f.classNum) === String(classFilter))
   );
@@ -1374,8 +1375,9 @@ export default function TrademarkClearancePanel({
     }
     const against = (res.dupont ?? []).filter(f => f.verdict === 'against_registration').length;
     score -= against * 4;
-    const total = res.marciaTotalCount ?? res.marciaFindings.length;
-    const exactSame = res.marciaFindings.some(f => f.name.toLowerCase().trim() === markName.toLowerCase().trim() && (f as MarciaFinding & { classOverlap?: string }).classOverlap === 'same');
+    const findings = res.marciaFindings ?? [];
+    const total = res.marciaTotalCount ?? findings.length;
+    const exactSame = findings.some(f => f.name.toLowerCase().trim() === markName.toLowerCase().trim() && (f as MarciaFinding & { classOverlap?: string }).classOverlap === 'same');
     if (exactSame) score -= 30;
     else if (total >= 5) score -= 15;
     else if (total > 0) score -= 8;
@@ -1386,7 +1388,7 @@ export default function TrademarkClearancePanel({
     return Math.max(0, Math.min(100, Math.round(score)));
   };
 
-  const topConflicts = [...result.marciaFindings]
+  const topConflicts = [...marciaFindings]
     .sort((a, b) => {
       const aA = /registrada|vigente|registered|active/i.test(a.status) ? 0 : 1;
       const bA = /registrada|vigente|registered|active/i.test(b.status) ? 0 : 1;
@@ -1394,7 +1396,7 @@ export default function TrademarkClearancePanel({
       return (a.name.toLowerCase() === markName.toLowerCase() ? 0 : 1) - (b.name.toLowerCase() === markName.toLowerCase() ? 0 : 1);
     })
     .slice(0, 2);
-  const totalMarcia = result.marciaTotalCount ?? result.marciaFindings.length;
+  const totalMarcia = result.marciaTotalCount ?? marciaFindings.length;
   const comDomain = domainResults.find(d => d.domain.endsWith('.com'));
   const comMxDomain = domainResults.find(d => d.domain.endsWith('.com.mx'));
   const regScore = computeRegistrabilityScore(result);
@@ -1422,7 +1424,7 @@ export default function TrademarkClearancePanel({
   };
 
   // Unique class numbers present in findings
-  const presentClasses = Array.from(new Set(result.marciaFindings.map(f => f.classNum).filter(Boolean))).sort();
+  const presentClasses = Array.from(new Set(marciaFindings.map(f => f.classNum).filter(Boolean))).sort();
 
   // ── Email validation ──────────────────────────────────────────────────────
   const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
@@ -1879,9 +1881,9 @@ export default function TrademarkClearancePanel({
                     {totalMarcia} {lang === 'es' ? 'marcas' : lang === 'zh' ? '个商标' : 'marks'}
                   </span>
                 </div>
-                {result.marciaFindings.length > 0 && (
+                {marciaFindings.length > 0 && (
                   <div className="flex flex-wrap gap-1">
-                    {result.marciaFindings.slice(0, 4).map((f, i) => (
+                    {marciaFindings.slice(0, 4).map((f, i) => (
                       <span key={i} className="text-[8px] font-medium bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full border border-gray-200 truncate max-w-[80px]" title={f.name}>
                         {f.name.length > 10 ? f.name.slice(0, 9) + '…' : f.name}
                       </span>
@@ -2177,7 +2179,7 @@ export default function TrademarkClearancePanel({
               <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${totalMarcia > 0 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
                 {totalMarcia} {tr('matches', lang)}
               </span>
-              {result.marciaFindings.length > 0 && (
+              {marciaFindings.length > 0 && (
                 <button
                   type="button"
                   onClick={() => setShowFilters(v => !v)}
@@ -2262,11 +2264,11 @@ export default function TrademarkClearancePanel({
           )}
 
           {/* Feature 5: Similarity Distribution Bar Chart */}
-          {result.marciaFindings.length > 0 && (() => {
-            const identical = result.marciaFindings.filter(f => getSimilarityScore(f.name) >= 90).length;
-            const verySimilar = result.marciaFindings.filter(f => { const s = getSimilarityScore(f.name); return s >= 70 && s < 90; }).length;
-            const similar = result.marciaFindings.filter(f => { const s = getSimilarityScore(f.name); return s >= 60 && s < 70; }).length;
-            const total = result.marciaFindings.length;
+          {marciaFindings.length > 0 && (() => {
+            const identical = marciaFindings.filter(f => getSimilarityScore(f.name) >= 90).length;
+            const verySimilar = marciaFindings.filter(f => { const s = getSimilarityScore(f.name); return s >= 70 && s < 90; }).length;
+            const similar = marciaFindings.filter(f => { const s = getSimilarityScore(f.name); return s >= 60 && s < 70; }).length;
+            const total = marciaFindings.length;
             if (total === 0) return null;
             const bars = [
               { label: lang === 'es' ? 'Idénticas' : 'Identical', labelSub: '≥90%', count: identical, color: 'bg-red-500' },
@@ -2304,7 +2306,7 @@ export default function TrademarkClearancePanel({
 
           {/* 1 — MARCia teaser (Part 2: enhanced cards) */}
           <div>
-            {filteredFindings.length === 0 && result.marciaFindings.length > 0 ? (
+            {filteredFindings.length === 0 && marciaFindings.length > 0 ? (
               <p className="text-[10px] text-gray-400 italic py-2 text-center">
                 {lang === 'es' ? 'No hay resultados para los filtros seleccionados.' : 'No results match the selected filters.'}
               </p>
@@ -2583,7 +2585,7 @@ export default function TrademarkClearancePanel({
                   ))}
                 </div>
                 {filteredFindings.length === 0 ? (
-                  <p className="text-xs text-gray-500 italic">{result.marciaFindings.length === 0 ? tr('noMarciaFindings', lang) : (lang === 'es' ? 'Sin resultados para los filtros seleccionados.' : 'No results match the selected filters.')}</p>
+                  <p className="text-xs text-gray-500 italic">{marciaFindings.length === 0 ? tr('noMarciaFindings', lang) : (lang === 'es' ? 'Sin resultados para los filtros seleccionados.' : 'No results match the selected filters.')}</p>
                 ) : (
                   <div className="space-y-2 mt-1">
                     {filteredFindings.map((f, i) => {
@@ -2933,10 +2935,10 @@ export default function TrademarkClearancePanel({
               if (!matchingFlag) {
                 // Special: confusingly_similar — check marcia findings
                 if (frac.category === 'confusingly_similar') {
-                  const hasExact = result.marciaFindings.some(f =>
+                  const hasExact = marciaFindings.some(f =>
                     (f as MarciaFinding & { classOverlap?: string }).classOverlap === 'same'
                   );
-                  const hasRelated = result.marciaFindings.some(f =>
+                  const hasRelated = marciaFindings.some(f =>
                     (f as MarciaFinding & { classOverlap?: string }).classOverlap === 'related'
                   );
                   if (hasExact && (frac.num === 'XVIII' || frac.num === 'XIX' || frac.num === 'XXI')) return 'fail';
@@ -3038,7 +3040,7 @@ export default function TrademarkClearancePanel({
 
           {/* 4c — Conflict Tiers: Critical / Significant / Background */}
           {(() => {
-            const allFindings = result.marciaFindings;
+            const allFindings = marciaFindings;
             const critical = allFindings.filter(f => {
               const sim = getSimilarityScore(f.name);
               const overlap = (f as MarciaFinding & { classOverlap?: string }).classOverlap;
@@ -3172,7 +3174,7 @@ export default function TrademarkClearancePanel({
           {(() => {
             const riskLevel = result.risk;
             const distinctTier = result.distinctiveness?.tier ?? 'suggestive';
-            const hasExactSameClass = result.marciaFindings.some(f =>
+            const hasExactSameClass = marciaFindings.some(f =>
               (f as MarciaFinding & { classOverlap?: string }).classOverlap === 'same'
             );
 
