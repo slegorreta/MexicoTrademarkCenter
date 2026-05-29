@@ -494,9 +494,14 @@ const LOADING_STEPS: Record<Lang, { label: string; detail: string }[]> = {
     { label: 'Analyzing phonetic & visual similarity', detail: 'Comparing sound, appearance and meaning with existing marks…' },
     { label: 'Evaluating DuPont factors', detail: 'Assessing all 13 likelihood-of-confusion criteria under Mexican law…' },
     { label: 'Assessing distinctiveness (LFPPI)', detail: 'Classifying mark tier: generic, descriptive, suggestive, arbitrary or fanciful…' },
+    { label: 'Verifying transliterations', detail: 'Checking romanized and phonetic equivalents across scripts and alphabets…' },
     { label: 'Scanning web & marketplace presence', detail: 'Checking for unregistered brands in commerce that may conflict…' },
     { label: 'Checking domain availability', detail: 'Querying .com, .mx, .net and 10 other TLDs…' },
-    { label: 'Analyzing translations & transliterations', detail: 'Reviewing mark meaning across 8 languages for cross-border conflicts…' },
+    { label: 'Analyzing translations & cross-language risk', detail: 'Reviewing mark meaning across 8 languages for cross-border conflicts…' },
+    { label: 'Reviewing secondary meanings', detail: 'Detecting descriptive or generic meanings that could bar registration…' },
+    { label: 'Scanning famous & notorious marks', detail: 'Cross-checking against LFPPI Art. 90 well-known mark protections…' },
+    { label: 'Confirming search accuracy', detail: 'Validating coverage across variant spellings and class combinations…' },
+    { label: 'Evaluating mala fe risk factors', detail: 'Reviewing bad-faith filing indicators and prior use evidence…' },
     { label: 'Compiling clearance report', detail: 'Aggregating all signals and computing final registrability score…' },
   ],
   es: [
@@ -504,9 +509,14 @@ const LOADING_STEPS: Record<Lang, { label: string; detail: string }[]> = {
     { label: 'Analizando similitud fonética y visual', detail: 'Comparando sonido, apariencia y significado con marcas existentes…' },
     { label: 'Evaluando factores DuPont', detail: 'Analizando los 13 criterios de probabilidad de confusión bajo la ley mexicana…' },
     { label: 'Evaluando distintividad (LFPPI)', detail: 'Clasificando el nivel de la marca: genérica, descriptiva, sugestiva, arbitraria o de fantasía…' },
+    { label: 'Verificando transliteraciones', detail: 'Comprobando equivalentes fonéticos y romanizados en distintos alfabetos…' },
     { label: 'Rastreando presencia web y comercial', detail: 'Verificando marcas no registradas en el comercio que puedan generar conflicto…' },
     { label: 'Verificando disponibilidad de dominios', detail: 'Consultando .com, .mx, .net y 10 TLDs más…' },
-    { label: 'Analizando traducciones y transliteraciones', detail: 'Revisando el significado de la marca en 8 idiomas para detectar conflictos internacionales…' },
+    { label: 'Analizando traducciones y riesgo entre idiomas', detail: 'Revisando el significado de la marca en 8 idiomas para detectar conflictos internacionales…' },
+    { label: 'Revisando significados secundarios', detail: 'Detectando significados descriptivos o genéricos que puedan impedir el registro…' },
+    { label: 'Escaneando marcas notoriamente conocidas', detail: 'Verificando contra protecciones del Art. 90 LFPPI para marcas famosas…' },
+    { label: 'Confirmando precisión de la búsqueda', detail: 'Validando cobertura de variantes ortográficas y combinaciones de clases…' },
+    { label: 'Evaluando factores de mala fe', detail: 'Revisando indicadores de solicitud de mala fe y evidencia de uso previo…' },
     { label: 'Compilando reporte de registrabilidad', detail: 'Integrando todas las señales y calculando la puntuación final…' },
   ],
   zh: [
@@ -514,9 +524,14 @@ const LOADING_STEPS: Record<Lang, { label: string; detail: string }[]> = {
     { label: '分析语音和视觉相似性', detail: '与现有商标比较发音、外观和含义…' },
     { label: '评估DuPont因素', detail: '根据墨西哥法律评估所有13项混淆可能性标准…' },
     { label: '评估显著性 (LFPPI)', detail: '对商标进行分类：通用、描述性、暗示性、任意性或臆造性…' },
+    { label: '验证音译形式', detail: '检查不同文字和字母表中的罗马化和语音等效形式…' },
     { label: '扫描网络和市场存在', detail: '检查可能产生冲突的未注册品牌…' },
     { label: '检查域名可用性', detail: '查询 .com、.mx、.net 和其他10个顶级域名…' },
-    { label: '分析翻译和音译', detail: '检查8种语言中的商标含义以发现跨境冲突…' },
+    { label: '分析翻译及跨语言风险', detail: '检查8种语言中的商标含义以发现跨境冲突…' },
+    { label: '审查次要含义', detail: '检测可能阻碍注册的描述性或通用含义…' },
+    { label: '扫描著名商标', detail: '对照LFPPI第90条知名商标保护进行交叉核查…' },
+    { label: '确认搜索准确性', detail: '验证变体拼写和类别组合的覆盖范围…' },
+    { label: '评估恶意申请风险', detail: '审查恶意申请指标和在先使用证据…' },
     { label: '编制注册可行性报告', detail: '汇总所有信号并计算最终注册可行性评分…' },
   ],
   de: [
@@ -524,9 +539,14 @@ const LOADING_STEPS: Record<Lang, { label: string; detail: string }[]> = {
     { label: 'Phonetische und visuelle Ähnlichkeit analysieren', detail: 'Klang, Erscheinung und Bedeutung mit bestehenden Marken vergleichen…' },
     { label: 'DuPont-Faktoren bewerten', detail: 'Alle 13 Verwechslungskriterien nach mexikanischem Recht prüfen…' },
     { label: 'Unterscheidungskraft bewerten (LFPPI)', detail: 'Markenstufe klassifizieren: generisch, beschreibend, suggestiv, willkürlich oder frei erfunden…' },
+    { label: 'Transliterationen prüfen', detail: 'Romanisierte und phonetische Entsprechungen in verschiedenen Schriften prüfen…' },
     { label: 'Web- und Marktpräsenz prüfen', detail: 'Nicht eingetragene Marken im Handel auf Konflikte untersuchen…' },
     { label: 'Domain-Verfügbarkeit prüfen', detail: '.com, .mx, .net und 10 weitere TLDs abfragen…' },
-    { label: 'Übersetzungen und Transliterationen analysieren', detail: 'Markenbedeutung in 8 Sprachen auf grenzüberschreitende Konflikte prüfen…' },
+    { label: 'Übersetzungen und sprachübergreifende Risiken analysieren', detail: 'Markenbedeutung in 8 Sprachen auf grenzüberschreitende Konflikte prüfen…' },
+    { label: 'Sekundäre Bedeutungen prüfen', detail: 'Beschreibende oder generische Bedeutungen erkennen, die die Eintragung verhindern könnten…' },
+    { label: 'Bekannte Marken scannen', detail: 'Abgleich mit LFPPI Art. 90-Schutz für bekannte Marken…' },
+    { label: 'Suchgenauigkeit bestätigen', detail: 'Abdeckung von Schreibvarianten und Klassenkombi­nationen validieren…' },
+    { label: 'Bösgläubigkeitsrisiken bewerten', detail: 'Indikatoren für bösgläubige Anmeldungen und Vornutzungsnachweise prüfen…' },
     { label: 'Registrierbarkeitsbericht erstellen', detail: 'Alle Signale zusammenführen und endgültige Bewertung berechnen…' },
   ],
   fr: [
@@ -534,9 +554,14 @@ const LOADING_STEPS: Record<Lang, { label: string; detail: string }[]> = {
     { label: 'Analyse de similarité phonétique et visuelle', detail: 'Comparaison du son, de l\'apparence et du sens avec les marques existantes…' },
     { label: 'Évaluation des facteurs DuPont', detail: 'Examen des 13 critères de risque de confusion selon le droit mexicain…' },
     { label: 'Évaluation du caractère distinctif (LFPPI)', detail: 'Classification : générique, descriptif, suggestif, arbitraire ou de fantaisie…' },
+    { label: 'Vérification des translittérations', detail: 'Contrôle des équivalents romanisés et phonétiques dans différents alphabets…' },
     { label: 'Analyse de la présence web et commerciale', detail: 'Recherche de marques non déposées susceptibles de créer un conflit…' },
     { label: 'Vérification de la disponibilité des domaines', detail: 'Interrogation de .com, .mx, .net et 10 autres TLD…' },
-    { label: 'Analyse des traductions et translittérations', detail: 'Vérification du sens de la marque dans 8 langues pour les conflits internationaux…' },
+    { label: 'Analyse des traductions et risques inter-langues', detail: 'Vérification du sens de la marque dans 8 langues pour les conflits internationaux…' },
+    { label: 'Examen des significations secondaires', detail: 'Détection de significations descriptives ou génériques pouvant bloquer l\'enregistrement…' },
+    { label: 'Analyse des marques notoires', detail: 'Vérification par rapport aux protections de l\'Art. 90 LFPPI pour les marques célèbres…' },
+    { label: 'Confirmation de la précision de la recherche', detail: 'Validation de la couverture des variantes orthographiques et combinaisons de classes…' },
+    { label: 'Évaluation des facteurs de mauvaise foi', detail: 'Examen des indicateurs de dépôt de mauvaise foi et des preuves d\'usage antérieur…' },
     { label: 'Compilation du rapport de disponibilité', detail: 'Agrégation de tous les signaux et calcul du score final…' },
   ],
   hi: [
@@ -544,9 +569,14 @@ const LOADING_STEPS: Record<Lang, { label: string; detail: string }[]> = {
     { label: 'ध्वन्यात्मक और दृश्य समानता विश्लेषण', detail: 'मौजूदा चिह्नों के साथ ध्वनि, रूप और अर्थ की तुलना…' },
     { label: 'DuPont कारकों का मूल्यांकन', detail: 'मेक्सिकन कानून के तहत सभी 13 भ्रम-संभावना मानदंड…' },
     { label: 'विशिष्टता मूल्यांकन (LFPPI)', detail: 'चिह्न स्तर वर्गीकरण: सामान्य, वर्णनात्मक, सुझावात्मक, मनमाना या काल्पनिक…' },
+    { label: 'लिप्यंतरण सत्यापन', detail: 'विभिन्न लिपियों और वर्णमालाओं में रोमानीकृत और ध्वन्यात्मक समकक्षों की जांच…' },
     { label: 'वेब और बाज़ार उपस्थिति स्कैन', detail: 'संघर्ष पैदा कर सकने वाले गैर-पंजीकृत ब्रांड की जांच…' },
     { label: 'डोमेन उपलब्धता जांच', detail: '.com, .mx, .net और 10 अन्य TLD क्वेरी…' },
-    { label: 'अनुवाद और लिप्यंतरण विश्लेषण', detail: '8 भाषाओं में चिह्न के अर्थ की समीक्षा…' },
+    { label: 'अनुवाद और अंतर-भाषा जोखिम विश्लेषण', detail: '8 भाषाओं में चिह्न के अर्थ की समीक्षा…' },
+    { label: 'द्वितीयक अर्थों की समीक्षा', detail: 'पंजीकरण को अवरुद्ध कर सकने वाले वर्णनात्मक या सामान्य अर्थों का पता लगाना…' },
+    { label: 'प्रसिद्ध चिह्नों की जांच', detail: 'LFPPI अनुच्छेद 90 के तहत सुप्रसिद्ध चिह्न सुरक्षाओं के विरुद्ध क्रॉस-चेकिंग…' },
+    { label: 'खोज सटीकता की पुष्टि', detail: 'वर्तनी भिन्नताओं और वर्ग संयोजनों की कवरेज को सत्यापित करना…' },
+    { label: 'मालाफे जोखिम कारकों का मूल्यांकन', detail: 'खराब नीयत दाखिला संकेतकों और पूर्व उपयोग साक्ष्य की समीक्षा…' },
     { label: 'क्लीयरेंस रिपोर्ट तैयार करना', detail: 'सभी संकेतों को एकत्रित करके अंतिम स्कोर की गणना…' },
   ],
   pt: [
@@ -554,9 +584,14 @@ const LOADING_STEPS: Record<Lang, { label: string; detail: string }[]> = {
     { label: 'Analisando similaridade fonética e visual', detail: 'Comparando som, aparência e significado com marcas existentes…' },
     { label: 'Avaliando fatores DuPont', detail: 'Examinando todos os 13 critérios de probabilidade de confusão pela lei mexicana…' },
     { label: 'Avaliando distintividade (LFPPI)', detail: 'Classificando a marca: genérica, descritiva, sugestiva, arbitrária ou de fantasia…' },
+    { label: 'Verificando transliterações', detail: 'Checando equivalentes romanizados e fonéticos em diferentes alfabetos e grafias…' },
     { label: 'Verificando presença web e comercial', detail: 'Checando marcas não registradas que possam gerar conflito…' },
     { label: 'Verificando disponibilidade de domínios', detail: 'Consultando .com, .mx, .net e outros 10 TLDs…' },
-    { label: 'Analisando traduções e transliterações', detail: 'Revisando o significado da marca em 8 idiomas para conflitos internacionais…' },
+    { label: 'Analisando traduções e risco entre idiomas', detail: 'Revisando o significado da marca em 8 idiomas para conflitos internacionais…' },
+    { label: 'Revisando significados secundários', detail: 'Detectando significados descritivos ou genéricos que possam impedir o registro…' },
+    { label: 'Verificando marcas notórias', detail: 'Cruzando com proteções do Art. 90 LFPPI para marcas famosas…' },
+    { label: 'Confirmando precisão da busca', detail: 'Validando cobertura de variações ortográficas e combinações de classes…' },
+    { label: 'Avaliando fatores de má-fé', detail: 'Revisando indicadores de depósito de má-fé e evidências de uso anterior…' },
     { label: 'Compilando relatório de registrabilidade', detail: 'Agregando todos os sinais e calculando a pontuação final…' },
   ],
   ja: [
@@ -564,9 +599,14 @@ const LOADING_STEPS: Record<Lang, { label: string; detail: string }[]> = {
     { label: '音声的・視覚的類似性の分析', detail: '既存商標との音、外観、意味の比較…' },
     { label: 'DuPont要素の評価', detail: 'メキシコ法の下で13の混同可能性基準を検討中…' },
     { label: '識別力の評価 (LFPPI)', detail: '商標の段階分類：普通名称、記述的、示唆的、任意的または造語…' },
+    { label: '音訳の検証', detail: '異なる文字・アルファベットにおけるローマ字化と音声的同等表記の確認…' },
     { label: 'ウェブ・市場調査', detail: '未登録ブランドで競合する可能性のあるものを確認中…' },
     { label: 'ドメイン利用可能性確認', detail: '.com、.mx、.netおよび他10のTLDを照会中…' },
-    { label: '翻訳・転記分析', detail: '8言語での商標の意味を確認し、越境衝突を調査中…' },
+    { label: '翻訳・言語横断リスク分析', detail: '8言語での商標の意味を確認し、越境衝突を調査中…' },
+    { label: '二次的意味の検討', detail: '登録を妨げる可能性のある記述的・普通名称的な意味を検出…' },
+    { label: '著名商標のスキャン', detail: 'LFPPI第90条の周知商標保護との照合…' },
+    { label: '検索精度の確認', detail: '綴り変形とクラス組み合わせのカバレッジを検証…' },
+    { label: '不正申請リスク評価', detail: '悪意のある申請の指標と先使用証拠を検討…' },
     { label: 'クリアランスレポート作成', detail: 'すべての情報を集約し、最終的な登録可能性スコアを算出中…' },
   ],
 };
@@ -577,11 +617,11 @@ function ClearanceLoadingSteps({ lang, done }: { lang: Lang; done: boolean }) {
   const [completedCount, setCompletedCount] = useState(0);
   const [elapsed, setElapsed] = useState(0);
 
-  // First 7 steps are time-simulated. The 8th ("Compiling report") is the heaviest
-  // server work and completes only when the API responds — we give it a realistic
-  // estimate of 12 000 ms for the "remaining time" display but never auto-advance it.
-  const durations = [2000, 1800, 2200, 1800, 1600, 1400, 1800];
-  const lastStepEstimateMs = 12000;
+  // Steps 1–12 auto-advance on a timer; step 13 ("Compiling report") only completes
+  // when the API responds (done=true). Total simulated time ~22s covers most of the
+  // real server processing, keeping the bar visibly moving throughout the wait.
+  const durations = [1800, 1600, 2000, 1700, 1500, 1800, 1400, 1700, 1600, 1800, 1500, 1700];
+  const lastStepEstimateMs = 10000;
   const totalEstimated = durations.reduce((a, b) => a + b, 0) + lastStepEstimateMs;
 
   useEffect(() => {
