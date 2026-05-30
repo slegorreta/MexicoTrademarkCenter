@@ -4,6 +4,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { useState, useEffect, useRef, type ReactNode } from 'react';
 import AboutSection from '../components/AboutSection';
 import ComparisonSection from '../components/ComparisonSection';
+import PaymentMethodIcons from '../components/PaymentMethodIcons';
 import impiBuilding from '../assets/IMPI-blindara-artesanias-poblanas-analiza-3-zonas-para-Indicacion-Geografica.webp';
 import { LANDING_PAGES } from '../data/landingPages';
 
@@ -506,6 +507,9 @@ export default function HomePage() {
               <p className="text-xs font-bold text-white mt-3">{t('pricing.taxesIncluded')}</p>
             </div>
           </div>
+          <div className="my-4">
+            <PaymentMethodIcons size="md" align="center" variant="light" />
+          </div>
           <p className="text-center text-gray-500 text-xs mb-5">{t('pricing.govFeeNote')}</p>
           <div className="text-center">
             <Link
@@ -534,9 +538,9 @@ export default function HomePage() {
           <div className="grid md:grid-cols-3 gap-8 relative">
             <div className="hidden md:block absolute top-12 left-1/3 right-1/3 h-0.5 bg-gold-200" />
             {[
-              { num: '01', title: t('process.step1.title'), desc: t('process.step1.desc'), icon: FileText, isImpi: false },
-              { num: '02', title: t('process.step2.title'), desc: t('process.step2.desc'), icon: Shield, isImpi: false },
-              { num: '03', title: t('process.step3.title'), desc: t('process.step3.desc'), icon: Award, isImpi: true },
+              { num: '01', title: t('process.step1.title'), desc: t('process.step1.desc'), icon: FileText, isImpi: false, showPayment: false },
+              { num: '02', title: t('process.step2.title'), desc: t('process.step2.desc'), icon: Shield, isImpi: false, showPayment: true },
+              { num: '03', title: t('process.step3.title'), desc: t('process.step3.desc'), icon: Award, isImpi: true, showPayment: false },
             ].map((step, i) => (
               <div key={i} className="relative text-center">
                 <div className="w-16 h-16 bg-navy-900 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
@@ -559,6 +563,11 @@ export default function HomePage() {
                   )}
                 </h3>
                 <p className="text-gray-600 text-sm leading-relaxed">{step.desc}</p>
+                {step.showPayment && (
+                  <div className="mt-3">
+                    <PaymentMethodIcons size="sm" align="center" variant="dark" />
+                  </div>
+                )}
               </div>
             ))}
           </div>

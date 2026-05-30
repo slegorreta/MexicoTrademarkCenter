@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { CheckCircle2, ArrowRight, X, ShieldCheck } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import PaymentMethodIcons from '../components/PaymentMethodIcons';
 
 export default function PricingPage() {
   const { t } = useLanguage();
@@ -75,6 +76,9 @@ export default function PricingPage() {
                   </div>
                   <div className="pt-2">
                     <p className="text-xs font-bold text-emerald-700">{t('pricing.taxesIncluded')}</p>
+                    <div className="mt-3">
+                      <PaymentMethodIcons size="sm" align="center" variant="dark" />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -104,6 +108,9 @@ export default function PricingPage() {
                 {t('pricing.card.stripe')}
               </p>
               <p className="text-center text-xs font-bold text-emerald-600 mt-3">{t('pricing.taxesIncluded')}</p>
+              <div className="mt-4">
+                <PaymentMethodIcons size="md" align="center" variant="dark" />
+              </div>
             </div>
           </div>
         </div>
