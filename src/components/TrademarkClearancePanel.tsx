@@ -1295,13 +1295,27 @@ export default function TrademarkClearancePanel({
         if (!orderId || bgAbortRef.current) return;
         setBgOrderId(orderId);
 
-        // Poll until PDF is ready (up to ~2 minutes, max 20 attempts × 6s)
+        // Call generate-clearance-pdf directly — this is a long-running request (~30-90s)
+        // and must be a top-level fetch, not a background task inside another edge function.
+        if (!bgAbortRef.current) {
+          try {
+            await fetch(`${SUPABASE_URL}/functions/v1/generate-clearance-pdf`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+              body: JSON.stringify({ reportOrderId: orderId }),
+            });
+          } catch {/* ignore — poll below will detect if it succeeded */}
+        }
+
+        if (bgAbortRef.current) return;
+
+        // Poll for the signed URL (PDF may have been stored even if the fetch threw)
         let attempts = 0;
-        const MAX_ATTEMPTS = 20;
+        const MAX_ATTEMPTS = 10;
         let succeeded = false;
         while (attempts < MAX_ATTEMPTS && !bgAbortRef.current) {
           attempts++;
-          await new Promise(res => setTimeout(res, 6000));
+          await new Promise(res => setTimeout(res, 3000));
           if (bgAbortRef.current) break;
           try {
             const r = await fetch(`${SUPABASE_URL}/functions/v1/get-report-download-url`, {
@@ -1657,6 +1671,18 @@ export default function TrademarkClearancePanel({
         }
 
         if (!url && orderId) {
+          // If background generation didn't finish (bgPdfUrl empty), call generate-clearance-pdf directly.
+          // This is a long-running fetch (~30-90s) and must be a top-level request.
+          if (!bgPdfUrl) {
+            try {
+              await fetch(`${SUPABASE_URL}/functions/v1/generate-clearance-pdf`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+                body: JSON.stringify({ reportOrderId: orderId }),
+              });
+            } catch {/* ignore — poll below detects success */}
+          }
+
           let attempts = 0;
           const poll = async (): Promise<string | null> => {
             attempts++;
@@ -1671,7 +1697,7 @@ export default function TrademarkClearancePanel({
                 if (d.url) return d.url;
               }
             } catch {/* ignore */}
-            if (attempts < 30) {
+            if (attempts < 10) {
               await new Promise(res => setTimeout(res, 3000));
               return poll();
             }

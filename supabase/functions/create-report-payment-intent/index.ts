@@ -102,36 +102,14 @@ Deno.serve(async (req: Request) => {
       await supabase.rpc("increment_coupon_uses", { coupon_id: couponId });
     }
 
-    // Free order: skip Stripe — trigger PDF generation in background and return immediately
+    // Free order: skip Stripe — return immediately so the frontend can call generate-clearance-pdf directly
     if (isFree) {
       const freeOrderId = `free_${crypto.randomUUID()}`;
 
-      // Update order with sentinel payment id
       await supabase
         .from("clearance_report_orders")
         .update({ stripe_payment_intent_id: freeOrderId })
         .eq("id", order.id);
-
-      // Fire PDF generation + email in background
-      EdgeRuntime.waitUntil(
-        (async () => {
-          try {
-            const pdfRes = await fetch(`${supabaseUrl}/functions/v1/generate-clearance-pdf`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${supabaseServiceKey}`,
-              },
-              body: JSON.stringify({ reportOrderId: order.id }),
-            });
-            if (!pdfRes.ok) {
-              console.error("generate-clearance-pdf failed:", await pdfRes.text());
-            }
-          } catch (e) {
-            console.error("Background PDF generation error:", e);
-          }
-        })()
-      );
 
       return new Response(JSON.stringify({
         clientSecret: null,
