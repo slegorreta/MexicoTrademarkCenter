@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { chromium } from 'playwright';
+import { chromium, type Page } from 'playwright-core';
 import { createClient } from '@supabase/supabase-js';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -79,7 +79,7 @@ async function uploadScreenshot(jobId: string, screenshotPath: string): Promise<
   }
 }
 
-async function dismissAutoSaveDialog(page: InstanceType<typeof import('playwright').Page>) {
+async function dismissAutoSaveDialog(page: Page) {
   try {
     const dialog = page.locator('div[role="dialog"], .ui-dialog').filter({ hasText: /informaci/i }).first();
     const aceptar = dialog.locator('button, input[type="button"]').filter({ hasText: /aceptar/i }).first();
@@ -126,13 +126,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Connect to Browserless remote Chrome via CDP
   const browserlessEndpoint = `wss://chrome.browserless.io?token=${process.env.BROWSERLESS_API_KEY}&slowMo=150`;
 
-  let browser: import('playwright').Browser | null = null;
-  let page: import('playwright').Page | null = null;
+  let browser: Awaited<ReturnType<typeof chromium.connectOverCDP>> | null = null;
+  let page: Page | null = null;
 
   try {
     stepName = 'connect-browser';
     await setStep(jobId, stepName);
-    browser = await chromium.connectOverCDP(browserlessEndpoint);
+    try {
+      browser = await chromium.connectOverCDP(browserlessEndpoint);
+    } catch (launchErr) {
+      const error = launchErr as Error;
+      console.error(`[worker][${jobId}] Browser launch failed:`, error.message);
+      await setFailed(jobId, stepName, `Browser launch failed: ${error.message}`);
+      try {
+        await sendFailureEmail(formData, stepName, error, jobId);
+      } catch (emailErr) {
+        console.error(`[worker][${jobId}] Also failed to send failure email:`, (emailErr as Error).message);
+      }
+      return;
+    }
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     page = await context.newPage();
 

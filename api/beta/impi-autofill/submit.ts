@@ -110,19 +110,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       : 'http://localhost:3000';
   const workerUrl = workerBase + '/api/beta/impi-autofill/worker';
 
-  fetch(workerUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-internal-secret': process.env.BETA_SECRET || '',
-    },
-    body: JSON.stringify({ formData, jobId }),
-  }).then(function(r) {
-    console.log('[submit] Worker triggered, status: ' + r.status);
-  }).catch(function(err) {
-    console.error('[submit] Worker error: ' + err.message);
-  });
+  try {
+    const workerRes = await fetch(workerUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-internal-secret': process.env.BETA_SECRET || '',
+      },
+      body: JSON.stringify({ formData, jobId }),
+    });
+    console.log('[submit] Worker triggered, status: ' + workerRes.status);
+  } catch (err) {
+    console.error('[submit] Worker fetch error:', (err as Error).message);
+  }
 
-  // Return immediately
   return res.status(200).json({ success: true, jobId });
 }
