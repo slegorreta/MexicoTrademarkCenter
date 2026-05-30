@@ -6,7 +6,7 @@ import {
   Bell, ArrowLeft, Send, Lock, Building2,
   Inbox, Shield, Pencil, CreditCard, Loader2, Tag, X,
   Printer, Sheet, Trash2, Receipt, ChevronDown, ChevronUp, RefreshCw, Eye, FileSearch,
-  Globe, Phone
+  Globe, Phone, Paperclip, ExternalLink, Info, HelpCircle
 } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
@@ -192,7 +192,8 @@ function getStageIndex(status: string): number {
 }
 
 const APP_STATUS_LABELS: Record<string, string> = {
-  pending_payment: 'Awaiting Payment',
+  pending_payment: 'Pending IMPI Filing',
+  awaiting_payment: 'Awaiting Payment',
   in_review: 'In Review',
   filed: 'Filed',
   published: 'Published',
@@ -200,7 +201,8 @@ const APP_STATUS_LABELS: Record<string, string> = {
   abandoned: 'Abandoned',
 };
 const APP_STATUS_COLORS: Record<string, string> = {
-  pending_payment: 'bg-orange-100 text-orange-700',
+  pending_payment: 'bg-gray-100 text-gray-600',
+  awaiting_payment: 'bg-orange-100 text-orange-700',
   in_review: 'bg-amber-100 text-amber-700',
   filed: 'bg-blue-100 text-blue-700',
   published: 'bg-cyan-100 text-cyan-700',
@@ -217,6 +219,23 @@ const TIMELINE_ICONS: Record<string, string> = {
   staff_comment: '💬',
   custom: '📌',
 };
+
+// ─── Tooltip component ────────────────────────────────────────────────────────
+
+function Tooltip({ content, children }: { content: string; children: React.ReactNode }) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <span className="relative inline-flex items-center" onMouseEnter={() => setVisible(true)} onMouseLeave={() => setVisible(false)} onClick={() => setVisible(v => !v)}>
+      {children}
+      {visible && (
+        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 z-50 w-max max-w-[220px] bg-[#1a3a2a] text-white text-[11px] leading-relaxed rounded-md px-3 py-2 shadow-lg pointer-events-none">
+          {content}
+          <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#1a3a2a]" />
+        </span>
+      )}
+    </span>
+  );
+}
 
 // ─── Export utilities ─────────────────────────────────────────────────────────
 
@@ -674,7 +693,7 @@ function DocketTable({
             <tr className="bg-[#1a2e1a] text-white">
               <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide w-8"></th>
               <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide">Mark</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide">Case No.</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide min-w-[130px]">Case No.</th>
               <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide">Country</th>
               <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide">Class</th>
               <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide">Status</th>
@@ -694,19 +713,23 @@ function DocketTable({
               const commentKey = `${row.app_id}-${row.class_id}`;
               const isExpanded = expandedComments.has(commentKey);
               const appStatus = row.application_status ?? 'pending_payment';
+              const isWordMark = row.mark_type === 'word' || row.mark_type === 'Word';
 
               return (
                 <>
                   <tr
                     key={rowKey}
-                    className={`group transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/60'} hover:bg-[#f0f7f0]`}
+                    className={`group transition-colors cursor-pointer ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/60'} hover:bg-[#f0f5f0]`}
+                    onClick={() => onViewDetail(row.app_id)}
                   >
                     {/* Logo */}
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                       <div className="w-8 h-8 rounded-md bg-[#f0f7f0] border border-[#c8e0c8] flex items-center justify-center overflow-hidden flex-shrink-0">
                         {row.logo_preview_url
                           ? <img src={row.logo_preview_url} alt="" className="w-full h-full object-contain" />
-                          : <Shield size={13} className="text-[#2d5a2d]" />}
+                          : isWordMark
+                            ? <span className="text-[8px] font-extrabold text-[#1a3a2a] uppercase tracking-tight leading-none text-center px-0.5 break-all line-clamp-2">{(row.trademark_name || '').slice(0, 8)}</span>
+                            : <Shield size={13} className="text-[#2d5a2d]" />}
                       </div>
                     </td>
 
@@ -716,8 +739,8 @@ function DocketTable({
                     </td>
 
                     {/* Case number */}
-                    <td className="px-4 py-3">
-                      <span className="text-xs font-mono text-gray-600">{row.case_number}</span>
+                    <td className="px-4 py-3 min-w-[130px]">
+                      <span className="text-xs font-mono text-gray-600 whitespace-nowrap">{row.case_number}</span>
                     </td>
 
                     {/* Country */}
@@ -734,24 +757,31 @@ function DocketTable({
                           Cl. {row.class_number}
                         </span>
                       ) : (
-                        <span className="text-xs text-gray-400 italic">—</span>
+                        <Tooltip content="Nice class will be assigned during our review.">
+                          <span className="text-xs text-gray-400 italic cursor-help">—</span>
+                        </Tooltip>
                       )}
                     </td>
 
                     {/* Filing status */}
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                       <TrademarkStatusBadge status={row.filing_status} showInfoButton={true} />
                     </td>
 
                     {/* Application status (admin-set) */}
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${APP_STATUS_COLORS[appStatus] ?? 'bg-gray-100 text-gray-600'}`}>
+                    <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${APP_STATUS_COLORS[appStatus] ?? 'bg-gray-100 text-gray-600'}`}>
                         {APP_STATUS_LABELS[appStatus] ?? appStatus}
+                        {appStatus === 'pending_payment' && (
+                          <Tooltip content="Your application is being reviewed by our team before submission to IMPI. No payment is due.">
+                            <Info size={10} className="cursor-help opacity-60" />
+                          </Tooltip>
+                        )}
                       </span>
                     </td>
 
                     {/* Comments (admin-set) */}
-                    <td className="px-4 py-3 max-w-[180px]">
+                    <td className="px-4 py-3 max-w-[180px]" onClick={e => e.stopPropagation()}>
                       {row.admin_comments ? (
                         <div>
                           <p className={`text-xs text-gray-600 leading-relaxed ${!isExpanded ? 'line-clamp-2' : ''}`}>
@@ -769,7 +799,7 @@ function DocketTable({
                     </td>
 
                     {/* Receipt */}
-                    <td className="px-4 py-3 text-center">
+                    <td className="px-4 py-3 text-center" onClick={e => e.stopPropagation()}>
                       {isPaid ? (
                         <button
                           onClick={() => onViewDetail(row.app_id)}
@@ -784,7 +814,7 @@ function DocketTable({
                     </td>
 
                     {/* Action */}
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1.5">
                         {isPending ? (
                           <>
@@ -873,19 +903,21 @@ function FilingParticularsCard({ app, printRef, onDownloadReceipt }: { app: AppD
   const trademark = Array.isArray(app.trademarks) ? app.trademarks[0] : app.trademarks;
   const classes = app.trademark_classes ?? [];
 
-  const fields: [string, string | null | undefined, boolean?][] = [
-    ['Mark Name', trademark?.mark_name, false],
-    ['Mark Type', trademark?.mark_type ? trademark.mark_type.charAt(0).toUpperCase() + trademark.mark_type.slice(1) : null, false],
-    ['Internal Case No.', app.case_number, true],
-    ['Filing Status', STATUS_LABELS[app.filing_status] ?? app.filing_status, false],
-    ['Nice Classes', String(app.total_classes), false],
-    ['Date Submitted', fmt(app.created_at), false],
-    ['IMPI Application No.', app.impi_application_number, true],
-    ['IMPI Filing Date', fmt(app.impi_filing_date), false],
-    ['Publication Date', fmt(app.impi_publication_date), false],
-    ['IMPI Registration No.', app.impi_registration_number, true],
-    ['Registration Date', fmt(app.impi_registration_date), false],
-    ['Renewal / Expiration', fmt(app.impi_renewal_deadline), false],
+  const PENDING_TOOLTIP = 'Your IMPI application number will appear here once your case is submitted. This usually happens within 24 business hours of team review.';
+  type FieldDef = { label: string; value: string | null | undefined; mono?: boolean; isImpiLink?: boolean; isPending?: boolean; pendingTooltip?: string };
+  const fields: FieldDef[] = [
+    { label: 'Mark Name', value: trademark?.mark_name },
+    { label: 'Mark Type', value: trademark?.mark_type ? trademark.mark_type.charAt(0).toUpperCase() + trademark.mark_type.slice(1) : null },
+    { label: 'Internal Case No.', value: app.case_number, mono: true },
+    { label: 'Filing Status', value: STATUS_LABELS[app.filing_status] ?? app.filing_status },
+    { label: 'Nice Classes', value: String(app.total_classes) },
+    { label: 'Date Submitted', value: fmt(app.created_at) },
+    { label: 'IMPI Application No.', value: app.impi_application_number, mono: true, isImpiLink: !!app.impi_application_number, isPending: !app.impi_application_number, pendingTooltip: PENDING_TOOLTIP },
+    { label: 'IMPI Filing Date', value: fmt(app.impi_filing_date), isPending: !app.impi_filing_date, pendingTooltip: PENDING_TOOLTIP },
+    { label: 'Publication Date', value: fmt(app.impi_publication_date), isPending: !app.impi_publication_date, pendingTooltip: 'Publication date will be assigned by IMPI after substantive examination.' },
+    { label: 'IMPI Registration No.', value: app.impi_registration_number, mono: true, isPending: !app.impi_registration_number, pendingTooltip: 'Registration number is issued upon successful registration.' },
+    { label: 'Registration Date', value: fmt(app.impi_registration_date), isPending: !app.impi_registration_date, pendingTooltip: 'Registration date will appear once your mark is officially registered.' },
+    { label: 'Renewal / Expiration', value: fmt(app.impi_renewal_deadline), isPending: !app.impi_renewal_deadline, pendingTooltip: 'Renewal deadline is calculated 10 years from registration date.' },
   ];
 
   return (
@@ -893,6 +925,10 @@ function FilingParticularsCard({ app, printRef, onDownloadReceipt }: { app: AppD
       <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 bg-[#f8fdf8]">
         {trademark?.logo_preview_url ? (
           <img src={trademark.logo_preview_url} alt="" className="w-12 h-12 object-contain rounded-lg border border-gray-200 bg-white p-1 flex-shrink-0" />
+        ) : (trademark?.mark_type === 'word' || trademark?.mark_type === 'Word') ? (
+          <div className="w-12 h-12 rounded-lg bg-white border border-[#c8e0c8] flex items-center justify-center flex-shrink-0 px-1">
+            <span className="text-[8px] font-extrabold text-[#1a3a2a] uppercase tracking-tight leading-none text-center break-all line-clamp-3">{trademark?.mark_name}</span>
+          </div>
         ) : (
           <div className="w-12 h-12 rounded-lg bg-[#f0f7f0] border border-[#c8e0c8] flex items-center justify-center flex-shrink-0">
             <Shield size={20} className="text-[#2d5a2d]" />
@@ -917,14 +953,31 @@ function FilingParticularsCard({ app, printRef, onDownloadReceipt }: { app: AppD
       </div>
 
       <dl className="grid grid-cols-2 sm:grid-cols-3 gap-px bg-gray-100">
-        {fields.map(([label, value, mono]) => (
-          <div key={label} className="bg-white px-4 py-3">
-            <dt className="text-[10px] uppercase tracking-wide text-gray-400 font-semibold mb-1">{label}</dt>
-            <dd className={`text-sm font-medium ${value && value !== '—' ? (mono ? 'font-mono text-[#1a2e1a]' : 'text-gray-800') : 'text-gray-300 italic text-xs'}`}>
-              {value && value !== '—' ? value : '—'}
-            </dd>
-          </div>
-        ))}
+        {fields.map(({ label, value, mono, isImpiLink, isPending, pendingTooltip }) => {
+          const hasValue = value && value !== '—';
+          return (
+            <div key={label} className="bg-white px-4 py-3">
+              <dt className="text-[10px] uppercase tracking-wide text-gray-400 font-semibold mb-1">{label}</dt>
+              <dd>
+                {hasValue ? (
+                  isImpiLink ? (
+                    <a href={`https://marcanet.impi.gob.mx/marcanet/controllerBusqueda.do?action=obtenerExpediente&numeroSolicitud=${value}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm font-mono text-[#1a3a2a] hover:underline">
+                      {value} <ExternalLink size={11} />
+                    </a>
+                  ) : (
+                    <span className={`text-sm font-medium ${mono ? 'font-mono text-[#1a2e1a]' : 'text-gray-800'}`}>{value}</span>
+                  )
+                ) : isPending && pendingTooltip ? (
+                  <Tooltip content={pendingTooltip}>
+                    <span className="text-xs text-gray-400 italic cursor-help">Pending</span>
+                  </Tooltip>
+                ) : (
+                  <span className="text-gray-300 italic text-xs">—</span>
+                )}
+              </dd>
+            </div>
+          );
+        })}
       </dl>
 
       {classes.length > 0 && (
@@ -995,6 +1048,10 @@ function ApplicationDetail({ appId, onBack }: { appId: string; onBack: () => voi
   const [loading, setLoading] = useState(true);
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
+  const [sentToast, setSentToast] = useState(false);
+  const [attachedFile, setAttachedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showNextSteps, setShowNextSteps] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
   const [paymentInfo, setPaymentInfo] = useState<{ amount_usd: number; paid_at: string; stripe_payment_intent_id: string } | null>(null);
 
@@ -1032,8 +1089,11 @@ function ApplicationDetail({ appId, onBack }: { appId: string; onBack: () => voi
     setSending(true);
     await supabase.from('client_messages').insert({ application_id: appId, sender_id: user.id, sender_role: 'client', content: newMessage.trim() });
     setNewMessage('');
+    setAttachedFile(null);
     await load();
     setSending(false);
+    setSentToast(true);
+    setTimeout(() => setSentToast(false), 3000);
   };
 
   const downloadFile = async (filePath: string, fileName: string) => {
@@ -1224,10 +1284,12 @@ function ApplicationDetail({ appId, onBack }: { appId: string; onBack: () => voi
         </button>
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-4">
-            <div className="w-14 h-14 rounded-xl bg-[#f0f7f0] border border-[#c8e0c8] flex items-center justify-center overflow-hidden flex-shrink-0">
+            <div className="w-14 h-14 rounded-xl bg-white border border-[#c8e0c8] flex items-center justify-center overflow-hidden flex-shrink-0">
               {trademark?.logo_preview_url
                 ? <img src={trademark.logo_preview_url} alt="" className="w-full h-full object-contain" />
-                : <Shield size={22} className="text-[#2d5a2d]" />}
+                : (trademark?.mark_type === 'word' || trademark?.mark_type === 'Word')
+                  ? <span className="text-[9px] font-extrabold text-[#1a3a2a] uppercase tracking-tight leading-none text-center px-1 break-all line-clamp-3">{trademark?.mark_name}</span>
+                  : <Shield size={22} className="text-[#2d5a2d]" />}
             </div>
             <div className="min-w-0">
               <h2 className="text-xl font-bold text-gray-900">{trademark?.mark_name ?? 'Trademark Application'}</h2>
@@ -1279,6 +1341,32 @@ function ApplicationDetail({ appId, onBack }: { appId: string; onBack: () => voi
               </div>
             </div>
           )}
+          {/* Expected Next Steps collapsible */}
+          <div className="mt-3">
+            <button
+              onClick={() => setShowNextSteps(v => !v)}
+              className="flex items-center gap-1.5 text-xs text-[#2d5a2d] font-medium hover:text-[#1a2e1a] transition-colors"
+            >
+              <ChevronDown size={13} className={`transition-transform ${showNextSteps ? 'rotate-180' : ''}`} />
+              {showNextSteps ? 'Hide next steps' : '▼ See what happens next'}
+            </button>
+            {showNextSteps && (
+              <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {[
+                  { stage: 'Under Review', desc: 'Our team reviews and submits to IMPI', time: 'Within 24 business hours' },
+                  { stage: 'Filed with IMPI', desc: 'IMPI assigns your official application number', time: 'Immediate upon submission' },
+                  { stage: 'Publication', desc: 'IMPI publishes your mark for 30-day opposition period', time: '3–6 months after filing' },
+                  { stage: 'Registered', desc: 'IMPI issues your registration certificate', time: '12–24 months after filing' },
+                ].map(s => (
+                  <div key={s.stage} className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
+                    <p className="text-xs font-semibold text-gray-800">{s.stage}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{s.desc}</p>
+                    <p className="text-[10px] text-[#2d5a2d] font-medium mt-1">{s.time}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1296,31 +1384,82 @@ function ApplicationDetail({ appId, onBack }: { appId: string; onBack: () => voi
       {tab === 'particulars' && <FilingParticularsCard app={app} printRef={printRef} onDownloadReceipt={paymentInfo ? handleDownloadReceipt : undefined} />}
 
       {tab === 'timeline' && (
-        <div className="space-y-3">
-          {timeline.length === 0 ? (
-            <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-400">
-              <Clock size={28} className="mx-auto mb-2 opacity-40" />
-              <p className="text-sm">No updates yet. We'll post progress here as your application advances.</p>
-            </div>
-          ) : timeline.map(ev => (
-            <div key={ev.id} className="bg-white rounded-xl border border-gray-200 p-4 flex gap-3">
-              <div className="text-xl flex-shrink-0 mt-0.5">{TIMELINE_ICONS[ev.event_type] ?? '📌'}</div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-gray-900">{ev.title}</p>
-                {ev.description && <p className="text-sm text-gray-600 mt-1 leading-relaxed">{ev.description}</p>}
-                <p className="text-xs text-gray-400 mt-2">{new Date(ev.created_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</p>
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          {(() => {
+            const receivedEntry = app.created_at ? {
+              id: 'received',
+              completed: true,
+              date: new Date(app.created_at).toLocaleDateString('en-US', { dateStyle: 'medium' }),
+              title: 'Application Received',
+              description: `Your application for ${trademark?.mark_name ?? 'your mark'} was received and payment confirmed. Our team is preparing your file for professional review.`,
+            } : null;
+
+            const dbEntries = timeline.map(ev => ({
+              id: ev.id,
+              completed: true,
+              date: new Date(ev.created_at).toLocaleDateString('en-US', { dateStyle: 'medium' }),
+              title: ev.title,
+              description: ev.description,
+            }));
+
+            const futureEntries = [
+              { id: 'f1', completed: false, date: null, title: 'Under Review', description: 'Expected: within 24 business hours of receipt' },
+              { id: 'f2', completed: false, date: null, title: 'Filed with IMPI', description: 'Expected: upon team review completion' },
+              { id: 'f3', completed: false, date: null, title: 'IMPI Publication', description: 'Expected: 3–6 months after filing' },
+              { id: 'f4', completed: false, date: null, title: 'Registered', description: 'Expected: 12–24 months after filing' },
+            ];
+
+            const allEntries = [
+              ...(receivedEntry ? [receivedEntry] : []),
+              ...dbEntries,
+              ...futureEntries,
+            ];
+
+            return (
+              <div className="relative">
+                {allEntries.map((entry, i) => (
+                  <div key={entry.id} className="flex gap-4 mb-0">
+                    <div className="flex flex-col items-center">
+                      <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 mt-0.5 ${entry.completed ? 'bg-[#1a3a2a] border-[#1a3a2a]' : 'bg-white border-gray-300'}`} />
+                      {i < allEntries.length - 1 && <div className="w-0.5 flex-1 bg-gray-200 my-1 min-h-[2rem]" />}
+                    </div>
+                    <div className="pb-5 flex-1 min-w-0">
+                      {entry.date && <p className="text-[10px] text-gray-400 mb-0.5">{entry.date}</p>}
+                      <p className={`text-sm font-semibold ${entry.completed ? 'text-gray-900' : 'text-gray-400'}`}>{entry.title}</p>
+                      {entry.description && <p className={`text-xs mt-0.5 leading-relaxed ${entry.completed ? 'text-gray-600' : 'text-gray-400 italic'}`}>{entry.description}</p>}
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
-          ))}
+            );
+          })()}
         </div>
       )}
 
       {tab === 'documents' && (
         <div className="space-y-2">
-          {documents.length === 0 ? (
+          {/* Payment receipt synthetic card */}
+          {app.payment_status === 'paid' && paymentInfo && (
+            <div className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-[#f0f7f0] flex items-center justify-center flex-shrink-0">
+                <Receipt size={16} className="text-[#1a3a2a]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900">Payment Receipt — {app.case_number}</p>
+                <p className="text-xs text-gray-400 mt-0.5">Issued {new Date(paymentInfo.paid_at).toLocaleDateString('en-US', { dateStyle: 'medium' })}</p>
+              </div>
+              <button onClick={handleDownloadReceipt} className="flex items-center gap-1.5 text-xs text-[#1a3a2a] border border-[#c8e0c8] hover:bg-[#f0f7f0] font-medium px-3 py-1.5 rounded-lg transition-colors">
+                <Download size={13} /> Download
+              </button>
+            </div>
+          )}
+          {documents.length === 0 && !(app.payment_status === 'paid' && paymentInfo) ? (
             <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-400">
-              <FileText size={28} className="mx-auto mb-2 opacity-40" />
-              <p className="text-sm">No documents available yet.</p>
+              <div className="w-12 h-12 bg-[#f0f7f0] rounded-full flex items-center justify-center mx-auto mb-3">
+                <FileText size={22} className="text-[#2d5a2d]" />
+              </div>
+              <p className="text-sm font-medium text-gray-600 mb-1">No documents yet</p>
+              <p className="text-xs text-gray-400 max-w-xs mx-auto leading-relaxed">Your IMPI filing receipt will appear here once your case is submitted to IMPI, typically within 24 business hours of team review.</p>
             </div>
           ) : documents.map(doc => (
             <div key={doc.id} className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-3">
@@ -1340,8 +1479,19 @@ function ApplicationDetail({ appId, onBack }: { appId: string; onBack: () => voi
       )}
 
       {tab === 'messages' && (
-        <div className="bg-white rounded-xl border border-gray-200 flex flex-col" style={{ minHeight: 400 }}>
-          <div className="flex-1 overflow-y-auto p-4 space-y-3" style={{ maxHeight: 400 }}>
+        <div className="bg-white rounded-xl border border-gray-200 flex flex-col relative" style={{ minHeight: 400 }}>
+          {/* Sent toast */}
+          {sentToast && (
+            <div className="fixed bottom-5 right-5 z-50 bg-[#1a3a2a] text-white text-xs font-semibold px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-2">
+              <CheckCircle2 size={13} className="text-green-300" /> Sent
+            </div>
+          )}
+          {/* Header */}
+          <div className="px-4 py-3 border-b border-gray-100">
+            <p className="text-sm font-semibold text-gray-900">Message our team</p>
+            <p className="text-xs text-gray-400 mt-0.5">Typically replies within 4 business hours · Mon–Fri</p>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4 space-y-3" style={{ maxHeight: 360 }}>
             {messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-48 text-gray-400">
                 <Inbox size={28} className="mb-2 opacity-40" />
@@ -1353,17 +1503,42 @@ function ApplicationDetail({ appId, onBack }: { appId: string; onBack: () => voi
                   ${msg.sender_role === 'client' ? 'bg-[#1a2e1a] text-white rounded-br-sm' : 'bg-gray-100 text-gray-800 rounded-bl-sm'}`}>
                   {msg.content}
                   <p className={`text-[10px] mt-1 ${msg.sender_role === 'client' ? 'text-green-300' : 'text-gray-400'}`}>
-                    {msg.sender_role === 'client' ? 'You' : 'MTC Team'} · {new Date(msg.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                    {msg.sender_role === 'client' ? 'You' : 'MTC Team'} · {new Date(msg.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
               </div>
             ))}
           </div>
-          <div className="border-t border-gray-100 p-3 flex gap-2">
-            <input value={newMessage} onChange={e => setNewMessage(e.target.value)} onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage()} placeholder="Type a message to our team..." className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2d5a2d] focus:border-transparent" />
-            <button onClick={sendMessage} disabled={sending || !newMessage.trim()} className="w-9 h-9 bg-[#1a2e1a] text-white rounded-lg flex items-center justify-center disabled:opacity-40 hover:bg-[#2d5a2d] transition-colors">
-              <Send size={15} />
-            </button>
+          <div className="border-t border-gray-100 p-3 space-y-2">
+            {attachedFile && (
+              <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-gray-600">
+                <Paperclip size={12} className="text-gray-400" />
+                <span className="flex-1 truncate">{attachedFile.name}</span>
+                <button onClick={() => setAttachedFile(null)} className="text-gray-400 hover:text-gray-600"><X size={12} /></button>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <textarea
+                value={newMessage}
+                onChange={e => setNewMessage(e.target.value.slice(0, 1000))}
+                onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+                placeholder="Type a message to our team..."
+                className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2d5a2d] focus:border-transparent resize-vertical"
+                style={{ minHeight: 80 }}
+              />
+              <div className="flex flex-col gap-1.5">
+                <button onClick={sendMessage} disabled={sending || !newMessage.trim()} className="w-9 h-9 bg-[#1a2e1a] text-white rounded-lg flex items-center justify-center disabled:opacity-40 hover:bg-[#2d5a2d] transition-colors">
+                  <Send size={15} />
+                </button>
+                <input ref={fileInputRef} type="file" accept="image/*,.pdf" className="hidden" onChange={e => setAttachedFile(e.target.files?.[0] ?? null)} />
+                <button onClick={() => fileInputRef.current?.click()} className="w-9 h-9 border border-gray-200 text-gray-400 rounded-lg flex items-center justify-center hover:bg-gray-50 hover:text-gray-600 transition-colors" title="Attach file">
+                  <Paperclip size={14} />
+                </button>
+              </div>
+            </div>
+            <p className={`text-[10px] text-right ${newMessage.length >= 950 ? 'text-red-500' : newMessage.length >= 800 ? 'text-amber-500' : 'text-gray-400'}`}>
+              {newMessage.length}/1000
+            </p>
           </div>
         </div>
       )}
@@ -1406,6 +1581,7 @@ function AccountSettings({ language }: { language: string }) {
   const [editName, setEditName] = useState(profile?.full_name ?? '');
   const [editPhone, setEditPhone] = useState(profile?.phone ?? '');
   const [editWechat, setEditWechat] = useState(profile?.wechat ?? '');
+  const [editWhatsapp, setEditWhatsapp] = useState((profile as Record<string, string> | null)?.whatsapp ?? '');
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileMsg, setProfileMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -1427,6 +1603,12 @@ function AccountSettings({ language }: { language: string }) {
   const [langMsg, setLangMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [selectedLang, setSelectedLang] = useState<Language>((profile?.preferred_language as Language) ?? (language as Language) ?? 'en');
 
+  // Notification preferences
+  const [notifStatusChange, setNotifStatusChange] = useState(true);
+  const [notifMessageReply, setNotifMessageReply] = useState(true);
+  const [notifDocumentReady, setNotifDocumentReady] = useState(true);
+  const [notifRenewal, setNotifRenewal] = useState(true);
+
   const l = (en: string, zh: string, es: string, de?: string, fr?: string, hi?: string, pt?: string, ja?: string) =>
     language === 'zh' ? zh : language === 'es' ? es : language === 'de' ? (de ?? en) : language === 'fr' ? (fr ?? en) : language === 'hi' ? (hi ?? en) : language === 'pt' ? (pt ?? en) : language === 'ja' ? (ja ?? en) : en;
 
@@ -1435,6 +1617,7 @@ function AccountSettings({ language }: { language: string }) {
       setEditName(profile.full_name ?? '');
       setEditPhone(profile.phone ?? '');
       setEditWechat(profile.wechat ?? '');
+      setEditWhatsapp((profile as Record<string, string> | null)?.whatsapp ?? '');
     }
   }, [profile]);
 
@@ -1446,6 +1629,7 @@ function AccountSettings({ language }: { language: string }) {
       full_name: editName,
       phone: editPhone,
       wechat: editWechat,
+      whatsapp: editWhatsapp,
       updated_at: new Date().toISOString(),
     }).eq('id', user.id);
     if (error) {
@@ -1538,6 +1722,13 @@ function AccountSettings({ language }: { language: string }) {
             <label className={labelClass}>WeChat</label>
             <input type="text" value={editWechat} onChange={e => setEditWechat(e.target.value)} className={inputClass} placeholder="WeChat ID" />
           </div>
+          <div>
+            <label className={labelClass}>WhatsApp</label>
+            <div className="relative">
+              <Phone size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input type="tel" value={editWhatsapp} onChange={e => setEditWhatsapp(e.target.value)} className={`${inputClass} pl-8`} placeholder="+1 555 000 0000" />
+            </div>
+          </div>
           <button onClick={saveProfile} disabled={profileSaving} className="w-full bg-[#1a2e1a] text-white text-sm font-medium py-2.5 rounded-lg hover:bg-[#2d5a2d] disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
             {profileSaving ? <Loader2 size={14} className="animate-spin" /> : null}
             {profileSaving ? l('Saving…', '保存中…', 'Guardando…', 'Speichern…', 'Enregistrement…', 'सहेज रहे हैं…', 'Salvando…', '保存中…') : l('Save Profile', '保存个人资料', 'Guardar perfil', 'Profil speichern', 'Enregistrer le profil', 'प्रोफ़ाइल सहेजें', 'Salvar perfil', 'プロフィールを保存')}
@@ -1582,6 +1773,58 @@ function AccountSettings({ language }: { language: string }) {
             >
               <span className="font-semibold">{opt.native}</span>
               <span className="text-[10px] text-gray-400">{opt.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Notification Preferences card */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <h3 className="text-sm font-semibold text-gray-900 mb-1 flex items-center gap-2">
+          <Bell size={15} className="text-[#2d5a2d]" />
+          {l('Notification Preferences', '通知偏好', 'Preferencias de notificaciones', 'Benachrichtigungseinstellungen', 'Préférences de notifications', 'सूचना प्राथमिकताएं', 'Preferências de notificação', '通知設定')}
+        </h3>
+        <p className="text-xs text-gray-400 mb-4">{l('Choose which emails you receive from us.', '选择接收我们哪些邮件。', 'Elige qué correos recibes de nosotros.', 'Wählen Sie, welche E-Mails Sie erhalten.', 'Choisissez les e-mails que vous recevez.', 'चुनें कि हमसे कौन से ईमेल प्राप्त करें।', 'Escolha quais e-mails você recebe.', '受け取るメールを選択してください。')}</p>
+        <div className="space-y-3">
+          {([
+            { state: notifStatusChange, setter: setNotifStatusChange, label: l('Status changes on your applications', '申请状态变更', 'Cambios de estado en tus solicitudes', 'Statusänderungen', 'Changements de statut', 'आवेदन स्थिति परिवर्तन', 'Mudanças de status', 'ステータス変更') },
+            { state: notifMessageReply, setter: setNotifMessageReply, label: l('Replies to your messages', '消息回复', 'Respuestas a tus mensajes', 'Antworten auf Nachrichten', 'Réponses à vos messages', 'संदेश उत्तर', 'Respostas às mensagens', 'メッセージへの返信') },
+            { state: notifDocumentReady, setter: setNotifDocumentReady, label: l('Documents ready to download', '文件可下载', 'Documentos listos para descargar', 'Dokumente zum Download bereit', 'Documents prêts à télécharger', 'डाउनलोड के लिए दस्तावेज़', 'Documentos prontos', 'ダウンロード可能なドキュメント') },
+            { state: notifRenewal, setter: setNotifRenewal, label: l('Renewal reminders', '续期提醒', 'Recordatorios de renovación', 'Erneuerungserinnerungen', 'Rappels de renouvellement', 'नवीनीकरण अनुस्मारक', 'Lembretes de renovação', '更新リマインダー') },
+          ] as { state: boolean; setter: (v: boolean) => void; label: string }[]).map((item, i) => (
+            <label key={i} className="flex items-center justify-between gap-3 cursor-pointer">
+              <span className="text-sm text-gray-700">{item.label}</span>
+              <button
+                onClick={() => item.setter(!item.state)}
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${item.state ? 'bg-[#2d5a2d]' : 'bg-gray-200'}`}
+              >
+                <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${item.state ? 'translate-x-4' : 'translate-x-1'}`} />
+              </button>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Portal Language card */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <h3 className="text-sm font-semibold text-gray-900 mb-1 flex items-center gap-2">
+          <Globe size={15} className="text-[#2d5a2d]" />
+          {l('Portal Language', '门户语言', 'Idioma del portal', 'Portalsprache', 'Langue du portail', 'पोर्टल भाषा', 'Idioma do portal', 'ポータル言語')}
+        </h3>
+        <p className="text-xs text-gray-400 mb-4">{l('Change the display language of this dashboard.', '更改此控制台的显示语言。', 'Cambia el idioma de visualización del panel.', 'Anzeigesprache des Dashboards ändern.', "Changer la langue d'affichage du tableau de bord.", 'इस डैशबोर्ड की प्रदर्शन भाषा बदलें।', 'Mudar o idioma de exibição do painel.', 'このダッシュボードの表示言語を変更する。')}</p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {LANG_OPTIONS.map(opt => (
+            <button
+              key={opt.code}
+              onClick={() => setLanguage(opt.code)}
+              className={`flex flex-col items-center gap-0.5 px-3 py-2.5 rounded-xl border text-xs font-medium transition-all ${
+                language === opt.code
+                  ? 'border-[#2d5a2d] bg-[#f0f7f0] text-[#1a2e1a] shadow-sm'
+                  : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              <span className="text-base">{opt.flag}</span>
+              <span className="font-semibold">{opt.label}</span>
             </button>
           ))}
         </div>
@@ -1686,6 +1929,9 @@ export default function DashboardPage() {
   const [reports, setReports] = useState<ClearanceReport[]>([]);
   const [reportsLoading, setReportsLoading] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [notifPanelOpen, setNotifPanelOpen] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<string | null>(null);
+  const [bannerDismissed, setBannerDismissed] = useState(() => localStorage.getItem('passwordBannerDismissed') === '1');
 
   const tri = (en: string, zh: string, es: string, de?: string, fr?: string, hi?: string, pt?: string, ja?: string): string =>
     language === 'zh' ? zh : language === 'es' ? es : language === 'de' ? (de ?? en) : language === 'fr' ? (fr ?? en) : language === 'hi' ? (hi ?? en) : language === 'pt' ? (pt ?? en) : language === 'ja' ? (ja ?? en) : en;
@@ -1706,8 +1952,12 @@ export default function DashboardPage() {
     }
   };
 
+  const hasAutoRedirectedToSettings = useRef(false);
   useEffect(() => {
-    if (profile?.password_change_required) setView('settings');
+    if (profile?.password_change_required && !hasAutoRedirectedToSettings.current) {
+      hasAutoRedirectedToSettings.current = true;
+      setView('settings');
+    }
   }, [profile]);
 
   const loadDocket = useCallback(async () => {
@@ -1837,11 +2087,21 @@ export default function DashboardPage() {
   };
 
   const stats = [
-    { label: tri('Total Cases', '案件总数', 'Casos totales', 'Gesamt', 'Total', 'कुल मामले', 'Total', '総件数'), value: docketRows.length, icon: FileText, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: tri('In Progress', '进行中', 'En proceso', 'Laufend', 'En cours', 'प्रगति में', 'Em andamento', '処理中'), value: docketRows.filter(r => ['new','pending_review','filed','ready_to_file'].includes(r.filing_status)).length, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
-    { label: tri('Registered', '已注册', 'Registradas', 'Eingetragen', 'Enregistrées', 'पंजीकृत', 'Registradas', '登録済み'), value: docketRows.filter(r => r.filing_status === 'registered').length, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-    { label: tri('Action Needed', '需要操作', 'Acción requerida', 'Aktion nötig', 'Action requise', 'कार्रवाई आवश्यक', 'Ação necessária', '対応必要'), value: docketRows.filter(r => ['info_requested','office_action_pending','pending_payment'].includes(r.filing_status)).length, icon: AlertCircle, color: 'text-rose-600', bg: 'bg-rose-50' },
+    { label: tri('Total Cases', '案件总数', 'Casos totales', 'Gesamt', 'Total', 'कुल मामले', 'Total', '総件数'), value: docketRows.length, icon: FileText, color: 'text-blue-600', bg: 'bg-blue-50', filterKey: 'all' },
+    { label: tri('In Progress', '进行中', 'En proceso', 'Laufend', 'En cours', 'प्रगति में', 'Em andamento', '処理中'), value: docketRows.filter(r => ['new','pending_review','filed','ready_to_file'].includes(r.filing_status)).length, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50', filterKey: 'in_progress' },
+    { label: tri('Registered', '已注册', 'Registradas', 'Eingetragen', 'Enregistrées', 'पंजीकृत', 'Registradas', '登録済み'), value: docketRows.filter(r => r.filing_status === 'registered').length, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50', filterKey: 'registered' },
+    { label: tri('Action Needed', '需要操作', 'Acción requerida', 'Aktion nötig', 'Action requise', 'कार्रवाई आवश्यक', 'Ação necessária', '対応必要'), value: docketRows.filter(r => ['info_requested','office_action_pending','pending_payment'].includes(r.filing_status)).length, icon: AlertCircle, color: 'text-rose-600', bg: 'bg-rose-50', filterKey: 'action_needed' },
   ];
+
+  const filteredDocketRows = (() => {
+    if (!activeFilter || activeFilter === 'all') return docketRows;
+    if (activeFilter === 'in_progress') return docketRows.filter(r => ['new','pending_review','filed','ready_to_file'].includes(r.filing_status));
+    if (activeFilter === 'registered') return docketRows.filter(r => r.filing_status === 'registered');
+    if (activeFilter === 'action_needed') return docketRows.filter(r => ['info_requested','office_action_pending','pending_payment'].includes(r.filing_status));
+    return docketRows;
+  })();
+
+  const uniqueCasesForJourney = Array.from(new Map(docketRows.map(r => [r.app_id, r])).values());
 
   const initials = profile?.full_name
     ? profile.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
@@ -1859,7 +2119,7 @@ export default function DashboardPage() {
       {langMenuOpen && <div className="fixed inset-0 z-40" onClick={() => setLangMenuOpen(false)} />}
 
       {/* Sidebar — z-50 keeps it above the lang backdrop (z-40) so the language button stays clickable */}
-      <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-[#0f1f0f] text-white flex flex-col transition-transform duration-200 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+      <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-[#0f1f0f] text-white flex flex-col transition-transform duration-200 overflow-y-auto ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
         <div className="px-6 py-5 border-b border-white/10">
           <Link to="/" className="flex items-center gap-2">
             <div className="w-7 h-7 bg-[#c9a84c] rounded flex items-center justify-center"><Shield size={14} className="text-white" /></div>
@@ -1877,9 +2137,10 @@ export default function DashboardPage() {
               <p className="text-xs text-gray-400 truncate">{user?.email}</p>
             </div>
           </div>
-          {profile?.password_change_required && (
-            <div className="mt-2 flex items-center gap-1.5 text-xs text-amber-400 bg-amber-900/30 rounded-lg px-2.5 py-1.5">
-              <Bell size={11} /> {tri('Please set your password', '请设置您的密码', 'Por favor establece tu contraseña', 'Bitte Passwort setzen', 'Veuillez définir votre mot de passe', 'कृपया अपना पासवर्ड सेट करें', 'Por favor defina sua senha', 'パスワードを設定してください')}
+          {profile?.password_change_required && !bannerDismissed && (
+            <div className="mt-2 flex items-center justify-between gap-1.5 text-xs text-amber-400 bg-amber-900/30 rounded-lg px-2.5 py-1.5">
+              <span className="flex items-center gap-1.5"><Bell size={11} /> {tri('Please set your password', '请设置您的密码', 'Por favor establece tu contraseña', 'Bitte Passwort setzen', 'Veuillez définir votre mot de passe', 'कृपया अपना पासवर्ड सेट करें', 'Por favor defina sua senha', 'パスワードを設定してください')}</span>
+              <button onClick={() => { setBannerDismissed(true); localStorage.setItem('passwordBannerDismissed', '1'); }} className="text-amber-400 hover:text-amber-200 flex-shrink-0 ml-1"><X size={11} /></button>
             </div>
           )}
         </div>
@@ -1892,6 +2153,24 @@ export default function DashboardPage() {
             </button>
           ))}
         </nav>
+        {/* What's next context card */}
+        {docketRows.length > 0 && (() => {
+          const hasPendingReview = docketRows.some(r => r.filing_status === 'pending_review');
+          const hasUnderReview = docketRows.some(r => ['classification_pending','ready_to_file','info_requested'].includes(r.filing_status));
+          const hasActionNeeded = docketRows.some(r => ['info_requested','office_action_pending','pending_payment'].includes(r.filing_status));
+          const allRegistered = docketRows.every(r => r.filing_status === 'registered');
+          let msg = '';
+          if (hasActionNeeded) msg = 'Action required on one of your cases. Check your docket.';
+          else if (hasPendingReview) msg = 'Your team is reviewing your filing. Estimated submission: within 24 hrs.';
+          else if (hasUnderReview) msg = 'IMPI is reviewing your application. This typically takes 3–6 months.';
+          else if (allRegistered) msg = 'All trademarks registered. Consider renewal protection.';
+          if (!msg) return null;
+          return (
+            <div className="mx-3 mb-3 bg-[#1a3a2a] border border-white/10 rounded-xl p-3">
+              <p className="text-[11px] text-green-200 leading-relaxed">{msg}</p>
+            </div>
+          );
+        })()}
         <div className="px-3 py-4 border-t border-white/10 space-y-1">
           {/* Language selector */}
           <div className="relative">
@@ -1936,6 +2215,23 @@ export default function DashboardPage() {
           </button>
           <span className="text-sm font-semibold text-gray-800">{tri('Client Portal', '客户门户', 'Portal del Cliente', 'Kundenportal', 'Portail client', 'क्लाइंट पोर्टल', 'Portal do Cliente', 'クライアントポータル')}</span>
           <div className="flex items-center gap-2">
+            {/* Notification bell */}
+            <div className="relative">
+              <button onClick={() => setNotifPanelOpen(v => !v)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 relative">
+                <Bell size={18} />
+              </button>
+              {notifPanelOpen && (
+                <div className="absolute top-full right-0 mt-1 w-72 bg-white border border-gray-200 rounded-xl shadow-xl z-60 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-gray-100">
+                    <p className="text-sm font-semibold text-gray-900">Notifications</p>
+                  </div>
+                  <div className="p-6 text-center">
+                    <div className="w-10 h-10 bg-[#f0f7f0] rounded-full flex items-center justify-center mx-auto mb-2"><Bell size={18} className="text-[#2d5a2d]" /></div>
+                    <p className="text-xs text-gray-500 leading-relaxed">No notifications yet. We'll alert you here when your case status changes.</p>
+                  </div>
+                </div>
+              )}
+            </div>
             <div className="relative">
               <button onClick={() => setLangMenuOpen(v => !v)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500">
                 <Globe size={18} />
@@ -1964,7 +2260,7 @@ export default function DashboardPage() {
                   <h1 className="text-xl font-bold text-gray-900">{tri('My Docket', '我的案件', 'Mi Expediente', 'Mein Docket', 'Mon dossier', 'मेरी सूची', 'Meu Painel', '自分のドケット')}</h1>
                   <p className="text-sm text-gray-500 mt-0.5">{tri('All your trademark cases in one place', '您的所有商标案件', 'Todos tus casos de marca en un lugar', 'Alle Ihre Markenfälle an einem Ort', 'Tous vos dossiers de marque au même endroit', 'आपके सभी ट्रेडमार्क मामले एक जगह', 'Todos os seus casos de marca em um lugar', 'すべての商標案件を一か所で')}</p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <button onClick={loadDocket} disabled={loading} className="flex items-center gap-1.5 text-xs font-medium text-gray-600 border border-gray-200 bg-white hover:bg-gray-50 px-3 py-2 rounded-lg transition-colors disabled:opacity-50" title={tri('Refresh', '刷新', 'Actualizar', 'Aktualisieren', 'Actualiser', 'ताज़ा करें', 'Atualizar', '更新')}>
                     <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> {tri('Refresh', '刷新', 'Actualizar', 'Aktualisieren', 'Actualiser', 'ताज़ा करें', 'Atualizar', '更新')}
                   </button>
@@ -1978,6 +2274,9 @@ export default function DashboardPage() {
                       </button>
                     </>
                   )}
+                  <Link to="/apply" className="flex items-center gap-1.5 text-xs font-semibold bg-[#1a3a2a] hover:bg-[#2d5a2d] text-white px-3 py-2 rounded-lg transition-colors">
+                    <Plus size={14} /> {tri('+ File New Trademark', '+ 申请新商标', '+ Registrar Nueva Marca', '+ Neue Marke anmelden', '+ Déposer une marque', '+ नया ट्रेडमार्क दाखिल करें', '+ Registrar Nova Marca', '+ 新規商標出願')}
+                  </Link>
                 </div>
               </div>
 
@@ -1997,17 +2296,61 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              {/* Stats */}
+              {/* Stats — clickable filters */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-                {stats.map((s, i) => (
-                  <div key={i} className="bg-white rounded-xl border border-gray-200 p-4">
-                    <div className={`w-8 h-8 ${s.bg} rounded-lg flex items-center justify-center mb-2`}>
-                      <s.icon size={15} className={s.color} />
-                    </div>
-                    <div className="text-2xl font-bold text-gray-900">{s.value}</div>
-                    <div className="text-xs text-gray-500 mt-0.5">{s.label}</div>
+                {stats.map((s, i) => {
+                  const isActive = activeFilter === s.filterKey || (s.filterKey === 'all' && !activeFilter);
+                  return (
+                    <button
+                      key={i}
+                      onClick={() => setActiveFilter(activeFilter === s.filterKey || (s.filterKey === 'all' && !activeFilter) ? null : s.filterKey)}
+                      className={`text-left bg-white rounded-xl border p-4 transition-all ${isActive && activeFilter ? 'border-l-4 border-l-[#c9a84c] border-[#c9a84c]/30 bg-[#fdf9f0]' : 'border-gray-200 hover:border-gray-300'}`}
+                    >
+                      <div className={`w-8 h-8 ${s.bg} rounded-lg flex items-center justify-center mb-2`}>
+                        <s.icon size={15} className={s.color} />
+                      </div>
+                      <div className="text-2xl font-bold text-gray-900">{s.value}</div>
+                      <div className="text-xs text-gray-500 mt-0.5">{s.label}</div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Your Trademark Journey mini-trackers */}
+              {uniqueCasesForJourney.length > 0 && (
+                <div className="mb-6 bg-white rounded-xl border border-gray-200 p-5">
+                  <p className="text-sm font-semibold text-gray-800 mb-4">Your Trademark Journey</p>
+                  <div className="space-y-4">
+                    {uniqueCasesForJourney.map(row => (
+                      <div key={row.app_id}>
+                        <p className="text-xs text-gray-500 font-medium mb-1.5">{row.trademark_name || 'Untitled'} <span className="font-mono text-gray-400">· {row.case_number}</span></p>
+                        <StageProgress status={row.filing_status} />
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </div>
+              )}
+
+              {/* What to expect timeline strip */}
+              <div className="mb-6 bg-white rounded-xl border border-gray-200 p-5">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-4">What to expect</p>
+                <div className="flex items-start gap-0">
+                  {[
+                    { step: 1, label: 'Team Review', time: 'Up to 24 hrs' },
+                    { step: 2, label: 'IMPI Filing', time: 'Day 1' },
+                    { step: 3, label: 'IMPI Examination', time: '3–6 months' },
+                    { step: 4, label: 'Registration', time: '12–24 months' },
+                  ].map((s, i, arr) => (
+                    <div key={s.step} className="flex-1 flex flex-col items-center">
+                      <div className="flex items-center w-full">
+                        <div className="w-7 h-7 rounded-full bg-[#1a3a2a] text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mx-auto">{s.step}</div>
+                        {i < arr.length - 1 && <div className="flex-1 h-px bg-gray-200 mx-2" />}
+                      </div>
+                      <p className="text-[11px] font-semibold text-gray-800 mt-1.5 text-center px-1">{s.label}</p>
+                      <p className="text-[10px] text-gray-400 text-center px-1">{s.time}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {loading ? (
@@ -2015,11 +2358,31 @@ export default function DashboardPage() {
                   <div className="w-8 h-8 border-2 border-[#2d5a2d] border-t-transparent rounded-full animate-spin" />
                 </div>
               ) : (
-                <DocketTable
-                  rows={docketRows}
-                  onRefresh={loadDocket}
-                  onViewDetail={id => { setSelectedAppId(id); setView('detail'); }}
-                />
+                <>
+                  {activeFilter && activeFilter !== 'all' && (
+                    <div className="mb-3 flex items-center gap-2">
+                      <span className="text-xs text-gray-500">Filtered: showing {filteredDocketRows.length} case{filteredDocketRows.length !== 1 ? 's' : ''}</span>
+                      <button onClick={() => setActiveFilter(null)} className="text-xs text-[#2d5a2d] underline">Clear filter</button>
+                    </div>
+                  )}
+                  <DocketTable
+                    rows={filteredDocketRows}
+                    onRefresh={loadDocket}
+                    onViewDetail={id => { setSelectedAppId(id); setView('detail'); }}
+                  />
+                  {/* File Another Trademark CTA */}
+                  {docketRows.length > 0 && (
+                    <div className="mt-6 bg-[#e8f0e8] rounded-xl p-6 flex items-center justify-between gap-4 flex-wrap">
+                      <div>
+                        <p className="font-semibold text-[#1a3a2a]">Protect more of your brand</p>
+                        <p className="text-sm text-[#2d5a2d] mt-0.5">File additional classes or new marks under the same account.</p>
+                      </div>
+                      <Link to="/apply" className="flex-shrink-0 inline-flex items-center gap-2 bg-[#1a3a2a] hover:bg-[#2d5a2d] text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors">
+                        <Plus size={15} /> + File Another Trademark
+                      </Link>
+                    </div>
+                  )}
+                </>
               )}
             </>
           )}
@@ -2051,10 +2414,11 @@ export default function DashboardPage() {
                   <div className="w-14 h-14 bg-[#f0f7f0] rounded-full flex items-center justify-center mx-auto mb-4">
                     <FileSearch size={24} className="text-[#2d5a2d]" />
                   </div>
-                  <h3 className="text-base font-semibold text-gray-800 mb-2">No search reports yet</h3>
-                  <p className="text-sm text-gray-500 mb-6 max-w-xs mx-auto">Run a trademark clearance check and purchase the full PDF report to see it here.</p>
+                  <h3 className="text-base font-semibold text-gray-800 mb-2">{tri('No search reports yet', '暂无搜索报告', 'Aún no hay informes de búsqueda', 'Noch keine Suchberichte', 'Aucun rapport de recherche', 'अभी तक कोई खोज रिपोर्ट नहीं', 'Nenhum relatório de busca ainda', 'まだ検索レポートはありません')}</h3>
+                  <p className="text-sm text-gray-500 mb-2 max-w-sm mx-auto">{tri('A trademark clearance search checks whether a name is already registered or conflicts with existing marks in Mexico — before you file.', '商标查询检查某个名称是否已在墨西哥注册或与现有商标冲突，在申请之前先确认。', 'Una búsqueda de disponibilidad de marca verifica si un nombre ya está registrado o entra en conflicto con marcas existentes en México, antes de presentar la solicitud.', 'Eine Markenrecherche prüft, ob ein Name bereits in Mexiko eingetragen ist oder mit bestehenden Marken kollidiert – bevor Sie die Anmeldung einreichen.', "Une recherche de disponibilité de marque vérifie si un nom est déjà enregistré ou entre en conflit avec des marques existantes au Mexique — avant de déposer.", 'एक ट्रेडमार्क क्लियरेंस खोज यह जांचती है कि क्या कोई नाम पहले से मेक्सिको में पंजीकृत है या मौजूदा चिह्नों के साथ टकराव करता है — दाखिल करने से पहले।', 'Uma pesquisa de disponibilidade de marca verifica se um nome já está registrado ou conflita com marcas existentes no México — antes de protocolar.', '商標先行調査では、出願前にメキシコで既に登録されているか、既存の商標と抵触しないかを確認します。')}</p>
+                  <p className="text-xs text-gray-400 mb-6 max-w-xs mx-auto">{tri('Purchase a full PDF clearance report to see it listed here.', '购买完整PDF查询报告后，将在此处显示。', 'Adquiere el informe PDF completo para verlo aquí.', 'Kaufen Sie einen vollständigen PDF-Bericht, um ihn hier zu sehen.', 'Achetez un rapport PDF complet pour le voir ici.', 'पूर्ण PDF क्लियरेंस रिपोर्ट खरीदें तो यह यहां दिखाई देगा।', 'Adquira um relatório PDF completo para vê-lo aqui.', '完全なPDFクリアランスレポートを購入するとここに表示されます。')}</p>
                   <Link to="/trademark-check" className="inline-flex items-center gap-2 bg-[#1a2e1a] hover:bg-[#2d5a2d] text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors">
-                    <FileSearch size={15} /> Run a Trademark Search
+                    <FileSearch size={15} /> {tri('Run a Free Trademark Search \u2192', '免费商标查询 \u2192', 'Realizar búsqueda gratuita de marca \u2192', 'Kostenlose Markensuche starten \u2192', 'Lancer une recherche gratuite \u2192', 'मुफ़्त ट्रेडमार्क खोज करें \u2192', 'Realizar busca gratuita de marca \u2192', '無料の商標検索を実行する \u2192')}
                   </Link>
                 </div>
               ) : (
@@ -2124,9 +2488,10 @@ export default function DashboardPage() {
             <>
               <div className="mb-6">
                 <h1 className="text-xl font-bold text-gray-900">{tri('Account Settings', '账户设置', 'Configuración de cuenta', 'Kontoeinstellungen', 'Paramètres du compte', 'खाता सेटिंग', 'Configurações da conta', 'アカウント設定')}</h1>
-                {profile?.password_change_required && (
-                  <div className="mt-2 inline-flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                    <Bell size={14} /> {tri('Please set a personal password to secure your account.', '请设置个人密码以保护您的账户。', 'Por favor establece una contraseña personal para asegurar tu cuenta.', 'Bitte setzen Sie ein persönliches Passwort.', 'Veuillez définir un mot de passe personnel.', 'कृपया अपना खाता सुरक्षित करने के लिए व्यक्तिगत पासवर्ड सेट करें।', 'Por favor defina uma senha pessoal para proteger sua conta.', '個人パスワードを設定してアカウントを保護してください。')}
+                {profile?.password_change_required && !bannerDismissed && (
+                  <div className="mt-2 flex items-center justify-between gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                    <span className="flex items-center gap-2"><Bell size={14} /> {tri('Please set a personal password to secure your account.', '请设置个人密码以保护您的账户。', 'Por favor establece una contraseña personal para asegurar tu cuenta.', 'Bitte setzen Sie ein persönliches Passwort.', 'Veuillez définir un mot de passe personnel.', 'कृपया अपना खाता सुरक्षित करने के लिए व्यक्तिगत पासवर्ड सेट करें।', 'Por favor defina uma senha pessoal para proteger sua conta.', '個人パスワードを設定してアカウントを保護してください。')}</span>
+                    <button onClick={() => { setBannerDismissed(true); localStorage.setItem('passwordBannerDismissed', '1'); }} className="text-amber-500 hover:text-amber-700 flex-shrink-0"><X size={14} /></button>
                   </div>
                 )}
               </div>
