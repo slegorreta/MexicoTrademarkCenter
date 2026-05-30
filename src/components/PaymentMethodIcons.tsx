@@ -99,7 +99,7 @@ const ICONS = [
 ];
 
 export default function PaymentMethodIcons({ size = 'md', align = 'center', variant = 'light' }: Props) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   const h = size === 'sm' ? 20 : 26;
   const gap = size === 'sm' ? 'gap-2' : 'gap-2.5';
@@ -108,13 +108,15 @@ export default function PaymentMethodIcons({ size = 'md', align = 'center', vari
   const colorClass = variant === 'light' ? 'text-white' : 'text-gray-400';
   const labelClass = variant === 'light' ? 'text-white/60' : 'text-gray-400';
 
+  const visibleIcons = ICONS.filter(({ id }) => id !== 'pix' || language === 'pt');
+
   return (
     <div className={`flex flex-col ${align === 'center' ? 'items-center' : 'items-start'} gap-1.5`}>
       <span className={`${labelSize} font-medium ${labelClass} tracking-widest uppercase`}>
         {t('payment.accept')}
       </span>
       <div className={`flex flex-wrap ${justifyClass} ${gap} items-center ${colorClass}`}>
-        {ICONS.map(({ id, label, Component }) => (
+        {visibleIcons.map(({ id, label, Component }) => (
           <span key={id} className="inline-flex items-center opacity-75 hover:opacity-100 transition-opacity" title={label}>
             <Component h={h} />
           </span>
