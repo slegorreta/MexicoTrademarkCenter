@@ -1270,113 +1270,78 @@ export default function ApplyPage() {
 
         setApplicationId(editingAppId);
       } else {
-        // ── CREATE MODE: insert new records ─────────────────────────────────
+        // ── CREATE MODE: call server-side edge function (bypasses RLS entirely) ──
         const cn = generateCaseNumber();
         setCaseNumber(cn);
-
-        // Ensure the profile row exists for authenticated users (it may be missing
-        // if the insert during signUp was blocked by RLS before the policy was added)
-        if (user) {
-          await supabase.from('profiles').upsert({
-            id: user.id,
-            email: user.email ?? form.email,
-            full_name: form.contactPerson || form.legalName,
-            role: 'client',
-          }, { onConflict: 'id', ignoreDuplicates: true });
-        }
-
-        const { data: clientData, error: clientError } = await supabase.from('clients').insert({
-          user_id: user?.id || null,
-          applicant_type: form.applicantType,
-          legal_name: form.legalName,
-          country: form.country,
-          address: form.address,
-          city: form.city,
-          state_province: form.stateProvince,
-          postal_code: form.postalCode,
-          email: form.email,
-          phone: form.phoneDialCode ? `${form.phoneDialCode} ${form.phoneNumber}` : form.phoneNumber,
-          wechat: form.wechat,
-          whatsapp: form.whatsapp,
-          tax_id: form.taxId,
-          contact_person: form.contactPerson,
-        }).select().maybeSingle();
-
-        if (clientError || !clientData) throw new Error(`Failed to create client record: ${clientError?.message ?? 'no data returned'}`);
 
         const priorOrderId = sessionStorage.getItem('tcpOrderId') || null;
         const priorSearchMark = sessionStorage.getItem('tcpSearchName') ?? '';
         const clearanceOrderId = priorSearchMark.toLowerCase() === form.markName.trim().toLowerCase() ? priorOrderId : null;
 
-        const { data: appData } = await supabase.from('applications').insert({
-          case_number: cn,
-          client_id: clientData.id,
-          user_id: user?.id || null,
-          payment_status: 'pending',
-          filing_status: 'pending_payment',
-          total_classes: totalClasses,
-          service_fee_usd: serviceFee,
-          government_fee_usd: govFee,
-          total_amount_usd: grandTotal,
-          priority_claimed: form.priorityClaimed,
-          priority_country: form.priorityCountry,
-          priority_app_number: form.priorityAppNumber,
-          priority_filing_date: form.priorityFilingDate || null,
-          source: 'website',
-          language,
-          search_language: language,
-          clearance_report_order_id: clearanceOrderId,
-          terms_accepted: agreedToTerms,
-          disclaimer_accepted: agreedToDisclaimer,
-          disclaimer_accepted_at: agreedToDisclaimer ? new Date().toISOString() : null,
-        }).select().maybeSingle();
-
-        if (!appData) throw new Error('Failed to create application record');
-        resolvedAppId = appData.id;
-        setApplicationId(appData.id);
-
-        await supabase.from('trademarks').insert({
-          application_id: appData.id,
-          mark_name: form.markName,
-          mark_type: form.markType as 'word',
-          contains_non_spanish: form.containsNonSpanish,
-          mark_language: form.markLanguage,
-          meaning_spanish: form.meaningSpanish,
-          transliteration: form.transliteration,
-          mark_description: form.markDescription,
-          claims_color: form.claimsColor,
-          color_description: form.colorDescription,
+        const filingRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-filing`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'Apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({
+            userId: user?.id ?? null,
+            caseNumber: cn,
+            applicantType: form.applicantType,
+            legalName: form.legalName,
+            country: form.country,
+            address: form.address,
+            city: form.city,
+            stateProvince: form.stateProvince,
+            postalCode: form.postalCode,
+            email: form.email,
+            phone: form.phoneDialCode ? `${form.phoneDialCode} ${form.phoneNumber}` : form.phoneNumber,
+            wechat: form.wechat,
+            whatsapp: form.whatsapp,
+            taxId: form.taxId,
+            contactPerson: form.contactPerson,
+            markName: form.markName,
+            markType: form.markType,
+            containsNonSpanish: form.containsNonSpanish,
+            markLanguage: form.markLanguage,
+            meaningSpanish: form.meaningSpanish,
+            transliteration: form.transliteration,
+            markDescription: form.markDescription,
+            claimsColor: form.claimsColor,
+            colorDescription: form.colorDescription,
+            classEntries: form.classEntries.map(e => ({
+              description: e.description,
+              businessIndustry: e.businessIndustry,
+              classNumber: e.classNumber,
+              classTitleEn: e.classTitleEn || (e.classNumber ? ALL_CLASSES.find(c => c.classNumber === e.classNumber)?.titleEn ?? '' : ''),
+              descriptionEn: e.descriptionEn,
+              descriptionEs: e.descriptionEs,
+              confidence: e.confidence,
+              isConfirmed: e.isConfirmed,
+              fallbackClasses: e.fallbackClasses,
+            })),
+            totalClasses,
+            serviceFeeUsd: serviceFee,
+            governmentFeeUsd: govFee,
+            totalAmountUsd: grandTotal,
+            priorityClaimed: form.priorityClaimed,
+            priorityCountry: form.priorityCountry,
+            priorityAppNumber: form.priorityAppNumber,
+            priorityFilingDate: form.priorityFilingDate || null,
+            language,
+            clearanceOrderId,
+            termsAccepted: agreedToTerms,
+            disclaimerAccepted: agreedToDisclaimer,
+            disclaimerAcceptedAt: agreedToDisclaimer ? new Date().toISOString() : null,
+          }),
         });
 
-        for (const entry of form.classEntries) {
-          const classNums = entry.isConfirmed && entry.classNumber !== null
-            ? [entry.classNumber]
-            : entry.fallbackClasses;
-          if (classNums.length === 0) continue;
+        const filingData = await filingRes.json();
+        if (!filingRes.ok) throw new Error(filingData.error || 'Failed to create filing records');
 
-          await supabase.from('goods_services').insert({
-            application_id: appData.id,
-            description_original: entry.description,
-            original_language: language,
-            business_industry: entry.businessIndustry,
-            sales_channels: [],
-            countries_sold: [],
-            mexico_launch_status: 'planning',
-          });
-
-          for (const classNum of classNums) {
-            const nc = ALL_CLASSES.find(c => c.classNumber === classNum);
-            if (nc) {
-              await supabase.from('trademark_classes').insert({
-                application_id: appData.id,
-                class_number: classNum,
-                class_title_en: entry.classTitleEn || nc.titleEn,
-                classification_source: entry.isConfirmed ? 'ai_classified' : 'user_selected',
-                confidence_score: entry.confidence,
-              });
-            }
-          }
-        }
+        resolvedAppId = filingData.applicationId;
+        setApplicationId(filingData.applicationId);
       }
 
       // Create Stripe PaymentIntent via Edge Function
@@ -1445,7 +1410,7 @@ export default function ApplyPage() {
 
   const handlePaymentSuccess = () => {
     deleteDraft();
-    setStep(7);
+    setStep(8);
   };
 
   const inputClass = 'w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-transparent';

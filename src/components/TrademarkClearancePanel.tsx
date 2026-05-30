@@ -1815,14 +1815,22 @@ export default function TrademarkClearancePanel({
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const niceClassification = (result as any)?.niceClassification as Array<{
               classNumber: number; className_en: string; officialHeading_en: string; officialHeading: string;
+              relevantItems?: string[]; relevantItems_en?: string[];
             }> | undefined;
             const suggested = classes.map(num => {
               const nc = niceClassification?.find(c => c.classNumber === num);
+              // Prefer the per-class specific items over the generic WIPO heading
+              const descEn = nc
+                ? (nc.relevantItems_en?.length ? nc.relevantItems_en.join('; ') : nc.officialHeading_en || nc.officialHeading || '')
+                : '';
+              const descEs = nc
+                ? (nc.relevantItems?.length ? nc.relevantItems.join('; ') : nc.officialHeading || '')
+                : '';
               return {
                 classNumber: num,
-                titleEn: nc?.className_en ?? `Class ${num}`,
-                descriptionEn: nc?.officialHeading_en ?? '',
-                descriptionEs: nc?.officialHeading ?? '',
+                titleEn: nc?.className_en || nc?.officialHeading_en || `Class ${num}`,
+                descriptionEn: descEn,
+                descriptionEs: descEs,
                 confidence: 1,
               };
             });
