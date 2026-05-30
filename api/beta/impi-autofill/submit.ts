@@ -85,8 +85,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const jobId = randomUUID();
-    const formData = { ...body } as ImpiFormData;
-    delete formData.token;
+  const { token: _token, ...formData } = body as ImpiFormData & { token?: string };
 
   // Persist job row immediately so the status page can show "queued"
   try {
@@ -104,7 +103,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   // Fire-and-forget: trigger the Playwright worker
-  const workerBase = process.env.VERCEL_URL ? ('https://' + process.env.VERCEL_URL) : 'http://localhost:3000';
+  const workerBase = process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? ('https://' + process.env.VERCEL_PROJECT_PRODUCTION_URL)
+    : process.env.VERCEL_URL
+      ? ('https://' + process.env.VERCEL_URL)
+      : 'http://localhost:3000';
   const workerUrl = workerBase + '/api/beta/impi-autofill/worker';
 
   fetch(workerUrl, {
