@@ -930,7 +930,7 @@ export default function ClearanceReportV2Page() {
                 <p className="text-white/50 text-[10px] font-bold uppercase tracking-widest mb-1.5">
                   {lang === 'es' ? 'Reporte de Registrabilidad IMPI · México' : 'IMPI Registrability Report · Mexico'}
                 </p>
-                <h1 className="text-5xl font-black text-white tracking-tight leading-none">{data.markName}</h1>
+                <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight leading-none break-words">{data.markName}</h1>
                 <div className="flex items-center gap-2 mt-3 flex-wrap">
                   {data.classes.map(c => (
                     <span key={c} className="text-xs font-bold bg-white/15 text-white/90 px-2.5 py-1 rounded-full">
@@ -1042,7 +1042,7 @@ export default function ClearanceReportV2Page() {
                 <details key={ax.key} className="group">
                   <summary className="list-none cursor-pointer select-none">
                     <div className="flex items-center gap-3">
-                      <div className="w-40 flex-shrink-0">
+                      <div className="w-28 sm:w-40 flex-shrink-0">
                         <p className="text-[11px] font-black text-gray-800 leading-tight">{t(ax.label, lang)}</p>
                       </div>
                       <div className="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden">
@@ -1052,7 +1052,7 @@ export default function ClearanceReportV2Page() {
                       <ChevronDown size={12} className="text-gray-400 group-open:rotate-180 transition-transform flex-shrink-0" />
                     </div>
                   </summary>
-                  <div className="mt-2 ml-[10.5rem] pl-3 border-l-2 border-gray-100">
+                  <div className="mt-2 ml-6 sm:ml-[10.5rem] pl-3 border-l-2 border-gray-100">
                     <p className="text-[11px] text-gray-600 leading-relaxed">{t(ax.desc, lang)}</p>
                   </div>
                 </details>
@@ -1089,7 +1089,7 @@ export default function ClearanceReportV2Page() {
               })()}
             </div>
             {/* Tier labels + examples */}
-            <div className="grid grid-cols-5 gap-1 mb-5">
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-1 mb-5">
               {TIER_ORDER.map(tier => {
                 const isActive = tier === data.distinctivenessTier;
                 return (
@@ -1567,6 +1567,7 @@ export default function ClearanceReportV2Page() {
               </div>
               {bgOpen && (
                 <div className="rounded-xl border border-gray-200 overflow-hidden">
+                  <div className="overflow-x-auto">
                   <table className="w-full text-[10px]">
                     <thead>
                       <tr className="bg-gray-50 border-b border-gray-200">
@@ -1589,6 +1590,7 @@ export default function ClearanceReportV2Page() {
                       ))}
                     </tbody>
                   </table>
+                  </div>
                 </div>
               )}
             </div>

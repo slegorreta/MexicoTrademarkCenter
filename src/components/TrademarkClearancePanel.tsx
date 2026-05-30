@@ -86,7 +86,7 @@ const STRIPE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string;
 
 function fireTrackEvent(event: string, properties?: Record<string, unknown>, language?: string, orderRef?: string) {
   import('../lib/analytics').then(({ trackEvent }) => {
-    fireTrackEvent(event as Parameters<typeof trackEvent>[0], properties, language, orderRef).catch(() => {});
+    trackEvent(event as Parameters<typeof trackEvent>[0], properties, language, orderRef).catch(() => {});
   }).catch(() => {});
 }
 
@@ -1177,8 +1177,10 @@ export default function TrademarkClearancePanel({
   const [bgPdfUrl, setBgPdfUrl] = useState('');
   const [bgGenerating, setBgGenerating] = useState(false);
   const [bgProgress, setBgProgress] = useState(0);
+  const [bgFailed, setBgFailed] = useState(false);
   const bgProgressTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const bgGeneratingRef = useRef(false);
+  const bgAbortRef = useRef(false);
 
   // Snap to 100 if background PDF finishes while user already submitted email
   useEffect(() => {
@@ -1255,8 +1257,10 @@ export default function TrademarkClearancePanel({
   useEffect(() => {
     if (!result || bgGeneratingRef.current) return;
     bgGeneratingRef.current = true;
+    bgAbortRef.current = false;
     setBgOrderId('');
     setBgPdfUrl('');
+    setBgFailed(false);
     setBgGenerating(true);
     setBgProgress(0);
 
@@ -1265,6 +1269,7 @@ export default function TrademarkClearancePanel({
     const bgStart = Date.now();
     if (bgProgressTimer.current) clearInterval(bgProgressTimer.current);
     bgProgressTimer.current = setInterval(() => {
+      if (bgAbortRef.current) return;
       const elapsed = (Date.now() - bgStart) / 1000;
       setBgProgress(Math.round(88 * (1 - Math.exp(-elapsed / BG_TAU))));
     }, 400);
@@ -1284,16 +1289,20 @@ export default function TrademarkClearancePanel({
             userId: userId ?? undefined,
           }),
         });
-        if (!piRes.ok) return;
+        if (!piRes.ok || bgAbortRef.current) return;
         const piData = await piRes.json();
         const orderId: string = piData.reportOrderId ?? '';
-        if (!orderId) return;
+        if (!orderId || bgAbortRef.current) return;
         setBgOrderId(orderId);
 
-        // Poll until PDF is ready (up to ~2 minutes)
+        // Poll until PDF is ready (up to ~2 minutes, max 20 attempts × 6s)
         let attempts = 0;
-        const pollUrl = async (): Promise<void> => {
+        const MAX_ATTEMPTS = 20;
+        let succeeded = false;
+        while (attempts < MAX_ATTEMPTS && !bgAbortRef.current) {
           attempts++;
+          await new Promise(res => setTimeout(res, 6000));
+          if (bgAbortRef.current) break;
           try {
             const r = await fetch(`${SUPABASE_URL}/functions/v1/get-report-download-url`, {
               method: 'POST',
@@ -1307,16 +1316,15 @@ export default function TrademarkClearancePanel({
                 setBgProgress(100);
                 setBgPdfUrl(d.url);
                 setBgGenerating(false);
-                return;
+                succeeded = true;
+                break;
               }
             }
-          } catch {/* ignore */}
-          if (attempts < 30) {
-            await new Promise(res => setTimeout(res, 4000));
-            await pollUrl();
-          }
-        };
-        await pollUrl();
+          } catch {/* ignore transient errors */}
+        }
+        if (!succeeded && !bgAbortRef.current) {
+          setBgFailed(true);
+        }
       } catch {/* silent — never block user */} finally {
         bgGeneratingRef.current = false;
         if (bgProgressTimer.current) clearInterval(bgProgressTimer.current);
@@ -1325,9 +1333,8 @@ export default function TrademarkClearancePanel({
     })();
 
     return () => {
-      bgGeneratingRef.current = false;
+      bgAbortRef.current = true;
       if (bgProgressTimer.current) clearInterval(bgProgressTimer.current);
-      setBgGenerating(false);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [result]);
@@ -1727,7 +1734,7 @@ export default function TrademarkClearancePanel({
     <div className={`mt-3 rounded-xl border ${cfg.border} ${cfg.bg} overflow-hidden`}>
 
       {/* ── Risk header ────────────────────────────────────────────────────── */}
-      <div className="px-4 py-3 flex items-center gap-3">
+      <div className="px-4 py-3 flex flex-wrap items-center gap-2">
         <RiskIcon size={16} className={`${cfg.text} flex-shrink-0`} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
@@ -1787,6 +1794,15 @@ export default function TrademarkClearancePanel({
                 />
               </div>
             </div>
+          ) : bgFailed && !bgPdfUrl ? (
+            <button
+              type="button"
+              onClick={() => setShowPdfModal(true)}
+              className="flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 transition-all"
+            >
+              <Download size={11} />
+              {tr('getPdfReport', lang)}
+            </button>
           ) : (
             <button
               type="button"
@@ -3728,7 +3744,7 @@ export default function TrademarkClearancePanel({
 
       {/* ── Free PDF report CTA ──────────────────────────────────────────────── */}
       {!pdfModalDone ? (
-        bgGenerating && !bgPdfUrl ? (
+        bgGenerating && !bgPdfUrl && !bgFailed ? (
           /* Generating state — green progress bar */
           <div className="border-t border-gray-100 px-4 py-4 bg-emerald-50 print:hidden">
             <div className="flex items-center gap-2 mb-2">
