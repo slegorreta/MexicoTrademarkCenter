@@ -7,6 +7,7 @@ import CurrencyDisplay from '../components/CurrencyDisplay';
 import { LANDING_PAGES, HREFLANG_ALTERNATES, type LandingPageData } from '../data/landingPages';
 import AboutSection from '../components/AboutSection';
 import ComparisonSection from '../components/ComparisonSection';
+import PaymentMethodIcons from '../components/PaymentMethodIcons';
 
 const PRICE_PER_CLASS = 299;
 
@@ -209,6 +210,9 @@ export default function LandingPage({ lang }: Props) {
                 <span className="text-sm font-bold leading-snug flex-1">{t('cta_idea_generator_full')}</span>
                 <ArrowRight size={18} className="group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
               </Link>
+            </div>
+            <div className="mt-2">
+              <PaymentMethodIcons size="sm" align="left" variant="light" />
             </div>
           </div>
 
