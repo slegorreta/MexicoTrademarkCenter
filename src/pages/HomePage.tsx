@@ -1,13 +1,32 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, Shield, Globe as Globe2, FileText, Award, ChevronDown, Sparkles, Search, HelpCircle, X, Star, Scale, BarChart2, Zap } from 'lucide-react';
+import { ArrowRight, Shield, Globe as Globe2, FileText, Award, ChevronDown, Sparkles, Search, HelpCircle, X, Star, Scale, BarChart2, Zap, Quote } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
-import { useState, useEffect, type ReactNode } from 'react';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
 import AboutSection from '../components/AboutSection';
 import ComparisonSection from '../components/ComparisonSection';
 import impiBuilding from '../assets/IMPI-blindara-artesanias-poblanas-analiza-3-zonas-para-Indicacion-Geografica.webp';
+import { LANDING_PAGES } from '../data/landingPages';
 
 export default function HomePage() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const testimonialRef = useRef<HTMLElement>(null);
+  const [testimonialsVisible, setTestimonialsVisible] = useState(false);
+
+  useEffect(() => {
+    const el = testimonialRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setTestimonialsVisible(true); },
+      { threshold: 0.15 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const pageData = LANDING_PAGES[language] ?? LANDING_PAGES['en'];
+  const testimonials = pageData.testimonials;
+  const socialProofLabel = pageData.socialProofLabel;
+  const starLabel = pageData.starLabel;
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [showComparisonModal, setShowComparisonModal] = useState(false);
 
@@ -208,6 +227,82 @@ export default function HomePage() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section
+        ref={testimonialRef}
+        className="py-14 lg:py-20 bg-white border-b border-gray-100"
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-5 mb-10">
+            <div className="flex items-center gap-2">
+              <div className="flex gap-0.5">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} size={18} className="fill-gold-400 text-gold-400" />
+                ))}
+              </div>
+              <span className="text-base font-bold text-navy-900 ml-1">5.0</span>
+            </div>
+            <div className="hidden sm:block w-px h-5 bg-gray-200" />
+            <p className="text-sm text-gray-500 text-center sm:text-left">{socialProofLabel}</p>
+          </div>
+
+          {/* Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {testimonials.map((testimonial, i) => {
+              const initials = testimonial.author
+                .split(' ')
+                .slice(0, 2)
+                .map(w => w[0])
+                .join('')
+                .toUpperCase();
+              const avatarColors = [
+                'bg-gold-100 text-gold-700',
+                'bg-sky-100 text-sky-700',
+                'bg-emerald-100 text-emerald-700',
+              ];
+              return (
+                <div
+                  key={i}
+                  className="relative bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200 transition-all duration-300"
+                  style={{
+                    opacity: testimonialsVisible ? 1 : 0,
+                    transform: testimonialsVisible ? 'translateY(0)' : 'translateY(16px)',
+                    transition: `opacity 0.5s ease ${i * 0.1}s, transform 0.5s ease ${i * 0.1}s`,
+                  }}
+                >
+                  {/* Decorative quote mark */}
+                  <Quote size={20} className="text-gold-200 mb-3 fill-gold-100" />
+
+                  {/* Stars */}
+                  <div className="flex gap-0.5 mb-3">
+                    {[...Array(5)].map((_, s) => (
+                      <Star key={s} size={12} className="fill-gold-400 text-gold-400" />
+                    ))}
+                  </div>
+
+                  {/* Quote */}
+                  <p className="text-gray-700 text-sm leading-relaxed mb-5 italic flex-1">
+                    &ldquo;{testimonial.quote}&rdquo;
+                  </p>
+
+                  {/* Author row */}
+                  <div className="flex items-center gap-3">
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${avatarColors[i % avatarColors.length]}`}>
+                      {initials}
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold text-navy-900 leading-tight">{testimonial.author}</div>
+                      <div className="text-xs text-gray-400 mt-0.5 leading-tight">{testimonial.role}</div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
