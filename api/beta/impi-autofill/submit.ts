@@ -81,20 +81,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const formData = { ...body } as ImpiFormData;
     delete formData.token;
 
-  // Return immediately
-  res.status(200).json({ success: true, jobId });
-
-  // Fire-and-forget: trigger the Playwright worker asynchronously
+  // Trigger the Playwright worker (fire and wait briefly to ensure the request starts)
   const workerUrl = `${process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'}/api/beta/impi-autofill/worker`;
 
-  fetch(workerUrl, {
-        method: 'POST',
-        headers: {
-                'Content-Type': 'application/json',
-                'x-internal-secret': process.env.BETA_SECRET ?? '',
-        },
-        body: JSON.stringify({ formData, jobId }),
+  const workerPromise = fetch(workerUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-internal-secret': process.env.BETA_SECRET ?? '',
+    },
+    body: JSON.stringify({ formData, jobId }),
+  }).then(r => {
+    console.log(`[submit] Worker started for job ${jobId}, status: ${r.status}`);
   }).catch((err: Error) => {
-        console.error(`[submit] Failed to trigger worker for job ${jobId}:`, err.message);
+    console.error(`[submit] Failed to trigger worker for job ${jobId}:`, err.message);
+  });
+
+  // Return the jobId immediately
+  res.status(200).json({ success: true, jobId });
+
+  // Wait for the worker fetch to at least start (don't await the full response)
+  await Promise.race([workerPromise, new Promise(resolve => setTimeout(resolve, 500))]); for job ${jobId}:`, err.message);
   });
 }
