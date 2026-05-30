@@ -1082,7 +1082,7 @@ export default function TrademarkCheckPage() {
       {/* ── Stepper bar ───────────────────────────────────────────────────────── */}
       <div className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-30 print-hide">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <StepperBar current={currentStep} maxReached={maxReached} labels={stepLabels} onFilingTabClick={maxReached >= 5 ? handleStartFiling : undefined} />
+          <StepperBar current={currentStep} maxReached={maxReached} labels={stepLabels} onFilingTabClick={maxReached >= 4 ? handleStartFiling : undefined} />
         </div>
       </div>
 

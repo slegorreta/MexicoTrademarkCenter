@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, ShieldCheck } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import sofiaImg from '../assets/Captura_de_pantalla_2026-05-14_a_la(s)_5.12.23_p.m..png';
@@ -264,17 +264,21 @@ export default function AboutSection() {
               <div className="w-48 h-48 rounded-full overflow-hidden ring-4 ring-gold-400/40 shadow-2xl">
                 <img
                   src={sofiaImg}
-                  alt="SofIA — AgenticEO"
+                  alt="SofIA — AI-Assisted Filing"
                   className="w-full h-full object-cover"
                   style={{ objectPosition: 'center 8%' }}
                 />
               </div>
               <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap bg-gold-500 text-navy-950 font-bold text-xs px-5 py-1.5 rounded-full shadow-lg tracking-widest uppercase">
-                SofIA &middot; AgenticEO
+                SofIA &middot; AI-Assisted Filing
               </div>
             </div>
           </div>
-          <div className="space-y-3 text-gray-300 mt-6">
+          <div className="flex items-center justify-center gap-2 mt-8 mb-4">
+            <ShieldCheck size={16} className="text-green-400 flex-shrink-0" />
+            <span className="text-green-400 text-sm font-semibold">Supervised by licensed Mexican IP attorneys</span>
+          </div>
+          <div className="space-y-3 text-gray-300">
             <p className="text-white text-xl font-semibold">{t('about.sofia.role')}</p>
             <p className="text-base leading-relaxed max-w-xl mx-auto">{t('about.sofia.desc')}</p>
           </div>

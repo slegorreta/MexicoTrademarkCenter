@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { CheckCircle2, ChevronRight, Upload, X, Plus, Trash2, Lock, CreditCard, AlertCircle, AlertTriangle, Sparkles, Tag, Loader2, Pencil, Eye, EyeOff, UserPlus, HelpCircle, Info, Save, Shield, Search, LogIn, Mail, ArrowLeft } from 'lucide-react';
+import { CheckCircle2, ChevronRight, Upload, X, Plus, Trash2, Lock, CreditCard, AlertCircle, AlertTriangle, Sparkles, Tag, Loader2, Pencil, Eye, EyeOff, UserPlus, HelpCircle, Info, Save, Shield, Search, LogIn, Mail, ArrowLeft, Clock } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { useLanguage } from '../context/LanguageContext';
@@ -116,7 +116,7 @@ function InfoTooltip({ text }: { text: string }) {
   );
 }
 
-function StepIndicator({ current, total, t }: { current: Step; total: number; t: (k: string) => string }) {
+function StepIndicator({ current, total, t, skippedSteps }: { current: Step; total: number; t: (k: string) => string; skippedSteps?: Set<number> }) {
   const stepLabels = [
     t('form.step1'), t('form.step2'), t('form.step3'),
     t('form.step4'), t('form.step5'), t('form.step6'),
@@ -128,15 +128,17 @@ function StepIndicator({ current, total, t }: { current: Step; total: number; t:
       <div className="flex items-center justify-between">
         {stepLabels.slice(0, total).map((_, i) => {
           const num = (i + 1) as Step;
-          const done = current > num;
+          const skipped = skippedSteps?.has(num) ?? false;
+          const done = !skipped && current > num;
           const active = current === num;
           return (
             <div key={i} className="flex items-center flex-1">
               <div className="flex flex-col items-center flex-shrink-0">
                 <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                  skipped ? 'bg-gray-100 text-gray-300 border border-gray-200' :
                   done ? 'bg-green-500 text-white' : active ? 'bg-gold-500 text-white' : 'bg-gray-200 text-gray-500'
                 }`}>
-                  {done ? <CheckCircle2 size={13} /> : num}
+                  {skipped ? <span className="text-[10px]">—</span> : done ? <CheckCircle2 size={13} /> : num}
                 </div>
               </div>
               {i < total - 1 && (
@@ -1121,6 +1123,31 @@ export default function ApplyPage() {
     setTimeout(() => setDraftSavedFeedback(false), 3000);
   }, [user, step, form, logoPreview, draftId, serializeForm]);
 
+  // Auto-save draft on page unload for steps 2–6
+  useEffect(() => {
+    if (!user || step < 2 || step > 6) return;
+    const handleBeforeUnload = () => {
+      if (!form.markName.trim()) return;
+      const payload = {
+        user_id: user.id,
+        current_step: step,
+        mark_name: form.markName,
+        form_data: serializeForm(form),
+        class_entries: form.classEntries,
+        logo_preview_data: logoPreview ?? null,
+        updated_at: new Date().toISOString(),
+      };
+      if (draftId) {
+        navigator.sendBeacon(
+          `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/filing_drafts?id=eq.${draftId}`,
+          new Blob([JSON.stringify(payload)], { type: 'application/json' })
+        );
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [user, step, form, logoPreview, draftId, serializeForm]);
+
   // ─── Payment ───────────────────────────────────────────────────────────────
 
   const handleProceedToPayment = async () => {
@@ -1439,11 +1466,27 @@ export default function ApplyPage() {
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-10">
         {step < 8 && (
-          <StepIndicator
-            current={step}
-            total={8}
-            t={t}
-          />
+          <>
+            <div className="flex items-center justify-center gap-1.5 mb-3 text-xs text-gray-400">
+              <Clock size={12} className="flex-shrink-0" />
+              <span>
+                {language === 'es' ? 'Tiempo promedio de llenado: ~5 min' :
+                 language === 'zh' ? '平均填写时间：约5分钟' :
+                 language === 'de' ? 'Durchschnittliche Ausfüllzeit: ~5 Min.' :
+                 language === 'fr' ? 'Durée moyenne de remplissage : ~5 min' :
+                 language === 'pt' ? 'Tempo médio de preenchimento: ~5 min' :
+                 language === 'hi' ? 'औसत भरने का समय: ~5 मिनट' :
+                 language === 'ja' ? '平均入力時間：約5分' :
+                 'Avg. completion time: ~5 minutes'}
+              </span>
+            </div>
+            <StepIndicator
+              current={step}
+              total={8}
+              t={t}
+              skippedSteps={fromClearance ? new Set([3]) : undefined}
+            />
+          </>
         )}
 
         {/* Edit-mode loading */}
@@ -3064,7 +3107,9 @@ export default function ApplyPage() {
                   <CheckCircle2 size={42} className="text-emerald-600" />
                 </div>
                 <h2 className="text-2xl font-bold text-navy-900 mb-2">
-                  {tri('Payment Confirmed!', '付款已确认！', '¡Pago Confirmado!', 'Zahlung bestätigt!', 'Paiement confirmé !', 'भुगतान की पुष्टि हुई!', 'Pagamento Confirmado!')}
+                  {isFreeOrder
+                    ? tri('Filing Confirmed!', '申请已确认！', '¡Solicitud Confirmada!', 'Einreichung bestätigt!', 'Dépôt confirmé !', 'फाइलिंग की पुष्टि हुई!', 'Registro Confirmado!')
+                    : tri('Payment Confirmed!', '付款已确认！', '¡Pago Confirmado!', 'Zahlung bestätigt!', 'Paiement confirmé !', 'भुगतान की पुष्टि हुई!', 'Pagamento Confirmado!')}
                 </h2>
                 {caseNumber && (
                   <div className="bg-gray-100 rounded-xl px-5 py-3 inline-block mb-3">
@@ -3073,7 +3118,9 @@ export default function ApplyPage() {
                   </div>
                 )}
                 <p className="text-gray-600 text-sm leading-relaxed max-w-lg mx-auto">
-                  {tri('Your payment has been received and your trademark filing is confirmed. Our team will review, classify, and file before IMPI within 24 business hours. A confirmation has been sent to', 'We收到您的付款，您的商标申请已确认。我们的团队将在24个工作小时内审查、分类并向IMPI提交。确认已发送至', 'Hemos recibido tu pago y tu solicitud está confirmada. Nuestro equipo presentará ante el IMPI en 24 horas hábiles. Se ha enviado confirmación a', 'Ihre Zahlung wurde empfangen und Ihre Markenanmeldung ist bestätigt. Unser Team reicht innerhalb von 24 Geschäftsstunden beim IMPI ein. Bestätigung gesendet an', 'Votre paiement a été reçu et votre dépôt est confirmé. Notre équipe déposera à l\'IMPI sous 24 heures ouvrées. Confirmation envoyée à', 'आपका भुगतान प्राप्त हुआ और आपकी ट्रेडमार्क फाइलिंग की पुष्टि हुई। हमारी टीम 24 व्यावसायिक घंटों में IMPI को दाखिल करेगी। पुष्टि भेजी गई:', 'Seu pagamento foi recebido e seu pedido está confirmado. Nossa equipe protocola no IMPI em 24 horas úteis. Confirmação enviada para')}
+                  {isFreeOrder
+                    ? tri('Your trademark application has been received at no charge. Our team will review, classify, and file before IMPI within 24 business hours. A confirmation has been sent to', '您的商标申请已免费受理。我们的团队将在24个工作小时内审查、分类并向IMPI提交。确认已发送至', 'Tu solicitud de marca ha sido recibida sin cargo. Nuestro equipo presentará ante el IMPI en 24 horas hábiles. Se ha enviado confirmación a', 'Ihre Markenanmeldung wurde kostenlos entgegengenommen. Unser Team reicht innerhalb von 24 Geschäftsstunden beim IMPI ein. Bestätigung gesendet an', 'Votre demande de marque a été reçue sans frais. Notre équipe déposera à l\'IMPI sous 24 heures ouvrées. Confirmation envoyée à', 'आपका ट्रेडमार्क आवेदन बिना किसी शुल्क के प्राप्त हुआ। हमारी टीम 24 व्यावसायिक घंटों में IMPI को दाखिल करेगी। पुष्टि भेजी गई:', 'Seu pedido de marca foi recebido sem cobrança. Nossa equipe protocola no IMPI em 24 horas úteis. Confirmação enviada para')
+                    : tri('Your payment has been received and your trademark filing is confirmed. Our team will review, classify, and file before IMPI within 24 business hours. A confirmation has been sent to', 'We收到您的付款，您的商标申请已确认。我们的团队将在24个工作小时内审查、分类并向IMPI提交。确认已发送至', 'Hemos recibido tu pago y tu solicitud está confirmada. Nuestro equipo presentará ante el IMPI en 24 horas hábiles. Se ha enviado confirmación a', 'Ihre Zahlung wurde empfangen und Ihre Markenanmeldung ist bestätigt. Unser Team reicht innerhalb von 24 Geschäftsstunden beim IMPI ein. Bestätigung gesendet an', 'Votre paiement a été reçu et votre dépôt est confirmé. Notre équipe déposera à l\'IMPI sous 24 heures ouvrées. Confirmation envoyée à', 'आपका भुगतान प्राप्त हुआ और आपकी ट्रेडमार्क फाइलिंग की पुष्टि हुई। हमारी टीम 24 व्यावसायिक घंटों में IMPI को दाखिल करेगी। पुष्टि भेजी गई:', 'Seu pagamento foi recebido e seu pedido está confirmado. Nossa equipe protocola no IMPI em 24 horas úteis. Confirmação enviada para')}
                   {' '}<strong>{form.email}</strong>.
                 </p>
               </div>
@@ -3084,7 +3131,7 @@ export default function ApplyPage() {
                   <CreditCard size={15} className="text-gray-400" />
                   <span className="text-sm font-semibold text-navy-900">{tri('Payment Summary', '付款摘要', 'Resumen de pago', 'Zahlungsübersicht', 'Récapitulatif du paiement', 'भुगतान सारांश', 'Resumo do pagamento')}</span>
                   <span className="ml-auto inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 text-xs font-bold px-2.5 py-0.5 rounded-full">
-                    <CheckCircle2 size={11} /> {tri('Paid', '已付款', 'Pagado', 'Bezahlt', 'Payé', 'भुगतान हुआ', 'Pago')}
+                    <CheckCircle2 size={11} /> {isFreeOrder ? tri('Confirmed', '已确认', 'Confirmado', 'Bestätigt', 'Confirmé', 'पुष्टि हुई', 'Confirmado') : tri('Paid', '已付款', 'Pagado', 'Bezahlt', 'Payé', 'भुगतान हुआ', 'Pago')}
                   </span>
                 </div>
                 <div className="divide-y divide-gray-100">
@@ -3092,14 +3139,18 @@ export default function ApplyPage() {
                     <span className="text-sm text-gray-600">{tri('Mark', '商标', 'Marca', 'Marke', 'Marque', 'मार्क', 'Marca')}</span>
                     <span className="text-sm font-semibold text-navy-900">{form.markName}</span>
                   </div>
-                  {form.classEntries.filter(e => e.classNumber !== null || e.fallbackClasses.length > 0).map((entry, i) => (
-                    <div key={i} className="flex justify-between items-center px-5 py-2">
-                      <span className="text-xs text-gray-500">
-                        {tri('Class', '类别', 'Clase', 'Klasse', 'Classe', 'वर्ग', 'Classe')} {entry.classNumber ?? entry.fallbackClasses[0]}
-                        {entry.classTitleEn ? ` — ${entry.classTitleEn}` : ''}
-                      </span>
-                    </div>
-                  ))}
+                  {form.classEntries.filter(e => e.classNumber !== null || e.fallbackClasses.length > 0).map((entry, i) => {
+                    const classNum = entry.classNumber ?? entry.fallbackClasses[0];
+                    const niceTitle = ALL_CLASSES.find(c => c.classNumber === classNum)?.titleEn ?? '';
+                    return (
+                      <div key={i} className="flex justify-between items-center px-5 py-2">
+                        <span className="text-xs text-gray-500">
+                          {tri('Class', '类别', 'Clase', 'Klasse', 'Classe', 'वर्ग', 'Classe')} {classNum}
+                          {niceTitle ? ` — ${niceTitle}` : ''}
+                        </span>
+                      </div>
+                    );
+                  })}
                   <div className="flex justify-between px-5 py-2">
                     <span className="text-sm text-gray-600">{tri('Service Fee', '服务费', 'Honorarios', 'Servicegebühr', 'Frais de service', 'सेवा शुल्क', 'Taxa de serviço')}</span>
                     <span className="text-sm font-medium">USD ${serviceFee.toFixed(2)}</span>
@@ -3117,7 +3168,7 @@ export default function ApplyPage() {
                     </div>
                   )}
                   <div className="flex justify-between px-5 py-4 bg-white">
-                    <span className="text-base font-bold text-navy-900">{tri('Total Paid', '已付总额', 'Total pagado', 'Gezahlter Betrag', 'Total payé', 'कुल भुगतान', 'Total pago')}</span>
+                    <span className="text-base font-bold text-navy-900">{isFreeOrder ? tri('Total', '总计', 'Total', 'Gesamt', 'Total', 'कुल', 'Total') : tri('Total Paid', '已付总额', 'Total pagado', 'Gezahlter Betrag', 'Total payé', 'कुल भुगतान', 'Total pago')}</span>
                     <span className="text-base font-bold text-navy-900">USD ${(finalTotal ?? discountedTotal).toFixed(2)}</span>
                   </div>
                 </div>
@@ -3366,15 +3417,19 @@ export default function ApplyPage() {
           {/* Navigation */}
           {step < 8 && (
             <div className="mt-8 pt-6 border-t border-gray-100">
-              {/* Save & Continue Later — shown for steps 1–6 */}
-              {step < 7 && !editingAppId && (
+              {/* Save & Continue Later — shown for steps 2–6 */}
+              {step >= 2 && step < 7 && !editingAppId && (
                 <div className="flex justify-center mb-4">
                   <button
                     type="button"
                     onClick={handleSaveAndContinueLater}
-                    className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl border text-sm font-medium transition-colors ${
+                      draftSavedFeedback
+                        ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                        : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400 hover:text-gray-800'
+                    }`}
                   >
-                    <Save size={13} />
+                    <Save size={14} />
                     {draftSavedFeedback ? t('form.draftSaved') : t('form.saveLater')}
                   </button>
                 </div>

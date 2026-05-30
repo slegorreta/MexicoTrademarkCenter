@@ -1323,6 +1323,12 @@ export default function TrademarkClearancePanel({
         setBgGenerating(false);
       }
     })();
+
+    return () => {
+      bgGeneratingRef.current = false;
+      if (bgProgressTimer.current) clearInterval(bgProgressTimer.current);
+      setBgGenerating(false);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [result]);
 
@@ -1798,53 +1804,154 @@ export default function TrademarkClearancePanel({
         </div>
       </div>
 
-      {/* ── Above-fold filing CTA (Change 1) — visible for ALL verdicts ─────── */}
-      <div className="border-t border-gray-100 bg-white px-4 py-3 print:hidden">
-        <a
-          href={`/apply?mark=${encodeURIComponent(markName)}&fromClearance=1`}
-          onClick={() => {
-            sessionStorage.setItem('clrMark', markName);
-            sessionStorage.setItem('clrGoods', goodsServices ?? '');
-            if (result) sessionStorage.setItem('clrResult', JSON.stringify(result));
+      {/* ── Executive Summary Banner ──────────────────────────────────────── */}
+      {result.riskColor && (
+        <div className={`border-t px-4 py-3.5 ${
+          result.riskColor === 'VERDE'    ? 'border-emerald-200 bg-emerald-50' :
+          result.riskColor === 'AMARILLO' ? 'border-amber-200 bg-amber-50' :
+          result.riskColor === 'NARANJA'  ? 'border-orange-200 bg-orange-50' :
+                                            'border-red-200 bg-red-50'
+        }`}>
+          <p className={`text-sm font-bold mb-1 ${
+            result.riskColor === 'VERDE'    ? 'text-emerald-800' :
+            result.riskColor === 'AMARILLO' ? 'text-amber-800' :
+            result.riskColor === 'NARANJA'  ? 'text-orange-800' :
+                                              'text-red-800'
+          }`}>
+            {result.riskColor === 'VERDE' ? (
+              lang === 'es' ? `Esta marca parece registrable.` :
+              lang === 'zh' ? `此商标看起来可以注册。` :
+              lang === 'de' ? `Diese Marke erscheint eintragungsfähig.` :
+              lang === 'fr' ? `Cette marque semble enregistrable.` :
+              lang === 'pt' ? `Esta marca parece registrável.` :
+              lang === 'hi' ? `यह ट्रेडमार्क पंजीकरण योग्य लगता है।` :
+              lang === 'ja' ? `この商標は登録可能と思われます。` :
+              `This mark looks registrable.`
+            ) : result.riskColor === 'AMARILLO' ? (
+              lang === 'es' ? `Esta marca puede registrarse con precauciones.` :
+              lang === 'zh' ? `此商标注册存在一些风险，需要谨慎处理。` :
+              lang === 'de' ? `Diese Marke kann mit Vorsicht eingetragen werden.` :
+              lang === 'fr' ? `Cette marque peut être enregistrée avec précautions.` :
+              lang === 'pt' ? `Esta marca pode ser registrada com precauções.` :
+              lang === 'hi' ? `यह ट्रेडमार्क सावधानी के साथ दर्ज किया जा सकता है।` :
+              lang === 'ja' ? `この商標は注意を払えば登録可能です。` :
+              `This mark can be filed, but proceed with caution.`
+            ) : result.riskColor === 'NARANJA' ? (
+              lang === 'es' ? `Se encontraron obstáculos importantes. Proceder con cuidado.` :
+              lang === 'zh' ? `发现重要障碍，建议谨慎处理。` :
+              lang === 'de' ? `Wichtige Hindernisse gefunden. Mit Vorsicht vorgehen.` :
+              lang === 'fr' ? `Des obstacles importants ont été trouvés. Procéder avec prudence.` :
+              lang === 'pt' ? `Obstáculos importantes encontrados. Prossiga com cuidado.` :
+              lang === 'hi' ? `महत्वपूर्ण बाधाएं पाई गईं। सावधानी से आगे बढ़ें।` :
+              lang === 'ja' ? `重要な障害が見つかりました。慎重に進めてください。` :
+              `Important obstacles found. Proceed with care.`
+            ) : (
+              lang === 'es' ? `No recomendamos presentar esta marca.` :
+              lang === 'zh' ? `我们不建议申请此商标。` :
+              lang === 'de' ? `Wir empfehlen, diese Marke nicht anzumelden.` :
+              lang === 'fr' ? `Nous déconseillons de déposer cette marque.` :
+              lang === 'pt' ? `Não recomendamos o registro desta marca.` :
+              lang === 'hi' ? `हम इस ट्रेडमार्क को दाखिल करने की अनुशंसा नहीं करते।` :
+              lang === 'ja' ? `この商標の出願はお勧めしません。` :
+              `We do not recommend filing this mark.`
+            )}
+          </p>
+          {(result.riskSummary_user ?? result.riskSummary_en ?? result.riskSummary) && (
+            <p className={`text-xs leading-relaxed ${
+              result.riskColor === 'VERDE'    ? 'text-emerald-700' :
+              result.riskColor === 'AMARILLO' ? 'text-amber-700' :
+              result.riskColor === 'NARANJA'  ? 'text-orange-700' :
+                                                'text-red-700'
+            }`}>
+              {lang === 'es'
+                ? (result.riskSummary_user ?? result.riskSummary)
+                : (result.riskSummary_user ?? result.riskSummary_en ?? result.riskSummary)}
+            </p>
+          )}
+        </div>
+      )}
 
-            // Pass class numbers so ApplyPage can pre-fill without asking user again
-            sessionStorage.setItem('clrSelected', JSON.stringify(classes));
+      {/* ── Above-fold filing CTA (Change 1) — hidden for ROJO verdict ─────── */}
+      {result?.riskColor === 'ROJO' ? (
+        <div className="border-t border-red-100 bg-red-50 px-4 py-3 print:hidden">
+          <div className="flex items-start gap-3">
+            <AlertOctagon size={18} className="text-red-500 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-red-800 mb-1">
+                {lang === 'es' ? 'No recomendamos presentar esta marca sin asesoría legal' :
+                 lang === 'zh' ? '我们建议在法律咨询后再决定是否申请此商标' :
+                 lang === 'de' ? 'Wir empfehlen, diese Marke nicht ohne Rechtsberatung anzumelden' :
+                 lang === 'fr' ? 'Nous déconseillons de déposer cette marque sans consultation juridique' :
+                 lang === 'pt' ? 'Não recomendamos registrar esta marca sem consultoria jurídica' :
+                 lang === 'hi' ? 'हम कानूनी सलाह के बिना इस ट्रेडमार्क को दाखिल करने की अनुशंसा नहीं करते' :
+                 lang === 'ja' ? '法的相談なしにこの商標を出願することはお勧めしません' :
+                 'We do not recommend filing this mark without legal counsel'}
+              </p>
+              <a
+                href="/contact"
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-red-700 hover:text-red-900 transition-colors underline underline-offset-2"
+              >
+                {lang === 'es' ? 'Consultar con nuestros abogados' :
+                 lang === 'zh' ? '咨询我们的律师' :
+                 lang === 'de' ? 'Unsere Anwälte konsultieren' :
+                 lang === 'fr' ? 'Consulter nos avocats' :
+                 lang === 'pt' ? 'Consultar nossos advogados' :
+                 lang === 'hi' ? 'हमारे वकीलों से परामर्श करें' :
+                 lang === 'ja' ? '弁護士に相談する' :
+                 'Speak with our attorneys'}
+                <ArrowRight size={13} />
+              </a>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="border-t border-gray-100 bg-white px-4 py-3 print:hidden">
+          <a
+            href={`/apply?mark=${encodeURIComponent(markName)}&fromClearance=1`}
+            onClick={() => {
+              sessionStorage.setItem('clrMark', markName);
+              sessionStorage.setItem('clrGoods', goodsServices ?? '');
+              if (result) sessionStorage.setItem('clrResult', JSON.stringify(result));
 
-            // Build clrSuggested from niceClassification in the result (if present)
-            // so the class titles and descriptions auto-populate on the filing form.
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const niceClassification = (result as any)?.niceClassification as Array<{
-              classNumber: number; className_en: string; officialHeading_en: string; officialHeading: string;
-              relevantItems?: string[]; relevantItems_en?: string[];
-            }> | undefined;
-            const suggested = classes.map(num => {
-              const nc = niceClassification?.find(c => c.classNumber === num);
-              // Prefer the per-class specific items over the generic WIPO heading
-              const descEn = nc
-                ? (nc.relevantItems_en?.length ? nc.relevantItems_en.join('; ') : nc.officialHeading_en || nc.officialHeading || '')
-                : '';
-              const descEs = nc
-                ? (nc.relevantItems?.length ? nc.relevantItems.join('; ') : nc.officialHeading || '')
-                : '';
-              return {
-                classNumber: num,
-                titleEn: nc?.className_en || nc?.officialHeading_en || `Class ${num}`,
-                descriptionEn: descEn,
-                descriptionEs: descEs,
-                confidence: 1,
-              };
-            });
-            sessionStorage.setItem('clrSuggested', JSON.stringify(suggested));
+              // Pass class numbers so ApplyPage can pre-fill without asking user again
+              sessionStorage.setItem('clrSelected', JSON.stringify(classes));
 
-            fireTrackEvent('report_cta_clicked', { source: 'above_fold', mark: markName }, lang);
-          }}
-          className="w-full flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white font-bold px-5 py-3 rounded-xl transition-colors shadow-md text-sm"
-        >
-          <FileText size={14} />
-          {tr('ctaFileThisName', lang)}
-          <ArrowRight size={14} />
-        </a>
-      </div>
+              // Build clrSuggested from niceClassification in the result (if present)
+              // so the class titles and descriptions auto-populate on the filing form.
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const niceClassification = (result as any)?.niceClassification as Array<{
+                classNumber: number; className_en: string; officialHeading_en: string; officialHeading: string;
+                relevantItems?: string[]; relevantItems_en?: string[];
+              }> | undefined;
+              const suggested = classes.map(num => {
+                const nc = niceClassification?.find(c => c.classNumber === num);
+                // Prefer the per-class specific items over the generic WIPO heading
+                const descEn = nc
+                  ? (nc.relevantItems_en?.length ? nc.relevantItems_en.join('; ') : nc.officialHeading_en || nc.officialHeading || '')
+                  : '';
+                const descEs = nc
+                  ? (nc.relevantItems?.length ? nc.relevantItems.join('; ') : nc.officialHeading || '')
+                  : '';
+                return {
+                  classNumber: num,
+                  titleEn: nc?.className_en || nc?.officialHeading_en || `Class ${num}`,
+                  descriptionEn: descEn,
+                  descriptionEs: descEs,
+                  confidence: 1,
+                };
+              });
+              sessionStorage.setItem('clrSuggested', JSON.stringify(suggested));
+
+              fireTrackEvent('report_cta_clicked', { source: 'above_fold', mark: markName }, lang);
+            }}
+            className="w-full flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white font-bold px-5 py-3 rounded-xl transition-colors shadow-md text-sm"
+          >
+            <FileText size={14} />
+            {tr('ctaFileThisName', lang)}
+            <ArrowRight size={14} />
+          </a>
+        </div>
+      )}
 
       {/* ── Part 7: Search summary panel ──────────────────────────────────── */}
       <div className="border-t border-gray-100 bg-white/70 px-4 py-2.5">

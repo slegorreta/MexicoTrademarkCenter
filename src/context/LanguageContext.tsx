@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 export type Language = 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt' | 'ja';
 
@@ -1986,24 +1986,24 @@ const translations: Record<string, Record<Language, string>> = {
     ja: 'これが私たちのAI独立宣言です。',
   },
   'about.sofia.role': {
-    en: 'AgenticEO — AI Chief Executive Officer',
-    zh: 'AgenticEO — AI首席执行官',
-    es: 'AgenticEO — Directora Ejecutiva de IA',
-    de: 'AgenticEO — KI-Geschäftsführerin',
-    fr: 'AgenticEO — Directrice Générale IA',
-    hi: 'AgenticEO — AI मुख्य कार्यकारी अधिकारी',
-    pt: 'AgenticEO — Diretora Executiva de IA',
-    ja: 'AgenticEO — AI最高経営責任者',
+    en: 'AI-Assisted Filing — Supervised by licensed attorneys',
+    zh: 'AI辅助申请 — 由持证律师监督',
+    es: 'Asistencia de IA — Supervisada por abogados con licencia',
+    de: 'KI-gestützte Einreichung — Überwacht von zugelassenen Anwälten',
+    fr: 'Dépôt assisté par IA — Supervisé par des avocats agréés',
+    hi: 'AI-सहायक फाइलिंग — लाइसेंस प्राप्त वकीलों द्वारा निगरानी',
+    pt: 'Protocolo assistido por IA — Supervisionado por advogados licenciados',
+    ja: 'AI支援出願 — 資格を持つ弁護士が監督',
   },
   'about.sofia.desc': {
-    en: 'SofIA is our autonomous AI agent that orchestrates workflows, supervises every filing, manages client communications, and continuously improves our platform — 24 hours a day, 365 days a year.',
-    zh: 'SofIA是我们的自主AI智能体，负责编排工作流程、监督每一份申请、管理客户沟通，并全年无休地持续改进我们的平台。',
-    es: 'SofIA es nuestro agente de IA autónomo que orquesta flujos de trabajo, supervisa cada presentación, gestiona las comunicaciones con clientes y mejora continuamente nuestra plataforma, las 24 horas del día, los 365 días del año.',
-    de: 'SofIA ist unser autonomer KI-Agent, der Workflows orchestriert, jede Einreichung überwacht, Kundenkommunikation verwaltet und unsere Plattform kontinuierlich verbessert — 24 Stunden am Tag, 365 Tage im Jahr.',
-    fr: 'SofIA est notre agent IA autonome qui orchestre les flux de travail, supervise chaque dépôt, gère les communications clients et améliore continuellement notre plateforme — 24h/24, 365 jours par an.',
-    hi: 'SofIA हमारी स्वायत्त AI एजेंट है जो वर्कफ़्लो को समन्वित करती है, प्रत्येक फाइलिंग की निगरानी करती है, क्लाइंट संचार प्रबंधित करती है और हमारे प्लेटफॉर्म को दिन-रात बेहतर बनाती है।',
-    pt: 'SofIA é nossa agente de IA autônoma que orquestra fluxos de trabalho, supervisiona cada protocolo, gerencia comunicações com clientes e melhora continuamente nossa plataforma — 24 horas por dia, 365 dias por ano.',
-    ja: 'SofIAは私たちの自律型AIエージェントで、ワークフローを指揮し、すべての申請を監督し、クライアントとのコミュニケーションを管理し、プラットフォームを年中無休で継続的に改善します。',
+    en: 'SofIA is our AI filing assistant, trained on Mexican IP law. Every application is reviewed and approved by licensed Mexican IP attorneys before submission — combining AI speed with professional legal oversight.',
+    zh: 'SofIA是我们的AI申请助手，专为墨西哥知识产权法培训。每一份申请在提交前都经过持证墨西哥知识产权律师的审核和批准——结合AI速度与专业法律监督。',
+    es: 'SofIA es nuestro asistente de IA para presentaciones, entrenado en derecho de propiedad intelectual mexicano. Cada solicitud es revisada y aprobada por abogados mexicanos de PI con licencia antes de su presentación, combinando velocidad de IA con supervisión legal profesional.',
+    de: 'SofIA ist unser KI-Einreichungsassistent, trainiert auf mexikanischem IP-Recht. Jede Anmeldung wird vor der Einreichung von zugelassenen mexikanischen IP-Anwälten geprüft und genehmigt — KI-Geschwindigkeit kombiniert mit professioneller rechtlicher Aufsicht.',
+    fr: 'SofIA est notre assistant IA de dépôt, formé sur le droit mexicain de la propriété intellectuelle. Chaque demande est examinée et approuvée par des avocats mexicains PI agréés avant soumission — alliant vitesse de l\'IA à une supervision juridique professionnelle.',
+    hi: 'SofIA हमारी AI फाइलिंग सहायक है, जो मैक्सिकन IP कानून पर प्रशिक्षित है। प्रत्येक आवेदन को सबमिट करने से पहले लाइसेंस प्राप्त मैक्सिकन IP वकीलों द्वारा समीक्षा और अनुमोदित किया जाता है — AI की गति को पेशेवर कानूनी निगरानी के साथ जोड़ता है।',
+    pt: 'SofIA é nossa assistente de IA para protocolos, treinada em direito de propriedade intelectual mexicano. Cada solicitação é revisada e aprovada por advogados mexicanos de PI licenciados antes da submissão — combinando velocidade da IA com supervisão jurídica profissional.',
+    ja: 'SofIAはメキシコ知的財産法に基づいて訓練されたAI出願アシスタントです。すべての出願は提出前に資格を持つメキシコの知財弁護士によって審査・承認されます — AIの速度とプロの法的監督を組み合わせています。',
   },
 };
 
@@ -2031,6 +2031,18 @@ export function LanguageProvider({ children, initialLang }: { children: ReactNod
   const [language, setLanguageState] = useState<Language>(() =>
     initialLang ?? detectLanguage()
   );
+
+  // If the app is mounted on a language-specific URL route (e.g. /es/), sync
+  // and persist that choice. This also guards against the state initializer
+  // running before the URL-based lang was determined.
+  useEffect(() => {
+    if (initialLang && initialLang !== language) {
+      localStorage.setItem(STORAGE_KEY, initialLang);
+      setLanguageState(initialLang);
+    }
+  // Only react to initialLang changes, not language (to avoid loops)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialLang]);
 
   const setLanguage = (lang: Language) => {
     localStorage.setItem(STORAGE_KEY, lang);

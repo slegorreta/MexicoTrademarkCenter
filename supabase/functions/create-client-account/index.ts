@@ -229,7 +229,7 @@ Deno.serve(async (req: Request) => {
     const { data: linkData, error: linkErr } = await supabase.auth.admin.generateLink({
       type: "recovery",
       email,
-      options: { redirectTo: `${SITE_URL}/login?set_password=1` },
+      options: { redirectTo: `${SITE_URL}/login?set_password=1&email=${encodeURIComponent(email)}` },
     });
 
     if (linkErr || !linkData?.properties?.action_link) {

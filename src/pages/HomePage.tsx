@@ -159,48 +159,51 @@ export default function HomePage() {
                 {t('hero_subhead')}
               </p>
 
-              {/* Primary CTAs */}
-              <div className="flex flex-col gap-3 mb-5 max-w-md">
-                {/* CTA 1 — Check availability (orange) */}
+              {/* Primary CTAs — equal-width 3-column grid on sm+, stacked on mobile */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5 max-w-2xl">
+                {/* CTA 1 — Check availability (gold) */}
                 <Link
                   to="/trademark-check"
-                  className="group flex items-center gap-3 bg-gold-500 hover:bg-gold-400 text-white font-bold px-5 py-[14px] rounded-2xl transition-all duration-200 shadow-xl hover:shadow-gold-500/30 hover:-translate-y-0.5 min-h-[72px]"
+                  className="group flex flex-col items-center text-center gap-2 bg-gold-500 hover:bg-gold-400 text-white font-bold px-4 py-5 rounded-2xl transition-all duration-200 shadow-xl hover:shadow-gold-500/30 hover:-translate-y-0.5"
                 >
-                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 group-hover:bg-white/30 transition-colors">
+                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-colors">
                     <Search size={18} className="text-white" />
                   </div>
-                  <div className="flex flex-col min-w-0 flex-1">
-                    <span className="text-[11px] font-extrabold text-white/90 uppercase tracking-[0.12em] leading-none mb-1">{t('hero.step1_label')}</span>
-                    <span className="text-sm font-bold leading-snug">{t('cta_check_available')}</span>
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-[10px] font-extrabold text-white/80 uppercase tracking-[0.1em] leading-none">{t('hero.step1_label')}</span>
+                    <span className="text-xs font-bold leading-snug">{t('cta_check_available')}</span>
                   </div>
-                  <ArrowRight size={18} className="group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
+                  <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform mt-auto opacity-70" />
                 </Link>
 
                 {/* CTA 2 — File (sky blue) */}
                 <Link
                   to="/apply"
-                  className="group flex items-center gap-3 bg-sky-600 hover:bg-sky-500 text-white font-bold px-5 py-[14px] rounded-2xl transition-all duration-200 shadow-lg hover:shadow-sky-500/30 hover:-translate-y-0.5 min-h-[72px]"
+                  className="group flex flex-col items-center text-center gap-2 bg-sky-600 hover:bg-sky-500 text-white font-bold px-4 py-5 rounded-2xl transition-all duration-200 shadow-lg hover:shadow-sky-500/30 hover:-translate-y-0.5"
                 >
-                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 group-hover:bg-white/30 transition-colors">
+                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-colors">
                     <FileText size={18} className="text-white" />
                   </div>
-                  <div className="flex flex-col min-w-0 flex-1">
-                    <span className="text-[11px] font-extrabold text-white/90 uppercase tracking-[0.12em] leading-none mb-1">{t('hero.step2_label')}</span>
-                    <span className="text-sm font-bold leading-snug">{t('cta_start_filing_full')}</span>
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-[10px] font-extrabold text-white/80 uppercase tracking-[0.1em] leading-none">{t('hero.step2_label')}</span>
+                    <span className="text-xs font-bold leading-snug">{t('cta_start_filing_full')}</span>
                   </div>
-                  <ArrowRight size={18} className="group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
+                  <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform mt-auto opacity-70" />
                 </Link>
 
-                {/* CTA 3 — Idea generator (bright green) */}
+                {/* CTA 3 — Idea generator (emerald) */}
                 <Link
                   to="/trademark-ideas"
-                  className="group flex items-center gap-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-5 py-[14px] rounded-2xl transition-all duration-200 shadow-lg hover:shadow-emerald-500/30 hover:-translate-y-0.5 min-h-[72px]"
+                  className="group flex flex-col items-center text-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-5 rounded-2xl transition-all duration-200 shadow-lg hover:shadow-emerald-500/30 hover:-translate-y-0.5"
                 >
-                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 group-hover:bg-white/30 transition-colors">
+                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-colors">
                     <Sparkles size={18} className="text-white" />
                   </div>
-                  <span className="text-sm font-bold leading-snug flex-1">{t('cta_idea_generator_full')}</span>
-                  <ArrowRight size={18} className="group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-[10px] font-extrabold text-white/80 uppercase tracking-[0.1em] leading-none">{t('hero.step3_label') || 'Step 3'}</span>
+                    <span className="text-xs font-bold leading-snug">{t('cta_idea_generator_full')}</span>
+                  </div>
+                  <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform mt-auto opacity-70" />
                 </Link>
               </div>
 
