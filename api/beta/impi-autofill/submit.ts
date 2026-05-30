@@ -1,7 +1,14 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { randomUUID } from 'crypto';
+import { createClient } from '@supabase/supabase-js';
 import type { ImpiFormData } from './types.js';
 import { REQUIRED_FIELDS } from './types.js';
+
+function makeSupabase() {
+  const url = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? '';
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
+  return createClient(url, key);
+}
 
 export const maxDuration = 10;
 
@@ -80,6 +87,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const jobId = randomUUID();
     const formData = { ...body } as ImpiFormData;
     delete formData.token;
+
+  // Persist job row immediately so the status page can show "queued"
+  try {
+    const supabase = makeSupabase();
+    await supabase.from('impi_jobs').insert({
+      id: jobId,
+      status: 'queued',
+      current_step: 'queued',
+      mark_name: formData.denominacion ?? '',
+      cliente_nombre: formData.clienteNombre ?? '',
+      cliente_email: formData.clienteEmail ?? '',
+    });
+  } catch (err) {
+    console.error(`[submit] Failed to insert impi_jobs row for ${jobId}:`, (err as Error).message);
+  }
 
   // Fire-and-forget: trigger the Playwright worker
   const workerBase = process.env.VERCEL_URL ? ('https://' + process.env.VERCEL_URL) : 'http://localhost:3000';

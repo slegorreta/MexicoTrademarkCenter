@@ -9,7 +9,75 @@ import { sendSuccessEmail, sendFailureEmail } from '../../lib/sendEmail.js';
 export const maxDuration = 300;
 
 const IMPI_LOGIN_URL = 'https://eservicios.impi.gob.mx/seimpi/';
-const MARCA_EN_LINEA_URL = 'https://marcaenlinea.impi.gob.mx/MarcaEnLinea/';
+
+function makeSupabase() {
+  const url = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? '';
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
+  return createClient(url, key);
+}
+
+async function setStep(jobId: string, step: string) {
+  try {
+    await makeSupabase()
+      .from('impi_jobs')
+      .update({ current_step: step, status: 'running' })
+      .eq('id', jobId);
+  } catch (e) {
+    console.warn(`[worker][${jobId}] DB step update failed (${step}):`, (e as Error).message);
+  }
+}
+
+async function setDone(jobId: string, applicationId: string, screenshotUrl: string | null) {
+  try {
+    await makeSupabase()
+      .from('impi_jobs')
+      .update({
+        status: 'done',
+        current_step: 'done',
+        application_id: applicationId,
+        screenshot_url: screenshotUrl,
+        completed_at: new Date().toISOString(),
+      })
+      .eq('id', jobId);
+  } catch (e) {
+    console.warn(`[worker][${jobId}] DB done update failed:`, (e as Error).message);
+  }
+}
+
+async function setFailed(jobId: string, step: string, errorMessage: string) {
+  try {
+    await makeSupabase()
+      .from('impi_jobs')
+      .update({
+        status: 'failed',
+        current_step: step,
+        error_message: errorMessage,
+        completed_at: new Date().toISOString(),
+      })
+      .eq('id', jobId);
+  } catch (e) {
+    console.warn(`[worker][${jobId}] DB failed update failed:`, (e as Error).message);
+  }
+}
+
+async function uploadScreenshot(jobId: string, screenshotPath: string): Promise<string | null> {
+  try {
+    if (!fs.existsSync(screenshotPath)) return null;
+    const supabase = makeSupabase();
+    const bytes = fs.readFileSync(screenshotPath);
+    const storagePath = `screenshots/${jobId}.png`;
+    const { error } = await supabase.storage
+      .from('beta-logo-uploads')
+      .upload(storagePath, bytes, { contentType: 'image/png', upsert: true });
+    if (error) return null;
+    const { data } = await supabase.storage
+      .from('beta-logo-uploads')
+      .createSignedUrl(storagePath, 60 * 60 * 24 * 30);
+    return data?.signedUrl ?? null;
+  } catch {
+    return null;
+  }
+}
 
 async function dismissAutoSaveDialog(page: InstanceType<typeof import('playwright').Page>) {
   try {
@@ -63,12 +131,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     stepName = 'connect-browser';
+    await setStep(jobId, stepName);
     browser = await chromium.connectOverCDP(browserlessEndpoint);
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     page = await context.newPage();
 
     // ── Step 1: Navigate to IMPI login ──────────────────────────────────────
     stepName = 'navigate-login';
+    await setStep(jobId, stepName);
     await page.goto(IMPI_LOGIN_URL, { waitUntil: 'domcontentloaded', timeout: 30000 });
     await page.waitForTimeout(1500);
 
@@ -86,6 +156,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // ── Step 2: Login ────────────────────────────────────────────────────────
     stepName = 'login';
+    await setStep(jobId, stepName);
 
     // Select TuCuentaPASE radio if present
     try {
@@ -124,6 +195,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // ── Step 3: Navigate to Marca en Línea ──────────────────────────────────
     stepName = 'navigate-marca-en-linea';
+    await setStep(jobId, stepName);
     const marcaLink = page.locator('a, button, div[role="button"]').filter({ hasText: /marca en l[ií]nea/i }).first();
     await marcaLink.click();
     await page.waitForURL(/marcaenlinea\.impi\.gob\.mx/i, { timeout: 30000 });
@@ -131,6 +203,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // ── Step 4: Accept privacy notice on Marca en Línea ─────────────────────
     stepName = 'accept-privacy-marca';
+    await setStep(jobId, stepName);
     try {
       const flagCheckbox = page.locator('input[id*="flagAceptAviso"]').first();
       if (await flagCheckbox.isVisible({ timeout: 5000 })) {
@@ -144,6 +217,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // ── Step 5: Dismiss welcome notice ──────────────────────────────────────
     stepName = 'dismiss-welcome';
+    await setStep(jobId, stepName);
     try {
       const closeBtn = page.locator('button, a').filter({ hasText: /cerrar|×|close/i }).first();
       if (await closeBtn.isVisible({ timeout: 3000 })) {
@@ -157,6 +231,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // ── Step 6: Fill Tab 1 — Trademark Details ──────────────────────────────
     stepName = 'fill-tab1-trademark-type';
+    await setStep(jobId, stepName);
 
     // Select trademark type card
     const tipoCardText: Record<string, string> = {
@@ -181,6 +256,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Fill text fields
     stepName = 'fill-tab1-text-fields';
+    await setStep(jobId, stepName);
     await page.locator('textarea[id*="txtDenominacion"]').first().fill(formData.denominacion);
     await page.waitForTimeout(300);
 
@@ -209,12 +285,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Click Siguiente
     stepName = 'tab1-siguiente';
+    await setStep(jobId, stepName);
     await page.locator('button, input[type="button"]').filter({ hasText: /siguiente/i }).first().click();
     await page.waitForTimeout(2000);
     await dismissAutoSaveDialog(page);
 
     // ── Step 7: Fill Tab 2 — Products & Services ────────────────────────────
     stepName = 'fill-tab2-classification';
+    await setStep(jobId, stepName);
 
     const metodoValue: Record<string, string> = {
       descripcion_libre: '1',
@@ -245,12 +323,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     stepName = 'tab2-siguiente';
+    await setStep(jobId, stepName);
     await page.locator('button, input[type="button"]').filter({ hasText: /siguiente/i }).first().click();
     await page.waitForTimeout(2000);
     await dismissAutoSaveDialog(page);
 
     // ── Step 8: Fill Tab 3 — Owner / Applicant ──────────────────────────────
     stepName = 'fill-tab3-owner-type';
+    await setStep(jobId, stepName);
 
     const tipoPerValue = formData.tipoDueno === 'empresa' ? '2' : '1';
     const tipoPerSelect = page.locator('select[id*="cmbTipoPer"]').first();
@@ -279,6 +359,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     stepName = 'fill-tab3-owner-details';
+    await setStep(jobId, stepName);
     if (formData.tipoDueno === 'persona_fisica') {
       try {
         await page.locator('input[placeholder*="nombre" i]').first().fill(formData.nombreDueno ?? '');
@@ -327,6 +408,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Click Agregar dueño
     stepName = 'tab3-agregar-dueno';
+    await setStep(jobId, stepName);
     try {
       const agregarBtn = page.locator('button, input[type="button"]').filter({ hasText: /agregar dueño|agregar/i }).first();
       await agregarBtn.click();
@@ -336,12 +418,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     stepName = 'tab3-siguiente';
+    await setStep(jobId, stepName);
     await page.locator('button, input[type="button"]').filter({ hasText: /siguiente/i }).first().click();
     await page.waitForTimeout(2000);
     await dismissAutoSaveDialog(page);
 
     // ── Step 9: Fill Tab 4 — Prior Use ──────────────────────────────────────
     stepName = 'fill-tab4-prior-use';
+    await setStep(jobId, stepName);
 
     if (formData.haMarcaUsado === 'si') {
       try {
@@ -394,12 +478,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     stepName = 'tab4-siguiente';
+    await setStep(jobId, stepName);
     await page.locator('button, input[type="button"]').filter({ hasText: /siguiente/i }).first().click();
     await page.waitForTimeout(2000);
     await dismissAutoSaveDialog(page);
 
     // ── Step 10: Fill Tab 5 — Signatory ─────────────────────────────────────
     stepName = 'fill-tab5-signatory';
+    await setStep(jobId, stepName);
 
     if (formData.curpFirmante) {
       try {
@@ -467,12 +553,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     } catch { /* Optional */ }
 
     stepName = 'tab5-siguiente';
+    await setStep(jobId, stepName);
     await page.locator('button, input[type="button"]').filter({ hasText: /siguiente/i }).first().click();
     await page.waitForTimeout(2000);
     await dismissAutoSaveDialog(page);
 
     // ── Step 11: Fill Tab 6 — Priority Claim ────────────────────────────────
     stepName = 'fill-tab6-priority';
+    await setStep(jobId, stepName);
 
     if (formData.tienePrioridad === 'si') {
       try {
@@ -502,8 +590,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       } catch { /* May already be default */ }
     }
 
-    // ── Step 12: STOP — Extract Application ID ──────────────────────────────
+    // ── Step 12: Extract Application ID ─────────────────────────────────────
     stepName = 'extract-application-id';
+    await setStep(jobId, stepName);
     await page.waitForTimeout(3000);
 
     let applicationId = 'ID not captured';
@@ -535,6 +624,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     await browser.close();
     browser = null;
 
+    // Upload screenshot and mark job done in DB
+    stepName = 'save-results';
+    const screenshotUrl = await uploadScreenshot(jobId, screenshotPath);
+    await setDone(jobId, applicationId, screenshotUrl);
+
     // Send success email
     stepName = 'send-success-email';
     await sendSuccessEmail(formData, applicationId, jobId);
@@ -544,14 +638,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const error = err as Error;
     console.error(`[worker][${jobId}] FAILED at step "${stepName}":`, error.message);
 
-    // Try to take error screenshot
     if (page) {
       try {
         await page.screenshot({ path: `/tmp/impi-error-${jobId}.png`, fullPage: false });
       } catch { /* Screenshot not critical */ }
     }
 
-    // Send failure email
+    await setFailed(jobId, stepName, error.message);
+
     try {
       await sendFailureEmail(formData, stepName, error, jobId);
     } catch (emailErr) {

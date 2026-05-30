@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { createClient } from '@supabase/supabase-js';
 
 const BETA_SECRET = import.meta.env.VITE_BETA_SECRET as string;
@@ -124,11 +124,11 @@ function SectionHeader({ num, title }: { num: number; title: string }) {
 export default function ImpiAutofillPage() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token') ?? '';
+  const navigate = useNavigate();
 
   const [form, setForm] = useState<FormState>(initialForm);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const logoInputRef = useRef<HTMLInputElement>(null);
 
@@ -182,32 +182,12 @@ export default function ImpiAutofillPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? `Server error ${res.status}`);
 
-      setSuccess(true);
+      navigate(`/beta/impi-autofill/status?jobId=${data.jobId}&token=${token}`);
     } catch (err) {
       setError((err as Error).message);
     } finally {
       setSubmitting(false);
     }
-  }
-
-  if (success) {
-    return (
-      <div style={{ fontFamily: 'system-ui, sans-serif', maxWidth: 640, margin: '60px auto', padding: '0 24px' }}>
-        <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 8, padding: '32px 24px' }}>
-          <h2 style={{ color: '#166534', fontSize: 20, marginBottom: 12 }}>Application Queued Successfully</h2>
-          <p style={{ color: '#374151', lineHeight: 1.6 }}>
-            Your application has been queued. IMPI auto-fill is running in the background.
-            You will receive an email at <strong>sergio.legorreta@lawtaem.com</strong> when complete.
-          </p>
-          <button
-            onClick={() => { setSuccess(false); setForm(initialForm); setLogoFile(null); }}
-            style={{ marginTop: 20, padding: '8px 20px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14 }}
-          >
-            Submit another application
-          </button>
-        </div>
-      </div>
-    );
   }
 
   return (
