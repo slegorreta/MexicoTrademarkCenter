@@ -200,7 +200,7 @@ export default function HomePage() {
                     <Sparkles size={18} className="text-white" />
                   </div>
                   <div className="flex flex-col items-center gap-1">
-                    <span className="text-[10px] font-extrabold text-white/80 uppercase tracking-[0.1em] leading-none">{t('hero.step3_label') || 'Step 3'}</span>
+                    <span className="text-[10px] font-extrabold text-white/80 uppercase tracking-[0.1em] leading-none">{t('hero.step3_label')}</span>
                     <span className="text-xs font-bold leading-snug">{t('cta_idea_generator_full')}</span>
                   </div>
                   <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform mt-auto opacity-70" />

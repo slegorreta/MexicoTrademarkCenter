@@ -132,6 +132,17 @@ const translations: Record<string, Record<Language, string>> = {
     ja: 'ステップ 2',
     hi: 'चरण 2',
   },
+  'hero.step3_label': {
+    en: 'Step 3',
+    es: 'Paso 3',
+    fr: 'Étape 3',
+    pt: 'Etapa 3',
+    de: 'Schritt 3',
+    it: 'Passo 3',
+    zh: '第 3 步',
+    ja: 'ステップ 3',
+    hi: 'चरण 3',
+  },
   'cta_check_available': {
     en: 'See if your trademark is available — free',
     es: 'Verifica si tu marca está disponible — gratis',
