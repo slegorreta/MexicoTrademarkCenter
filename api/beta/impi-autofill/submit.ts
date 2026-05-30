@@ -10,6 +10,14 @@ function makeSupabase() {
   if (!url) console.error('[submit] FATAL: SUPABASE_URL / VITE_SUPABASE_URL is not set');
   if (!key || key === 'your_supabase_service_role_key_here') {
     console.error('[submit] FATAL: SUPABASE_SERVICE_ROLE_KEY is missing or still a placeholder');
+  } else {
+    // Log key prefix and embedded project ref so we can verify it matches the URL
+    try {
+      const payload = JSON.parse(Buffer.from(key.split('.')[1], 'base64').toString());
+      console.log(`[submit] Supabase key ref="${payload.ref}" url="${url}"`);
+    } catch {
+      console.log(`[submit] Supabase key prefix="${key.slice(0, 20)}..." url="${url}"`);
+    }
   }
   return createClient(url, key);
 }
@@ -103,7 +111,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       cliente_email: formData.clienteEmail ?? '',
     });
     if (insertError) {
-      console.error(`[submit] Failed to insert impi_jobs row for ${jobId}:`, insertError.message, insertError.code, insertError.details);
+      console.error(`[submit] Failed to insert impi_jobs row for ${jobId}:`, JSON.stringify(insertError));
     }
   } catch (err) {
     console.error(`[submit] Failed to insert impi_jobs row for ${jobId}:`, (err as Error).message);
