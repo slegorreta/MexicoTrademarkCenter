@@ -173,7 +173,7 @@ export default function ImpiAutofillPage() {
         token,
       };
 
-      const res = await fetch(`https://mexico-trademark-center.vercel.app/api/beta/impi-autofill/submit`, {
+      const res = await fetch('/api/beta/impi-autofill/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
