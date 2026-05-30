@@ -22,10 +22,11 @@ function makeSupabase() {
 
 async function setStep(jobId: string, step: string) {
   try {
-    await makeSupabase()
+    const { error } = await makeSupabase()
       .from('impi_jobs')
       .update({ current_step: step, status: 'running' })
       .eq('id', jobId);
+    if (error) console.warn(`[worker][${jobId}] DB step update failed (${step}):`, error.message, error.code);
   } catch (e) {
     console.warn(`[worker][${jobId}] DB step update failed (${step}):`, (e as Error).message);
   }
@@ -33,7 +34,7 @@ async function setStep(jobId: string, step: string) {
 
 async function setDone(jobId: string, applicationId: string, screenshotUrl: string | null) {
   try {
-    await makeSupabase()
+    const { error } = await makeSupabase()
       .from('impi_jobs')
       .update({
         status: 'done',
@@ -43,6 +44,7 @@ async function setDone(jobId: string, applicationId: string, screenshotUrl: stri
         completed_at: new Date().toISOString(),
       })
       .eq('id', jobId);
+    if (error) console.warn(`[worker][${jobId}] DB done update failed:`, error.message, error.code);
   } catch (e) {
     console.warn(`[worker][${jobId}] DB done update failed:`, (e as Error).message);
   }
@@ -50,7 +52,7 @@ async function setDone(jobId: string, applicationId: string, screenshotUrl: stri
 
 async function setFailed(jobId: string, step: string, errorMessage: string) {
   try {
-    await makeSupabase()
+    const { error } = await makeSupabase()
       .from('impi_jobs')
       .update({
         status: 'failed',
@@ -59,6 +61,7 @@ async function setFailed(jobId: string, step: string, errorMessage: string) {
         completed_at: new Date().toISOString(),
       })
       .eq('id', jobId);
+    if (error) console.warn(`[worker][${jobId}] DB failed update error:`, error.message, error.code);
   } catch (e) {
     console.warn(`[worker][${jobId}] DB failed update failed:`, (e as Error).message);
   }

@@ -94,7 +94,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Persist job row immediately so the status page can show "queued"
   try {
     const supabase = makeSupabase();
-    await supabase.from('impi_jobs').insert({
+    const { error: insertError } = await supabase.from('impi_jobs').insert({
       id: jobId,
       status: 'queued',
       current_step: 'queued',
@@ -102,6 +102,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       cliente_nombre: formData.clienteNombre ?? '',
       cliente_email: formData.clienteEmail ?? '',
     });
+    if (insertError) {
+      console.error(`[submit] Failed to insert impi_jobs row for ${jobId}:`, insertError.message, insertError.code, insertError.details);
+    }
   } catch (err) {
     console.error(`[submit] Failed to insert impi_jobs row for ${jobId}:`, (err as Error).message);
   }
