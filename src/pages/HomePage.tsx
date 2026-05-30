@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, Shield, Globe as Globe2, FileText, Award, ChevronDown, Sparkles, Search, HelpCircle, X, Star, Scale, BarChart2, Zap, Quote } from 'lucide-react';
+import { ArrowRight, Shield, Globe as Globe2, FileText, Award, ChevronDown, Sparkles, Search, HelpCircle, X, Star, Scale, Zap, Quote } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { useState, useEffect, useRef, type ReactNode } from 'react';
 import AboutSection from '../components/AboutSection';
@@ -28,7 +28,6 @@ export default function HomePage() {
   const socialProofLabel = pageData.socialProofLabel;
   const starLabel = pageData.starLabel;
   const [openFaq, setOpenFaq] = useState<number | null>(null);
-  const [showComparisonModal, setShowComparisonModal] = useState(false);
 
   useEffect(() => {
     if (window.location.hash === '#faq') {
@@ -233,6 +232,43 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Video Section */}
+      {(() => {
+        const videoIdByLocale: Record<string, string> = {
+          en: 'vIK7hikaVp0',
+          fr: 'Du3E8fxOU18',
+          de: 'pl_AUmsc_gU',
+          es: 'N4wNYJO06Go',
+          pt: 'TZVJ_whPSck',
+          zh: 'UOtEg9rUrlA',
+          ja: '-fsnNbCjk7c',
+        };
+        const videoId = videoIdByLocale[language] ?? videoIdByLocale['en'];
+        const videoSrc = `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1`;
+        return (
+          <section className="bg-[#1a3a2a] py-12 lg:py-20">
+            <div className="max-w-[720px] mx-auto px-6">
+              <div className="text-center mb-6">
+                <div className="text-gold-400 font-semibold text-sm uppercase tracking-wider mb-2">
+                  {t('video.eyebrow')}
+                </div>
+                <p className="text-white/80 text-base">{t('video.subhead')}</p>
+              </div>
+              <div className="relative w-full" style={{ paddingBottom: '56.25%', height: 0 }}>
+                <iframe
+                  src={videoSrc}
+                  title={t('video.eyebrow')}
+                  loading="lazy"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  className="absolute inset-0 w-full h-full rounded-xl shadow-2xl"
+                />
+              </div>
+            </div>
+          </section>
+        );
+      })()}
 
       {/* Testimonials */}
       <section
@@ -446,14 +482,6 @@ export default function HomePage() {
             </div>
             <h2 className="text-3xl lg:text-4xl font-bold mb-4">{t('pricing.title')}</h2>
             <p className="text-gray-400 max-w-xl mx-auto">{t('pricing.sub')}</p>
-            <button
-              type="button"
-              onClick={() => setShowComparisonModal(true)}
-              className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-semibold text-gold-400 border border-gold-500/40 hover:border-gold-400 hover:bg-gold-500/10 px-3 py-1.5 rounded-full transition-all duration-200 group"
-            >
-              <BarChart2 size={11} className="group-hover:scale-110 transition-transform" />
-              {t('comparison.badge')}
-            </button>
           </div>
           <div className="max-w-sm mx-auto mb-8">
             <div className="rounded-2xl bg-gold-500 border-2 border-gold-400 shadow-2xl p-8 text-center">
@@ -490,6 +518,9 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Inline Comparison Table */}
+      <ComparisonSection />
 
       {/* 3-Step Process */}
       <section className="py-16 lg:py-20 bg-white">
@@ -667,17 +698,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Comparison modal */}
-      {showComparisonModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-          onClick={(e) => { if (e.target === e.currentTarget) setShowComparisonModal(false); }}
-        >
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-6">
-            <ComparisonSection compact onClose={() => setShowComparisonModal(false)} />
-          </div>
-        </div>
-      )}
     </div>
   );
 }

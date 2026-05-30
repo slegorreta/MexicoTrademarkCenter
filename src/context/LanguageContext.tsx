@@ -110,6 +110,27 @@ const translations: Record<string, Record<Language, string>> = {
     ja: '出願を開始 — $299',
     hi: 'दाखिल करना शुरू करें — $299',
   },
+  'video.eyebrow': {
+    en: 'SEE HOW IT WORKS',
+    es: 'VER CÓMO FUNCIONA',
+    fr: 'VOIR COMMENT ÇA MARCHE',
+    de: 'SO FUNKTIONIERT ES',
+    zh: '了解如何运作',
+    ja: '仕組みを見る',
+    hi: 'यह कैसे काम करता है देखें',
+    pt: 'VEJA COMO FUNCIONA',
+  },
+  'video.subhead': {
+    en: 'A 2-minute overview of the filing process',
+    es: 'Un resumen de 2 minutos del proceso de registro',
+    fr: 'Un aperçu de 2 minutes du processus de dépôt',
+    de: 'Eine 2-minütige Übersicht über den Anmeldeprozess',
+    zh: '2分钟了解申请流程',
+    ja: '出願プロセスの2分間概要',
+    hi: 'दाखिल प्रक्रिया का 2 मिनट का अवलोकन',
+    pt: 'Uma visão geral de 2 minutos do processo de registro',
+  },
+
   'hero.step1_label': {
     en: 'Step 1',
     es: 'Paso 1',
