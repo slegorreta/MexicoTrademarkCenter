@@ -166,6 +166,7 @@ function AppRoutes() {
 
       {/* Trademark Idea Generator */}
       <Route path="/trademark-ideas" element={<Layout><TrademarkIdeaPage /></Layout>} />
+      <Route path="/idea-generator" element={<Navigate to="/trademark-ideas" replace />} />
 
       {/* Free Trademark Check */}
       <Route path="/trademark-check" element={<Layout><TrademarkCheckPage /></Layout>} />

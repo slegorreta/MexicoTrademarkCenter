@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, lazy, Suspense } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, ArrowRight, ArrowLeft, Sparkles, CheckCircle2, FileText, HelpCircle, Loader2, Plus, X, Tag, ChevronDown, Send, CreditCard as Edit2, AlertTriangle, ChevronRight, Upload, Image as ImageIcon, Type } from 'lucide-react';
+import { Search, ArrowRight, ArrowLeft, Sparkles, CheckCircle2, FileText, HelpCircle, Loader2, Plus, X, Tag, ChevronDown, Send, CreditCard as Edit2, AlertTriangle, ChevronRight, Upload, Image as ImageIcon, Type, RefreshCw } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
 const TrademarkClearancePanel = lazy(() => import('../components/TrademarkClearancePanel'));
@@ -1068,13 +1068,25 @@ export default function TrademarkCheckPage() {
       {/* ── Page header ──────────────────────────────────────────────────────── */}
       <section className="bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800 text-white print-hide">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-10 lg:pb-12">
-          <button
-            onClick={() => navigate(-1)}
-            className="inline-flex items-center gap-1.5 text-white/60 hover:text-white text-sm font-medium mb-5 transition-colors group"
-          >
-            <ArrowLeft size={15} className="group-hover:-translate-x-0.5 transition-transform" />
-            {tr('backLabel')}
-          </button>
+          <div className="flex items-center justify-between mb-5">
+            <button
+              onClick={() => navigate(-1)}
+              className="inline-flex items-center gap-1.5 text-white/60 hover:text-white text-sm font-medium transition-colors group"
+            >
+              <ArrowLeft size={15} className="group-hover:-translate-x-0.5 transition-transform" />
+              {tr('backLabel')}
+            </button>
+            {currentStep > 1 && !startOverConfirm && (
+              <button
+                type="button"
+                onClick={() => setStartOverConfirm(true)}
+                className="inline-flex items-center gap-1.5 text-white/60 hover:text-white text-sm font-medium transition-colors border border-white/20 hover:border-white/40 rounded-lg px-3 py-1.5"
+              >
+                <RefreshCw size={13} />
+                {lang === 'es' ? 'Nueva búsqueda' : lang === 'zh' ? '新搜索' : lang === 'de' ? 'Neue Suche' : lang === 'fr' ? 'Nouvelle recherche' : lang === 'hi' ? 'नई खोज' : lang === 'pt' ? 'Nova pesquisa' : lang === 'ja' ? '新規検索' : 'New Search'}
+              </button>
+            )}
+          </div>
           <h1 className="text-2xl sm:text-3xl font-bold leading-tight mb-2">{tr('pageTitle')}</h1>
           <p className="text-sm text-gray-300 leading-relaxed max-w-xl">{tr('pageSubtitle')}</p>
         </div>

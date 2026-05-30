@@ -341,7 +341,8 @@ export default function FigurativeSearchPage() {
 
       <div className="max-w-3xl mx-auto px-4 py-8 space-y-5">
 
-        {/* ── Mode selector tabs ───────────────────────────────────────── */}
+        {/* ── Form: mode tabs, upload, goods/services, search button — hidden when results are shown ── */}
+        {!result && (<>
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="grid grid-cols-3 divide-x divide-gray-100">
             {TABS.map(tab => (
@@ -515,6 +516,8 @@ export default function FigurativeSearchPage() {
           {isLoading ? <><Loader2 size={15} className="animate-spin" />{tr('analyzing', lang)}</> : <><Search size={14} />{tr('searchBtn', lang)}</>}
         </button>
 
+        </>)}
+
         {/* ── Loading progress ─────────────────────────────────────────── */}
         {isLoading && (
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
@@ -557,6 +560,18 @@ export default function FigurativeSearchPage() {
         {/* ── Results ──────────────────────────────────────────────────── */}
         {result && (
           <div ref={resultsRef} className="space-y-4">
+
+            {/* New search button */}
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => { setResult(null); setLoadingStep('idle'); setErrorMsg(''); }}
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-[#1a2e1a] border border-gray-200 hover:border-[#1a2e1a]/40 rounded-lg px-3 py-1.5 transition-colors"
+              >
+                <Search size={13} />
+                {lang === 'es' ? 'Nueva búsqueda' : lang === 'zh' ? '新搜索' : lang === 'de' ? 'Neue Suche' : lang === 'fr' ? 'Nouvelle recherche' : lang === 'hi' ? 'नई खोज' : lang === 'pt' ? 'Nova pesquisa' : lang === 'ja' ? '新規検索' : 'New Search'}
+              </button>
+            </div>
 
             {/* Escalation banner */}
             {result.scores.escalationRequired && (

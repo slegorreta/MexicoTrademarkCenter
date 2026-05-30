@@ -582,6 +582,7 @@ export default function ApplyPage() {
   const [applicationId, setApplicationId] = useState<string | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const activeEntryRef = useRef<HTMLDivElement>(null);
+  const confirmedClassesRef = useRef<HTMLDivElement>(null);
   const [draftId, setDraftId] = useState<string | null>(null);
   const draftLoaded = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1915,7 +1916,7 @@ export default function ApplyPage() {
                       onClick={() => {
                         const next = !showAddClassPanel;
                         setShowAddClassPanel(next);
-                        if (next) { setAddClassSearch(''); setAddClassTab('browse'); setAddClassDescInput(''); setAddClassDescSuggested([]); setAddClassDescSelected([]); setAddClassDescError(null); }
+                        if (next) { setAddClassSearch(''); setAddClassTab('browse'); setAddClassDescSuggested([]); setAddClassDescSelected([]); setAddClassDescError(null); }
                       }}
                       className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-gray-200 hover:border-[#c9a84c] text-gray-400 hover:text-[#c9a84c] font-semibold py-3 rounded-xl text-sm transition-all"
                     >
@@ -2121,7 +2122,7 @@ export default function ApplyPage() {
               {/* Reusing G&S content marker — inserted below as step2gscontent */}
               {/* STEP 2 content START — only shown in normal (non-clearance) flow */}
               {!fromClearance && confirmedEntries.length > 0 && (
-                <div className="space-y-2 mb-6">
+                <div ref={confirmedClassesRef} className="space-y-2 mb-6">
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
                     {tri('Confirmed Classes', '已确认类别', 'Clases Confirmadas', 'Bestätigte Klassen', 'Classes confirmées', 'पुष्टि की गई कक्षाएं', 'Classes Confirmadas')}
                   </p>
@@ -2229,6 +2230,9 @@ export default function ApplyPage() {
                           confidence: 0.9,
                           isConfirmed: true,
                         });
+                        setTimeout(() => {
+                          confirmedClassesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }, 80);
                       }}
                       onFallbackSuggestions={suggestions => updateEntry(activeEntry.id, { fallbackSuggestions: suggestions })}
                       selectedClasses={
@@ -2378,6 +2382,7 @@ export default function ApplyPage() {
                   <div className="bg-white border border-gray-200 rounded-xl p-5">
                     <label className={labelClass}>{tri('First Use Date in Mexico', '在墨西哥首次使用日期', 'Fecha de Primer Uso en México', 'Erstes Verwendungsdatum in Mexiko', 'Date de première utilisation au Mexique', 'मेक्सिको में पहले उपयोग की तारीख', 'Data do Primeiro Uso no México', 'メキシコでの初使用日')}</label>
                     <input type="date" className={inputClass} value={form.firstUseDate} onChange={e => set({ firstUseDate: e.target.value })} />
+                    <p className="text-xs text-gray-400 mt-1">dd/mm/yyyy</p>
                   </div>
                 )}
 
@@ -2402,6 +2407,7 @@ export default function ApplyPage() {
                       <div>
                         <label className={labelClass}>{tri('Filing Date', '申请日期', 'Fecha de Presentación', 'Einreichungsdatum', 'Date de dépôt', 'दाखिल तारीख', 'Data de Protocolo', '出願日')}</label>
                         <input type="date" className={inputClass} value={form.priorityFilingDate} onChange={e => set({ priorityFilingDate: e.target.value })} />
+                        <p className="text-xs text-gray-400 mt-1">dd/mm/yyyy</p>
                       </div>
                     </div>
                   )}
@@ -2999,7 +3005,22 @@ export default function ApplyPage() {
               )}
 
               {/* Payment section — "proceed" button, free confirmation, or Stripe Element */}
-              {!clientSecret && !isFreeOrder ? (
+              {!clientSecret && !isFreeOrder && Object.values(clearanceResults).some(r => r.risk === 'high') ? (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-5 flex items-start gap-3">
+                  <AlertCircle size={18} className="text-red-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold text-red-800">
+                      {tri('Filing not recommended due to high conflict risk', '由于冲突风险高，不建议提交', 'No se recomienda presentar debido al alto riesgo de conflicto', 'Einreichung wegen hohem Konfliktrisiko nicht empfohlen', 'Dépôt déconseillé en raison d\'un risque de conflit élevé', 'उच्च विरोध जोखिम के कारण दाखिल करने की अनुशंसा नहीं', 'Registro não recomendado devido ao alto risco de conflito')}
+                    </p>
+                    <p className="text-xs text-red-700 mt-1 leading-relaxed">
+                      {tri('Your clearance search returned a high-risk result. We strongly recommend consulting with our team before filing to avoid rejection and wasted fees.', '您的查询返回了高风险结果。我们强烈建议在提交前咨询我们的团队，以避免被驳回和浪费费用。', 'Tu búsqueda de disponibilidad devolvió un resultado de alto riesgo. Recomendamos consultar con nuestro equipo antes de presentar para evitar el rechazo y gastos innecesarios.', 'Ihre Verfügbarkeitsprüfung ergab ein Hochrisikoresultat. Wir empfehlen dringend, vor der Einreichung unser Team zu konsultieren.', 'Votre recherche de disponibilité a renvoyé un résultat à haut risque. Nous recommandons vivement de consulter notre équipe avant de déposer.', 'आपकी उपलब्धता खोज ने उच्च जोखिम परिणाम दिया। दाखिल करने से पहले हमारी टीम से परामर्श करने की सलाह दी जाती है।', 'Sua pesquisa de disponibilidade retornou um resultado de alto risco. Recomendamos consultar nossa equipe antes de registrar.')}
+                    </p>
+                    <a href="/contact" className="inline-flex items-center gap-1.5 mt-3 text-xs font-semibold text-red-700 hover:text-red-900 underline underline-offset-2 transition-colors">
+                      {tri('Contact our team for guidance', '联系我们的团队获取建议', 'Contactar a nuestro equipo para orientación', 'Unser Team kontaktieren', 'Contacter notre équipe', 'हमारी टीम से संपर्क करें', 'Entrar em contato com nossa equipe')}
+                    </a>
+                  </div>
+                </div>
+              ) : !clientSecret && !isFreeOrder ? (
                 <div className="space-y-4">
                   <div className="bg-navy-50 rounded-xl p-4 border border-navy-100">
                     <p className="text-xs text-navy-700">

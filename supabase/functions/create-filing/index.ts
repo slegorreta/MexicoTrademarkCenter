@@ -155,6 +155,9 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Free orders (100% coupon) are immediately confirmed
+    const isFreeOrder = totalAmountUsd === 0;
+
     // Insert application
     const { data: appData, error: appError } = await supabase
       .from("applications")
@@ -162,8 +165,8 @@ Deno.serve(async (req: Request) => {
         case_number: caseNumber,
         client_id: clientData.id,
         user_id: userId ?? null,
-        payment_status: "pending",
-        filing_status: "pending_payment",
+        payment_status: isFreeOrder ? "paid" : "pending",
+        filing_status: isFreeOrder ? "received" : "pending_payment",
         total_classes: totalClasses,
         service_fee_usd: serviceFeeUsd,
         government_fee_usd: governmentFeeUsd,
@@ -223,13 +226,18 @@ Deno.serve(async (req: Request) => {
       });
 
       for (const classNum of classNums) {
-        await supabase.from("trademark_classes").insert({
+        const { error: tcError } = await supabase.from("trademark_classes").insert({
           application_id: appData.id,
           class_number: classNum,
-          class_title_en: entry.classTitleEn,
-          classification_source: entry.isConfirmed ? "ai_classified" : "user_selected",
+          class_title_en: entry.classTitleEn || "",
+          goods_services_en: entry.descriptionEn || "",
+          goods_services_es: entry.descriptionEs || "",
+          classification_source: entry.isConfirmed ? "suggested" : "user_selected",
           confidence_score: entry.confidence,
         });
+        if (tcError) {
+          console.error("trademark_classes insert error:", tcError.message, { classNum, entry });
+        }
       }
     }
 
