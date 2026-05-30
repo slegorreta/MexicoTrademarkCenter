@@ -3,8 +3,8 @@ import { chromium } from 'playwright';
 import { createClient } from '@supabase/supabase-js';
 import * as fs from 'fs';
 import * as path from 'path';
-import type { ImpiFormData } from './types';
-import { sendSuccessEmail, sendFailureEmail } from '../../lib/sendEmail';
+import type { ImpiFormData } from './types.js';
+import { sendSuccessEmail, sendFailureEmail } from '../../lib/sendEmail.js';
 
 export const maxDuration = 300;
 
