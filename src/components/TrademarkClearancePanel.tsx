@@ -1390,7 +1390,7 @@ export default function TrademarkClearancePanel({
   }
   if (!result) return null;
 
-  const cfg = RISK_CFG[result.risk];
+  const cfg = RISK_CFG[result.risk] ?? RISK_CFG['high'];
   const RiskIcon = cfg.icon;
   const marciaFindings = result.marciaFindings ?? [];
   const dupont = result.dupont ?? [];
@@ -2970,9 +2970,9 @@ export default function TrademarkClearancePanel({
               <p className="text-xs leading-relaxed text-gray-700">
                 {lang === 'en' ? result.malaFe.explanation_en : result.malaFe.explanation}
               </p>
-              {result.malaFe.indicators.length > 0 && (
+              {(result.malaFe.indicators?.length ?? 0) > 0 && (
                 <ul className="mt-1.5 space-y-0.5">
-                  {result.malaFe.indicators.map((ind, i) => (
+                  {result.malaFe.indicators?.map((ind, i) => (
                     <li key={i} className="text-[10px] text-gray-500 flex items-start gap-1">
                       <span className="text-gray-400 flex-shrink-0 mt-0.5">•</span>{ind}
                     </li>
@@ -3444,7 +3444,7 @@ export default function TrademarkClearancePanel({
                         </div>
                         <p className="text-[10px] text-gray-500 mb-3 leading-relaxed">{tr('alternativeNamesSubtitle', lang)}</p>
                         <div className="space-y-2.5">
-                          {result.alternativeNames!.map((alt, i) => {
+                          {(result.alternativeNames ?? []).map((alt, i) => {
                             const scoreColor = alt.score >= 85 ? 'bg-emerald-100 text-emerald-700 border-emerald-300'
                               : alt.score >= 70 ? 'bg-amber-100 text-amber-700 border-amber-300'
                               : 'bg-gray-100 text-gray-600 border-gray-300';

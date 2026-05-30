@@ -4,6 +4,7 @@ import { Search, ArrowRight, ArrowLeft, Sparkles, CheckCircle2, FileText, HelpCi
 import { useLanguage } from '../context/LanguageContext';
 
 const TrademarkClearancePanel = lazy(() => import('../components/TrademarkClearancePanel'));
+import TMViewErrorBoundary from '../components/TMViewErrorBoundary';
 
 type Lang = 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt' | 'ja';
 
@@ -1737,19 +1738,21 @@ export default function TrademarkCheckPage() {
             onEditRequest={() => {}} // step 4 is terminal
             editLabel={tr('editLabel')}
           >
-            <Suspense fallback={<div className="flex items-center justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-gold-500" /></div>}>
-              <TrademarkClearancePanel
-                markName={markName}
-                goodsServices={goodsInput}
-                classes={selectedNums}
-                language={lang as 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt'}
-                autoRun={true}
-                showFilingCta={true}
-                onStartFiling={handleStartFiling}
-                imageBase64={markType === 'design' ? designBase64 : undefined}
-                imageMimeType={markType === 'design' ? designMime : undefined}
-              />
-            </Suspense>
+            <TMViewErrorBoundary language={lang} mode="clearance">
+              <Suspense fallback={<div className="flex items-center justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-gold-500" /></div>}>
+                <TrademarkClearancePanel
+                  markName={markName}
+                  goodsServices={goodsInput}
+                  classes={selectedNums}
+                  language={lang as 'en' | 'zh' | 'es' | 'de' | 'fr' | 'hi' | 'pt'}
+                  autoRun={true}
+                  showFilingCta={true}
+                  onStartFiling={handleStartFiling}
+                  imageBase64={markType === 'design' ? designBase64 : undefined}
+                  imageMimeType={markType === 'design' ? designMime : undefined}
+                />
+              </Suspense>
+            </TMViewErrorBoundary>
           </StepCard>
         </div>
 
