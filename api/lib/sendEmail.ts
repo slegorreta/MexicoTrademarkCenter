@@ -1,4 +1,4 @@
-import type { ImpiFormData } from '../beta/impi-autofill/types';
+import type { ImpiFormData } from '../beta/impi-autofill/types.js';
 
 const RESEND_API_URL = 'https://api.resend.com/emails';
 const FROM = 'IMPI AutoFill Beta <tm@mexicotrademarkcenter.com>';
