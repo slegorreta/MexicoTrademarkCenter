@@ -1,3 +1,4 @@
-# Serve static files directly — never rewrite to index.html
 /sitemap.xml  /sitemap.xml  200
 /robots.txt   /robots.txt   200
+/api/*  https://mexico-trademark-center.vercel.app/api/:splat  200
+/*  /index.html  200
