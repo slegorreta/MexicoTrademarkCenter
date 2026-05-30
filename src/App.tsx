@@ -31,6 +31,10 @@ import PreviewPage from './pages/PreviewPage';
 // Clearance Report V2
 import ClearanceReportV2Page from './pages/ClearanceReportV2Page';
 
+// Beta (internal, not in nav/sitemap)
+import ImpiAutofillPage from './pages/beta/ImpiAutofillPage';
+import ImpiAutofillStatusPage from './pages/beta/ImpiAutofillStatusPage';
+
 // Admin
 import AdminLoginPage from './pages/admin/AdminLoginPage';
 import AdminLayout from './pages/admin/AdminLayout';
@@ -245,6 +249,10 @@ function AppRoutes() {
 
       {/* Video upload utility */}
       <Route path="/admin/upload-video" element={<AdminVideoUpload />} />
+
+      {/* Beta — internal only, not in nav or sitemap */}
+      <Route path="/beta/impi-autofill" element={<ImpiAutofillPage />} />
+      <Route path="/beta/impi-autofill/status" element={<ImpiAutofillStatusPage />} />
 
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
