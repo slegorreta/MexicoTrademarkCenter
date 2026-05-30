@@ -13,6 +13,10 @@ const IMPI_LOGIN_URL = 'https://eservicios.impi.gob.mx/seimpi/';
 function makeSupabase() {
   const url = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? '';
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
+  if (!url) console.error('[worker] FATAL: SUPABASE_URL / VITE_SUPABASE_URL is not set');
+  if (!key || key === 'your_supabase_service_role_key_here') {
+    console.error('[worker] FATAL: SUPABASE_SERVICE_ROLE_KEY is missing or still a placeholder');
+  }
   return createClient(url, key);
 }
 
@@ -93,10 +97,7 @@ async function dismissAutoSaveDialog(page: Page) {
 }
 
 async function downloadLogoFromStorage(storagePath: string, jobId: string): Promise<string> {
-  const supabase = createClient(
-    process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? '',
-    process.env.SUPABASE_SERVICE_ROLE_KEY ?? '',
-  );
+  const supabase = makeSupabase();
   const { data, error } = await supabase.storage.from('beta-logo-uploads').download(storagePath);
   if (error || !data) throw new Error(`Failed to download logo from storage: ${error?.message}`);
   const localPath = `/tmp/logo-${jobId}${path.extname(storagePath)}`;

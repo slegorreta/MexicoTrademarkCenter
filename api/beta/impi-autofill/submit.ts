@@ -7,6 +7,10 @@ import { REQUIRED_FIELDS } from './types.js';
 function makeSupabase() {
   const url = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? '';
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
+  if (!url) console.error('[submit] FATAL: SUPABASE_URL / VITE_SUPABASE_URL is not set');
+  if (!key || key === 'your_supabase_service_role_key_here') {
+    console.error('[submit] FATAL: SUPABASE_SERVICE_ROLE_KEY is missing or still a placeholder');
+  }
   return createClient(url, key);
 }
 
