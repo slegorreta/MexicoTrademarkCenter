@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { randomUUID } from 'crypto';
-import type { ImpiFormData } from './types';
-import { REQUIRED_FIELDS } from './types';
+import type { ImpiFormData } from './types.js';
+import { REQUIRED_FIELDS } from './types.js';
 
 export const maxDuration = 10;
 
