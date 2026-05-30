@@ -6,19 +6,9 @@ import { REQUIRED_FIELDS } from './types.js';
 
 function makeSupabase() {
   const url = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? '';
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
-  if (!url) console.error('[submit] FATAL: SUPABASE_URL / VITE_SUPABASE_URL is not set');
-  if (!key || key === 'your_supabase_service_role_key_here') {
-    console.error('[submit] FATAL: SUPABASE_SERVICE_ROLE_KEY is missing or still a placeholder');
-  } else {
-    // Log key prefix and embedded project ref so we can verify it matches the URL
-    try {
-      const payload = JSON.parse(Buffer.from(key.split('.')[1], 'base64').toString());
-      console.log(`[submit] Supabase key ref="${payload.ref}" url="${url}"`);
-    } catch {
-      console.log(`[submit] Supabase key prefix="${key.slice(0, 20)}..." url="${url}"`);
-    }
-  }
+  const key = process.env.SUPABASE_ANON_KEY ?? process.env.VITE_SUPABASE_ANON_KEY ?? '';
+  if (!url) console.error('[submit] FATAL: SUPABASE_URL is not set');
+  if (!key) console.error('[submit] FATAL: SUPABASE_ANON_KEY is not set');
   return createClient(url, key);
 }
 

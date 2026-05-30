@@ -12,11 +12,9 @@ const IMPI_LOGIN_URL = 'https://eservicios.impi.gob.mx/seimpi/';
 
 function makeSupabase() {
   const url = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? '';
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
-  if (!url) console.error('[worker] FATAL: SUPABASE_URL / VITE_SUPABASE_URL is not set');
-  if (!key || key === 'your_supabase_service_role_key_here') {
-    console.error('[worker] FATAL: SUPABASE_SERVICE_ROLE_KEY is missing or still a placeholder');
-  }
+  const key = process.env.SUPABASE_ANON_KEY ?? process.env.VITE_SUPABASE_ANON_KEY ?? '';
+  if (!url) console.error('[worker] FATAL: SUPABASE_URL is not set');
+  if (!key) console.error('[worker] FATAL: SUPABASE_ANON_KEY is not set');
   return createClient(url, key);
 }
 
