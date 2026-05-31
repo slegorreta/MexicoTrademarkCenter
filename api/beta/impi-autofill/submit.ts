@@ -107,13 +107,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.error(`[submit] Failed to insert impi_jobs row for ${jobId}:`, (err as Error).message);
   }
 
-  // Fire-and-forget: trigger the Playwright worker
-  const workerBase = process.env.VERCEL_PROJECT_PRODUCTION_URL
-    ? ('https://' + process.env.VERCEL_PROJECT_PRODUCTION_URL)
-    : process.env.VERCEL_URL
-      ? ('https://' + process.env.VERCEL_URL)
-      : 'http://localhost:3000';
+  // Fire-and-forget: trigger the Playwright worker.
+  // WORKER_BASE_URL must be set in Vercel env vars to the canonical production
+  // domain (e.g. https://mexicotrademarkcenter.com) so the worker receives the
+  // correct maxDuration budget. VERCEL_URL is a preview-deployment hostname and
+  // will route to the wrong deployment if used here.
+  const workerBase =
+    process.env.WORKER_BASE_URL ??
+    (process.env.VERCEL_URL ? 'https://' + process.env.VERCEL_URL : 'http://localhost:3000');
   const workerUrl = workerBase + '/api/beta/impi-autofill/worker';
+  console.log(`[submit] Firing worker at: ${workerUrl}`);
 
   try {
     const workerRes = await fetch(workerUrl, {
@@ -124,7 +127,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
       body: JSON.stringify({ formData, jobId }),
     });
-    console.log('[submit] Worker triggered, status: ' + workerRes.status);
+    console.log(`[submit] Worker triggered — HTTP ${workerRes.status}`);
   } catch (err) {
     console.error('[submit] Worker fetch error:', (err as Error).message);
   }
