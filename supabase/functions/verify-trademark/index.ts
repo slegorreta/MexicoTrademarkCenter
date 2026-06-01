@@ -91,6 +91,38 @@ async function persistTokenUsage(markName: string, tokenUsage: TokenUsage) {
   }
 }
 
+async function persistSearchLog(opts: {
+  markName: string;
+  classes: number[];
+  language: string;
+  risk: string;
+  ipAddress: string;
+  city: string;
+  country: string;
+  userId: string | null;
+  userEmail: string | null;
+}) {
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!supabaseUrl || !serviceKey) return;
+    const sb = createClient(supabaseUrl, serviceKey);
+    await sb.from("clearance_searches").insert({
+      mark_searched: opts.markName,
+      classes_searched: opts.classes,
+      language: opts.language,
+      result_risk: opts.risk,
+      ip_address: opts.ipAddress,
+      city: opts.city,
+      country: opts.country,
+      user_id: opts.userId,
+      user_email: opts.userEmail,
+    });
+  } catch (err) {
+    console.error("Failed to persist search log:", err);
+  }
+}
+
 // ─── Famous & Notorious Marks List (Art. 173 Fr. XV LFPPI) ───────────────────
 // Top global brands + IMPI-recognized notorious marks across all classes
 const FAMOUS_MARKS: string[] = [
@@ -1777,6 +1809,28 @@ Deno.serve(async (req: Request) => {
   // Reset per-request token accumulator
   resetTokenAccumulator();
 
+  // Capture caller metadata for search logging
+  const ipAddress =
+    req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
+    req.headers.get("cf-connecting-ip") ??
+    req.headers.get("x-real-ip") ??
+    "";
+  const cfCity = req.headers.get("cf-ipcity") ?? "";
+  const cfCountry = req.headers.get("cf-ipcountry") ?? "";
+
+  // Extract user identity from JWT if present (best-effort, no hard failure)
+  let callerUserId: string | null = null;
+  let callerEmail: string | null = null;
+  try {
+    const authHeader = req.headers.get("authorization") ?? "";
+    const token = authHeader.replace(/^Bearer\s+/i, "");
+    if (token) {
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      callerUserId = payload.sub ?? null;
+      callerEmail = payload.email ?? null;
+    }
+  } catch { /* anonymous request — leave nulls */ }
+
   try {
     const apiKey = Deno.env.get("OPENAI_API_KEY");
     if (!apiKey) {
@@ -1989,6 +2043,21 @@ Deno.serve(async (req: Request) => {
       ),
     ]);
 
+    // Persist token usage and search log asynchronously (must be before return)
+    const finalTokens = getAccumulatedTokens();
+    EdgeRuntime.waitUntil(persistTokenUsage(searchName, finalTokens));
+    EdgeRuntime.waitUntil(persistSearchLog({
+      markName: searchName,
+      classes,
+      language: lang,
+      risk,
+      ipAddress,
+      city: cfCity,
+      country: cfCountry,
+      userId: callerUserId,
+      userEmail: callerEmail,
+    }));
+
     return new Response(JSON.stringify({
       risk,
       riskColor,
@@ -2020,10 +2089,6 @@ Deno.serve(async (req: Request) => {
       tmviewAvailable: tmviewResult !== null,
       tokenUsage: getAccumulatedTokens(),
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-
-    // Persist token usage asynchronously after response is sent
-    const finalTokens = getAccumulatedTokens();
-    EdgeRuntime.waitUntil(persistTokenUsage(searchName, finalTokens));
   } catch (err) {
     console.error("verify-trademark error:", err);
     return new Response(JSON.stringify({ error: "Internal error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });

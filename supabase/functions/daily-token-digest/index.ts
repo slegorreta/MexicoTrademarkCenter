@@ -16,9 +16,6 @@ const ADMIN_CC_EMAILS = [
   "Sergio.Legorreta@lawtaem.com",
 ];
 
-// Mexico City is UTC-6 (CST) / UTC-5 (CDT). We schedule invocation at 10pm MX.
-// This function can also be called manually via POST for testing.
-
 function fmtUsd(n: number): string {
   return `$${n.toFixed(4)}`;
 }
@@ -39,6 +36,18 @@ interface TokenRow {
   created_at: string;
 }
 
+interface SearchRow {
+  mark_searched: string;
+  classes_searched: number[] | null;
+  language: string | null;
+  result_risk: string | null;
+  ip_address: string | null;
+  city: string | null;
+  country: string | null;
+  user_email: string | null;
+  created_at: string;
+}
+
 interface PeriodSummary {
   count: number;
   costUsd: number;
@@ -54,31 +63,38 @@ function periodSummary(rows: TokenRow[], from: Date): PeriodSummary {
   };
 }
 
+function riskBadge(risk: string | null): string {
+  const r = (risk ?? "").toUpperCase();
+  if (r === "HIGH")   return `<span style="background:#c0392b;color:#fff;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:bold">ALTO</span>`;
+  if (r === "MEDIUM") return `<span style="background:#e67e22;color:#fff;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:bold">MEDIO</span>`;
+  if (r === "LOW")    return `<span style="background:#27ae60;color:#fff;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:bold">BAJO</span>`;
+  return `<span style="color:#aaa;font-size:10px">—</span>`;
+}
+
 function buildDigestHtml(
-  todayRows: TokenRow[],
-  allRows: TokenRow[],
+  todayTokenRows: TokenRow[],
+  allTokenRows: TokenRow[],
+  todaySearchRows: SearchRow[],
   nowMx: Date,
 ): string {
   const todayStr = fmtDate(nowMx);
 
-  // Period boundaries (all in Mexico City time via UTC offsets)
   const startOfToday = new Date(nowMx);
   startOfToday.setHours(0, 0, 0, 0);
-
   const startOfWeek = new Date(startOfToday);
   startOfWeek.setDate(startOfToday.getDate() - startOfToday.getDay());
-
   const startOfMonth = new Date(startOfToday.getFullYear(), startOfToday.getMonth(), 1);
   const startOfYear  = new Date(startOfToday.getFullYear(), 0, 1);
 
-  const day   = periodSummary(allRows, startOfToday);
-  const week  = periodSummary(allRows, startOfWeek);
-  const month = periodSummary(allRows, startOfMonth);
-  const year  = periodSummary(allRows, startOfYear);
+  const day   = periodSummary(allTokenRows, startOfToday);
+  const week  = periodSummary(allTokenRows, startOfWeek);
+  const month = periodSummary(allTokenRows, startOfMonth);
+  const year  = periodSummary(allTokenRows, startOfYear);
 
-  const searchRows = todayRows.length === 0
-    ? `<tr><td colspan="4" style="padding:20px;text-align:center;color:#999;font-size:13px">No searches today.</td></tr>`
-    : todayRows.map((r, i) => {
+  // ── Token rows section ────────────────────────────────────────────────────
+  const tokenTableRows = todayTokenRows.length === 0
+    ? `<tr><td colspan="4" style="padding:20px;text-align:center;color:#999;font-size:13px">No AI calls logged today.</td></tr>`
+    : todayTokenRows.map((r, i) => {
         const ts = new Date(r.created_at).toLocaleTimeString("es-MX", {
           timeZone: "America/Mexico_City", hour: "2-digit", minute: "2-digit",
         });
@@ -99,6 +115,29 @@ function buildDigestHtml(
       <td style="padding:9px 16px;font-size:13px;color:#1a2e1a;font-weight:700;text-align:right">${fmtUsd(s.costUsd)}</td>
     </tr>`;
 
+  // ── Trademark search rows section ─────────────────────────────────────────
+  const searchTableRows = todaySearchRows.length === 0
+    ? `<tr><td colspan="6" style="padding:20px;text-align:center;color:#999;font-size:13px">No searches today.</td></tr>`
+    : todaySearchRows.map((r, i) => {
+        const ts = new Date(r.created_at).toLocaleTimeString("es-MX", {
+          timeZone: "America/Mexico_City", hour: "2-digit", minute: "2-digit",
+        });
+        const bg = i % 2 === 0 ? "#ffffff" : "#f8f8f5";
+        const classes = Array.isArray(r.classes_searched) && r.classes_searched.length > 0
+          ? r.classes_searched.join(", ")
+          : "—";
+        const location = [r.city, r.country].filter(Boolean).join(", ") || "—";
+        const user = r.user_email ?? "Anónimo";
+        return `<tr style="background:${bg}">
+          <td style="padding:8px 12px;font-size:12px;color:#1a2e1a;font-weight:600">${r.mark_searched}</td>
+          <td style="padding:8px 12px;font-size:12px;color:#555;text-align:center">${classes}</td>
+          <td style="padding:8px 12px;font-size:12px;color:#555">${user}</td>
+          <td style="padding:8px 12px;font-size:11px;color:#777;font-family:monospace">${r.ip_address ?? "—"}</td>
+          <td style="padding:8px 12px;font-size:12px;color:#555">${location}</td>
+          <td style="padding:8px 12px;font-size:12px;text-align:center">${riskBadge(r.result_risk)}&nbsp;<span style="font-size:11px;color:#888">${ts}</span></td>
+        </tr>`;
+      }).join("");
+
   return `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -109,7 +148,7 @@ function buildDigestHtml(
 <body style="margin:0;padding:0;background:#f0f4f0;font-family:Arial,sans-serif">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4f0;padding:32px 16px">
 <tr><td align="center">
-<table width="620" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);max-width:620px">
+<table width="720" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);max-width:720px">
 
   <!-- Header -->
   <tr>
@@ -120,10 +159,28 @@ function buildDigestHtml(
     </td>
   </tr>
 
-  <!-- Today's searches -->
+  <!-- Trademark searches today -->
   <tr>
     <td style="padding:28px 32px 0">
-      <div style="font-size:11px;letter-spacing:2px;color:#888;text-transform:uppercase;font-weight:bold;margin-bottom:14px">Searches Today (${todayRows.length})</div>
+      <div style="font-size:11px;letter-spacing:2px;color:#888;text-transform:uppercase;font-weight:bold;margin-bottom:14px">Trademark Searches Today (${todaySearchRows.length})</div>
+      <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e8e8e0;border-radius:8px;overflow:hidden">
+        <tr style="background:#f8f8f5">
+          <th style="font-size:10px;color:#888;padding:9px 12px;text-align:left;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Mark</th>
+          <th style="font-size:10px;color:#888;padding:9px 12px;text-align:center;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Classes</th>
+          <th style="font-size:10px;color:#888;padding:9px 12px;text-align:left;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">User</th>
+          <th style="font-size:10px;color:#888;padding:9px 12px;text-align:left;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">IP</th>
+          <th style="font-size:10px;color:#888;padding:9px 12px;text-align:left;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Location</th>
+          <th style="font-size:10px;color:#888;padding:9px 12px;text-align:center;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Risk / Time</th>
+        </tr>
+        ${searchTableRows}
+      </table>
+    </td>
+  </tr>
+
+  <!-- AI token usage today -->
+  <tr>
+    <td style="padding:28px 32px 0">
+      <div style="font-size:11px;letter-spacing:2px;color:#888;text-transform:uppercase;font-weight:bold;margin-bottom:14px">AI Token Usage Today (${todayTokenRows.length} calls)</div>
       <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e8e8e0;border-radius:8px;overflow:hidden">
         <tr style="background:#f8f8f5">
           <th style="font-size:10px;color:#888;padding:9px 14px;text-align:left;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Mark</th>
@@ -131,7 +188,7 @@ function buildDigestHtml(
           <th style="font-size:10px;color:#888;padding:9px 14px;text-align:right;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Tokens</th>
           <th style="font-size:10px;color:#888;padding:9px 14px;text-align:right;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Cost USD</th>
         </tr>
-        ${searchRows}
+        ${tokenTableRows}
       </table>
     </td>
   </tr>
@@ -143,7 +200,7 @@ function buildDigestHtml(
       <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e8e8e0;border-radius:8px;overflow:hidden">
         <tr style="background:#f8f8f5">
           <th style="font-size:10px;color:#888;padding:9px 16px;text-align:left;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Period</th>
-          <th style="font-size:10px;color:#888;padding:9px 16px;text-align:right;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Searches</th>
+          <th style="font-size:10px;color:#888;padding:9px 16px;text-align:right;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">AI Calls</th>
           <th style="font-size:10px;color:#888;padding:9px 16px;text-align:right;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Tokens</th>
           <th style="font-size:10px;color:#888;padding:9px 16px;text-align:right;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Total Cost</th>
         </tr>
@@ -160,7 +217,7 @@ function buildDigestHtml(
     <td style="padding:28px 32px;border-top:1px solid #e8e8e0;margin-top:28px">
       <p style="font-size:11px;color:#999;margin:0;line-height:1.6">
         Costs are estimated based on published OpenAI pricing (gpt-4o: $0.0025/$0.01 per 1K tokens input/output · gpt-4o-mini: $0.00015/$0.0006).<br>
-        Actual billing may differ. This is an automated internal report — Mexico Trademark Center.
+        IP geolocation provided by Cloudflare headers. Actual billing may differ. Automated internal report — Mexico Trademark Center.
       </p>
     </td>
   </tr>
@@ -195,52 +252,53 @@ Deno.serve(async (req: Request) => {
 
     const sb = createClient(supabaseUrl, serviceKey);
 
-    // Current time in Mexico City
     const nowUtc = new Date();
-    // Mexico City offset: UTC-6 standard, UTC-5 DST. Use Intl to get the offset.
     const mxDateStr = nowUtc.toLocaleString("en-US", { timeZone: "America/Mexico_City" });
     const nowMx = new Date(mxDateStr);
 
-    // Start of today Mexico City (midnight)
     const startOfTodayMx = new Date(mxDateStr);
     startOfTodayMx.setHours(0, 0, 0, 0);
-    // Convert back to UTC for DB query
     const mxOffsetMs = nowUtc.getTime() - nowMx.getTime();
     const startOfTodayUtc = new Date(startOfTodayMx.getTime() + mxOffsetMs);
-
-    // Start of year for the broadest query needed
     const startOfYearMx = new Date(nowMx.getFullYear(), 0, 1);
     const startOfYearUtc = new Date(startOfYearMx.getTime() + mxOffsetMs);
 
-    // Fetch all rows since start of year (covers day/week/month/year aggregation)
-    const { data: allRows, error } = await sb
+    // Fetch token usage (year-to-date for period aggregation)
+    const { data: allTokenData, error: tokenError } = await sb
       .from("token_usage_log")
       .select("mark_name, cost_usd, total_tokens, prompt_tokens, completion_tokens, created_at")
       .gte("created_at", startOfYearUtc.toISOString())
       .order("created_at", { ascending: false });
 
-    if (error) throw error;
+    if (tokenError) throw tokenError;
 
-    const rows = (allRows ?? []) as TokenRow[];
+    const allTokenRows = (allTokenData ?? []) as TokenRow[];
+    const todayTokenRows = allTokenRows.filter(r => new Date(r.created_at) >= startOfTodayUtc);
 
-    // Today's rows only (for the per-search table)
-    const todayRows = rows.filter(r => new Date(r.created_at) >= startOfTodayUtc);
+    // Fetch trademark searches for today
+    const { data: searchData, error: searchError } = await sb
+      .from("clearance_searches")
+      .select("mark_searched, classes_searched, language, result_risk, ip_address, city, country, user_email, created_at")
+      .gte("created_at", startOfTodayUtc.toISOString())
+      .order("created_at", { ascending: false });
 
-    const html = buildDigestHtml(todayRows, rows, nowMx);
+    if (searchError) throw searchError;
+
+    const todaySearchRows = (searchData ?? []) as SearchRow[];
+
+    const html = buildDigestHtml(todayTokenRows, allTokenRows, todaySearchRows, nowMx);
     const subject = `[MTC] Daily AI Token Digest — ${fmtDate(nowMx)}`;
-
-    const emailPayload = {
-      from: "Mexico Trademark Center <tm@mexicotrademarkcenter.com>",
-      to: ADMIN_EMAILS,
-      cc: ADMIN_CC_EMAILS,
-      subject,
-      html,
-    };
 
     const resendRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify(emailPayload),
+      body: JSON.stringify({
+        from: "Mexico Trademark Center <tm@mexicotrademarkcenter.com>",
+        to: ADMIN_EMAILS,
+        cc: ADMIN_CC_EMAILS,
+        subject,
+        html,
+      }),
     });
 
     const resendData = await resendRes.json();
@@ -252,7 +310,12 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    return new Response(JSON.stringify({ success: true, messageId: resendData.id, todaySearches: todayRows.length }), {
+    return new Response(JSON.stringify({
+      success: true,
+      messageId: resendData.id,
+      todaySearches: todaySearchRows.length,
+      todayAiCalls: todayTokenRows.length,
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
