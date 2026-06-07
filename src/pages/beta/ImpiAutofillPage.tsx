@@ -1,12 +1,8 @@
 import { useState, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '../../lib/supabase';
 
 const BETA_SECRET = import.meta.env.VITE_BETA_SECRET as string;
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 type TipoMarca = 'marca' | 'marca_colectiva' | 'aviso_comercial' | 'nombre_comercial';
 type Composicion = 'palabra' | 'diseno' | 'palabra_diseno';
