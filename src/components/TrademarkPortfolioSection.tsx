@@ -84,7 +84,6 @@ export default function TrademarkPortfolioSection() {
   const { t } = useLanguage();
 
   const shuffledRow1 = useMemo(() => shuffle(ALL_BRANDS, 42), []);
-  const shuffledRow2 = useMemo(() => shuffle(ALL_BRANDS, 137), []);
 
   return (
     <section className="bg-[#1a3a2a] py-14 lg:py-20 overflow-hidden">
@@ -100,10 +99,7 @@ export default function TrademarkPortfolioSection() {
         </p>
       </div>
 
-      <div className="flex flex-col gap-5">
-        <ScrollRow brands={shuffledRow1} direction="left" />
-        <ScrollRow brands={shuffledRow2} direction="right" />
-      </div>
+      <ScrollRow brands={shuffledRow1} direction="left" />
 
       <p className="text-center text-white/35 text-[11px] mt-8 px-4 max-w-2xl mx-auto leading-relaxed">
         {t('portfolio.disclaimer')}
