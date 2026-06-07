@@ -175,6 +175,16 @@ const translations: Record<string, Record<Language, string>> = {
     ja: 'ステップ 3',
     hi: 'चरण 3',
   },
+  'hero.search.placeholder': {
+    en: 'Enter your trademark name…',
+    es: 'Escribe el nombre de tu marca…',
+    fr: 'Saisissez le nom de votre marque…',
+    pt: 'Digite o nome da sua marca…',
+    de: 'Geben Sie Ihren Markennamen ein…',
+    zh: '输入您的商标名称…',
+    ja: '商標名を入力してください…',
+    hi: 'अपना ट्रेडमार्क नाम दर्ज करें…',
+  },
   'cta_check_available': {
     en: 'See if your trademark is available — free',
     es: 'Verifica si tu marca está disponible — gratis',

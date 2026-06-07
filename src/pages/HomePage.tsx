@@ -193,7 +193,7 @@ export default function HomePage() {
                       type="text"
                       value={searchQuery}
                       onChange={e => setSearchQuery(e.target.value)}
-                      placeholder="Enter your trademark name…"
+                      placeholder={t('hero.search.placeholder')}
                       className="flex-1 px-4 py-3 text-navy-900 text-sm font-medium placeholder-gray-400 bg-transparent outline-none"
                       onClick={e => e.stopPropagation()}
                     />
