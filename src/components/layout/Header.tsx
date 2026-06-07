@@ -236,10 +236,59 @@ export default function Header() {
         </div>
       </div>
 
-      {/* Slide-out menu — all screen sizes */}
+      {/* Slide-out menu */}
       {isMenuOpen && (
         <div className="bg-white border-t border-gray-100 shadow-lg">
-          <div className="max-w-7xl mx-auto px-4 py-4 space-y-1">
+          {/* Desktop overflow menu (lg+): secondary links + account only */}
+          <div className="hidden lg:block max-w-7xl mx-auto px-4 py-3">
+            {[
+              { href: '/', label: t('nav.home') },
+              { href: '/trademark-ideas', label: t('nav.ideaGenerator') },
+              { href: '/figurative-search', label: t('nav.figurativeSearch') },
+              { href: '/about', label: t('nav.about') },
+              { href: '/contact', label: t('nav.contact') },
+            ].map(link => (
+              <Link
+                key={link.href}
+                to={link.href}
+                className={`block px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  isActive(link.href)
+                    ? 'bg-gold-50 text-gold-700'
+                    : 'text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
+            <div className="mt-2 pt-2 border-t border-gray-100 flex flex-col gap-1">
+              {!user && (
+                <Link to="/login" className="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg">
+                  {t('nav.login')}
+                </Link>
+              )}
+              {user && (
+                <>
+                  <Link
+                    to={isStaff ? '/admin' : '/dashboard'}
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg"
+                  >
+                    {isStaff ? <Shield size={15} /> : <LayoutDashboard size={15} />}
+                    {isStaff ? 'Admin Dashboard' : t('nav.dashboard')}
+                  </Link>
+                  <button
+                    onClick={() => { signOut(); setIsMenuOpen(false); navigate('/'); }}
+                    className="flex items-center gap-2 w-full px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg"
+                  >
+                    <LogOut size={15} />
+                    {t('nav.logout')}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Mobile menu (< lg): full navigation */}
+          <div className="lg:hidden max-w-7xl mx-auto px-4 py-4 space-y-1">
             {navLinks.map(link => (
               <Link
                 key={link.href}
@@ -254,7 +303,6 @@ export default function Header() {
               </Link>
             ))}
             <div className="pt-2 border-t border-gray-100 flex flex-col gap-2">
-              {/* Mobile language selector */}
               <div className="flex gap-2 px-1 pb-1">
                 {LANGUAGES.map(lang => (
                   <button
