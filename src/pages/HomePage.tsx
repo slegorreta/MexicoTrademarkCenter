@@ -201,7 +201,7 @@ export default function HomePage() {
                       type="submit"
                       className="flex items-center gap-1.5 bg-gold-500 hover:bg-gold-600 text-white font-bold text-sm px-4 py-3 transition-colors flex-shrink-0"
                     >
-                      Search
+                      {t('common.search')}
                       <ArrowRight size={14} />
                     </button>
                   </div>
