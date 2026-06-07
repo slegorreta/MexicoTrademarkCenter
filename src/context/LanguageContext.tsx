@@ -47,7 +47,7 @@ const translations: Record<string, Record<Language, string>> = {
   },
   'hero_headline': {
     en: 'File Your Trademark in Mexico — 100% Online and AI-Powered',
-    es: 'Registra tu marca en México — rápido, seguro y al mejor precio',
+    es: 'Registra tu marca en México — 100% en línea y con IA',
     fr: 'Déposez votre marque au Mexique — 100 % en ligne et propulsé par l\'IA',
     pt: 'Registre sua marca no México — 100% online e com IA',
     de: 'Melden Sie Ihre Marke in Mexiko an — 100 % online und KI-gestützt',

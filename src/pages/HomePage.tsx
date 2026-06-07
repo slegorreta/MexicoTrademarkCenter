@@ -155,13 +155,8 @@ export default function HomePage() {
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight mb-5">
                 {t('hero_headline')}
               </h1>
-              <p className="text-base text-gray-300 leading-relaxed mb-3 max-w-xl">
+              <p className="text-base text-gray-300 leading-relaxed mb-8 max-w-xl">
                 {t('hero_subhead')}
-              </p>
-
-              {/* Trust line */}
-              <p className="text-sm text-white/50 mb-8 max-w-xl">
-                Somos uno de los mayores solicitantes de marcas en México con más de 100 marcas presentadas cada mes ante el IMPI
               </p>
 
               {/* Primary CTAs — equal-width 3-column grid on sm+, stacked on mobile */}
@@ -608,29 +603,6 @@ export default function HomePage() {
               </div>
             </div>
           )}
-        </div>
-      </section>
-
-      {/* ── Trust Stats Bar ───────────────────────────────────────────────── */}
-      <section className="bg-navy-900/[0.03] border-y border-navy-100 py-10">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-0 md:divide-x md:divide-navy-100">
-            {[
-              { value: '+150', label: 'marcas presentadas ante el IMPI' },
-              { value: '24 hrs', label: 'tiempo de presentación garantizado' },
-              { value: '$299 USD', label: 'precio todo incluido por clase' },
-              { value: '5.0 ★', label: 'calificación de nuestros clientes' },
-            ].map((stat, i) => (
-              <div key={i} className="flex flex-col items-center text-center px-4 py-2">
-                <span className="text-2xl sm:text-3xl font-extrabold text-gold-500 leading-none mb-1.5">
-                  {stat.value}
-                </span>
-                <span className="text-xs text-white/80 leading-snug max-w-[140px]" style={{ color: 'rgba(30,46,30,0.65)' }}>
-                  {stat.label}
-                </span>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 
