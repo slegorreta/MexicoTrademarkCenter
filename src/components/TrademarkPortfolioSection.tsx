@@ -60,8 +60,7 @@ function TrademarkCard({ name }: { name: string }) {
         border: '1px solid rgba(255,255,255,0.12)',
         borderRadius: '12px',
         padding: '16px 24px',
-        minWidth: '180px',
-        maxWidth: '260px',
+        width: 'max-content',
       }}
     >
       <span
