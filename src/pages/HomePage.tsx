@@ -56,15 +56,6 @@ function HeroImageCarousel() {
       />
       {/* subtle gradient overlay for depth */}
       <div className="absolute inset-0 bg-gradient-to-t from-navy-950/40 via-transparent to-transparent pointer-events-none" />
-      {/* dot indicators */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
-        {HERO_IMAGES.map((_, i) => (
-          <span
-            key={i}
-            className={`block w-1.5 h-1.5 rounded-full transition-all duration-300 ${i === current ? 'bg-white scale-125' : 'bg-white/40'}`}
-          />
-        ))}
-      </div>
     </div>
   );
 }
