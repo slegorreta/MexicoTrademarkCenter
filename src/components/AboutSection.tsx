@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, ShieldCheck } from 'lucide-react';
+import { ArrowRight, ShieldCheck, X, Terminal } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import sofiaImg from '../assets/Captura_de_pantalla_2026-05-14_a_la(s)_5.12.23_p.m..png';
@@ -104,8 +104,8 @@ function useTypewriter(lines: string[], active: boolean) {
       if (!typoScheduled && charIdx === 0 && line.length >= 6) {
         typoScheduled = true;
         if (Math.random() < 0.3) {
-          const t = injectTypo(line);
-          if (t) typoState = { ...t, phase: 'typing-typo', typoCharIdx: 0, eraseCount: 0, retypeIdx: 0 };
+          const typo = injectTypo(line);
+          if (typo) typoState = { ...typo, phase: 'typing-typo', typoCharIdx: 0, eraseCount: 0, retypeIdx: 0 };
         }
       }
 
@@ -164,14 +164,101 @@ function useTypewriter(lines: string[], active: boolean) {
   return { displayed, current, done };
 }
 
+// ── Declaration Modal ─────────────────────────────────────────────────────────
+function DeclarationModal({ onClose, lines, eyebrow }: { onClose: () => void; lines: string[]; eyebrow: string }) {
+  const terminalRef = useRef<HTMLDivElement>(null);
+  const { displayed, current, done } = useTypewriter(lines, true);
+
+  useEffect(() => {
+    const el = terminalRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [displayed, current]);
+
+  // Close on Escape
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-3xl max-h-[90vh] flex flex-col rounded-2xl overflow-hidden shadow-2xl border border-[#2a2a2a]"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Title bar */}
+        <div className="bg-[#1a1a1a] px-4 py-3 flex items-center gap-2 border-b border-[#2a2a2a] flex-shrink-0">
+          <span className="w-3 h-3 rounded-full bg-[#ff5f57]" />
+          <span className="w-3 h-3 rounded-full bg-[#febc2e]" />
+          <span className="w-3 h-3 rounded-full bg-[#28c840]" />
+          <span className="ml-3 text-[#555] text-xs font-mono flex-1">declaration.txt — mexico-trademark-center</span>
+          <button
+            onClick={onClose}
+            className="text-[#555] hover:text-[#aaa] transition-colors flex-shrink-0"
+            aria-label="Close"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div
+          ref={terminalRef}
+          className="bg-[#0a0a0a] px-6 sm:px-10 py-8 overflow-y-auto flex-1"
+          style={{ fontFamily: '"Courier New", Courier, monospace', scrollBehavior: 'smooth' }}
+        >
+          <p className="text-[#555] text-sm mb-5 font-mono">
+            <span className="text-[#28c840]">mtc@aindependence</span>
+            <span className="text-[#555]">:</span>
+            <span className="text-[#4da6ff]">~</span>
+            <span className="text-[#555]">$ </span>
+            <span className="text-[#aaa]">cat declaration.txt</span>
+          </p>
+          {displayed.map((line, i) => (
+            <p
+              key={i}
+              className={`text-[15px] leading-[1.8] whitespace-pre-wrap break-words ${line === '' ? 'h-4' : 'text-[#39ff14]'}`}
+              style={{ fontFamily: '"Courier New", Courier, monospace' }}
+            >
+              {line}
+            </p>
+          ))}
+          {!done && (
+            <p
+              className="text-[15px] leading-[1.8] text-[#39ff14] whitespace-pre-wrap break-words"
+              style={{ fontFamily: '"Courier New", Courier, monospace' }}
+            >
+              {current}
+              <span className="inline-block w-[9px] h-[16px] bg-[#39ff14] ml-[1px] animate-pulse align-middle" />
+            </p>
+          )}
+          {done && (
+            <p className="text-[#555] text-sm mt-4 font-mono">
+              <span className="text-[#28c840]">mtc@aindependence</span>
+              <span className="text-[#555]">:</span>
+              <span className="text-[#4da6ff]">~</span>
+              <span className="text-[#555]">$ </span>
+              <span className="inline-block w-[9px] h-[16px] bg-[#555] ml-[1px] animate-pulse align-middle" />
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Exported component ────────────────────────────────────────────────────────
 export default function AboutSection() {
   const { language, t } = useLanguage();
   const lines = buildLines(t, language);
 
-  const terminalRef = useRef<HTMLDivElement>(null);
   const sectionRef = useRef<HTMLDivElement>(null);
   const [inView, setInView] = useState(false);
+  const [showDeclaration, setShowDeclaration] = useState(false);
 
   useEffect(() => {
     const el = sectionRef.current;
@@ -181,13 +268,6 @@ export default function AboutSection() {
     return () => obs.disconnect();
   }, []);
 
-  const { displayed, current, done } = useTypewriter(lines, inView);
-
-  useEffect(() => {
-    const el = terminalRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [displayed, current]);
-
   return (
     <div ref={sectionRef}>
       {/* ── Header ── */}
@@ -196,64 +276,8 @@ export default function AboutSection() {
           {t('about.title')}
         </p>
         <h2 className="text-4xl lg:text-6xl font-bold text-white leading-tight tracking-tight max-w-3xl mx-auto">
-          {t('about.eyebrow')}
+          {t('about.homepageHeading')}
         </h2>
-      </section>
-
-      {/* ── Terminal ── */}
-      <section className="bg-[#0d0d0d] py-14 px-4 sm:px-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="rounded-xl overflow-hidden shadow-2xl border border-[#1e1e1e]">
-            {/* Title bar */}
-            <div className="bg-[#1a1a1a] px-4 py-3 flex items-center gap-2 border-b border-[#2a2a2a]">
-              <span className="w-3 h-3 rounded-full bg-[#ff5f57]" />
-              <span className="w-3 h-3 rounded-full bg-[#febc2e]" />
-              <span className="w-3 h-3 rounded-full bg-[#28c840]" />
-              <span className="ml-4 text-[#555] text-xs font-mono">declaration.txt — mexico-trademark-center</span>
-            </div>
-            {/* Body */}
-            <div
-              ref={terminalRef}
-              className="bg-[#0a0a0a] px-6 sm:px-10 py-8 min-h-[420px] max-h-[65vh] overflow-y-auto"
-              style={{ fontFamily: '"Courier New", Courier, monospace', scrollBehavior: 'smooth' }}
-            >
-              <p className="text-[#555] text-sm mb-5 font-mono">
-                <span className="text-[#28c840]">mtc@aindependence</span>
-                <span className="text-[#555]">:</span>
-                <span className="text-[#4da6ff]">~</span>
-                <span className="text-[#555]">$ </span>
-                <span className="text-[#aaa]">cat declaration.txt</span>
-              </p>
-              {displayed.map((line, i) => (
-                <p
-                  key={i}
-                  className={`text-[15px] leading-[1.8] whitespace-pre-wrap break-words ${line === '' ? 'h-4' : 'text-[#39ff14]'}`}
-                  style={{ fontFamily: '"Courier New", Courier, monospace' }}
-                >
-                  {line}
-                </p>
-              ))}
-              {!done && (
-                <p
-                  className="text-[15px] leading-[1.8] text-[#39ff14] whitespace-pre-wrap break-words"
-                  style={{ fontFamily: '"Courier New", Courier, monospace' }}
-                >
-                  {current}
-                  <span className="inline-block w-[9px] h-[16px] bg-[#39ff14] ml-[1px] animate-pulse align-middle" />
-                </p>
-              )}
-              {done && (
-                <p className="text-[#555] text-sm mt-4 font-mono">
-                  <span className="text-[#28c840]">mtc@aindependence</span>
-                  <span className="text-[#555]">:</span>
-                  <span className="text-[#4da6ff]">~</span>
-                  <span className="text-[#555]">$ </span>
-                  <span className="inline-block w-[9px] h-[16px] bg-[#555] ml-[1px] animate-pulse align-middle" />
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
       </section>
 
       {/* ── SofIA ── */}
@@ -281,10 +305,21 @@ export default function AboutSection() {
             <ShieldCheck size={16} className="text-green-400 flex-shrink-0" />
             <span className="text-green-400 text-sm font-semibold">Supervised by licensed Mexican IP attorneys</span>
           </div>
-          <div className="space-y-3 text-gray-300">
+          <div className="space-y-3 text-gray-300 mb-8">
             <p className="text-white text-xl font-semibold">{t('about.sofia.role')}</p>
             <p className="text-base leading-relaxed max-w-xl mx-auto">{t('about.sofia.desc')}</p>
           </div>
+
+          {/* Declaration link */}
+          {inView && (
+            <button
+              onClick={() => setShowDeclaration(true)}
+              className="inline-flex items-center gap-2 text-sm font-semibold text-[#39ff14]/80 hover:text-[#39ff14] border border-[#39ff14]/20 hover:border-[#39ff14]/50 bg-[#39ff14]/5 hover:bg-[#39ff14]/10 px-5 py-2.5 rounded-xl transition-all duration-200"
+            >
+              <Terminal size={15} />
+              {t('about.eyebrow')}
+            </button>
+          )}
         </div>
       </section>
 
@@ -306,6 +341,15 @@ export default function AboutSection() {
           </Link>
         </div>
       </section>
+
+      {/* ── Declaration Modal ── */}
+      {showDeclaration && (
+        <DeclarationModal
+          onClose={() => setShowDeclaration(false)}
+          lines={lines}
+          eyebrow={t('about.eyebrow')}
+        />
+      )}
     </div>
   );
 }
