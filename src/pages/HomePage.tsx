@@ -349,6 +349,7 @@ export default function HomePage() {
           pt: 'TZVJ_whPSck',
           zh: 'UOtEg9rUrlA',
           ja: '-fsnNbCjk7c',
+          hi: 'KfCpbk9FOzc',
         };
         const videoId = videoIdByLocale[language] ?? videoIdByLocale['en'];
         const videoSrc = `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1`;
