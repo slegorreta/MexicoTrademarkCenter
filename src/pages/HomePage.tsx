@@ -3,20 +3,19 @@ import { ArrowRight, Shield, Globe as Globe2, FileText, Award, ChevronDown, Spar
 import { useLanguage } from '../context/LanguageContext';
 import { useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
 
-import heroImg1 from '../assets/pexels-pavel-danilyuk-7654133.jpg';
-import heroImg2 from '../assets/pexels-pavel-danilyuk-7654581.jpg';
-import heroImg3 from '../assets/pexels-pavel-danilyuk-7654602.jpg';
-import heroImg4 from '../assets/pexels-pavel-danilyuk-7654616.jpg';
-import heroImg5 from '../assets/pexels-pavel-danilyuk-7658252.jpg';
-import heroImg6 from '../assets/pexels-pavel-danilyuk-7658380.jpg';
-import heroImg7 from '../assets/pexels-pavel-danilyuk-7658400_(1).jpg';
-import heroImg8 from '../assets/pexels-pavel-danilyuk-7658416.jpg';
-import heroImg9 from '../assets/pexels-pavel-danilyuk-7658417.jpg';
-import heroImg10 from '../assets/pexels-pavel-danilyuk-7658432.jpg';
-
 const HERO_IMAGES = [
-  heroImg1, heroImg2, heroImg3, heroImg4, heroImg5,
-  heroImg6, heroImg7, heroImg8, heroImg9, heroImg10,
+  '/ChatGPT_Image_7_jun_2026,_03_11_30_p.m..png',
+  '/ChatGPT_Image_7_jun_2026,_03_12_52_p.m..png',
+  '/ChatGPT_Image_7_jun_2026,_03_18_47_p.m..png',
+  '/ChatGPT_Image_7_jun_2026,_03_27_43_p.m..png',
+  '/ChatGPT_Image_7_jun_2026,_03_30_31_p.m..png',
+  '/ChatGPT_Image_7_jun_2026,_03_32_54_p.m..png',
+  '/ChatGPT_Image_7_jun_2026,_03_35_08_p.m..png',
+  '/ChatGPT_Image_7_jun_2026,_03_39_08_p.m..png',
+  '/ChatGPT_Image_7_jun_2026,_03_42_25_p.m..png',
+  '/ChatGPT_Image_7_jun_2026,_03_45_45_p.m..png',
+  '/ChatGPT_Image_7_jun_2026,_03_48_30_p.m..png',
+  '/ChatGPT_Image_7_jun_2026,_03_50_28_p.m..png',
 ];
 
 function HeroImageCarousel() {
