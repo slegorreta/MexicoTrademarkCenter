@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, Shield, Globe as Globe2, FileText, Award, ChevronDown, Sparkles, Search, HelpCircle, X, Star, Scale, Zap, Quote } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { useState, useEffect, useRef, type ReactNode } from 'react';
@@ -12,8 +12,10 @@ import { LANDING_PAGES } from '../data/landingPages';
 
 export default function HomePage() {
   const { t, language } = useLanguage();
+  const navigate = useNavigate();
   const testimonialRef = useRef<HTMLElement>(null);
   const [testimonialsVisible, setTestimonialsVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     const el = testimonialRef.current;
@@ -164,52 +166,79 @@ export default function HomePage() {
                 {t('hero.trustLine')}
               </p>
 
-              {/* Primary CTAs — equal-width 3-column grid on sm+, stacked on mobile */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5 max-w-2xl">
-                {/* CTA 1 — Check availability (gold) */}
-                <Link
-                  to="/trademark-check"
-                  className="group flex flex-col items-center text-center gap-2 bg-gold-500 hover:bg-gold-400 text-white font-bold px-4 py-5 rounded-2xl transition-all duration-200 shadow-xl hover:shadow-gold-500/30 hover:-translate-y-0.5"
+              {/* Primary CTAs */}
+              <div className="flex flex-col gap-3 mb-5 max-w-2xl">
+                {/* CTA 1 — Search with embedded input field */}
+                <form
+                  onSubmit={e => {
+                    e.preventDefault();
+                    sessionStorage.setItem('tcpMark', searchQuery.trim());
+                    navigate('/trademark-check');
+                  }}
+                  className="group flex flex-col gap-3 bg-gold-500 hover:bg-gold-400 text-white font-bold px-5 pt-5 pb-4 rounded-2xl transition-all duration-200 shadow-xl hover:shadow-gold-500/30 hover:-translate-y-0.5"
                 >
-                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-colors">
-                    <Search size={18} className="text-white" />
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                      <Search size={20} className="text-white" />
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[10px] font-extrabold text-white/80 uppercase tracking-[0.1em] leading-none">{t('hero.step1_label')}</span>
+                      <span className="text-sm font-bold leading-snug">{t('cta_check_available')}</span>
+                    </div>
                   </div>
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="text-[10px] font-extrabold text-white/80 uppercase tracking-[0.1em] leading-none">{t('hero.step1_label')}</span>
-                    <span className="text-xs font-bold leading-snug">{t('cta_check_available')}</span>
-                  </div>
-                  <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform mt-auto opacity-70" />
-                </Link>
 
-                {/* CTA 2 — File (sky blue) */}
-                <Link
-                  to="/apply"
-                  className="group flex flex-col items-center text-center gap-2 bg-sky-600 hover:bg-sky-500 text-white font-bold px-4 py-5 rounded-2xl transition-all duration-200 shadow-lg hover:shadow-sky-500/30 hover:-translate-y-0.5"
-                >
-                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-colors">
-                    <FileText size={18} className="text-white" />
+                  {/* Inline search field */}
+                  <div className="flex items-center gap-2 bg-white rounded-xl overflow-hidden shadow-inner">
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                      placeholder="Enter your trademark name…"
+                      className="flex-1 px-4 py-3 text-navy-900 text-sm font-medium placeholder-gray-400 bg-transparent outline-none"
+                      onClick={e => e.stopPropagation()}
+                    />
+                    <button
+                      type="submit"
+                      className="flex items-center gap-1.5 bg-gold-500 hover:bg-gold-600 text-white font-bold text-sm px-4 py-3 transition-colors flex-shrink-0"
+                    >
+                      Search
+                      <ArrowRight size={14} />
+                    </button>
                   </div>
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="text-[10px] font-extrabold text-white/80 uppercase tracking-[0.1em] leading-none">{t('hero.step2_label')}</span>
-                    <span className="text-xs font-bold leading-snug">{t('cta_start_filing_full')}</span>
-                  </div>
-                  <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform mt-auto opacity-70" />
-                </Link>
+                </form>
 
-                {/* CTA 3 — Idea generator (emerald) */}
-                <Link
-                  to="/trademark-ideas"
-                  className="group flex flex-col items-center text-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-5 rounded-2xl transition-all duration-200 shadow-lg hover:shadow-emerald-500/30 hover:-translate-y-0.5"
-                >
-                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-colors">
-                    <Sparkles size={18} className="text-white" />
-                  </div>
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="text-[10px] font-extrabold text-white/80 uppercase tracking-[0.1em] leading-none">{t('hero.step3_label')}</span>
-                    <span className="text-xs font-bold leading-snug">{t('cta_idea_generator_full')}</span>
-                  </div>
-                  <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform mt-auto opacity-70" />
-                </Link>
+                {/* CTA 2 & 3 — side by side */}
+                <div className="grid grid-cols-2 gap-3">
+                  {/* CTA 2 — File (sky blue) */}
+                  <Link
+                    to="/apply"
+                    className="group flex flex-col items-center text-center gap-2.5 bg-sky-600 hover:bg-sky-500 text-white font-bold px-4 py-6 rounded-2xl transition-all duration-200 shadow-lg hover:shadow-sky-500/30 hover:-translate-y-0.5"
+                  >
+                    <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-colors">
+                      <FileText size={20} className="text-white" />
+                    </div>
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="text-[10px] font-extrabold text-white/80 uppercase tracking-[0.1em] leading-none">{t('hero.step2_label')}</span>
+                      <span className="text-xs font-bold leading-snug">{t('cta_start_filing_full')}</span>
+                    </div>
+                    <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform opacity-70" />
+                  </Link>
+
+                  {/* CTA 3 — Idea generator (emerald) */}
+                  <Link
+                    to="/trademark-ideas"
+                    className="group flex flex-col items-center text-center gap-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-6 rounded-2xl transition-all duration-200 shadow-lg hover:shadow-emerald-500/30 hover:-translate-y-0.5"
+                  >
+                    <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-colors">
+                      <Sparkles size={20} className="text-white" />
+                    </div>
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="text-[10px] font-extrabold text-white/80 uppercase tracking-[0.1em] leading-none">{t('hero.step3_label')}</span>
+                      <span className="text-xs font-bold leading-snug">{t('cta_idea_generator_full')}</span>
+                    </div>
+                    <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform opacity-70" />
+                  </Link>
+                </div>
               </div>
 
               {/* Trust row */}
