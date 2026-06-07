@@ -5,6 +5,8 @@ import { useState, useEffect, useRef, type ReactNode } from 'react';
 import AboutSection from '../components/AboutSection';
 import ComparisonSection from '../components/ComparisonSection';
 import PaymentMethodIcons from '../components/PaymentMethodIcons';
+import TrustStatsBar from '../components/TrustStatsBar';
+import TrademarkPortfolioSection from '../components/TrademarkPortfolioSection';
 import impiBuilding from '../assets/IMPI-blindara-artesanias-poblanas-analiza-3-zonas-para-Indicacion-Geografica.webp';
 import { LANDING_PAGES } from '../data/landingPages';
 
@@ -155,8 +157,11 @@ export default function HomePage() {
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight mb-5">
                 {t('hero_headline')}
               </h1>
-              <p className="text-base text-gray-300 leading-relaxed mb-8 max-w-xl">
+              <p className="text-base text-gray-300 leading-relaxed mb-4 max-w-xl">
                 {t('hero_subhead')}
+              </p>
+              <p className="text-[14px] text-white/80 mb-8 max-w-xl leading-relaxed">
+                {t('hero.trustLine')}
               </p>
 
               {/* Primary CTAs — equal-width 3-column grid on sm+, stacked on mobile */}
@@ -233,6 +238,12 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Trust Stats Bar */}
+      <TrustStatsBar />
+
+      {/* Trademark Portfolio */}
+      <TrademarkPortfolioSection />
 
       {/* Video Section */}
       {(() => {
@@ -539,7 +550,7 @@ export default function HomePage() {
             <div className="hidden md:block absolute top-12 left-1/3 right-1/3 h-0.5 bg-gold-200" />
             {[
               { num: '01', title: t('process.step1.title'), desc: t('process.step1.desc'), icon: FileText, isImpi: false, showPayment: false },
-              { num: '02', title: t('process.step2.title'), desc: t('process.step2.desc'), icon: Shield, isImpi: false, showPayment: true },
+              { num: '02', title: t('process.step2.title'), desc: t('process.step2.desc'), icon: Shield, isImpi: false, showPayment: false },
               { num: '03', title: t('process.step3.title'), desc: t('process.step3.desc'), icon: Award, isImpi: true, showPayment: false },
             ].map((step, i) => (
               <div key={i} className="relative text-center">

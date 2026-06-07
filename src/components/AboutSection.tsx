@@ -259,6 +259,9 @@ export default function AboutSection() {
       {/* ── SofIA ── */}
       <section className="bg-navy-950 py-16">
         <div className="max-w-2xl mx-auto px-6 text-center">
+          <p className="text-white/70 text-base leading-relaxed max-w-[600px] mx-auto mb-10">
+            {t('about.sofia.intro')}
+          </p>
           <div className="flex justify-center mb-8">
             <div className="relative">
               <div className="w-48 h-48 rounded-full overflow-hidden ring-4 ring-gold-400/40 shadow-2xl">
