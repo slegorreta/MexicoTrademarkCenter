@@ -13,8 +13,8 @@ const HERO_IMAGES = [
   '/ChatGPT_Image_7_jun_2026,_03_35_08_p.m..png',
   '/ChatGPT_Image_7_jun_2026,_03_39_08_p.m..png',
   '/ChatGPT_Image_7_jun_2026,_03_42_25_p.m..png',
-  '/ChatGPT_Image_7_jun_2026,_03_45_45_p.m..png',
-  '/ChatGPT_Image_7_jun_2026,_03_48_30_p.m..png',
+  '/ChatGPT_Image_7_jun_2026,_03_57_24_p.m._(1).png',
+  '/ChatGPT_Image_7_jun_2026,_03_59_47_p.m..png',
   '/ChatGPT_Image_7_jun_2026,_03_50_28_p.m..png',
 ];
 
