@@ -1,7 +1,73 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, Shield, Globe as Globe2, FileText, Award, ChevronDown, Sparkles, Search, HelpCircle, X, Star, Scale, Zap, Quote } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
-import { useState, useEffect, useRef, type ReactNode } from 'react';
+import { useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
+
+import heroImg1 from '../assets/pexels-pavel-danilyuk-7654133.jpg';
+import heroImg2 from '../assets/pexels-pavel-danilyuk-7654581.jpg';
+import heroImg3 from '../assets/pexels-pavel-danilyuk-7654602.jpg';
+import heroImg4 from '../assets/pexels-pavel-danilyuk-7654616.jpg';
+import heroImg5 from '../assets/pexels-pavel-danilyuk-7658252.jpg';
+import heroImg6 from '../assets/pexels-pavel-danilyuk-7658380.jpg';
+import heroImg7 from '../assets/pexels-pavel-danilyuk-7658400_(1).jpg';
+import heroImg8 from '../assets/pexels-pavel-danilyuk-7658416.jpg';
+import heroImg9 from '../assets/pexels-pavel-danilyuk-7658417.jpg';
+import heroImg10 from '../assets/pexels-pavel-danilyuk-7658432.jpg';
+
+const HERO_IMAGES = [
+  heroImg1, heroImg2, heroImg3, heroImg4, heroImg5,
+  heroImg6, heroImg7, heroImg8, heroImg9, heroImg10,
+];
+
+function HeroImageCarousel() {
+  const [current, setCurrent] = useState(0);
+  const [next, setNext] = useState(1);
+  const [fading, setFading] = useState(false);
+
+  const advance = useCallback(() => {
+    const nextIdx = (current + 1) % HERO_IMAGES.length;
+    setNext(nextIdx);
+    setFading(true);
+    setTimeout(() => {
+      setCurrent(nextIdx);
+      setFading(false);
+    }, 800);
+  }, [current]);
+
+  useEffect(() => {
+    const id = setInterval(advance, 10000);
+    return () => clearInterval(id);
+  }, [advance]);
+
+  return (
+    <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10">
+      {/* base image */}
+      <img
+        src={HERO_IMAGES[current]}
+        alt=""
+        className="absolute inset-0 w-full h-full object-cover object-center"
+      />
+      {/* next image fading in */}
+      <img
+        src={HERO_IMAGES[next]}
+        alt=""
+        className="absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-[800ms] ease-in-out"
+        style={{ opacity: fading ? 1 : 0 }}
+      />
+      {/* subtle gradient overlay for depth */}
+      <div className="absolute inset-0 bg-gradient-to-t from-navy-950/40 via-transparent to-transparent pointer-events-none" />
+      {/* dot indicators */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
+        {HERO_IMAGES.map((_, i) => (
+          <span
+            key={i}
+            className={`block w-1.5 h-1.5 rounded-full transition-all duration-300 ${i === current ? 'bg-white scale-125' : 'bg-white/40'}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
 import AboutSection from '../components/AboutSection';
 import ComparisonSection from '../components/ComparisonSection';
 import PaymentMethodIcons from '../components/PaymentMethodIcons';
@@ -154,7 +220,8 @@ export default function HomePage() {
           <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-500 rounded-full blur-3xl" />
         </div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24">
-          <div className="max-w-2xl">
+          <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
+          <div className="w-full lg:w-1/2">
             <div>
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight mb-5">
                 {t('hero_headline')}
@@ -264,6 +331,13 @@ export default function HomePage() {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Right column — image carousel */}
+          <div className="hidden lg:block w-full lg:w-1/2 flex-shrink-0" style={{ height: '520px' }}>
+            <HeroImageCarousel />
+          </div>
+
           </div>
         </div>
       </section>
