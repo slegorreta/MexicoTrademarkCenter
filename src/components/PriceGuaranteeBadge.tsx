@@ -8,7 +8,7 @@ interface Props {
 }
 
 export default function PriceGuaranteeBadge({ variant = 'float', hidden = false }: Props) {
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
 
   if (hidden) return null;
 
