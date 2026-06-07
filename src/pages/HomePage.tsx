@@ -4,19 +4,19 @@ import { useLanguage } from '../context/LanguageContext';
 import { useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
 
 const HERO_IMAGES = [
-  '/ChatGPT_Image_7_jun_2026,_03_11_30_p.m..png',
-  '/ChatGPT_Image_7_jun_2026,_03_12_52_p.m..png',
-  '/ChatGPT_Image_7_jun_2026,_03_18_47_p.m..png',
-  '/ChatGPT_Image_7_jun_2026,_03_27_43_p.m..png',
-  '/ChatGPT_Image_7_jun_2026,_03_30_31_p.m..png',
-  '/ChatGPT_Image_7_jun_2026,_03_32_54_p.m..png',
-  '/ChatGPT_Image_7_jun_2026,_03_35_08_p.m..png',
-  '/ChatGPT_Image_7_jun_2026,_03_39_08_p.m..png',
-  '/ChatGPT_Image_7_jun_2026,_03_42_25_p.m..png',
-  '/ChatGPT_Image_7_jun_2026,_03_57_24_p.m._(1).png',
-  '/ChatGPT_Image_7_jun_2026,_03_59_47_p.m..png',
-  '/ChatGPT_Image_7_jun_2026,_03_50_28_p.m..png',
-  '/ChatGPT_Image_7_jun_2026,_04_04_52_p.m..png',
+  'https://images.pexels.com/photos/7654133/pexels-photo-7654133.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+  'https://images.pexels.com/photos/7654581/pexels-photo-7654581.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+  'https://images.pexels.com/photos/7654602/pexels-photo-7654602.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+  'https://images.pexels.com/photos/7654616/pexels-photo-7654616.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+  'https://images.pexels.com/photos/7658252/pexels-photo-7658252.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+  'https://images.pexels.com/photos/7658380/pexels-photo-7658380.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+  'https://images.pexels.com/photos/7658400/pexels-photo-7658400.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+  'https://images.pexels.com/photos/7658416/pexels-photo-7658416.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+  'https://images.pexels.com/photos/7658417/pexels-photo-7658417.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+  'https://images.pexels.com/photos/7658432/pexels-photo-7658432.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+  'https://images.pexels.com/photos/7658388/pexels-photo-7658388.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+  'https://images.pexels.com/photos/8190827/pexels-photo-8190827.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+  'https://images.pexels.com/photos/3183197/pexels-photo-3183197.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
 ];
 
 function HeroImageCarousel() {
