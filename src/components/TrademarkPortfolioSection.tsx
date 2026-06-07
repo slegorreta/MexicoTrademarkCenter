@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 
 const ALL_BRANDS = [
@@ -27,64 +27,77 @@ const ALL_BRANDS = [
   'BASH', 'HELIOPHARM', 'LA QUICHE', 'SEGURILIB', 'LA GUACAMAYA', 'FIRST CLASS',
 ];
 
-function shuffle<T>(arr: T[], seed: number): T[] {
+function fisherYates(arr: string[]): string[] {
   const a = [...arr];
-  let s = seed;
   for (let i = a.length - 1; i > 0; i--) {
-    s = (s * 1664525 + 1013904223) & 0xffffffff;
-    const j = Math.abs(s) % (i + 1);
+    const j = Math.floor(Math.random() * (i + 1));
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
 }
 
-function TrademarkCard({ name }: { name: string }) {
-  return (
-    <div
-      className="flex-shrink-0 flex items-center justify-center"
-      style={{
-        background: 'rgba(255,255,255,0.07)',
-        border: '1px solid rgba(255,255,255,0.12)',
-        borderRadius: '12px',
-        padding: '16px 24px',
-        width: 'max-content',
-      }}
-    >
-      <span
-        style={{
-          fontWeight: 700,
-          fontSize: '18px',
-          color: '#ffffff',
-          letterSpacing: '0.02em',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        {name}
-      </span>
-    </div>
-  );
+// Build a long non-repeating sequence: shuffle all brands, then reshuffle and
+// append, ensuring the last brand of one round != the first of the next.
+function buildSequence(rounds: number): string[] {
+  const result: string[] = [];
+  let prev: string[] = [];
+  for (let r = 0; r < rounds; r++) {
+    let round = fisherYates(ALL_BRANDS);
+    // Avoid the same brand appearing at the boundary between two rounds
+    if (prev.length > 0 && round[0] === prev[prev.length - 1]) {
+      const swap = Math.floor(Math.random() * (round.length - 1)) + 1;
+      [round[0], round[swap]] = [round[swap], round[0]];
+    }
+    result.push(...round);
+    prev = round;
+  }
+  return result;
 }
 
-function ScrollRow({ brands, direction }: { brands: string[]; direction: 'left' | 'right' }) {
-  const doubled = [...brands, ...brands];
-  const animClass = direction === 'left' ? 'animate-scroll-left' : 'animate-scroll-right';
+// Height of each card in px (must match the rendered card)
+const CARD_HEIGHT = 60;
+const GAP = 16;
+const ITEM_HEIGHT = CARD_HEIGHT + GAP;
 
-  return (
-    <div className="overflow-hidden w-full" style={{ maskImage: 'linear-gradient(to right, transparent, black 5%, black 95%, transparent)' }}>
-      <div className={`flex gap-4 ${animClass} hover:[animation-play-state:paused]`} style={{ width: 'max-content' }}>
-        {doubled.map((name, i) => (
-          <TrademarkCard key={`${name}-${i}`} name={name} />
-        ))}
-      </div>
-    </div>
-  );
-}
+// How many cards to show in the visible window
+const VISIBLE_COUNT = 6;
 
 export default function TrademarkPortfolioSection() {
   const { t } = useLanguage();
 
-  const shuffledRow1 = useMemo(() => shuffle(ALL_BRANDS, 42), []);
-  const shuffledRow2 = useMemo(() => shuffle(ALL_BRANDS, 137), []);
+  // Build enough cards for a long smooth scroll (sequence doubles for seamless loop)
+  const sequence = useRef<string[]>(buildSequence(6));
+  const [offset, setOffset] = useState(0);
+  const rafRef = useRef<number>(0);
+  const lastTimeRef = useRef<number | null>(null);
+  // px per second
+  const SPEED = 40;
+
+  useEffect(() => {
+    const totalHeight = sequence.current.length * ITEM_HEIGHT;
+    // We duplicate the sequence so we can loop seamlessly
+    const loopAt = (sequence.current.length / 2) * ITEM_HEIGHT;
+
+    function tick(time: number) {
+      if (lastTimeRef.current === null) lastTimeRef.current = time;
+      const delta = (time - lastTimeRef.current) / 1000;
+      lastTimeRef.current = time;
+
+      setOffset(prev => {
+        const next = prev + SPEED * delta;
+        // Loop back once we've scrolled through the first half
+        return next >= loopAt ? next - loopAt : next;
+      });
+
+      rafRef.current = requestAnimationFrame(tick);
+    }
+
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, []);
+
+  // Double the sequence so we can loop seamlessly
+  const doubled = [...sequence.current, ...sequence.current];
 
   return (
     <section className="bg-[#1a3a2a] py-14 lg:py-20 overflow-hidden">
@@ -100,9 +113,55 @@ export default function TrademarkPortfolioSection() {
         </p>
       </div>
 
-      <div className="flex flex-col gap-5">
-        <ScrollRow brands={shuffledRow1} direction="left" />
-        <ScrollRow brands={shuffledRow2} direction="right" />
+      {/* Single scrolling column, centered */}
+      <div className="flex justify-center">
+        <div
+          className="relative overflow-hidden"
+          style={{
+            height: VISIBLE_COUNT * ITEM_HEIGHT - GAP,
+            width: 340,
+            maskImage: 'linear-gradient(to bottom, transparent, black 12%, black 88%, transparent)',
+          }}
+        >
+          <div
+            style={{
+              transform: `translateY(-${offset}px)`,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: GAP,
+              willChange: 'transform',
+            }}
+          >
+            {doubled.map((name, i) => (
+              <div
+                key={`${name}-${i}`}
+                style={{
+                  height: CARD_HEIGHT,
+                  flexShrink: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'rgba(255,255,255,0.07)',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  borderRadius: 12,
+                  padding: '0 24px',
+                }}
+              >
+                <span
+                  style={{
+                    fontWeight: 700,
+                    fontSize: 17,
+                    color: '#ffffff',
+                    letterSpacing: '0.02em',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {name}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       <p className="text-center text-white/35 text-[11px] mt-8 px-4 max-w-2xl mx-auto leading-relaxed">

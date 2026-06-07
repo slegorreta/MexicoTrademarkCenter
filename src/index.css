@@ -41,6 +41,15 @@
   animation: scrollRight 350s linear infinite;
 }
 
+@keyframes scrollUp {
+  from { transform: translateY(0); }
+  to { transform: translateY(-50%); }
+}
+
+.animate-scroll-up {
+  animation: scrollUp linear infinite;
+}
+
 @media print {
   /* Hide site navigation, hero, and non-report UI */
   header, footer, nav,
