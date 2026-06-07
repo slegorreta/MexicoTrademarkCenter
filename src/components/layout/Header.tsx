@@ -92,9 +92,7 @@ export default function Header() {
             </div>
           </Link>
 
-          {/* Desktop Nav — centered, only renders when there is genuinely enough room.
-              "Preguntas Frecuentes" + "Generador de Ideas" in Spanish need ~950px of nav
-              space alone, so the full layout only works at 1536px (2xl) and above. */}
+          {/* Full desktop nav — only at 2xl+ where all labels fit */}
           <nav className="hidden 2xl:flex items-center gap-4 flex-1 justify-center">
             {navLinks.map(link => (
               <Link
@@ -111,8 +109,29 @@ export default function Header() {
             ))}
           </nav>
 
-          {/* Spacer on xl so right-side controls stay right-aligned without a nav */}
-          <div className="flex-1 2xl:hidden" />
+          {/* Slim desktop nav — lg to 2xl: only the three conversion-critical links */}
+          <nav className="hidden lg:flex 2xl:hidden items-center gap-1 ml-4">
+            {[
+              { href: '/pricing', label: t('nav.pricing') },
+              { href: '/how-it-works', label: t('nav.howItWorks') },
+              { href: '/#faq', label: t('nav.faq') },
+            ].map(link => (
+              <Link
+                key={link.href}
+                to={link.href}
+                className={`text-sm font-medium whitespace-nowrap px-3 py-1.5 rounded transition-colors ${
+                  isActive(link.href)
+                    ? 'text-gold-600'
+                    : 'text-gray-600 hover:text-navy-900'
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+
+          {/* Spacer — pushes right-side controls to the right */}
+          <div className="flex-1" />
 
           {/* Right side */}
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -198,16 +217,17 @@ export default function Header() {
               </Link>
             )}
 
+            {/* Start Filing CTA — shown at lg+, always */}
             <Link
               to="/apply"
-              className="hidden 2xl:inline-flex bg-gold-500 hover:bg-gold-600 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-sm whitespace-nowrap"
+              className="hidden lg:inline-flex bg-gold-500 hover:bg-gold-600 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-sm whitespace-nowrap"
             >
               {t('nav.startFiling')}
             </Link>
 
-            {/* Hamburger — visible below 2xl */}
+            {/* Hamburger — always visible */}
             <button
-              className="2xl:hidden p-2 text-gray-600"
+              className="p-2 text-gray-600"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
             >
               {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
@@ -216,9 +236,9 @@ export default function Header() {
         </div>
       </div>
 
-      {/* Mobile/tablet menu — shown below 2xl */}
+      {/* Slide-out menu — all screen sizes */}
       {isMenuOpen && (
-        <div className="2xl:hidden bg-white border-t border-gray-100 shadow-lg">
+        <div className="bg-white border-t border-gray-100 shadow-lg">
           <div className="max-w-7xl mx-auto px-4 py-4 space-y-1">
             {navLinks.map(link => (
               <Link
