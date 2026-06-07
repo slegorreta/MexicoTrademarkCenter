@@ -16,6 +16,7 @@ const HERO_IMAGES = [
   '/ChatGPT_Image_7_jun_2026,_03_57_24_p.m._(1).png',
   '/ChatGPT_Image_7_jun_2026,_03_59_47_p.m..png',
   '/ChatGPT_Image_7_jun_2026,_03_50_28_p.m..png',
+  '/ChatGPT_Image_7_jun_2026,_04_04_52_p.m..png',
 ];
 
 function HeroImageCarousel() {
