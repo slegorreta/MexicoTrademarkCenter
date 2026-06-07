@@ -26,14 +26,9 @@ import FigurativeSearchPage from './pages/FigurativeSearchPage';
 
 // Homepage V2 preview
 import HomePageV2 from './pages/HomePageV2';
-import PreviewPage from './pages/PreviewPage';
 
 // Clearance Report V2
 import ClearanceReportV2Page from './pages/ClearanceReportV2Page';
-
-// Beta (internal, not in nav/sitemap)
-import ImpiAutofillPage from './pages/beta/ImpiAutofillPage';
-import ImpiAutofillStatusPage from './pages/beta/ImpiAutofillStatusPage';
 
 // Admin
 import AdminLoginPage from './pages/admin/AdminLoginPage';
@@ -125,10 +120,6 @@ function AppRoutes() {
     <Routes>
       {/* Root: on app subdomain go straight to admin login, otherwise public home */}
       <Route path="/" element={isAppSubdomain ? <Navigate to="/admin/login" replace /> : <Layout><HomePage /></Layout>} />
-
-      {/* Homepage V2 preview */}
-      <Route path="/preview" element={<Layout><PreviewPage /></Layout>} />
-      <Route path="/preview-v2" element={<Layout><HomePageV2 /></Layout>} />
 
       {/* Clearance Report V2 */}
       <Route path="/clearance-report-v2" element={<ClearanceReportV2Page />} />
@@ -249,10 +240,6 @@ function AppRoutes() {
 
       {/* Video upload utility */}
       <Route path="/admin/upload-video" element={<AdminVideoUpload />} />
-
-      {/* Beta — internal only, not in nav or sitemap */}
-      <Route path="/beta/impi-autofill" element={<ImpiAutofillPage />} />
-      <Route path="/beta/impi-autofill/status" element={<ImpiAutofillStatusPage />} />
 
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
