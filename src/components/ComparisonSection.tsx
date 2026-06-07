@@ -18,6 +18,7 @@ const MTC_PRICE = 299;
 
 // Competitors sorted alphabetically — data from published prices as of May 2026
 const COMPETITORS: Competitor[] = [
+  { name: 'Traditional IP Law Firms', price: -1 },
   { name: 'Bonamark',               price: 533 },
   { name: 'Flatfee Corp',           price: 600 },
   { name: 'Markavo',                price: 566 },
@@ -97,25 +98,32 @@ export default function ComparisonSection({ lang, compact = false, onClose }: Pr
             </tr>
 
             {/* Competitors */}
-            {COMPETITORS.map((c, i) => (
-              <tr
-                key={c.name}
-                className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
-                  i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'
-                }`}
-              >
-                <td className="px-4 py-2.5">
-                  <span className="font-medium text-gray-600 text-[11px]">{c.name}</span>
-                </td>
-                <td className="px-3 py-2.5 text-center">
-                  <span className="font-semibold text-gray-400 block leading-none">${c.price}</span>
-                  <X size={10} className="text-red-400 mx-auto mt-0.5" />
-                </td>
-                <td className="px-2 py-2.5 text-center">{NO}</td>
-                <td className="px-2 py-2.5 text-center">{NO}</td>
-                <td className="px-2 py-2.5 text-center">{NO}</td>
-              </tr>
-            ))}
+            {COMPETITORS.map((c, i) => {
+              const isCategory = c.price === -1;
+              return (
+                <tr
+                  key={c.name}
+                  className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
+                    isCategory ? 'bg-slate-50' : i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'
+                  }`}
+                >
+                  <td className="px-4 py-2.5">
+                    <span className={`text-[11px] ${isCategory ? 'font-semibold text-slate-600 italic' : 'font-medium text-gray-600'}`}>
+                      {c.name}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2.5 text-center">
+                    <span className="font-semibold text-gray-400 block leading-none">
+                      {isCategory ? '$1,000+' : `$${c.price}`}
+                    </span>
+                    <X size={10} className="text-red-400 mx-auto mt-0.5" />
+                  </td>
+                  <td className="px-2 py-2.5 text-center">{NO}</td>
+                  <td className="px-2 py-2.5 text-center">{NO}</td>
+                  <td className="px-2 py-2.5 text-center">{NO}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
