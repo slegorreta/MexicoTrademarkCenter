@@ -34,11 +34,11 @@
 }
 
 .animate-scroll-left {
-  animation: scrollLeft 250s linear infinite;
+  animation: scrollLeft 350s linear infinite;
 }
 
 .animate-scroll-right {
-  animation: scrollRight 250s linear infinite;
+  animation: scrollRight 350s linear infinite;
 }
 
 @media print {
