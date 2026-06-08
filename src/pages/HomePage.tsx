@@ -4,35 +4,43 @@ import { useLanguage } from '../context/LanguageContext';
 import { useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
 
 const HERO_IMAGES = [
-  'https://images.pexels.com/photos/7654133/pexels-photo-7654133.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
-  'https://images.pexels.com/photos/7654581/pexels-photo-7654581.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
-  'https://images.pexels.com/photos/7654602/pexels-photo-7654602.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
-  'https://images.pexels.com/photos/7654616/pexels-photo-7654616.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
-  'https://images.pexels.com/photos/7658252/pexels-photo-7658252.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
-  'https://images.pexels.com/photos/7658380/pexels-photo-7658380.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
-  'https://images.pexels.com/photos/7658400/pexels-photo-7658400.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
-  'https://images.pexels.com/photos/7658416/pexels-photo-7658416.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
-  'https://images.pexels.com/photos/7658417/pexels-photo-7658417.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
-  'https://images.pexels.com/photos/7658432/pexels-photo-7658432.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
-  'https://images.pexels.com/photos/7658388/pexels-photo-7658388.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
-  'https://images.pexels.com/photos/8190827/pexels-photo-8190827.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
-  'https://images.pexels.com/photos/3183197/pexels-photo-3183197.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+  '/ChatGPT_Image_7_jun_2026,_03_11_30_p.m..jpg',
+  '/ChatGPT_Image_7_jun_2026,_03_12_52_p.m..jpg',
+  '/ChatGPT_Image_7_jun_2026,_03_32_54_p.m..jpg',
+  '/ChatGPT_Image_7_jun_2026,_03_35_08_p.m..jpg',
+  '/ChatGPT_Image_7_jun_2026,_03_42_25_p.m..jpg',
+  '/ChatGPT_Image_7_jun_2026,_03_45_45_p.m..jpg',
+  '/ChatGPT_Image_7_jun_2026,_03_48_30_p.m..jpg',
+  '/ChatGPT_Image_7_jun_2026,_03_50_28_p.m..jpg',
+  '/ChatGPT_Image_7_jun_2026,_03_57_24_p.m._(1).jpg',
+  '/ChatGPT_Image_7_jun_2026,_03_59_47_p.m..jpg',
+  '/ChatGPT_Image_7_jun_2026,_04_04_52_p.m..jpg',
 ];
 
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 function HeroImageCarousel() {
+  const [images] = useState(() => shuffle(HERO_IMAGES));
   const [current, setCurrent] = useState(0);
   const [next, setNext] = useState(1);
   const [fading, setFading] = useState(false);
 
   const advance = useCallback(() => {
-    const nextIdx = (current + 1) % HERO_IMAGES.length;
+    const nextIdx = (current + 1) % images.length;
     setNext(nextIdx);
     setFading(true);
     setTimeout(() => {
       setCurrent(nextIdx);
       setFading(false);
     }, 800);
-  }, [current]);
+  }, [current, images.length]);
 
   useEffect(() => {
     const id = setInterval(advance, 10000);
@@ -43,13 +51,13 @@ function HeroImageCarousel() {
     <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10">
       {/* base image */}
       <img
-        src={HERO_IMAGES[current]}
+        src={images[current]}
         alt=""
         className="absolute inset-0 w-full h-full object-cover object-center"
       />
       {/* next image fading in */}
       <img
-        src={HERO_IMAGES[next]}
+        src={images[next]}
         alt=""
         className="absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-[800ms] ease-in-out"
         style={{ opacity: fading ? 1 : 0 }}
