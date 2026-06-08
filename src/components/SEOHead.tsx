@@ -135,7 +135,7 @@ export const HOMEPAGE_FAQS: FaqItem[] = [
   },
   {
     q: 'What is a trademark opposition?',
-    a: 'After IMPI approves your application, it is published in the Official Gazette (Diario Oficial de la Federación) for a mandatory opposition period — typically 30 business days — during which third parties can file a formal opposition.',
+    a: 'After IMPI approves your application, it is published in the Gaceta de la Propiedad Industrial for a mandatory opposition period — typically 30 business days — during which third parties can file a formal opposition.',
   },
 ];
 

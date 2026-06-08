@@ -174,7 +174,7 @@ const FILING_STAGES = [
     key: 'published',
     label: 'Published',
     statuses: ['published', 'office_action_pending'],
-    desc: 'IMPI has approved your application and published it in the Official Gazette (Diario Oficial de la Federación) for a 30-day opposition period, during which third parties may file an opposition. If no opposition is filed, registration proceeds.',
+    desc: 'IMPI has approved your application and published it in the Gaceta de la Propiedad Industrial for a 30-day opposition period, during which third parties may file an opposition. If no opposition is filed, registration proceeds.',
   },
   {
     key: 'registered',

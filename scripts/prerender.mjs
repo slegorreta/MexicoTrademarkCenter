@@ -438,7 +438,7 @@ const HOMEPAGE_FAQS = [
   { q: 'Can I file multiple trademarks at once?', a: 'Yes. You can file multiple trademarks and multiple classes in a single order. Volume pricing applies automatically based on the total number of classes filed.' },
   { q: 'What is the difference between a Filing Certificate and a Registration Certificate?', a: 'The Filing Certificate (Constancia de Presentación) is issued by IMPI immediately upon submission and establishes your official filing date. The Registration Certificate (Título de Registro de Marca) is issued after IMPI completes examination and approves your mark — typically 12 to 24 months later.' },
   { q: 'What is an IMPI anticipation (anterioridad)?', a: 'An anterioridad is a prior trademark on the IMPI register that is identical or confusingly similar to your mark. If found during examination, IMPI issues an office action citing it as a barrier to registration.' },
-  { q: 'What is a trademark opposition?', a: 'After IMPI approves your application, it is published in the Official Gazette (Diario Oficial de la Federación) for a mandatory opposition period — typically 30 business days — during which third parties can file a formal opposition.' },
+  { q: 'What is a trademark opposition?', a: 'After IMPI approves your application, it is published in the Gaceta de la Propiedad Industrial for a mandatory opposition period — typically 30 business days — during which third parties can file a formal opposition.' },
 ];
 
 function buildFaqSchema(faqs) {
