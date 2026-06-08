@@ -1887,6 +1887,7 @@ const translations: Record<string, Record<Language, string>> = {
   'footer.legal': { en: 'Legal', zh: '法律', es: 'Legal', de: 'Rechtliches', fr: 'Mentions légales', hi: 'कानूनी', pt: 'Legal', ja: '法的情報' },
   'footer.privacy': { en: 'Privacy Policy', zh: '隐私政策', es: 'Política de Privacidad', de: 'Datenschutzerklärung', fr: 'Politique de confidentialité', hi: 'गोपनीयता नीति', pt: 'Política de Privacidade', ja: 'プライバシーポリシー' },
   'footer.terms': { en: 'Terms of Service', zh: '服务条款', es: 'Términos de Servicio', de: 'Nutzungsbedingungen', fr: 'Conditions d\'utilisation', hi: 'सेवा की शर्तें', pt: 'Termos de Serviço', ja: '利用規約' },
+  'footer.blog': { en: 'Blog', zh: '博客', es: 'Blog', de: 'Blog', fr: 'Blog', hi: 'ब्लॉग', pt: 'Blog', ja: 'ブログ' },
   'footer.disclaimer': {
     en: 'Not affiliated with IMPI. Filing does not guarantee registration.',
     zh: '与IMPI无关。申请不保证注册。',

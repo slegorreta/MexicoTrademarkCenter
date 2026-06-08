@@ -5,6 +5,10 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { detectLanguageFromIp } from './lib/ipLanguage';
 import Layout from './components/layout/Layout';
 
+// Blog
+import BlogIndex from './pages/BlogIndex';
+import BlogPost from './pages/BlogPost';
+
 // Public pages
 import HomePage from './pages/HomePage';
 import LandingPage from './pages/LandingPage';
@@ -81,7 +85,15 @@ const LANG_ROUTES: Record<string, Language> = {
 
 function detectInitialLang(): Language | undefined {
   const path = window.location.pathname;
-  return LANG_ROUTES[path] ?? LANG_ROUTES[path.endsWith('/') ? path : `${path}/`];
+  // Exact match for language root pages (e.g. /en, /en/)
+  const exact = LANG_ROUTES[path] ?? LANG_ROUTES[path.endsWith('/') ? path : `${path}/`];
+  if (exact) return exact;
+  // Prefix match for language sub-pages (e.g. /en/blog, /es/blog/slug)
+  for (const [route, lang] of Object.entries(LANG_ROUTES)) {
+    const prefix = route.replace(/\/$/, ''); // e.g. '/en'
+    if (path.startsWith(prefix + '/')) return lang;
+  }
+  return undefined;
 }
 
 const LANG_PREFIXES = Object.keys(LANG_ROUTES).map(k => k.replace(/\//g, ''));
@@ -240,6 +252,26 @@ function AppRoutes() {
 
       {/* Video upload utility */}
       <Route path="/admin/upload-video" element={<AdminVideoUpload />} />
+
+      {/* Blog */}
+      <Route path="/blog" element={<Layout><BlogIndex lang="en" /></Layout>} />
+      <Route path="/en/blog" element={<Layout><BlogIndex lang="en" /></Layout>} />
+      <Route path="/es/blog" element={<Layout><BlogIndex lang="es" /></Layout>} />
+      <Route path="/zh/blog" element={<Layout><BlogIndex lang="zh" /></Layout>} />
+      <Route path="/ja/blog" element={<Layout><BlogIndex lang="ja" /></Layout>} />
+      <Route path="/de/blog" element={<Layout><BlogIndex lang="de" /></Layout>} />
+      <Route path="/fr/blog" element={<Layout><BlogIndex lang="fr" /></Layout>} />
+      <Route path="/hi/blog" element={<Layout><BlogIndex lang="hi" /></Layout>} />
+      <Route path="/pt/blog" element={<Layout><BlogIndex lang="pt" /></Layout>} />
+      <Route path="/blog/:slug" element={<Layout><BlogPost lang="en" /></Layout>} />
+      <Route path="/en/blog/:slug" element={<Layout><BlogPost lang="en" /></Layout>} />
+      <Route path="/es/blog/:slug" element={<Layout><BlogPost lang="es" /></Layout>} />
+      <Route path="/zh/blog/:slug" element={<Layout><BlogPost lang="zh" /></Layout>} />
+      <Route path="/ja/blog/:slug" element={<Layout><BlogPost lang="ja" /></Layout>} />
+      <Route path="/de/blog/:slug" element={<Layout><BlogPost lang="de" /></Layout>} />
+      <Route path="/fr/blog/:slug" element={<Layout><BlogPost lang="fr" /></Layout>} />
+      <Route path="/hi/blog/:slug" element={<Layout><BlogPost lang="hi" /></Layout>} />
+      <Route path="/pt/blog/:slug" element={<Layout><BlogPost lang="pt" /></Layout>} />
 
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
