@@ -587,22 +587,3 @@ for (const [lang, pageData] of Object.entries(PAGES)) {
 console.log(`\nPre-rendered ${successCount}/${Object.keys(PAGES).length} pages successfully.`);
 if (successCount < Object.keys(PAGES).length) process.exit(1);
 
-// ── Inject JSON-LD into root dist/index.html ──────────────────────────────
-// The "/" route (HomePage) renders schemas via react-helmet at runtime, but
-// crawlers need them in the static shell before JS executes.
-{
-  const faqSchema = buildFaqSchema(HOMEPAGE_FAQS);
-  const jsonLdBlock = [
-    `    <script type="application/ld+json">${ORGANIZATION_SCHEMA}</script>`,
-    `    <script type="application/ld+json">${OFFER_SCHEMA}</script>`,
-    `    <script type="application/ld+json">${faqSchema}</script>`,
-  ].join('\n');
-  let rootHtml = fs.readFileSync(shellPath, 'utf-8');
-  if (!rootHtml.includes('application/ld+json')) {
-    rootHtml = rootHtml.replace('</head>', `${jsonLdBlock}\n  </head>`);
-    fs.writeFileSync(shellPath, rootHtml, 'utf-8');
-    console.log('✓  dist/index.html  [json-ld: injected]');
-  } else {
-    console.log('✓  dist/index.html  [json-ld: already present]');
-  }
-}

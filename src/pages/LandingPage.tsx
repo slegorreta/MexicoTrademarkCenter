@@ -129,6 +129,7 @@ export default function LandingPage({ lang }: Props) {
         ogImageAlt={data.ogImageAlt}
         hreflangAlternates={HREFLANG_ALTERNATES}
         faqs={HOMEPAGE_FAQS}
+        noSchema
       />
 
       {/* Hero */}
