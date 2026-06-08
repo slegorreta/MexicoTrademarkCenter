@@ -1465,6 +1465,14 @@ export default function ApplyPage() {
         </div>
       </section>
 
+      {/* Price reminder strip */}
+      <div className="bg-amber-50 border-b border-amber-200 py-2.5 px-4">
+        <div className="max-w-3xl mx-auto flex items-center justify-center gap-2 text-sm font-medium text-amber-800">
+          <Lock size={14} className="flex-shrink-0 text-amber-600" />
+          <span>{t('apply.priceStrip')}</span>
+        </div>
+      </div>
+
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-10">
         {step < 8 && (
           <>

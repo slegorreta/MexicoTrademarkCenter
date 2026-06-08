@@ -222,7 +222,7 @@ export default function Header() {
               to="/apply"
               className="hidden lg:inline-flex bg-gold-500 hover:bg-gold-600 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-sm whitespace-nowrap"
             >
-              {t('nav.startFiling')}
+              {t('nav.startFilingWithPrice')}
             </Link>
 
             {/* Hamburger — always visible */}
@@ -329,7 +329,7 @@ export default function Header() {
                 </Link>
               )}
               <Link to="/apply" className="block bg-gold-500 text-white text-sm font-semibold px-4 py-2.5 rounded-lg text-center">
-                {t('nav.startFiling')}
+                {t('nav.startFilingWithPrice')}
               </Link>
             </div>
           </div>
