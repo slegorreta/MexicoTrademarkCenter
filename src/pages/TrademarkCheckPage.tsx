@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, lazy, Suspense } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, ArrowRight, ArrowLeft, Sparkles, CheckCircle2, FileText, HelpCircle, Loader2, Plus, X, Tag, ChevronDown, Send, CreditCard as Edit2, AlertTriangle, ChevronRight, Upload, Image as ImageIcon, Type, RefreshCw } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import SEOHead from '../components/SEOHead';
 
 const TrademarkClearancePanel = lazy(() => import('../components/TrademarkClearancePanel'));
 import TMViewErrorBoundary from '../components/TMViewErrorBoundary';
@@ -1064,6 +1065,15 @@ export default function TrademarkCheckPage() {
   // ── RENDER ─────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gray-50" ref={pageTopRef}>
+      <SEOHead
+        title="Free Mexico Trademark Search — Check IMPI Availability Instantly"
+        description="Search the IMPI registry for free in about 60 seconds. Get a full trademark clearance report with no signup and no credit card. Powered by live IMPI data."
+        canonicalPath="/trademark-check"
+        lang="en"
+        ogLocale="en_US"
+        ogImageAlt="Free Mexico trademark search — check IMPI availability"
+        hreflangAlternates={[]}
+      />
 
       {/* ── Page header ──────────────────────────────────────────────────────── */}
       <section className="bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800 text-white print-hide">

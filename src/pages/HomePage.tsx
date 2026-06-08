@@ -2,19 +2,20 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, Shield, Globe as Globe2, FileText, Award, ChevronDown, Sparkles, Search, HelpCircle, X, Star, Scale, Zap, Quote } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
+import SEOHead from '../components/SEOHead';
 
-const HERO_IMAGES = [
-  '/ChatGPT_Image_7_jun_2026,_03_11_30_p.m..jpg',
-  '/ChatGPT_Image_7_jun_2026,_03_12_52_p.m..jpg',
-  '/ChatGPT_Image_7_jun_2026,_03_32_54_p.m..jpg',
-  '/ChatGPT_Image_7_jun_2026,_03_35_08_p.m..jpg',
-  '/ChatGPT_Image_7_jun_2026,_03_42_25_p.m..jpg',
-  '/ChatGPT_Image_7_jun_2026,_03_45_45_p.m..jpg',
-  '/ChatGPT_Image_7_jun_2026,_03_48_30_p.m..jpg',
-  '/ChatGPT_Image_7_jun_2026,_03_50_28_p.m..jpg',
-  '/ChatGPT_Image_7_jun_2026,_03_57_24_p.m._(1).jpg',
-  '/ChatGPT_Image_7_jun_2026,_03_59_47_p.m..jpg',
-  '/ChatGPT_Image_7_jun_2026,_04_04_52_p.m..jpg',
+const HERO_IMAGES: { src: string; alt: string }[] = [
+  { src: '/ChatGPT_Image_7_jun_2026,_03_11_30_p.m..jpg', alt: 'Business owner holding official IMPI Título de Registro de Marca trademark certificate, Mexico' },
+  { src: '/ChatGPT_Image_7_jun_2026,_03_12_52_p.m..jpg', alt: 'Insomniatica bookstore owner holding IMPI trademark registration certificate, Mexico' },
+  { src: '/ChatGPT_Image_7_jun_2026,_03_32_54_p.m..jpg', alt: 'Tech entrepreneur holding ConsultroniX IMPI trademark certificate, Mexico' },
+  { src: '/ChatGPT_Image_7_jun_2026,_03_35_08_p.m..jpg', alt: 'Bella Radiante salon owner holding IMPI Título de Registro de Marca, Mexico' },
+  { src: '/ChatGPT_Image_7_jun_2026,_03_42_25_p.m..jpg', alt: 'Longeva Pilates founder holding IMPI trademark registration certificate, Mexico' },
+  { src: '/ChatGPT_Image_7_jun_2026,_03_45_45_p.m..jpg', alt: 'Hungry Babies Club food brand owner holding IMPI trademark certificate, Mexico' },
+  { src: '/ChatGPT_Image_7_jun_2026,_03_48_30_p.m..jpg', alt: 'WOLFpak brand founders holding IMPI Título de Registro de Marca, Mexico' },
+  { src: '/ChatGPT_Image_7_jun_2026,_03_50_28_p.m..jpg', alt: 'Fashion entrepreneur holding MOXIPLUS IMPI trademark registration certificate, Mexico' },
+  { src: '/ChatGPT_Image_7_jun_2026,_03_57_24_p.m._(1).jpg', alt: 'Algoritmo art brand owner holding IMPI trademark certificate in gallery, Mexico' },
+  { src: '/ChatGPT_Image_7_jun_2026,_03_59_47_p.m..jpg', alt: 'Palmar Kite surf instructor holding IMPI Título de Registro de Marca on beach, Mexico' },
+  { src: '/ChatGPT_Image_7_jun_2026,_04_04_52_p.m..jpg', alt: 'Mecánica González auto shop owner holding IMPI trademark registration certificate, Mexico' },
 ];
 
 function shuffle<T>(arr: T[]): T[] {
@@ -51,14 +52,14 @@ function HeroImageCarousel() {
     <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10">
       {/* base image */}
       <img
-        src={images[current]}
-        alt=""
+        src={images[current].src}
+        alt={images[current].alt}
         className="absolute inset-0 w-full h-full object-cover object-center"
       />
       {/* next image fading in */}
       <img
-        src={images[next]}
-        alt=""
+        src={images[next].src}
+        alt={images[next].alt}
         className="absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-[800ms] ease-in-out"
         style={{ opacity: fading ? 1 : 0 }}
       />
@@ -210,8 +211,20 @@ export default function HomePage() {
     'home.proof.oem',
   ];
 
+  const enFaqs = LANDING_PAGES['en']?.faqs ?? [];
+
   return (
     <div>
+      <SEOHead
+        title="Mexico Trademark Registration — $299 All-Inclusive | Filed with IMPI in 24hrs"
+        description="Register your trademark in Mexico with IMPI — $299 all-inclusive per class, filed in 24 business hours. Free availability search. Trusted by 1,000+ businesses."
+        canonicalPath="/"
+        lang="en"
+        ogLocale="en_US"
+        ogImageAlt="Mexico trademark registration — MexicoTrademarkCenter"
+        hreflangAlternates={[]}
+        faqs={enFaqs}
+      />
       {/* Hero */}
       <section className="relative bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800 text-white overflow-hidden">
         <div className="absolute inset-0 opacity-10">

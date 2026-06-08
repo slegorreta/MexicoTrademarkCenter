@@ -26,35 +26,39 @@ interface SEOHeadProps {
 
 const ORGANIZATION_SCHEMA = JSON.stringify({
   '@context': 'https://schema.org',
-  '@type': ['Organization', 'LegalService'],
+  '@type': 'Organization',
   name: 'MexicoTrademarkCenter',
   url: BASE_URL,
-  logo: `${BASE_URL}/IMG_2221_2.jpg`,
-  description: 'Affordable trademark registration in Mexico with IMPI — AI-powered classification, 24-hour filing, all fees included from USD $299 per class.',
-  areaServed: {
-    '@type': 'Country',
+  logo: `${BASE_URL}/favicon.svg`,
+  description: 'Mexico trademark registration service filing with IMPI for international businesses. All-inclusive price of $299 USD per class, filed within 24 business hours. Available in 8 languages.',
+  foundingLocation: {
+    '@type': 'Place',
     name: 'Mexico',
   },
-  serviceType: 'Trademark Registration',
-  priceRange: '$',
-  sameAs: [],
+  serviceArea: {
+    '@type': 'AdministrativeArea',
+    name: 'Mexico',
+  },
   contactPoint: {
     '@type': 'ContactPoint',
     contactType: 'customer support',
     url: `${BASE_URL}/contact`,
-    availableLanguage: ['English', 'Spanish', 'Chinese', 'Portuguese', 'German', 'French', 'Hindi', 'Japanese'],
+    availableLanguage: ['English', 'Spanish', 'Chinese', 'Japanese', 'German', 'French', 'Hindi', 'Portuguese'],
   },
+  sameAs: [],
 });
 
 const OFFER_SCHEMA = JSON.stringify({
   '@context': 'https://schema.org',
   '@type': 'Service',
-  name: 'Trademark Registration in Mexico',
+  name: 'Mexico Trademark Registration',
   provider: {
     '@type': 'Organization',
     name: 'MexicoTrademarkCenter',
     url: BASE_URL,
   },
+  serviceType: 'Trademark Registration',
+  description: 'All-inclusive Mexico trademark filing service with IMPI. Includes AI-powered availability search, Nice classification, government fees, and filing certificate — all for $299 USD per class.',
   areaServed: {
     '@type': 'Country',
     name: 'Mexico',
@@ -63,10 +67,16 @@ const OFFER_SCHEMA = JSON.stringify({
     '@type': 'Offer',
     price: '299',
     priceCurrency: 'USD',
-    description: 'All-inclusive price per Nice class — covers service fees and official IMPI government fees. No hidden charges.',
+    priceSpecification: {
+      '@type': 'UnitPriceSpecification',
+      price: '299',
+      priceCurrency: 'USD',
+      unitText: 'per class',
+    },
     availability: 'https://schema.org/InStock',
-    url: `${BASE_URL}/apply`,
+    url: `${BASE_URL}/pricing`,
   },
+  termsOfService: `${BASE_URL}/terms`,
 });
 
 export default function SEOHead({

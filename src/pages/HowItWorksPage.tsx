@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Shield, Tags, Languages, CreditCard, SendHorizontal as SendHorizonal, LayoutDashboard, ArrowRight, Sparkles, Clock, Receipt, Bell } from 'lucide-react';
 import { useLanguage, type Language } from '../context/LanguageContext';
+import SEOHead from '../components/SEOHead';
 
 type BadgeMap = Record<Language, string>;
 
@@ -88,6 +89,15 @@ export default function HowItWorksPage() {
 
   return (
     <div className="bg-white">
+      <SEOHead
+        title="How Mexico Trademark Registration Works — 3 Simple Steps | MexicoTrademarkCenter"
+        description="File your Mexico trademark in 3 steps: submit details, pay online, we file with IMPI in 24 business hours. AI-powered classification. No office visits."
+        canonicalPath="/how-it-works"
+        lang="en"
+        ogLocale="en_US"
+        ogImageAlt="How Mexico trademark registration works — MexicoTrademarkCenter"
+        hreflangAlternates={[]}
+      />
       {/* Header */}
       <section className="bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800 text-white py-16 lg:py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">

@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { CheckCircle2, ArrowRight, X, ShieldCheck } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import PaymentMethodIcons from '../components/PaymentMethodIcons';
+import SEOHead from '../components/SEOHead';
 
 export default function PricingPage() {
   const { t } = useLanguage();
@@ -25,6 +26,15 @@ export default function PricingPage() {
 
   return (
     <div className="bg-white">
+      <SEOHead
+        title="Mexico Trademark Pricing — $299 All-Inclusive | IMPI Fees Included"
+        description="One price for Mexico trademark registration: $299 USD per class — IMPI gov. fee of $170 + service fee + taxes. Filed in 24 business hours. No hidden costs."
+        canonicalPath="/pricing"
+        lang="en"
+        ogLocale="en_US"
+        ogImageAlt="Mexico trademark registration pricing — MexicoTrademarkCenter"
+        hreflangAlternates={[]}
+      />
       {/* Header */}
       <section className="bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800 text-white py-16 lg:py-24">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
