@@ -91,12 +91,13 @@ export default function HowItWorksPage() {
     <div className="bg-white">
       <SEOHead
         title="How Mexico Trademark Registration Works — 3 Simple Steps | MexicoTrademarkCenter"
-        description="File your Mexico trademark in 3 steps: submit details, pay online, we file with IMPI in 24 business hours. AI-powered classification. No office visits."
+        description="File your Mexico trademark in 3 steps: submit your details, pay online, we file with IMPI in 24 business hours. AI-powered classification. No office visits required."
         canonicalPath="/how-it-works"
         lang="en"
         ogLocale="en_US"
         ogImageAlt="How Mexico trademark registration works — MexicoTrademarkCenter"
         hreflangAlternates={[]}
+        noSchema
       />
       {/* Header */}
       <section className="bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800 text-white py-16 lg:py-20">

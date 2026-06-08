@@ -2,7 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, Shield, Globe as Globe2, FileText, Award, ChevronDown, Sparkles, Search, HelpCircle, X, Star, Scale, Zap, Quote } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
-import SEOHead from '../components/SEOHead';
+import SEOHead, { HOMEPAGE_FAQS } from '../components/SEOHead';
 
 const HERO_IMAGES: { src: string; alt: string }[] = [
   { src: '/ChatGPT_Image_7_jun_2026,_03_11_30_p.m..jpg', alt: 'Business owner holding official IMPI Título de Registro de Marca trademark certificate, Mexico' },
@@ -211,8 +211,6 @@ export default function HomePage() {
     'home.proof.oem',
   ];
 
-  const enFaqs = LANDING_PAGES['en']?.faqs ?? [];
-
   return (
     <div>
       <SEOHead
@@ -223,7 +221,7 @@ export default function HomePage() {
         ogLocale="en_US"
         ogImageAlt="Mexico trademark registration — MexicoTrademarkCenter"
         hreflangAlternates={[]}
-        faqs={enFaqs}
+        faqs={HOMEPAGE_FAQS}
       />
       {/* Hero */}
       <section className="relative bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800 text-white overflow-hidden">

@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Star, Shield, Zap, Tag, ChevronDown, CheckCircle2, Sparkles, Search, FileText, HelpCircle, X } from 'lucide-react';
 import { useLanguage, type Language } from '../context/LanguageContext';
-import SEOHead from '../components/SEOHead';
+import SEOHead, { HOMEPAGE_FAQS } from '../components/SEOHead';
 import CurrencyDisplay from '../components/CurrencyDisplay';
 import { LANDING_PAGES, HREFLANG_ALTERNATES, type LandingPageData } from '../data/landingPages';
 import AboutSection from '../components/AboutSection';
@@ -128,7 +128,7 @@ export default function LandingPage({ lang }: Props) {
         ogLocale={data.ogLocale}
         ogImageAlt={data.ogImageAlt}
         hreflangAlternates={HREFLANG_ALTERNATES}
-        faqs={data.faqs}
+        faqs={HOMEPAGE_FAQS}
       />
 
       {/* Hero */}

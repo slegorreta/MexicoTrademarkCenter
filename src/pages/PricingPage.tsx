@@ -28,12 +28,13 @@ export default function PricingPage() {
     <div className="bg-white">
       <SEOHead
         title="Mexico Trademark Pricing — $299 All-Inclusive | IMPI Fees Included"
-        description="One price for Mexico trademark registration: $299 USD per class — IMPI gov. fee of $170 + service fee + taxes. Filed in 24 business hours. No hidden costs."
+        description="One price for Mexico trademark registration: $299 USD per class — includes IMPI government fee of $170, service fee, all taxes. Filed in 24 business hours. No hidden costs."
         canonicalPath="/pricing"
         lang="en"
         ogLocale="en_US"
         ogImageAlt="Mexico trademark registration pricing — MexicoTrademarkCenter"
         hreflangAlternates={[]}
+        noSchema
       />
       {/* Header */}
       <section className="bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800 text-white py-16 lg:py-24">

@@ -1067,12 +1067,13 @@ export default function TrademarkCheckPage() {
     <div className="min-h-screen bg-gray-50" ref={pageTopRef}>
       <SEOHead
         title="Free Mexico Trademark Search — Check IMPI Availability Instantly"
-        description="Search the IMPI registry for free in about 60 seconds. Get a full trademark clearance report with no signup and no credit card. Powered by live IMPI data."
+        description="Search the IMPI registry for free in about 60 seconds. Full trademark clearance report with no signup, no credit card. Powered by live IMPI data."
         canonicalPath="/trademark-check"
         lang="en"
         ogLocale="en_US"
         ogImageAlt="Free Mexico trademark search — check IMPI availability"
         hreflangAlternates={[]}
+        noSchema
       />
 
       {/* ── Page header ──────────────────────────────────────────────────────── */}

@@ -240,12 +240,13 @@ export default function AboutPage() {
     <>
       <SEOHead
         title="About MexicoTrademarkCenter — AI-Assisted IMPI Filing, Supervised by Licensed Attorneys"
-        description="MexicoTrademarkCenter uses AI tools and licensed Mexican IP attorneys to file trademarks with IMPI for international businesses in 8 languages."
+        description="MexicoTrademarkCenter combines AI tools with licensed Mexican IP attorneys to file trademarks with IMPI for international businesses in 8 languages."
         canonicalPath="/about"
         lang="en"
         ogLocale="en_US"
         ogImageAlt="About MexicoTrademarkCenter — AI-assisted IMPI trademark filing"
         hreflangAlternates={[{ lang: 'x-default', href: '/about' }]}
+        noSchema
       />
 
       {/* ── Hero ── */}
